@@ -4,7 +4,7 @@ Working copy of the requirement table in [projektplan.md](projektplan.md). That 
 
 Priority: **M** must be in version 1, **B** should be, **K** can wait for phase 2. Each requirement becomes one or more issues in the backlog.
 
-Requirement text is quoted verbatim in Swedish. A quotation does not get translated, and the produktägare has to be able to recognise his own wording. Everything around it is English, per the language policy in the README.
+Requirement text is quoted verbatim in Swedish. A quotation does not get translated, and the produktägare has to be able to recognise his own wording. Everything around it is English, per [decisions/0006](decisions/0006-language-policy.md).
 
 | Id | Område | Krav | Prio | Status |
 | --- | --- | --- | --- | --- |
