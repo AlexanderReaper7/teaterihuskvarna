@@ -17,4 +17,4 @@ These block sprint 1 and are the board's to answer.
 
 Not in the original document. Added here so they are not lost.
 
-- [ ] Transfer the repository to an organisation the association owns, on `webb@teaterihuskvarna.se`. It currently lives under the personal account AlexanderReaper7 because no such organisation exists yet. Commits, issues and pull requests survive a transfer; Actions secrets and variables do not and must be re-entered. See [decisions/0004](decisions/0004-accounts-under-a-personal-login.md).
+- [ ] Transfer the repository to an organisation the association owns, on `webb@teaterihuskvarna.se`. It currently lives under the personal account AlexanderReaper7 because no such organisation exists yet. Commits, issues and pull requests survive a transfer; Actions secrets and variables do not and must be re-entered. See [decisions/0002](decisions/0002-accounts-under-a-personal-login.md).

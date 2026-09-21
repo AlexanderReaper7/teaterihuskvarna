@@ -1,4 +1,4 @@
-# 0004 — Accounts under a personal login
+# 0002 — Accounts under a personal login
 
 2026-09-21
 
