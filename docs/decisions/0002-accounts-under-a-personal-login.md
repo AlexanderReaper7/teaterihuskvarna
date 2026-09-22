@@ -8,7 +8,7 @@ The repository is `AlexanderReaper7/teaterihuskvarna`, private, on a personal Gi
 
 ## Why, when the plan says otherwise
 
-[projektplan.md](../projektplan.md) is explicit under "Ägarskap": every account belongs to the association, registered on a function address such as `webb@teaterihuskvarna.se`, with at least two board members holding admin. This decision breaks that rule on purpose, so the break is written down rather than discovered later.
+[projektplan-original.md](../projektplan-original.md) is explicit under "Ägarskap": every account belongs to the association, registered on a function address such as `webb@teaterihuskvarna.se`, with at least two board members holding admin. This decision breaks that rule on purpose, so the break is written down rather than discovered later.
 
 No such organisation exists yet. It cannot be created from here either: the `gh` token carries `gist`, `read:org`, `repo` and `workflow` but not `admin:org`, and `gh` has no org-create command in any case. Organisations are made in the web UI by a human.
 

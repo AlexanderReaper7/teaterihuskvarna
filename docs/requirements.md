@@ -1,6 +1,6 @@
 # Requirements
 
-Working copy of the requirement table in [projektplan.md](projektplan.md). That file is a frozen conversion of the produktägare's docx; this one is the list the team edits.
+Working copy of the requirement table in [projektplan-original.md](projektplan-original.md). That file is a frozen conversion of the produktägare's docx; this one is the list the team edits.
 
 Priority: **M** must be in version 1, **B** should be, **K** can wait for phase 2. Each requirement becomes one or more issues in the backlog.
 

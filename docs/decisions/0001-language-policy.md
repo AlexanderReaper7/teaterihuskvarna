@@ -10,7 +10,7 @@ English is everything else: this `docs/` tree, code identifiers, comments, commi
 
 ## Two exceptions, both quotations
 
-[projektplan.md](../projektplan.md) stays Swedish word for word. It is a conversion of the produktägare's docx, not something written here, and a translation would fork the source of truth.
+[projektplan-original.md](../projektplan-original.md) stays Swedish word for word. It is a conversion of the produktägare's docx, not something written here, and a translation would fork the source of truth.
 
 The requirement text in [requirements.md](../requirements.md) stays Swedish for the same reason. Translating P1 through U4 would invent wording that no longer matches the document those ids come from, and the produktägare has to be able to recognise his own requirements. The table's headings, columns and surrounding prose are English; only the quoted cells are not.
 

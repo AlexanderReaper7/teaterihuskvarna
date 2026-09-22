@@ -18,3 +18,4 @@ These block sprint 1 and are the board's to answer.
 Not in the original document. Added here so they are not lost.
 
 - [ ] Transfer the repository to an organisation the association owns, on `webb@teaterihuskvarna.se`. It currently lives under the personal account AlexanderReaper7 because no such organisation exists yet. Commits, issues and pull requests survive a transfer; Actions secrets and variables do not and must be re-entered. See [decisions/0002](decisions/0002-accounts-under-a-personal-login.md).
+- [ ] Apply for GitHub for Nonprofits once the organisation exists. It grants free GitHub Team, which is what makes branch protection on a private repository possible. Separate application from the Microsoft Azure credit above. See [decisions/0003](decisions/0003-no-branch-protection-yet.md).

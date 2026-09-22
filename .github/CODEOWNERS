@@ -1,0 +1,15 @@
+# Review ownership for this repository.
+#
+# Staged, not active. A CODEOWNERS entry does nothing until a branch protection
+# rule requires code owner review, and main deliberately carries no rules:
+# see docs/decisions/0003-no-branch-protection-yet.md.
+
+*       @AlexanderReaper7
+
+# Not yet expressible: the plan's rule that the technical mentor reviews every
+# change touching security, login and personal data ("Regler för kod" in
+# docs/projektplan-original.md). It needs a mentor GitHub account, which does
+# not exist yet. The paths it will cover, once it does:
+#
+#   /src/main/java/**/security/    @mentor
+#   /src/main/java/**/member/      @mentor
