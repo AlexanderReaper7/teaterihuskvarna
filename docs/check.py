@@ -26,8 +26,8 @@ from pathlib import Path
 DOCS = Path(__file__).resolve().parent
 ROOT = DOCS.parent
 # The produktagare writes M/B/K; the working copy spells them out. Same meaning.
-PRIORITY = {"M": "Must", "B": "Should", "K": "Could"}
-EXPECTED_TOTALS = {"Must": 20, "Should": 4, "Could": 1}
+PRIORITY = {"M": "MUST", "B": "SHOULD", "K": "COULD"}
+EXPECTED_TOTALS = {"MUST": 20, "SHOULD": 4, "COULD": 1}
 REQ_ID = re.compile(r"[PRIMVAU]\d")
 
 problems = []

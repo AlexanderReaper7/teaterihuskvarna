@@ -10,27 +10,29 @@ Sanity stays as the CMS for version 1, as the produktägare's document assumed. 
 
 The vendor was inherited rather than chosen, so it was re-examined against one criterion, that the site be easy for the association to edit, and then against a second the board added, minimise cost.
 
-| | Sanity free | Storyblok free | Directus self-hosted |
+| | Sanity nonprofit, with Free as fallback | Storyblok free | Directus self-hosted |
 | --- | --- | --- | --- |
-| Cash | 0 | 0 | 0 |
-| Editor seats | 20 | 1, second at 15 USD/mo, max 2 | Unlimited under the Open Innovation Grant |
-| Editor roles | Administrator or Viewer only | Roles included | Custom access policies under the grant |
-| Drafts | World-readable, free datasets are public only | Private | Private |
+| Cash | 0 within quota if the application is accepted; 0 on Free | 0 | 0 |
+| Editor seats | 25 on nonprofit; 20 on Free | 1, second at 15 USD/mo, max 2 | Unlimited under the Open Innovation Grant |
+| Editor roles | Growth roles on nonprofit; Administrator or Viewer on Free | Roles included | Custom access policies under the grant |
+| Content access | Private datasets on nonprofit; published documents public on Free; drafts require authentication on both | Private | Private |
 | Servers to patch | None | None | One container |
 | Rich text in Java | Portable Text, no renderer exists | Richtext JSON, no renderer exists | WYSIWYG stores HTML, nothing to write |
 | Visual editing in Java | Needs stega and content source maps, no library exists | HTML attributes, workable | HTML attributes, workable |
 
-Directus was the recommendation on the merits. Its [Open Innovation Grant](https://directus.com/docs/licensing/open-innovation-grant) became perpetual on 2026-09-10, with no renewal and no expiry, and the association is under the 5M USD revenue and 50 employee thresholds by several orders of magnitude. It costs nothing, gives unlimited named editors, and its WYSIWYG stores HTML, which removes the only piece of custom rendering code this project would otherwise have to write.
+Directus was the recommendation in the original comparison. Its [Open Innovation Grant](https://directus.com/docs/licensing/open-innovation-grant) became perpetual on 2026-09-10, with no renewal and no expiry, and the association is under the 5M USD revenue and 50 employee thresholds by several orders of magnitude. It costs nothing, gives unlimited named editors, and its WYSIWYG stores HTML, which removes the only piece of custom rendering code this project would otherwise have to write.
 
 The board chose Sanity anyway, for now. That is recorded as chosen rather than defaulted to.
 
-## What Sanity costs, stated plainly
+## Apply for the nonprofit plan before configuring production
 
-The free plan has **20 seats but only two roles, Administrator and Viewer**. Editor, Developer and Contributor start at Growth, 15 USD per seat per month. So every board member who can change content can also delete the dataset and rewrite the schema. The mitigation is backups, not permissions.
+[Sanity's nonprofit plan](https://www.sanity.io/docs/platform-management/non-profit-plan) mirrors Growth within quota at no charge for an eligible organisation and includes 25 users. That removes the two largest Free-plan costs in the original comparison: it allows private datasets and provides Editor, Developer and Contributor roles. The association should apply after creating the Sanity project because the application requires a project ID.
 
-Free datasets are **public only**. Private datasets start at Growth. This sounds worse than it is here: every document type in the model, events, news, pages, offers and partners, is meant to be read by the public. What actually leaks is drafts, so an unpublished announcement is readable by anyone who guesses the URL. For a theatre association that is a low-harm exposure, and it is bounded by the hard rule that no member register data is ever written to the CMS. Published personal data does live there, meaning names and photographs of the board and of performers, so a draft that is world-readable early is a photograph reaching the internet before the board meant it to. Still low harm, because the photograph was going to be published, but it is not nothing.
+Until Sanity approves that application, Free remains the fallback. Free has 20 seats but only Administrator and Viewer roles. Anyone who edits can therefore delete the dataset or change its configuration. Backups limit damage but do not replace permissions.
 
-Limits are 10,000 documents and 250,000 API requests a month, both far above what this site will use.
+Free datasets expose published documents to unauthenticated queries. Drafts do not leak: Sanity's [authentication documentation](https://www.sanity.io/docs/content-lake/http-auth) and [draft documentation](https://www.sanity.io/docs/content-lake/drafts) state that drafts require authentication. The previous version of this record got that fact wrong. Member-only offer details must stay outside published Sanity documents while the project uses a public dataset.
+
+The Free plan limit of 10,000 documents is far above the expected content volume.
 
 The real cost is Java work. No renderer exists on Maven Central for Portable Text, and no library exists for stega encoding or content source maps, which Sanity's Presentation tool needs for visual editing. So version 1 gets neither: rich text is a Markdown field rendered by commonmark-java, and editors get the Studio rather than click-the-page editing. That is the compromise already assumed in [projektplan.md](../projektplan.md), and choosing Sanity keeps it.
 
@@ -38,8 +40,8 @@ The real cost is Java work. No renderer exists on Maven Central for Portable Tex
 
 Any one of these, and this decision should be reopened:
 
-- The board wants more than one or two people editing and wants to know who changed what. Sanity's free plan cannot express that, because everyone is an Administrator.
-- Draft content appears that should not be public before it is published.
+- Sanity rejects the nonprofit application and the board will not accept Administrator rights for every editor.
+- Published content must be available to members but hidden from the public, and the nonprofit plan is unavailable.
 - Editors ask for click-the-page editing, or find the Markdown field hard to use. Directus's WYSIWYG answers both and Sanity's free plan answers neither without Java work that has no library behind it.
 - Sanity changes its free tier. This is already on the risk list.
 
@@ -52,3 +54,5 @@ One content export, one API client, and deleting the commonmark-java rendering p
 ## Amendment, 2026-09-22
 
 This record originally leaned on the claim, inherited from the produktägare's document, that Sanity receives no personal data at all. That is wrong: requirement P4 asks for pages about the board and about productions, so names and photographs of identifiable people are published to Sanity by design. The claim has been narrowed here and in [projektplan.md](../projektplan.md) to the member register, which is the part that actually holds. The decision itself does not change, but the public-dataset argument above is slightly weaker than it first read, and Sanity now needs a data processing agreement it was previously exempted from.
+
+The same review found two newer facts. Sanity now documents a nonprofit plan that mirrors Growth within quota at no charge, and its public-dataset documentation says unauthenticated requests cannot read drafts. Both change the cost comparison but not the CMS choice. The project now applies for the nonprofit plan and uses Free as the fallback.
