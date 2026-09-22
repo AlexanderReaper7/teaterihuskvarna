@@ -4,7 +4,9 @@
 
 ## Decision
 
-Swedish is what a visitor or a member reads: Sanity content, Thymeleaf template copy, mail bodies, form labels, validation messages.
+Swedish is what a visitor or a member reads: Sanity content, mail bodies, form labels, validation messages.
+
+Where that Swedish lives is a second question, and the answer is not "in the templates". Editable content lives in Sanity. Fixed copy such as form labels and validation messages lives in `messages_sv.properties`. A template holds markup and message keys, nothing a reader sees. That keeps the copy somewhere a non-developer can be pointed at, and it means fixing a typo in a validation message does not mean touching a template. See [0004](0004-jte-for-templates.md), which is where this rule came from and which also replaced Thymeleaf with JTE.
 
 English is everything else: this `docs/` tree, code identifiers, comments, commit messages, README, decision records.
 
