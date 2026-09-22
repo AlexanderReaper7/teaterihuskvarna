@@ -30,6 +30,7 @@ These are the outcomes the finished system is judged against. Each one is checka
 | The membership register survives any one person leaving | Two named board members hold admin on every account, checked by logging in as the second one |
 | A new developer goes from clone to running site in under an hour | Timed on a machine that has never built the project |
 | Published content appears on the site within a minute | Publish in Sanity, reload, measure |
+| The member register survives the server being lost | Restore a `pg_dump` into an empty database and compare row counts against the original |
 
 The first and third are the ones that fail quietly. An editor who finds publishing awkward goes back to mailing the webmaster, and the site is stale again within a year.
 
@@ -52,23 +53,32 @@ Payment deserves a note, because it looks like an omission. Fees stay on bankgir
 
 ## Architecture
 
-Two systems. Sanity holds public content. The Spring Boot application holds everything about people. No personal data is ever written to Sanity, which is what keeps the GDPR question confined to one database and one mail provider.
+Two systems. Sanity holds public content. The Spring Boot application holds everything about people. **No member register data is ever written to Sanity**, which is what keeps the register confined to one database and one mail provider.
+
+That rule is narrower than the original document's, which says Sanity receives no personal data at all. That version breaks in the first week of content entry, because requirement P4 asks for a page about the board and a page about productions, and both mean names and photographs of identifiable people. Published personal data goes into Sanity by design. The register does not. Keeping the two claims apart is what stops the second one from being quietly abandoned along with the first.
+
+Sanity was inherited from the original document rather than chosen, so it was re-examined against both the editing requirement and cost. It stays, with self-hosted Directus recorded as the alternative and the conditions that would make it the better answer. See [0006](decisions/0006-sanity-for-now.md). Nothing else in this specification depends on the vendor, because the application reads the CMS over HTTP and keeps the register out of it either way.
 
 ```mermaid
 flowchart LR
     editor[Editor]
     visitor["Visitors and members<br/>(browser)"]
     admin[Administrator]
-    github["GitHub<br/>code, CI/CD, Dependabot"]
-    app["Spring Boot app<br/>JTE + Spring Security<br/>(cloud hosting, EU region)"]
+    github["GitHub<br/>code, CI/CD, Dependabot<br/>container registry"]
     sanity["Sanity<br/>news, events, pages"]
-    db[("PostgreSQL<br/>members, sign-ups")]
     brevo["Brevo<br/>mail to members"]
 
+    subgraph host["One host, EU region, all containers"]
+        proxy["Reverse proxy<br/>TLS"]
+        app["Spring Boot app<br/>JTE + Spring Security"]
+        db[("PostgreSQL<br/>members, sign-ups")]
+    end
+
     editor -- "Sanity Studio" --> sanity
-    visitor --> app
-    admin -- "admin view" --> app
-    github -- "deployment" --> app
+    visitor --> proxy
+    admin -- "admin view" --> proxy
+    proxy --> app
+    github -- "pushes image,<br/>then deploys over SSH" --> host
     app <-- "fetches content via API;<br/>webhook on publish" --> sanity
     app <--> db
     app -- "login links, mailings" --> brevo
@@ -76,7 +86,7 @@ flowchart LR
     classDef internal fill:#dae8fc,stroke:#6c8ebf
     classDef external fill:#ffe6cc,stroke:#d79b00
     classDef tooling fill:#e8e8e8,stroke:#999999
-    class editor,visitor,admin,app,db internal
+    class editor,visitor,admin,proxy,app,db internal
     class sanity,brevo external
     class github tooling
 ```
@@ -94,8 +104,10 @@ The site reads Sanity through its API and caches the result. A webhook on publis
 | JTE templates | HTML for every page | Built. See [decisions/0004](decisions/0004-jte-for-templates.md) |
 | Spring Security one-time token | Passwordless login | Configured; the mail sending around it is built |
 | PostgreSQL | Members, sign-ups, volunteer shifts | Schema built, migrations under Flyway |
-| Brevo | Delivers login links and mailings | Integration built |
+| Brevo | Sends login links over SMTP, holds mailings as drafts until an administrator sends them | Integration built |
 | GitHub Actions | Tests, build, deployment | Configured |
+| Reverse proxy | Terminates TLS, renews certificates automatically | Configured. See [decisions/0008](decisions/0008-everything-in-containers.md) |
+| Container host, EU region | Runs the proxy, the application and PostgreSQL | Configured. See [decisions/0007](decisions/0007-postgres-in-a-container.md) and [0008](decisions/0008-everything-in-containers.md) |
 | Dependabot | Dependency update proposals | Configured |
 
 ### Member login
@@ -130,23 +142,28 @@ flowchart TD
     publish[Editor publishes<br/>an event in Sanity]
     choose[Admin selects<br/>Send as mailing]
     audience["Selects audience:<br/>all, paying, volunteers"]
-    review[Previews<br/>and confirms]
-    send[App sends<br/>through Brevo]
-    log[Mailing is logged<br/>in the database]
+    draft[App builds the HTML and<br/>creates a draft campaign in Brevo]
+    review[Admin reviews in Brevo:<br/>preview, test send, edit]
+    send[Admin sends<br/>from Brevo]
+    log[Brevo records delivery,<br/>opens and unsubscribes]
 
-    publish --> choose --> audience --> review --> send --> log
+    publish --> choose --> audience --> draft --> review --> send --> log
 ```
 
-The mailing takes its text from the Sanity document, so the wording is written once. Every mailing carries an unsubscribe link (U3), and the send step cannot be reached without passing through the preview (U2).
+The application builds the mailing and stops. It does not send it. `createEmailCampaign` leaves the campaign in draft status, and an administrator opens Brevo to check it and press send. There is no mailing editor in the admin view, and no send button.
+
+That is a deliberate handover, reasoned through in [0005](decisions/0005-brevo-campaign-drafts.md). It means U2's preview and test send, U3's unsubscribe link and U4's log are Brevo's rather than ours, which is the point: an unsubscribe that Brevo records is honoured by every later campaign without anyone here having written that code correctly.
+
+The text still comes from the Sanity document, so the wording is written once (U1). Audience selection stays in the application, because it is the only component that knows who has paid.
 
 ## Data
 
-Personal data lives only in PostgreSQL. The schema sketch below is the specification for what gets stored; anything not on it needs a reason before being added.
+The member register lives only in PostgreSQL. The schema sketch below is the specification for what gets stored; anything not on it needs a reason before being added.
 
 ```mermaid
 erDiagram
-    HOUSEHOLD ||--o{ MEMBER : contains
-    HOUSEHOLD ||--o{ MEMBERSHIP_FEE : owes
+    HOUSEHOLD |o--o{ MEMBER : contains
+    MEMBER ||--o{ MEMBERSHIP_FEE : holds
     MEMBER ||--o{ OFFER_SIGNUP : makes
     MEMBER ||--o{ VOLUNTEER_BOOKING : takes
     MEMBER ||--o{ MAILING_RECIPIENT : receives
@@ -159,7 +176,7 @@ erDiagram
         citext email
         text phone
         text address
-        uuid household_id
+        uuid household_id "null for an individual member"
         text role
         timestamptz created_at
     }
@@ -169,7 +186,8 @@ erDiagram
     }
     MEMBERSHIP_FEE {
         uuid id
-        uuid household_id
+        uuid member_id "the account the fee is bound to"
+        text kind "individual or household"
         int year
         int amount_ore
         text status
@@ -187,13 +205,15 @@ erDiagram
 
 Offers, sign-ups and mailings are sketched by their relationships rather than their columns, because their fields follow from the requirements (M3, A3, U1, U4) and do not carry decisions worth arguing about here.
 
-Four rules about this data:
+Rules about this data:
 
 - **No personnummer.** Name, mail, phone, address and household are enough. This is enforced by a test that fails if a column named `personnummer`, `national_id` or `ssn` appears in the schema, not by a sentence in a document.
-- The fee is owed by a household for a year, not by a person. Every member belongs to a household, including a household of one, so a 50 kr single and a 100 kr family membership are the same row with a different `amount_ore`. Hanging the fee off the member instead forces a rule about which family member counts as having paid.
+- **A fee is always bound to one member account, and a `kind` field says how far it reaches.** `member_id` is not null. `kind` is `individual`, covering only that member, or `household`, covering everyone in that member's household. `CHECK (kind IN ('individual', 'household'))`, and `UNIQUE (member_id, year)`. A plain text column with a check rather than a Postgres enum, because adding a value to an enum is a migration and adding one to a check is a one-line one.
+- **This is the model because of how the money arrives.** Fees come in by bankgiro with a name in the message field and get reconciled by hand. A name is one person, so the row an administrator ticks off is the row bound to that person. Pointing the fee at a household instead would make every reconciliation start with a lookup, which is work added to the one task in the system that happens a few hundred times a year.
+- **Whether a member has paid is a two-branch question.** A member is paid up for a year if they hold a paid fee for it, or if someone in their household holds a paid `household` fee for it. Belonging to a household is therefore exactly what family coverage means, and `member.household_id` is nullable, because an individual member belongs to no household. This is the rule to write a test against, since it is the one an administrator will phone about.
 - Money is stored in öre as an integer. Fees are decided by the annual meeting and will not stay 50 and 100 kr forever.
 - `marked_paid_by` records which administrator ticked a fee off. Manual reconciliation without an audit trail is how disputes become unresolvable.
-- Personal data never leaves for Sanity. Sanity gets no member fields, not even a name on a volunteer shift.
+- No member register field is ever added to a Sanity document type. Not a name on a volunteer shift, not an e-mail on a sign-up. This is checkable rather than aspirational: the content model is five TypeScript files, so the property is read off the schema, and it is the schema a reviewer should look at when a new field is proposed.
 
 ## Accessibility and the public site
 
@@ -222,8 +242,9 @@ Swedish visitor-facing text lives in `messages_sv.properties` and in Sanity, not
 
 The association becomes data controller for the member register and has to be able to show how the data is protected.
 
-- Data processing agreements with Brevo and the hosting provider, which both process member data. Sanity gets none, so it needs none.
-- Database and hosting in an EU region.
+- Data processing agreements with Brevo, the hosting provider and **Sanity**. The original document exempts Sanity on the grounds that it receives no personal data, which is not true once the board and the productions are published. Sanity publishes a DPA with Standard Contractual Clauses and a subprocessor list at [sanity.io/legal/dpa](https://www.sanity.io/legal/dpa).
+- Database and hosting in an EU region. Sanity satisfies this without being asked: every dataset is stored in Belgium, GCP `europe-west1`, on all plans, with the CDN in front used for delivery only. Region selection is not offered, so this is the vendor's default rather than a setting to get right.
+- Two kinds of personal data, kept apart. The **member register** lives only in PostgreSQL and never reaches Sanity. **Published personal data**, meaning names and photographs of board members, performers and audiences, lives in Sanity because publishing it is the point. The second kind needs consent and a way to honour a removal request, which is a process the board runs rather than code the system enforces.
 - Development runs against invented test data. Production data never reaches a development machine.
 - Members who have not renewed are anonymised or deleted after a period the board sets. That period is an open question and the retention job cannot be written until it is answered.
 - Member mailings go out on the basis of membership. Every mailing carries an unsubscribe link.
@@ -233,9 +254,15 @@ The association becomes data controller for the member register and has to be ab
 
 GitHub holds the code, runs the tests on every push and pull request, and deploys. Dependabot proposes dependency updates weekly. Together those mean routine maintenance is approving a green pull request rather than remembering to check for updates.
 
-Hosting is a cloud provider with an EU region and a managed PostgreSQL service. The original plan assumes Azure on the strength of Microsoft's nonprofit credit of 2 000 USD a year. That credit is not yet applied for and does not roll over, so the choice stays open. Nothing in this specification depends on which provider wins.
+Hosting is one host in an EU region, running the reverse proxy, the application and PostgreSQL as containers from the same pinned images used locally. PostgreSQL is not a managed service, which is the project's largest cost decision, reasoned through in [0007](decisions/0007-postgres-in-a-container.md). Everything else being containerised too is [0008](decisions/0008-everything-in-containers.md).
 
-Java 26 and Spring Boot 4.1.1. Java 26 is not an LTS release and its updates end around September 2026, which is a real cost against a system whose maintenance budget is a few hours a year. It was chosen deliberately anyway, with Java 25 LTS one line away if the handover argues otherwise.
+What runs in production is the image CI tested. Images are tagged with the commit sha rather than only `latest`, so rolling back is pulling the previous tag and "which version is running" has an answer. Actions pushes to GHCR on a green build of `main` and then deploys over SSH, so a deployment is a deliberate act with a timestamp rather than an agent acting unattended.
+
+The original plan assumes Azure on the strength of Microsoft's nonprofit credit of 2 000 USD a year. That credit is not yet applied for, requires the association to validate as a nonprofit, and does not roll over, so it is treated as headroom rather than as the budget. Nothing in this specification depends on which provider wins.
+
+Running the database rather than renting it moves backups from the provider to us, and the failure mode is losing the member register with no way back. So a scheduled `pg_dump` to encrypted storage on another machine in an EU region is part of the system, and **a restore has to have been run from one of those dumps into an empty database before launch**. A backup nobody has restored is a file, not a backup.
+
+Java 25 LTS and Spring Boot 4.1.1. The project originally tracked the newest JDK, which was Java 26. That policy was abandoned when JDK 27 went generally available on 2026-09-15 and ended updates for JDK 26 the same day, before any application code existed. A six month update cycle is the wrong commitment for a system whose maintenance budget is a few hours a year and whose maintainer after week 12 is still an open question. Temurin supports Java 25 until at least 2031-09-30. See [0009](decisions/0009-java-25-lts.md).
 
 ## Quality bar
 
@@ -274,10 +301,14 @@ The largest risk is that nobody owns the system after week 12. Everything else i
 | No maintainer after handover | Medium | High | Named maintainer before launch; the automation above keeps routine updates to approving a pull request |
 | Scope overruns and version 1 misses week 12 | High | High | Strict priority; Should and Could cut first |
 | Accessibility declared done on the automated check alone | Medium | High | The manual pass is a separate named item in the week 12 list |
-| Sanity changes its free tier | Low | Medium | Content exports; budget for a paid plan |
+| Sanity changes its free tier | Low | Medium | Content exports; self-hosted Directus is the costed alternative in [0006](decisions/0006-sanity-for-now.md) |
 | More than 300 members hits Brevo's daily limit | Unknown | Low | Member count is an open question; split the send or upgrade |
-| Azure credit is not granted | Unknown | Medium | Apply early; nothing here depends on the provider |
+| Azure credit is not granted | Unknown | Low | Apply early; hosting is costed without it, per [0007](decisions/0007-postgres-in-a-container.md) |
 | Personal data leaks from a development environment | Low | High | Test data only; production access restricted |
+| A photograph of an identifiable person is published without consent | Medium | Medium | Consent practice is a board question in [open-questions.md](open-questions.md), to be settled before the first upload |
+| Backups are never tested and the register is lost | Medium | High | A tested restore is a desired result, not a runbook line |
+| The site launches without HTTPS because nobody owned TLS | Low | High | The proxy is a named component with automatic certificate renewal, per [0008](decisions/0008-everything-in-containers.md) |
+| A board member deletes content in Sanity | Low | Medium | The free plan has no Editor role, so everyone is an Administrator; scheduled content exports |
 | Editors find it awkward and stop using it | Medium | High | Timed test with real editors is a desired result, not an afterthought |
 
 The produktägare's version of this table lists two risks this one drops, both about a team that no longer applies: mentoring that does not materialise, and four junior developers taking on too much.
@@ -290,9 +321,14 @@ Recorded, with reasoning, in [decisions/](decisions/):
 - [0002](decisions/0002-accounts-under-a-personal-login.md), why the repository sits on a personal account and what a transfer costs.
 - [0003](decisions/0003-no-branch-protection-yet.md), why main carries no protection rules yet.
 - [0004](decisions/0004-jte-for-templates.md), JTE rather than Thymeleaf.
+- [0005](decisions/0005-brevo-campaign-drafts.md), the application drafts mailings and Brevo sends them. Login links stay transactional over SMTP.
+- [0006](decisions/0006-sanity-for-now.md), Sanity stays as the CMS, with self-hosted Directus recorded as the alternative.
+- [0007](decisions/0007-postgres-in-a-container.md), PostgreSQL runs in a container rather than as a managed service, and what that obliges.
+- [0008](decisions/0008-everything-in-containers.md), the whole application is containerised, which makes TLS termination, the registry and rollback explicit components.
+- [0009](decisions/0009-java-25-lts.md), Java 25 LTS rather than the newest JDK, and why tracking the newest one was abandoned.
 
-Assumed here but not yet recorded, each one worth a decision record before it is built:
+Rich text from Sanity is a Markdown field rendered by commonmark-java rather than Portable Text, and editors get the Studio rather than click-the-page editing. Both follow from there being no Java library for Portable Text, stega encoding or content source maps, and both are part of [0006](decisions/0006-sanity-for-now.md).
 
-- Rich text from Sanity as Markdown rendered by commonmark-java, rather than Portable Text. No Java Portable Text renderer exists on Maven Central, so Portable Text means writing one. This trades Sanity's visual block editor for zero custom rendering code, and it affects what editors see, so it is a content decision rather than a technical one.
-- Brevo over SMTP rather than its API. SMTP means `JavaMailSender` with one configuration locally against Mailpit and another in production, which is less code than an API client and testable without mocking. The original document says API.
+Assumed here but not yet recorded:
+
 - One repository holding both the application and the studio, so a schema change and the template reading it land in the same commit.
