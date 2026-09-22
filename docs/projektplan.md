@@ -276,6 +276,8 @@ A change is finished when all of these hold:
 - The documentation that describes it is updated in the same change.
 - No new personal data field appeared without being on the list above.
 
+The documents have their own check, since prose rots without a compiler to notice. `docs/check.py` verifies that [requirements.md](requirements.md) still quotes the produktägare's Swedish word for word, that every relative link between documents resolves, and that every mermaid diagram renders. GitHub Actions runs it on push and pull request with `--require-mermaid`, which turns a missing renderer into a failure rather than a skip. All four of those failure modes have been triggered by hand and watched to exit 1.
+
 Four documents ship with the system: how to deploy, update and restore it; how to publish content, as short screen recordings; what the architecture actually became, as opposed to what this file predicted; and a README that gets a new developer running in under an hour.
 
 ## What has to be true at week 12

@@ -1,15 +1,26 @@
 #!/usr/bin/env python3
-"""Checks the docs tree for the two things that rot silently.
+"""Checks the docs tree for the three things that rot silently.
 
 1. requirements.md quotes the produktagare's Swedish word for word. A quotation
    that drifts from projektplan-original.md is no longer a quotation.
 2. Relative links between documents resolve. Dropping a citation and dropping
    prose look identical in a diff, so the citations get checked mechanically.
+3. Every mermaid block parses. A broken diagram renders as a grey code block on
+   GitHub rather than as an error, so nobody notices in review.
 
-Run: python3 docs/check.py   (exit 0 clean, 1 with findings on stderr)
+The mermaid check needs mmdc on PATH. Without it the check is skipped and says
+so loudly; --require-mermaid turns that skip into a failure, which is what CI
+passes. A check that silently passes when its tool is missing is worse than no
+check, because it reports success it did not earn.
+
+Run: python3 docs/check.py [--require-mermaid]
+     (exit 0 clean, 1 with findings on stderr)
 """
 import re
+import shutil
+import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 DOCS = Path(__file__).resolve().parent
@@ -74,6 +85,67 @@ def check_requirements():
         problems.append(f'requirements.md does not state "Totals: {line}."')
 
 
+def markdown_files():
+    for md in sorted(ROOT.rglob("*.md")):
+        if ".git" not in md.parts:
+            yield md
+
+
+STACK_FRAME = re.compile(r"\s*(at\s|\S+ \(https?://)")
+
+
+def mmdc_complaint(done):
+    """The first lines of mmdc's output, before the puppeteer stack trace."""
+    said = []
+    for line in (done.stderr or done.stdout).strip().splitlines():
+        if STACK_FRAME.match(line):
+            break
+        said.append(line[:300])
+    return "\n".join("      " + l for l in said[:4]) or f"      exit {done.returncode}"
+
+
+def check_mermaid(require):
+    """Render every mermaid block. Returns how many were actually checked."""
+    blocks = []
+    for md in markdown_files():
+        text = md.read_text(encoding="utf-8")
+        for m in re.finditer(r"```mermaid\n(.*?)```", text, re.S):
+            line = text.count("\n", 0, m.start()) + 1
+            blocks.append((md.relative_to(ROOT), line, m.group(1)))
+    if not blocks:
+        return 0
+
+    if shutil.which("mmdc") is None:
+        note = f"{len(blocks)} mermaid diagram(s) not checked: mmdc is not on PATH"
+        if require:
+            problems.append(note + " (--require-mermaid was passed)")
+        else:
+            print(f"skipped: {note}", file=sys.stderr)
+        return 0
+
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp = Path(tmp)
+        # Chromium's sandbox is unavailable on most CI runners.
+        config = tmp / "puppeteer.json"
+        config.write_text('{"args": ["--no-sandbox"]}', encoding="utf-8")
+        for n, (rel, line, src) in enumerate(blocks, 1):
+            source = tmp / f"{n}.mmd"
+            source.write_text(src, encoding="utf-8")
+            done = subprocess.run(
+                ["mmdc", "-i", str(source), "-o", str(tmp / f"{n}.svg"),
+                 "-p", str(config), "-q"],
+                capture_output=True, text=True,
+            )
+            if done.returncode != 0:
+                # mmdc numbers the error's line from the start of the block, so
+                # add the fence's own line to get somewhere the editor can jump.
+                problems.append(
+                    f"{rel}:{line}: mermaid diagram does not render\n"
+                    f"{mmdc_complaint(done)}"
+                )
+    return len(blocks)
+
+
 def check_links():
     for md in sorted(ROOT.rglob("*.md")):
         if ".git" in md.parts:
@@ -90,10 +162,14 @@ def check_links():
 
 check_requirements()
 check_links()
+diagrams = check_mermaid("--require-mermaid" in sys.argv[1:])
 
 if problems:
     print(f"{len(problems)} problem(s):", file=sys.stderr)
     for p in problems:
         print(f"  - {p}", file=sys.stderr)
     sys.exit(1)
-print("docs ok: 25 requirements quoted intact, all relative links resolve")
+print(
+    f"docs ok: {sum(EXPECTED_TOTALS.values())} requirements quoted intact, "
+    f"all relative links resolve, {diagrams} mermaid diagrams parse"
+)

@@ -1,0 +1,22 @@
+# Runs the guard in docs/check.py: quoted requirements, relative links, mermaid.
+# --require-mermaid makes a missing mmdc a failure rather than a skip, so this
+# job cannot report success by quietly not checking the diagrams.
+name: docs
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-python@v7.0.0
+        with:
+          python-version: '3.13'
+      - uses: actions/setup-node@v7.0.0
+        with:
+          node-version: '24'
+      - run: npm install --global @mermaid-js/mermaid-cli@11.17.0
+      - run: python3 docs/check.py --require-mermaid
