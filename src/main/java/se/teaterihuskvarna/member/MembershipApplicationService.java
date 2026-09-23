@@ -15,8 +15,8 @@ import se.teaterihuskvarna.login.Background;
 import se.teaterihuskvarna.login.Lifetimes;
 import se.teaterihuskvarna.login.LinkRequestLimiter;
 import se.teaterihuskvarna.login.LoginKind;
-import se.teaterihuskvarna.login.LoginLinks;
 import se.teaterihuskvarna.login.LoginSettings;
+import se.teaterihuskvarna.login.LoginUrls;
 import se.teaterihuskvarna.login.MailSettings;
 import se.teaterihuskvarna.login.Mailer;
 import se.teaterihuskvarna.login.Tokens;
@@ -40,7 +40,6 @@ public class MembershipApplicationService {
     private final AccountRepository accounts;
     private final MemberRepository members;
     private final LinkRequestLimiter limiter;
-    private final LoginLinks loginLinks;
     private final Background background;
     private final Mailer mailer;
     private final MessageSource messages;
@@ -53,7 +52,6 @@ public class MembershipApplicationService {
             AccountRepository accounts,
             MemberRepository members,
             LinkRequestLimiter limiter,
-            LoginLinks loginLinks,
             Background background,
             Mailer mailer,
             MessageSource messages,
@@ -64,7 +62,6 @@ public class MembershipApplicationService {
         this.accounts = accounts;
         this.members = members;
         this.limiter = limiter;
-        this.loginLinks = loginLinks;
         this.background = background;
         this.mailer = mailer;
         this.messages = messages;
@@ -77,7 +74,8 @@ public class MembershipApplicationService {
     /// every case, so the caller cannot tell which of these happened:
     ///
     /// - the address or the client is over the rate limit, and nothing is sent;
-    /// - the address belongs to an account, which gets a login link instead;
+    /// - the address belongs to an account, which gets a mail pointing to the
+    ///   login page instead;
     /// - otherwise the application is stored, replacing any earlier one for the
     ///   address, and a confirmation link is mailed.
     ///
@@ -99,7 +97,7 @@ public class MembershipApplicationService {
 
     private void receive(ApplicationForm form, String email) {
         if (accounts.findByEmailIgnoreCase(email).isPresent()) {
-            loginLinks.send(LoginKind.MEMBER, email);
+            alreadyMember(email);
             return;
         }
 
@@ -127,6 +125,21 @@ public class MembershipApplicationService {
                 email,
                 messages.getMessage("application.mail.subject", null, SWEDISH),
                 messages.getMessage("application.mail.body", new Object[] {fullName, link, lifetime}, SWEDISH));
+    }
+
+    /// Points a member who applied again to the login page, with no token. A
+    /// login link here would work in any browser, since the application form
+    /// sets no login cookie, and would reopen what [se.teaterihuskvarna.login.LoginBrowser]
+    /// closes: anyone applying with their own address could pass the link on.
+    private void alreadyMember(String email) {
+        String login = UriComponentsBuilder.fromUri(mail.siteUrl())
+                .path(LoginUrls.of(LoginKind.MEMBER).page())
+                .build()
+                .toUriString();
+        mailer.send(
+                email,
+                messages.getMessage("application.mail.member.subject", null, SWEDISH),
+                messages.getMessage("application.mail.member.body", new Object[] {login}, SWEDISH));
     }
 
     /// Follows a confirmation link. The application is deleted whatever the

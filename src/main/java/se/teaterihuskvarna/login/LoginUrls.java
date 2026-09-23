@@ -7,7 +7,7 @@ package se.teaterihuskvarna.login;
 ///
 /// @param page      GET shows the form, POST asks for a link
 /// @param sent      the page shown after asking, whether or not a mail went out
-/// @param link      GET shows the button page, POST with the token logs in
+/// @param link      GET shows the button page, POST with the token or the code logs in
 /// @param success   where a login lands
 /// @param failure   where an expired, used or unknown link lands
 /// @param logout    POST ends the session

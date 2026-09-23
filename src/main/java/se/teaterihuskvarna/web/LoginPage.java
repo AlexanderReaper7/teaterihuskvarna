@@ -26,12 +26,17 @@ public enum LoginPage {
         this.headingKey = headingKey;
     }
 
+    /// @return which kind of login this page is for
+    public LoginKind kind() {
+        return kind;
+    }
+
     /// @return where the address form posts, and the page to return to
     public String path() {
         return path;
     }
 
-    /// @return where the button on the link page posts the token
+    /// @return where the button on the link page posts the token, and the code form posts the code
     public String linkPath() {
         return path + "/lank";
     }

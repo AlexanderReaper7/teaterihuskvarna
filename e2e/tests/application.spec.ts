@@ -139,22 +139,26 @@ test.describe("what a person might get wrong", () => {
       .toBeVisible();
   });
 
-  test("a member who applies again gets a login link instead", async ({ page }) => {
+  test("a member who applies again is pointed to the login page, with no login link", async ({ page }) => {
+    // 0015, "A link works only in the browser that asked for it": the form sets
+    // no login cookie, so a login link here would work in any browser.
     await clearMail(MEMBERS.erik);
     await apply(page, { fullName: "Erik Lindqvist", email: "Erik.Lindqvist@Example.test" });
     await expect(page).toHaveURL("/bli-medlem/skickat");
     const mail = await waitForMail(MEMBERS.erik);
-    expect(mail.subject).toBe(text("login.mail.member.subject"));
+    expect(mail.subject).toBe(text("application.mail.member.subject"));
+    expect(mail.link).toBe(`http://localhost:55556${PATHS.member.login}`);
+    expect(mail.text).not.toContain("token=");
     await page.goto(mail.link);
-    await expect(page).toHaveURL(PATHS.member.home);
+    await expect(page.locator("#email")).toBeVisible();
   });
 
-  test("a new member who applies once more after confirming gets a login link", async ({ page }) => {
+  test("a new member who applies once more after confirming is pointed to the login page", async ({ page }) => {
     const email = freshAddress("igen");
     await confirm(page, await applyForLink(page, { fullName: "Redan Medlem", email }));
     await clearMail(email);
     await apply(page, { fullName: "Redan Medlem", email });
-    expect((await waitForMail(email)).subject).toBe(text("login.mail.member.subject"));
+    expect((await waitForMail(email)).subject).toBe(text("application.mail.member.subject"));
   });
 
   test("a mangled confirmation link shows the expired page", async ({ page }) => {

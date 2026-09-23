@@ -70,9 +70,9 @@ The accepted component choices and their costs are recorded in [0004](decisions/
 
 ## Member login must not reveal membership
 
-The member submits an email address and receives a short-lived, single-use login link if the address belongs to an account. The page gives the same response whether the address exists or not. Rate limits protect the request endpoint. Tokens live in PostgreSQL so deployment and process restarts do not invalidate them.
+The member submits an email address and receives a short-lived, single-use login link if the address belongs to an account. The link works only in the browser that asked for it, and the mail carries a code for logging in when it is read on another device. The page gives the same response whether the address exists or not. Rate limits protect the request endpoint. Tokens live in PostgreSQL so deployment and process restarts do not invalidate them.
 
-A login link is valid for one hour by default, and the lifetime is configurable. Tests must prove expiry, one-time use and identical user-visible responses for known and unknown addresses.
+A login link is valid for one hour by default, and the lifetime is configurable. Tests must prove expiry, one-time use, that a link or code from another browser does not log in, and identical user-visible responses for known and unknown addresses. [0015](decisions/0015-login-links-on-spring-security.md) records why links are bound to a browser.
 
 Members and administrators log in on separate pages, because one email address may belong to both an account and an administrator account, and each page looks the address up only among its own kind. A member session lasts 30 days and an administrator session 8 hours, since an administrator can read the whole register. The REST adapter accepts the same session cookie, with CSRF protection on changes, so both adapters authenticate the same way. Rate limits count recent requests per address and per IP address in PostgreSQL, next to the tokens, and the IP addresses are deleted along with expired tokens.
 
@@ -80,7 +80,7 @@ Members and administrators may also add passkeys on their own page and log in wi
 
 The first administrator account comes from configuration at startup, when none exists. After that, administrators create and remove each other in the application, and nobody removes themselves: a last active administrator removing their own account would lock the association out. Removal is refused while two or fewer administrators remain, which is how the application enforces the two-administrator rule under [ownership](#ownership-and-maintenance-are-release-work) without refusing to start with one.
 
-A membership application (P5) registers one person. The applicant gets a confirmation link, and the application becomes a member with an account when they follow it. An application nobody confirms is deleted after 24 hours. The page gives the same response when the address already belongs to an account; that account gets a mail with a login link instead of a confirmation link. The form therefore falls under the same rate limit as the login page. What P5 creates is provisional, see [open-questions.md](open-questions.md).
+A membership application (P5) registers one person. The applicant gets a confirmation link, and the application becomes a member with an account when they follow it. An application nobody confirms is deleted after 24 hours. The page gives the same response when the address already belongs to an account; that account gets a mail pointing to the login page instead of a confirmation link, with no login link in it. The form therefore falls under the same rate limit as the login page. What P5 creates is provisional, see [open-questions.md](open-questions.md).
 
 An invitation is valid for 7 days by default, and the lifetime is configurable. It is longer than an application's 24 hours because a logged-in member or an administrator sends it, so the bot argument does not apply, and the recipient may not read their mail for days. The sender can send it again.
 

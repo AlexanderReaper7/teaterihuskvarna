@@ -10,11 +10,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import jakarta.servlet.http.Cookie;
 import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -39,6 +41,8 @@ import se.teaterihuskvarna.IntegrationTestSupport;
 /// - the database holds the SHA-256 of a token, never the token;
 /// - a link expires after the configured lifetime, one hour by default;
 /// - opening a link logs nobody in, pressing its button does, and only once;
+/// - a link and its code work only in the browser that asked for them, and a
+///   code allows five tries;
 /// - the rate limits per address and per client stop the mail but not the
 ///   response, which stays the same, and hold for requests sent at once;
 /// - expired links, and client addresses older than the window, are deleted;
@@ -102,19 +106,165 @@ class LoginIT extends IntegrationTestSupport {
         tokenIn(mail, linkPath(LoginKind.MEMBER));
     }
 
+    /// The code is six digits, too short to search the row for, so the test
+    /// checks the column holds its hash instead.
     @Test
     void theDatabaseKeepsOnlyTheHashOfALoginLink() throws Exception {
         insertAccount("Karin Karlsson", KARIN);
         requestLink(LoginKind.MEMBER, KARIN);
-        String token = tokenIn(awaitMail(), linkPath(LoginKind.MEMBER));
+        SimpleMailMessage mail = awaitMail();
+        String token = tokenIn(mail, linkPath(LoginKind.MEMBER));
+        String browser = browserCookie(LoginKind.MEMBER).getValue();
 
         List<Map<String, Object>> rows = jdbc.sql("SELECT * FROM one_time_token").query().listOfRows();
 
         assertThat(rows).hasSize(1);
         assertThat(rows.getFirst().get("token_hash")).isEqualTo(sha256Hex(token));
         assertThat(rows.getFirst().get("kind")).isEqualTo("member");
-        assertThat(rows.getFirst().values())
-                .allSatisfy(value -> assertThat(String.valueOf(value)).doesNotContain(token));
+        assertThat(rows.getFirst().get("browser_hash")).isEqualTo(sha256Hex(browser));
+        assertThat(rows.getFirst().get("code_hash")).isEqualTo(sha256Hex(codeIn(mail)));
+        assertThat(rows.getFirst().values()).allSatisfy(value -> assertThat(String.valueOf(value))
+                .doesNotContain(token)
+                .doesNotContain(browser));
+    }
+
+    /// Every request for a link gets the cookie, known address or not, so the
+    /// response does not tell them apart. A browser that asks again keeps its
+    /// value, so its older links keep working.
+    @Test
+    void askingForALinkSetsTheBrowserCookie() throws Exception {
+        MvcResult first = requestLink(LoginKind.MEMBER, NOBODY);
+        String setCookie = first.getResponse().getHeader("Set-Cookie");
+        MvcResult again = requestLink(LoginKind.MEMBER, NOBODY);
+
+        assertThat(setCookie)
+                .startsWith(LoginBrowser.COOKIE + "=")
+                .contains("Path=/logga-in")
+                .contains("Max-Age=" + settings.linkLifetime().toSeconds())
+                .contains("HttpOnly")
+                .contains("SameSite=Lax");
+        assertThat(again.getResponse().getCookie(LoginBrowser.COOKIE).getValue())
+                .isEqualTo(first.getResponse().getCookie(LoginBrowser.COOKIE).getValue());
+        assertThat(requestLink(LoginKind.ADMINISTRATOR, NOBODY).getResponse().getHeader("Set-Cookie"))
+                .contains("Path=/admin/logga-in");
+    }
+
+    /// The attack this stops: someone asks for a link to their own address and
+    /// sends it to someone else, who would then be logged in as the sender
+    /// without noticing. The refused attempt leaves the link alone, so it still
+    /// works where it was asked for.
+    @Test
+    void aLinkWorksOnlyInTheBrowserThatAskedForIt() throws Exception {
+        insertAccount("Karin Karlsson", KARIN);
+        requestLink(LoginKind.MEMBER, KARIN);
+        String token = tokenIn(awaitMail(), linkPath(LoginKind.MEMBER));
+
+        MvcResult noCookie = mockMvc.perform(post("/logga-in/lank").param("token", token).with(csrf())).andReturn();
+        MvcResult otherBrowser = mockMvc.perform(post("/logga-in/lank").param("token", token).with(csrf())
+                .cookie(new Cookie(LoginBrowser.COOKIE, Tokens.newToken()))).andReturn();
+
+        assertRedirect(noCookie, "/logga-in?fel");
+        assertRedirect(otherBrowser, "/logga-in?fel");
+        assertThat(signedInSessions()).isEmpty();
+        assertRedirect(followLink(LoginKind.MEMBER, token), "/medlem");
+    }
+
+    /// Opened in another browser, the link page offers no button, which would
+    /// only fail, and says to type the code where the link was asked for.
+    @Test
+    void aLinkOpenedInAnotherBrowserSaysToUseTheCode() throws Exception {
+        insertAccount("Karin Karlsson", KARIN);
+        requestLink(LoginKind.MEMBER, KARIN);
+        String token = tokenIn(awaitMail(), linkPath(LoginKind.MEMBER));
+
+        mockMvc.perform(get("/logga-in/lank").param("token", token))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("Länken fungerar bara i webbläsaren där du bad om den")))
+                .andExpect(content().string(containsString("href=\"/logga-in\"")))
+                .andExpect(content().string(not(containsString(token))))
+                .andExpect(content().string(not(containsString("data-auto-submit"))));
+        assertRedirect(mockMvc.perform(get("/logga-in/lank").param("token", "not-a-token")).andReturn(),
+                "/logga-in?fel");
+        assertThat(rowsIn("one_time_token")).isEqualTo(1);
+    }
+
+    @Test
+    void theMailCarriesACodeThatLogsIn() throws Exception {
+        long account = insertAccount("Karin Karlsson", KARIN);
+        requestLink(LoginKind.MEMBER, KARIN);
+        SimpleMailMessage mail = awaitMail();
+        String code = codeIn(mail);
+
+        MvcResult login = enterCode(LoginKind.MEMBER, code.substring(0, 3) + " " + code.substring(3));
+
+        assertThat(mail.getText()).contains("Ge aldrig koden till någon. Föreningen frågar aldrig efter den.");
+        assertRedirect(login, "/medlem");
+        mockMvc.perform(get("/medlem").with(sessionOf(login))).andExpect(status().isOk());
+        assertThat(signedInSessions()).containsExactly(LoginKind.MEMBER.principalName(account));
+        assertThat(rowsIn("one_time_token")).isZero();
+    }
+
+    @Test
+    void aCodeWorksOnlyInTheBrowserThatAskedForIt() throws Exception {
+        insertAccount("Karin Karlsson", KARIN);
+        requestLink(LoginKind.MEMBER, KARIN);
+        String code = codeIn(awaitMail());
+
+        MvcResult otherBrowser = mockMvc.perform(post("/logga-in/lank").param("code", code).with(csrf())
+                .cookie(new Cookie(LoginBrowser.COOKIE, Tokens.newToken()))).andReturn();
+
+        assertRedirect(otherBrowser, "/logga-in/skickat?fel");
+        assertThat(signedInSessions()).isEmpty();
+        assertRedirect(enterCode(LoginKind.MEMBER, code), "/medlem");
+    }
+
+    /// Five wrong codes stop the code, and the link carries on working: someone
+    /// guessing codes from their own browser cannot spend a link they do not hold.
+    @Test
+    void aCodeAllowsFiveTriesAndTheLinkOutlastsThem() throws Exception {
+        insertAccount("Karin Karlsson", KARIN);
+        requestLink(LoginKind.MEMBER, KARIN);
+        SimpleMailMessage mail = awaitMail();
+        String code = codeIn(mail);
+        String wrong = String.format(Locale.ROOT, "%06d", (Integer.parseInt(code) + 1) % 1_000_000);
+
+        for (int attempt = 0; attempt < 5; attempt++) {
+            assertRedirect(enterCode(LoginKind.MEMBER, wrong), "/logga-in/skickat?fel");
+        }
+        MvcResult sixth = enterCode(LoginKind.MEMBER, code);
+
+        assertRedirect(sixth, "/logga-in/skickat?fel");
+        mockMvc.perform(get("/logga-in/skickat").param("fel", ""))
+                .andExpect(content().string(containsString("Koden fungerade inte")));
+        mockMvc.perform(get("/logga-in/skickat"))
+                .andExpect(content().string(not(containsString("Koden fungerade inte"))));
+        assertRedirect(followLink(LoginKind.MEMBER, tokenIn(mail, linkPath(LoginKind.MEMBER))), "/medlem");
+    }
+
+    /// Guesses sent at the same moment count one another, as link requests do.
+    @Test
+    void codeGuessesSentAtOnceStillStopAtFive() throws Exception {
+        insertAccount("Karin Karlsson", KARIN);
+        requestLink(LoginKind.MEMBER, KARIN);
+        String code = codeIn(awaitMail());
+        String wrong = String.format(Locale.ROOT, "%06d", (Integer.parseInt(code) + 1) % 1_000_000);
+        CountDownLatch start = new CountDownLatch(1);
+        List<Future<MvcResult>> results = new ArrayList<>();
+        try (ExecutorService threads = Executors.newFixedThreadPool(20)) {
+            for (int guess = 0; guess < 20; guess++) {
+                results.add(threads.submit(() -> {
+                    start.await();
+                    return enterCode(LoginKind.MEMBER, wrong);
+                }));
+            }
+            start.countDown();
+            for (Future<MvcResult> result : results) {
+                assertRedirect(result.get(), "/logga-in/skickat?fel");
+            }
+        }
+
+        assertThat(jdbc.sql("SELECT code_tries FROM one_time_token").query(Integer.class).single()).isEqualTo(5);
+        assertRedirect(enterCode(LoginKind.MEMBER, code), "/logga-in/skickat?fel");
     }
 
     @Test
@@ -141,7 +291,8 @@ class LoginIT extends IntegrationTestSupport {
         requestLink(LoginKind.MEMBER, KARIN);
         String token = tokenIn(awaitMail(), linkPath(LoginKind.MEMBER));
 
-        MvcResult page = mockMvc.perform(get("/logga-in/lank").param("token", token))
+        MvcResult page = mockMvc.perform(get("/logga-in/lank").param("token", token)
+                        .cookie(browserCookie(LoginKind.MEMBER)))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString(token)))
                 .andExpect(content().string(containsString("data-auto-submit")))
@@ -333,8 +484,8 @@ class LoginIT extends IntegrationTestSupport {
     void theCleanupDeletesExpiredLinksAndOldClientAddresses() {
         OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
         OffsetDateTime windowStart = now.minus(settings.requestWindow());
-        jdbc.sql("INSERT INTO one_time_token (token_hash, kind, email, expires_at) VALUES "
-                + "('expired', 'member', ?, ?), ('live', 'member', ?, ?)")
+        jdbc.sql("INSERT INTO one_time_token (token_hash, kind, email, expires_at, browser_hash, code_hash) VALUES "
+                + "('expired', 'member', ?, ?, 'b', 'c'), ('live', 'member', ?, ?, 'b', 'c')")
                 .params(KARIN, now.minusSeconds(1), KARIN, now.plusHours(1))
                 .update();
         jdbc.sql("INSERT INTO link_request (email, client_address, requested_at) VALUES (?, ?, ?), (?, ?, ?)")
@@ -400,11 +551,12 @@ class LoginIT extends IntegrationTestSupport {
         requestLink(LoginKind.MEMBER, KARIN);
         String token = tokenIn(awaitMail(), linkPath(LoginKind.MEMBER));
         jdbc.sql("DELETE FROM spring_session").update();
-        MvcResult page = mockMvc.perform(get("/logga-in/lank").param("token", token)).andReturn();
+        MvcResult page = mockMvc.perform(get("/logga-in/lank").param("token", token)
+                .cookie(browserCookie(LoginKind.MEMBER))).andReturn();
         List<String> before = jdbc.sql("SELECT primary_id FROM spring_session").query(String.class).list();
 
         MvcResult login = mockMvc.perform(post("/logga-in/lank").param("token", token)
-                .with(sessionOf(page)).with(csrf())).andReturn();
+                .cookie(browserCookie(LoginKind.MEMBER)).with(sessionOf(page)).with(csrf())).andReturn();
 
         assertRedirect(login, "/medlem");
         assertThat(before).hasSize(1);

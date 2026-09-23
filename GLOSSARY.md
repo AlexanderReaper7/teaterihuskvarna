@@ -24,6 +24,14 @@ A person recorded in the member register. A member may lack a paid fee for the c
 
 A member's login. It holds the email address that login links and mailings go to, and it belongs to exactly one member. A member without an account cannot log in and receives no mailings. An administrator account is not an account in this sense.
 
+### Login link | Inloggningslänk
+
+A link mailed to the address of an account or an administrator account, which logs its holder in once, within a limited time, and only in the browser that asked for it. Asking again sends a new link and leaves the older ones working.
+
+### Login code | Kod
+
+Six digits in the same mail as a login link, for when the mail is read on another device than the one that asked. It is typed on the page the asking browser shows after the request, works only there, and stops after five wrong tries while the link keeps working. The association never asks anyone for it.
+
 ### Passkey | Lösenordsnyckel
 
 A key a person's device or password manager holds, which logs them in to the site without a login link. It belongs to one account or one administrator account, and works only on that kind's login page. A person may have several, one per device, and removes them on their own page. A login link always works as well.

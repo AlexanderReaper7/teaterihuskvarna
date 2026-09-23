@@ -1,16 +1,20 @@
 package se.teaterihuskvarna.login;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
+import org.jspecify.annotations.Nullable;
 import org.springframework.context.MessageSource;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Component;
 import org.springframework.web.util.UriComponentsBuilder;
 
-/// Creates login links and mails them.
+/// Creates login links and their codes, and mails them. A link and its code
+/// work only in the browser that asked for them ([LoginBrowser]).
 ///
 /// An address nobody of that kind has gets nothing: no token, no mail, and no
 /// sign of it in the return value. The caller shows the same page either way,
@@ -49,35 +53,71 @@ public class LoginLinks {
         this.mail = mail;
     }
 
-    /// Mails a login link if the address belongs to a login of this kind, and
-    /// does nothing otherwise. Returns before either has happened: the work runs
-    /// on [Background], after the caller's transaction commits if there is one.
+    /// Mails a login link and code if the address belongs to a login of this
+    /// kind, and does nothing otherwise. Returns before either has happened: the
+    /// work runs on [Background], after the caller's transaction commits if there
+    /// is one.
     ///
-    /// @param kind  whether to look among accounts or among administrator accounts
-    /// @param email the address as somebody typed it
-    public void send(LoginKind kind, String email) {
+    /// @param kind    whether to look among accounts or among administrator accounts
+    /// @param email   the address as somebody typed it
+    /// @param browser the [LoginBrowser] value of the browser that asked, the only one the link will work in
+    public void send(LoginKind kind, String email, String browser) {
         String address = Addresses.normalise(email);
-        background.run(() -> create(kind, address));
+        background.run(() -> create(kind, address, browser));
     }
 
-    private void create(LoginKind kind, String address) {
+    /// What the link page should show for a link. A lookup and nothing more:
+    /// mail scanners open every link, so opening one must not spend it.
+    ///
+    /// @param kind    whose link page was opened
+    /// @param token   the token in the link
+    /// @param browser the browser's login cookie, if it sent one
+    /// @return whether the link works here, works only in another browser, or does not work
+    public LinkOpening open(LoginKind kind, @Nullable String token, @Nullable String browser) {
+        if (token == null || token.isBlank()) {
+            return LinkOpening.UNUSABLE;
+        }
+        Optional<String> boundTo = jdbc.sql("""
+                        SELECT browser_hash FROM one_time_token
+                        WHERE token_hash = ? AND kind = ? AND expires_at > now()""")
+                .param(Tokens.hash(token))
+                .param(kind.code())
+                .query(String.class)
+                .optional();
+        if (boundTo.isEmpty()) {
+            return LinkOpening.UNUSABLE;
+        }
+        boolean here = browser != null && LoginBrowser.isWellFormed(browser)
+                && MessageDigest.isEqual(
+                        boundTo.get().getBytes(StandardCharsets.US_ASCII),
+                        Tokens.hash(browser).getBytes(StandardCharsets.US_ASCII));
+        return here ? LinkOpening.HERE : LinkOpening.ELSEWHERE;
+    }
+
+    private void create(LoginKind kind, String address, String browser) {
         Optional<SignedIn> found = Directories.of(kind, directories).find(address);
         if (found.isEmpty()) {
             return;
         }
         String token = Tokens.newToken();
-        jdbc.sql("INSERT INTO one_time_token (token_hash, kind, email, expires_at) VALUES (?, ?, ?, ?)")
+        String code = Tokens.newCode();
+        jdbc.sql("""
+                        INSERT INTO one_time_token (token_hash, kind, email, expires_at, browser_hash, code_hash)
+                        VALUES (?, ?, ?, ?, ?, ?)""")
                 .param(Tokens.hash(token))
                 .param(kind.code())
                 .param(address)
                 .param(OffsetDateTime.now(ZoneOffset.UTC).plus(settings.linkLifetime()))
+                .param(Tokens.hash(browser))
+                .param(Tokens.hash(code))
                 .update();
         String link = UriComponentsBuilder.fromUri(mail.siteUrl())
                 .path(LoginUrls.of(kind).link())
                 .queryParam("token", token)
                 .build()
                 .toUriString();
-        Object[] arguments = {link, Lifetimes.describe(messages, settings.linkLifetime()), found.get().fullName()};
+        Object[] arguments = {
+            link, Lifetimes.describe(messages, settings.linkLifetime()), found.get().fullName(), code};
         String prefix = "login.mail." + kind.code();
         mailer.send(
                 address,

@@ -62,14 +62,41 @@ test.describe("what works", () => {
     await context.close();
   });
 
-  test("a link opened in another browser logs in there", async ({ page, browser }) => {
-    const link = await mailedLink(page, "member", MEMBERS.sara);
+  test("a link opened in another browser says to use the code, which logs in where it was asked for", async ({
+    page,
+    browser,
+  }) => {
+    // 0015, "A link works only in the browser that asked for it".
+    await clearLinkRequests();
+    await clearMail(MEMBERS.sara);
+    await requestLink(page, "member", MEMBERS.sara);
+    const mail = await waitForMail(MEMBERS.sara);
+    expect(mail.text).toContain("Ge aldrig koden till någon. Föreningen frågar aldrig efter den.");
     const phone = await browser.newContext();
     const phonePage = await phone.newPage();
-    await phonePage.goto(link);
-    await expect(phonePage).toHaveURL(PATHS.member.home);
-    await expect(phonePage.getByText("Sara Bergström")).toBeVisible();
+    await phonePage.goto(mail.link);
+    await expect(phonePage.getByRole("heading", { name: text("login.elsewhere.heading") })).toBeVisible();
+    await expect(phonePage).toHaveURL(/\/logga-in\/lank\?token=/);
     await phone.close();
+
+    await page.getByLabel(text("login.code.label")).fill(mail.code!);
+    await page.getByRole("button", { name: text("login.code.submit") }).click();
+    await expect(page).toHaveURL(PATHS.member.home);
+    await expect(page.getByText("Sara Bergström")).toBeVisible();
+  });
+
+  test("a wrong code says so on the page it was typed on", async ({ page }) => {
+    await clearMail(MEMBERS.anders);
+    await requestLink(page, "member", MEMBERS.anders);
+    const code = (await waitForMail(MEMBERS.anders)).code!;
+    await page.getByLabel(text("login.code.label")).fill(code === "000000" ? "111111" : "000000");
+    await page.getByRole("button", { name: text("login.code.submit") }).click();
+    await expect(page).toHaveURL(`${PATHS.member.sent}?fel`);
+    await expect(page.getByRole("alert").filter({ hasText: text("login.code.failed") })).toBeVisible();
+
+    await page.getByLabel(text("login.code.label")).fill(code);
+    await page.getByRole("button", { name: text("login.code.submit") }).click();
+    await expect(page).toHaveURL(PATHS.member.home);
   });
 
   test("the login holds while the link page's fonts are still loading", async ({ page, playwright, browserName }) => {
@@ -86,8 +113,15 @@ test.describe("what works", () => {
     test.skip(browserName !== "chromium", "sends no browser requests");
     const lost: number[] = [];
     for (let attempt = 0; attempt < 20; attempt++) {
-      const link = await mailedLink(page, "member", MEMBERS.erik);
+      // The client asks for the link itself, since a link works only in the
+      // browser that asked for it.
+      await clearLinkRequests();
+      await clearMail(MEMBERS.erik);
       const client = await playwright.request.newContext({ baseURL: SITE });
+      const loginPage = await (await client.get(PATHS.member.login)).text();
+      const loginCsrf = /name="_csrf" value="([^"]*)"/.exec(loginPage)![1];
+      await client.post(PATHS.member.login, { form: { email: MEMBERS.erik, _csrf: loginCsrf } });
+      const link = (await waitForMail(MEMBERS.erik)).link;
       const linkPage = await (await client.get(link)).text();
       const csrf = /name="_csrf" value="([^"]*)"/.exec(linkPage)![1];
       const token = new URL(link).searchParams.get("token")!;
@@ -207,18 +241,16 @@ test.describe("what a person might get wrong", () => {
     await expect(page).toHaveURL(PATHS.member.home);
   });
 
-  test("an older link still works after asking for a newer one", async ({ page, browser }) => {
+  test("an older link still works after asking for a newer one", async ({ page }) => {
     const first = await mailedLink(page, "member", MEMBERS.erik);
     const second = await mailedLink(page, "member", MEMBERS.erik);
     expect(second).not.toBe(first);
 
     await page.goto(first);
     await expect(page).toHaveURL(PATHS.member.home);
-    const other = await browser.newContext();
-    const otherPage = await other.newPage();
-    await otherPage.goto(second);
-    await expect(otherPage).toHaveURL(PATHS.member.home);
-    await other.close();
+    await logOut(page, "member");
+    await page.goto(second);
+    await expect(page).toHaveURL(PATHS.member.home);
   });
 
   test("pressing the send button twice still leaves a link that works", async ({ page }) => {

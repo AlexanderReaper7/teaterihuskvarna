@@ -18,7 +18,8 @@ export async function clearMail(to: string): Promise<void> {
   await fetch(`${MAILPIT}/api/v1/search?query=${query}`, { method: "DELETE" });
 }
 
-export type Mail = { subject: string; text: string; link: string };
+/// `code` is the six digit login code on a line of its own, where the mail has one.
+export type Mail = { subject: string; text: string; link: string; code?: string };
 
 /// Waits for a mail to `to` and returns it with the first site link in it.
 /// The application sends mail off the request thread, so it arrives a moment
@@ -33,7 +34,8 @@ export async function waitForMail(to: string, timeoutMs = 10_000): Promise<Mail>
       if (!link) {
         throw new Error(`Mail to ${to} has no site link:\n${message.Text}`);
       }
-      return { subject: message.Subject, text: message.Text, link };
+      const code = /^(\d{6})$/m.exec(message.Text)?.[1];
+      return { subject: message.Subject, text: message.Text, link, code };
     }
     await new Promise((resolve) => setTimeout(resolve, 200));
   }

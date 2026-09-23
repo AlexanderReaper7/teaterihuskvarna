@@ -9,7 +9,6 @@ import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.simple.JdbcClient;
-import org.springframework.security.authentication.ott.GenerateOneTimeTokenRequest;
 import org.springframework.security.authentication.ott.OneTimeTokenAuthenticationProvider;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -18,6 +17,7 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.access.intercept.AuthorizationFilter;
+import org.springframework.security.web.authentication.AuthenticationFailureHandler;
 import org.springframework.security.web.authentication.DelegatingAuthenticationEntryPoint;
 import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint;
@@ -175,11 +175,13 @@ class SecurityConfiguration {
                 .showDefaultSubmitPage(false)
                 .generateRequestResolver(emailField(settings.linkLifetime()))
                 .tokenGenerationSuccessHandler(new RedirectOneTimeTokenGenerationSuccessHandler(urls.sent()))
+                .authenticationConverter(BoundLogin::from)
                 .authenticationSuccessHandler(LoginSuccessHandler.byLink(sessionLifetime, urls.success()))
-                .authenticationFailureHandler(new SimpleUrlAuthenticationFailureHandler(urls.failure())));
+                .authenticationFailureHandler(failure(urls)));
         http.with(new PasskeyLogin(kind, relyingParty, passkeys, directory, sessionLifetime),
                 Customizer.withDefaults());
         http.addFilterBefore(new LinkRequestLimitFilter(limiter, urls), GenerateOneTimeTokenFilter.class);
+        http.addFilterBefore(new LoginBrowserFilter(urls, settings.linkLifetime()), LinkRequestLimitFilter.class);
         http.logout(logout -> logout
                 .logoutUrl(urls.logout())
                 .logoutSuccessUrl(urls.loggedOut()));
@@ -204,7 +206,8 @@ class SecurityConfiguration {
 
     /// Reads the address from the form field `email`, not Spring's `username`,
     /// and asks for the configured lifetime. Spring's default request says 5
-    /// minutes, which would disagree with the token [LoginLinks] stores.
+    /// minutes, which would disagree with the token [LoginLinks] stores. The
+    /// browser's value comes from [LoginBrowserFilter], which ran first.
     ///
     /// A blank field gives null, which makes Spring's filter pass the request
     /// on. [LinkRequestLimitFilter] has already sent a blank form back, so that
@@ -212,7 +215,22 @@ class SecurityConfiguration {
     private static GenerateOneTimeTokenRequestResolver emailField(Duration linkLifetime) {
         return request -> {
             String email = request.getParameter("email");
-            return StringUtils.hasText(email) ? new GenerateOneTimeTokenRequest(email, linkLifetime) : null;
+            String browser = LoginBrowser.read(request);
+            if (!StringUtils.hasText(email) || browser == null) {
+                return null;
+            }
+            return new BoundLinkRequest(email, linkLifetime, browser);
+        };
+    }
+
+    /// A wrong code goes back to the page it was typed on, which says so. A
+    /// link that fails goes to the login form, as before codes existed.
+    private static AuthenticationFailureHandler failure(LoginUrls urls) {
+        AuthenticationFailureHandler link = new SimpleUrlAuthenticationFailureHandler(urls.failure());
+        AuthenticationFailureHandler code = new SimpleUrlAuthenticationFailureHandler(urls.sent() + "?fel");
+        return (request, response, exception) -> {
+            boolean byCode = !StringUtils.hasText(request.getParameter("token"));
+            (byCode ? code : link).onAuthenticationFailure(request, response, exception);
         };
     }
 

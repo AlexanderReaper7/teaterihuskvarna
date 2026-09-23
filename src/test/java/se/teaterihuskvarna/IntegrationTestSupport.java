@@ -16,8 +16,10 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
+import java.util.EnumMap;
 import java.util.HexFormat;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.regex.Matcher;
@@ -39,6 +41,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
+import se.teaterihuskvarna.login.LoginBrowser;
 import se.teaterihuskvarna.login.LoginKind;
 
 /// What every integration test shares: the whole application against a real
@@ -86,6 +89,10 @@ public abstract class IntegrationTestSupport {
     @Value("${teaterihuskvarna.mail.site-url}")
     protected String siteUrl;
 
+    /// The [LoginBrowser] cookie per login, as one browser would hold it:
+    /// [#requestLink] sends and keeps it, [#followLink] and [#enterCode] send it.
+    private final Map<LoginKind, Cookie> browser = new EnumMap<>(LoginKind.class);
+
     /// Children before parents, because of the foreign keys. Passkeys have
     /// none, so they go first by choice. The first
     /// administrator is made active again rather than deleted, since the
@@ -93,6 +100,7 @@ public abstract class IntegrationTestSupport {
     /// happens at startup, not between tests.
     @BeforeEach
     protected void emptyTables() {
+        browser.clear();
         jdbc.sql("DELETE FROM spring_session").update();
         jdbc.sql("DELETE FROM user_credentials").update();
         jdbc.sql("DELETE FROM user_entities").update();
@@ -198,6 +206,15 @@ public abstract class IntegrationTestSupport {
         return link.group(1);
     }
 
+    /// @param mail the mail to read
+    /// @return the six digit code in it
+    protected static String codeIn(SimpleMailMessage mail) {
+        String text = String.valueOf(mail.getText());
+        Matcher code = Pattern.compile("^(\\d{6})$", Pattern.MULTILINE).matcher(text);
+        assertThat(code.find()).as("a code on a line of its own in the mail:%n%s", text).isTrue();
+        return code.group(1);
+    }
+
     /// @param kind which login
     /// @return the login page's path, which a POST asks for a link on
     protected static String loginPage(LoginKind kind) {
@@ -222,20 +239,62 @@ public abstract class IntegrationTestSupport {
         };
     }
 
+    /// Asks for a link from this test's browser, sending the [LoginBrowser]
+    /// cookie it holds for the kind and keeping the one the response sets.
+    ///
     /// @param kind  which login page
     /// @param email the address to type in
     /// @return the response to asking for a link
     /// @throws Exception from MockMvc
     protected MvcResult requestLink(LoginKind kind, String email) throws Exception {
-        return mockMvc.perform(post(loginPage(kind)).param("email", email).with(csrf())).andReturn();
+        MvcResult result = mockMvc.perform(post(loginPage(kind)).param("email", email).with(csrf())
+                        .with(inBrowser(kind)))
+                .andReturn();
+        Cookie set = result.getResponse().getCookie(LoginBrowser.COOKIE);
+        if (set != null) {
+            browser.put(kind, set);
+        }
+        return result;
     }
 
+    /// Presses the button on the link page in this test's browser.
+    ///
     /// @param kind  which login the link belongs to
     /// @param token the token from the mail
     /// @return the response to the button on the link page
     /// @throws Exception from MockMvc
     protected MvcResult followLink(LoginKind kind, String token) throws Exception {
-        return mockMvc.perform(post(linkPath(kind)).param("token", token).with(csrf())).andReturn();
+        return mockMvc.perform(post(linkPath(kind)).param("token", token).with(csrf()).with(inBrowser(kind)))
+                .andReturn();
+    }
+
+    /// Types the code from the mail on the "link sent" page in this test's browser.
+    ///
+    /// @param kind which login the code belongs to
+    /// @param code what to type
+    /// @return the response to the form
+    /// @throws Exception from MockMvc
+    protected MvcResult enterCode(LoginKind kind, String code) throws Exception {
+        return mockMvc.perform(post(linkPath(kind)).param("code", code).with(csrf()).with(inBrowser(kind)))
+                .andReturn();
+    }
+
+    /// @param kind which login
+    /// @return the [LoginBrowser] cookie this test's browser holds for it, or null before it asked for a link
+    protected @Nullable Cookie browserCookie(LoginKind kind) {
+        return browser.get(kind);
+    }
+
+    private RequestPostProcessor inBrowser(LoginKind kind) {
+        Cookie cookie = browser.get(kind);
+        return request -> {
+            if (cookie != null) {
+                Cookie[] existing = request.getCookies();
+                request.setCookies(existing == null ? new Cookie[] {cookie}
+                        : Stream.concat(Arrays.stream(existing), Stream.of(cookie)).toArray(Cookie[]::new));
+            }
+            return request;
+        };
     }
 
     /// Logs in the way a person does: ask for a link, read it from the mail, press

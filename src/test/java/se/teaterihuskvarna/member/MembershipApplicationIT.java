@@ -178,10 +178,11 @@ class MembershipApplicationIT extends IntegrationTestSupport {
     }
 
     /// The form must not reveal that an address is already a member's, so the
-    /// response matches a new address's, and the mail is a login link rather than
-    /// a second account.
+    /// response matches a new address's. The mail points to the login page and
+    /// carries no login link: the application form sets no login cookie, so a
+    /// link here would work in any browser.
     @Test
-    void anAddressWithAnAccountGetsALoginLinkInstead() throws Exception {
+    void anAddressWithAnAccountIsPointedToTheLoginPage() throws Exception {
         insertAccount("Karin Karlsson", KARIN);
 
         MvcResult fresh = apply("Nils Nilsson", "nils@example.test");
@@ -193,12 +194,14 @@ class MembershipApplicationIT extends IntegrationTestSupport {
         assertRedirect(existing, "/bli-medlem/skickat");
         assertThat(Visible.of(existing)).isEqualTo(Visible.of(fresh));
         assertThat(mail.getTo()).containsExactly(KARIN);
-        assertThat(mail.getText()).doesNotContain(CONFIRMATION);
-        String token = tokenIn(mail, linkPath(LoginKind.MEMBER));
+        assertThat(mail.getText())
+                .doesNotContain(CONFIRMATION)
+                .doesNotContain("token=")
+                .contains(siteUrl + "/logga-in\n");
+        assertThat(rowsIn("one_time_token")).isZero();
         assertThat(jdbc.sql("SELECT email FROM membership_application").query(String.class).list())
                 .containsExactly("nils@example.test");
         assertThat(rowsIn("account")).isEqualTo(1);
-        assertRedirect(followLink(LoginKind.MEMBER, token), "/medlem");
     }
 
     @Test
