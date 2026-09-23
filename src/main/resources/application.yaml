@@ -42,9 +42,10 @@ spring:
       # Flyway owns these tables like every other, from V3: docs/decisions/0015.
       initialize-schema: never
     # No spring.session.timeout: a session before login lasts
-    # server.servlet.session.timeout, 30 minutes by default. Logging in sets the
-    # session's own lifetime from teaterihuskvarna.login, 30 days for a member
-    # and 8 hours for an administrator.
+    # server.servlet.session.timeout, 30 minutes by default. A login lasts a
+    # fixed time from teaterihuskvarna.login, 30 days for a member and 8 hours
+    # for an administrator, counted from the login: docs/decisions/0015, "A
+    # login ends a fixed time after it starts".
 
 server:
   # Traefik sets X-Forwarded-For and X-Forwarded-Proto, and replaces any a

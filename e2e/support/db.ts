@@ -37,6 +37,11 @@ export async function clearLinkRequests(): Promise<void> {
   await sql("DELETE FROM link_request");
 }
 
+/// Logs everyone out, on every device. Sessions stay between tests otherwise.
+export async function clearSessions(): Promise<void> {
+  await sql("DELETE FROM spring_session");
+}
+
 /// Removes every passkey the server knows about.
 export async function clearPasskeys(): Promise<void> {
   await sql("DELETE FROM user_credentials");

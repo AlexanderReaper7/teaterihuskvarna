@@ -38,6 +38,10 @@ A key a person's device or password manager holds, which logs them in to the sit
 
 The Swedish plural is lösenordsnycklar. Why this word: [0016](docs/decisions/0016-passkeys-beside-links.md), "The Swedish word".
 
+### Logged-in device | Inloggad enhet
+
+A browser where a person is logged in, from one login until it ends. A login ends when the person logs out, when they end it from the list on their own page, or a fixed time after it started: 30 days for an account and 8 hours for an administrator account. The person may start that time again from the page before it runs out. Two browsers on one computer are two devices.
+
 ### Membership | Medlemskap
 
 The association's recorded relationship with a member. Membership and fee status are separate facts.

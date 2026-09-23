@@ -6,7 +6,7 @@
 
 Members and administrators log in with Spring Security 7.1.1's one-time-token login. The flow is Spring's: the filter that takes an address and generates a token, the filter that takes a token and logs in, the session, CSRF and the access rules. This project supplies the parts that Spring's defaults get wrong for it: a token store that keeps hashes, a lookup that says nothing about unknown addresses, a rate limit, mail sent after the response, and a cookie that makes a link work only in the browser that asked for it. They live in `se.teaterihuskvarna.login`.
 
-Sessions live in PostgreSQL through Spring Session JDBC 4.1.1. Flyway owns every table involved: V2 for tokens and rate limit rows, V3 for sessions, V5 for binding tokens to a browser.
+Sessions live in PostgreSQL through Spring Session JDBC 4.1.1. A login ends a fixed time after it starts, and the person sees and ends their logins on other devices. Flyway owns every table involved: V2 for tokens and rate limit rows, V3 for sessions, V5 for binding tokens to a browser.
 
 The rules this has to meet are in [projektplan.md](../projektplan.md), "Member login must not reveal membership".
 
@@ -72,7 +72,7 @@ Before this change, the form mailed such an address a login link. The form sets 
 
 ## Sessions in PostgreSQL
 
-A member session lasts 30 days. In memory, every deploy would end it. Spring Session JDBC keeps sessions in `SPRING_SESSION`, so they survive a restart.
+A member login lasts 30 days ("A login ends a fixed time after it starts"). In memory, every deploy would end it. Spring Session JDBC keeps sessions in `SPRING_SESSION`, so they survive a restart.
 
 `spring.session.jdbc.initialize-schema` is `never`, and V3 creates the tables instead. V3 is `schema-postgresql.sql` from the spring-session-jdbc 4.1.1 jar, and on 2026-09-23 it was identical to that file apart from its header comment and tabs turned to spaces. Upgrading Spring Session means comparing the two again.
 
@@ -88,6 +88,26 @@ The cost was measured the same day on the e2e stack, 5 000 sequential keep-alive
 | `/api/admin/administrators` | 1.009, 1.004 | 0.964, 1.060 |
 
 The difference is smaller than the spread between two runs of the same build. By itself, the lookup (`removed_at IS NULL` by primary key) took 0.014 ms in `pgbench`. Spring Session's own load of the session takes 0.023 ms. Members get no such check, because nothing removes an account yet. Whatever later removes one should add the filter to the member chain.
+
+## A login ends a fixed time after it starts
+
+Since 2026-09-23 a member login lasts 30 days and an administrator login 8 hours, counted from the login, however often it is used (`LoginSession`, `LoginExpiryFilter`). Before that the same numbers were Spring Session's idle timeout, so a login used once a month lasted for ever, and a stolen session cookie did too. The user chose a fixed end for both kinds that day.
+
+The end is a session attribute, set at login by `LoginSuccessHandler` for a link and a passkey alike. A filter in both chains, before the access rules, deletes a logged-in session whose end has passed, and a logged-in session without an end, which only one from before the change can be. The access rules then answer as for anyone: the login page, or 401 under `/api/`. Spring Session's idle timeout stays set to the same length, only so that its cleanup job deletes rows nobody comes back to.
+
+Two minutes before the end, `/medlem` and `/admin` beep once, count down and offer "Fortsätt vara inloggad", which starts the full 30 days or 8 hours again (`static/js/session.js`, `DeviceService.extend`). The user chose one click, a restart of the full period and two minutes on 2026-09-23. At the end, or when the server says the login is gone, the page stays and says the person is logged out, with a link to the plain login page and never a login link, because the user asked that a login that ended must not be one click away from starting again. Browsers play sound only on a page the person has clicked or typed on, so on a page left untouched the beep stays silent and only the text shows.
+
+The page gets the seconds left rather than the time of the end, since the computer's clock may be wrong. It asks the server again before it warns, at zero, and when the tab comes back into view after a minute or more, because another tab may have extended the login or another device may have ended it. Each question counts as a use and moves "Senast använd" below. Extending changes only the attribute. The session keeps its id, and the cookie needs no new expiry, since the login already set it to last as long as the browser keeps it.
+
+### Logged-in devices
+
+`/medlem` and `/admin` list the devices the person is logged in on, and the REST adapter has the same list under `/api/member/devices` and `/api/admin/devices`. Each row shows a name read from the `User-Agent` at login, such as "Firefox på Windows" (`DeviceNames`), when it logged in, when it was last used, "den här enheten" for the asking one, and a button that logs it out. "Logga ut överallt annars" ends all but the asking one. The user chose these columns on 2026-09-23, for members and administrators both.
+
+A device is a row in `SPRING_SESSION`, found through the principal name index that removing an administrator already uses. The name is the second session attribute beside the end, so the list needs no table of its own. No IP address is stored: a name is enough to tell one's own phone from one's laptop, and an address would be more personal data to keep and to delete. "Logged in" is the session's creation time, which is the login's time because a login moves the session to a new row. "Last used" is Spring Session's last access time.
+
+A device's id in the list is the SHA-256 of its session id, never the session id itself, which is the cookie value and would log in whoever reads it. Ending a device looks the id up among the asking person's own sessions only, so another person's id is a 404. Ending the asking device goes through the request's own session, which Spring Session then deletes.
+
+`DeviceNames` and `static/js/passkey.js` read the `User-Agent` with the same two tables, since a new passkey is named the same way. The duplication is a smell: naming the passkey on the server would leave one table.
 
 ## Two filter chains
 
@@ -128,4 +148,4 @@ The client IP address is the one Traefik forwards: `server.forward-headers-strat
 
 ## What it costs to undo
 
-Swapping the token store for Spring's means a table rename and accepting plaintext tokens. Unbinding links from the browser means dropping `LoginBrowserFilter`, the browser condition in `HashedTokenService` and the code, and brings back login CSRF. Going back to in-memory sessions means deleting one dependency and V3's tables through a new migration. Dropping Spring's flow for one written here means owning everything listed under "Why Spring's flow".
+Swapping the token store for Spring's means a table rename and accepting plaintext tokens. Unbinding links from the browser means dropping `LoginBrowserFilter`, the browser condition in `HashedTokenService` and the code, and brings back login CSRF. Going back to in-memory sessions means deleting one dependency and V3's tables through a new migration, and losing the list of logged-in devices, which reads the session table. Going back to sessions that slide with use means dropping `LoginExpiryFilter`, the countdown and the extend endpoints; the two attributes can stay. Dropping Spring's flow for one written here means owning everything listed under "Why Spring's flow".

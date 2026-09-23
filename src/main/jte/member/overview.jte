@@ -1,15 +1,21 @@
 @import java.util.List
+@import se.teaterihuskvarna.login.DeviceDetails
+@import se.teaterihuskvarna.login.LoginStatus
 @import se.teaterihuskvarna.login.PasskeyDetails
 @import se.teaterihuskvarna.login.PasskeyUrls
 @import se.teaterihuskvarna.member.MemberDetails
 @import se.teaterihuskvarna.web.Copy
 @import se.teaterihuskvarna.web.CsrfField
+@import se.teaterihuskvarna.web.DeviceUrls
 @param Copy copy
 @param CsrfField csrf
 @param MemberDetails member
 @param List<PasskeyDetails> passkeys
 @param PasskeyUrls passkeyUrls
 @param boolean offerPasskey = false
+@param List<DeviceDetails> devices
+@param LoginStatus loginStatus
+@param DeviceUrls deviceUrls
 @param String error
 @param String notice
 @template.layout(copy = copy, title = copy.text("member.heading"), content = @`
@@ -32,6 +38,8 @@
         <dd>@if(member.household() == null)${copy.text("member.noHousehold")}@else${member.household()}@endif</dd>
     </dl>
     @template.tag.passkeys(copy = copy, csrf = csrf, passkeys = passkeys, urls = passkeyUrls)
+    @template.tag.devices(copy = copy, csrf = csrf, devices = devices, urls = deviceUrls)
     @template.tag.logout(copy = copy, csrf = csrf, action = "/logga-ut")
+    @template.tag.loginCountdown(copy = copy, status = loginStatus, urls = deviceUrls)
     <script src="/js/passkey.js" defer></script>
 `)

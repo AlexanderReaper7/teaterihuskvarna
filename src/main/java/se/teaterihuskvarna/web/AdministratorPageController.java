@@ -23,7 +23,8 @@ import se.teaterihuskvarna.administrator.TooFewAdministrators;
 import se.teaterihuskvarna.login.SignedIn;
 
 /// The administrators' start page: who the administrators are, a form to add one,
-/// a button to remove each, and the logged-in administrator's own passkeys.
+/// a button to remove each, and the logged-in administrator's own passkeys and
+/// devices.
 /// Spring Security lets only an administrator account reach it.
 ///
 /// A failed add shows the page again with the typed values kept. A remove has no
@@ -41,40 +42,45 @@ public class AdministratorPageController {
     private final AdministratorService administrators;
     private final Copy copy;
     private final PasskeySection passkeys;
+    private final DeviceSection devices;
 
-    AdministratorPageController(AdministratorService administrators, Copy copy, PasskeySection passkeys) {
+    AdministratorPageController(AdministratorService administrators, Copy copy, PasskeySection passkeys,
+            DeviceSection devices) {
         this.administrators = administrators;
         this.copy = copy;
         this.passkeys = passkeys;
+        this.devices = devices;
     }
 
     /// @param signedIn the logged-in administrator
     /// @param session  holds whether a link login just happened, which offers a passkey
     /// @param request  may say the offer was declined on this browser
-    /// @param model    receives the administrators, an empty form, passkeys, and any flash message
+    /// @param model    receives the administrators, an empty form, passkeys, devices, and any flash message
     /// @return the administrators page
     @GetMapping("/admin")
     public String overview(@AuthenticationPrincipal SignedIn signedIn, HttpSession session,
             HttpServletRequest request, Model model) {
-        return page(signedIn, new NewAdministrator("", ""), FieldErrors.none(), null,
+        return page(signedIn, session, new NewAdministrator("", ""), FieldErrors.none(), null,
                 passkeys.offer(session, request), model);
     }
 
     /// @param signedIn   the logged-in administrator, recorded as the one who added
     /// @param form       the submitted address and name
+    /// @param session    the asking request's session, which the devices list marks
     /// @param model      receives the page again when the add fails
     /// @param redirected receives the confirmation shown after the redirect
     /// @return a redirect to the page, or the page again with what was wrong
     @PostMapping("/admin/administratorer")
     public String add(@AuthenticationPrincipal SignedIn signedIn, @ModelAttribute("form") NewAdministrator form,
-            Model model, RedirectAttributes redirected) {
+            HttpSession session, Model model, RedirectAttributes redirected) {
         AdministratorDetails added;
         try {
             added = administrators.add(form, signedIn.id());
         } catch (ConstraintViolationException e) {
-            return page(signedIn, form, FieldErrors.of(e), null, false, model);
+            return page(signedIn, session, form, FieldErrors.of(e), null, false, model);
         } catch (AdministratorAlreadyExists e) {
-            return page(signedIn, form, FieldErrors.none(), copy.text("admin.error.alreadyExists"), false, model);
+            return page(signedIn, session, form, FieldErrors.none(), copy.text("admin.error.alreadyExists"), false,
+                    model);
         }
         redirected.addFlashAttribute("notice", copy.text("admin.added", added.fullName()));
         return REDIRECT;
@@ -127,10 +133,36 @@ public class AdministratorPageController {
         return REDIRECT;
     }
 
-    private String page(SignedIn signedIn, NewAdministrator form, FieldErrors errors, @Nullable String error,
-            boolean offerPasskey, Model model) {
+    /// @param signedIn   the logged-in administrator, whose device it must be
+    /// @param id         the device to log out
+    /// @param session    the asking request's session
+    /// @param redirected receives the outcome, shown after the redirect
+    /// @return a redirect to the page
+    @PostMapping("/admin/enheter/{id}/logga-ut")
+    public String endDevice(@AuthenticationPrincipal SignedIn signedIn, @PathVariable String id,
+            HttpSession session, RedirectAttributes redirected) {
+        devices.end(signedIn, id, session, redirected);
+        return REDIRECT;
+    }
+
+    /// "Logga ut överallt annars".
+    ///
+    /// @param signedIn   the logged-in administrator
+    /// @param session    the asking request's session, which stays logged in
+    /// @param redirected receives the outcome, shown after the redirect
+    /// @return a redirect to the page
+    @PostMapping("/admin/enheter/andra/logga-ut")
+    public String endOtherDevices(@AuthenticationPrincipal SignedIn signedIn, HttpSession session,
+            RedirectAttributes redirected) {
+        devices.endOthers(signedIn, session, redirected);
+        return REDIRECT;
+    }
+
+    private String page(SignedIn signedIn, HttpSession session, NewAdministrator form, FieldErrors errors,
+            @Nullable String error, boolean offerPasskey, Model model) {
         model.addAttribute("signedIn", signedIn);
         passkeys.addTo(model, signedIn, offerPasskey);
+        devices.addTo(model, signedIn, session);
         model.addAttribute("administrators", administrators.list());
         model.addAttribute("form", form);
         model.addAttribute("errors", errors);

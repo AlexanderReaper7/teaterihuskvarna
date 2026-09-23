@@ -23,8 +23,11 @@ public final class Copy {
 
     /// The association is in Huskvarna, so a date is the date there, whatever
     /// zone the container runs in.
+    private static final ZoneId SWEDEN = ZoneId.of("Europe/Stockholm");
     private static final DateTimeFormatter DATE = DateTimeFormatter.ofPattern("d MMMM yyyy", SWEDISH)
-            .withZone(ZoneId.of("Europe/Stockholm"));
+            .withZone(SWEDEN);
+    private static final DateTimeFormatter DATE_TIME = DateTimeFormatter.ofPattern("d MMMM yyyy 'kl.' HH:mm", SWEDISH)
+            .withZone(SWEDEN);
 
     private final MessageSource messages;
 
@@ -53,5 +56,11 @@ public final class Copy {
     /// @return its date in Sweden, such as "23 september 2026"
     public String date(Instant instant) {
         return DATE.format(instant);
+    }
+
+    /// @param instant a moment
+    /// @return its date and time in Sweden, such as "23 september 2026 kl. 14:05"
+    public String dateTime(Instant instant) {
+        return DATE_TIME.format(instant);
     }
 }

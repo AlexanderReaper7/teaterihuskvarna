@@ -320,6 +320,27 @@ button:hover {
   margin-bottom: 0;
 }
 
+/* The countdown before a login ends (/js/session.js), fixed to the bottom of
+ * the window so it shows wherever the page is scrolled. */
+.login-countdown > div {
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  padding: 1rem var(--gutter);
+  border-top: 2px solid var(--color-primary);
+  background: var(--color-white);
+}
+
+.login-countdown > div > * {
+  max-width: var(--width-text);
+  margin: 0 auto 0.75rem;
+}
+
+.login-countdown > div > :last-child {
+  margin-bottom: 0;
+}
+
 /* Tables */
 
 table {

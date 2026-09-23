@@ -3,6 +3,7 @@ package se.teaterihuskvarna.login;
 import java.time.Duration;
 import java.util.List;
 import org.springframework.boot.session.autoconfigure.DefaultCookieSerializerCustomizer;
+import org.springframework.context.MessageSource;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
@@ -61,10 +62,11 @@ class SecurityConfiguration {
     private final List<LoginDirectory> directories;
     private final WebAuthnRelyingPartyOperations relyingParty;
     private final UserCredentialRepository passkeys;
+    private final DeviceNames devices;
 
     SecurityConfiguration(LoginLinks links, LinkRequestLimiter limiter, JdbcClient jdbc, LoginSettings settings,
             List<LoginDirectory> directories, WebAuthnRelyingPartyOperations relyingParty,
-            UserCredentialRepository passkeys) {
+            UserCredentialRepository passkeys, MessageSource messages) {
         this.links = links;
         this.limiter = limiter;
         this.jdbc = jdbc;
@@ -72,6 +74,7 @@ class SecurityConfiguration {
         this.directories = List.copyOf(directories);
         this.relyingParty = relyingParty;
         this.passkeys = passkeys;
+        this.devices = new DeviceNames(messages);
     }
 
     /// @param http Spring's builder for this chain
@@ -156,9 +159,9 @@ class SecurityConfiguration {
         return new PostgreSqlJdbcIndexedSessionRepositoryCustomizer();
     }
 
-    /// The one-time-token login, passkeys, the rate limit, logout, the entry
-    /// point, the refusals and the session at login, all of which differ between
-    /// the two chains only by kind.
+    /// The one-time-token login, passkeys, the rate limit, the end of a login,
+    /// logout, the entry point, the refusals and the session at login, all of
+    /// which differ between the two chains only by kind.
     private void login(HttpSecurity http, LoginKind kind, Duration sessionLifetime) {
         LoginUrls urls = LoginUrls.of(kind);
         HashedTokenService tokens = new HashedTokenService(kind, links, jdbc);
@@ -176,10 +179,11 @@ class SecurityConfiguration {
                 .generateRequestResolver(emailField(settings.linkLifetime()))
                 .tokenGenerationSuccessHandler(new RedirectOneTimeTokenGenerationSuccessHandler(urls.sent()))
                 .authenticationConverter(BoundLogin::from)
-                .authenticationSuccessHandler(LoginSuccessHandler.byLink(sessionLifetime, urls.success()))
+                .authenticationSuccessHandler(LoginSuccessHandler.byLink(sessionLifetime, devices, urls.success()))
                 .authenticationFailureHandler(failure(urls)));
-        http.with(new PasskeyLogin(kind, relyingParty, passkeys, directory, sessionLifetime),
+        http.with(new PasskeyLogin(kind, relyingParty, passkeys, directory, sessionLifetime, devices),
                 Customizer.withDefaults());
+        http.addFilterBefore(new LoginExpiryFilter(), AuthorizationFilter.class);
         http.addFilterBefore(new LinkRequestLimitFilter(limiter, urls), GenerateOneTimeTokenFilter.class);
         http.addFilterBefore(new LoginBrowserFilter(urls, settings.linkLifetime()), LinkRequestLimitFilter.class);
         http.logout(logout -> logout

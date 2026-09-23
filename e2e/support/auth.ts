@@ -1,4 +1,5 @@
 import { expect, type Page } from "@playwright/test";
+import { text } from "./copy";
 import { clearLinkRequests } from "./db";
 import { clearMail, waitForMail } from "./mail";
 import { PATHS, type Kind } from "./site";
@@ -28,7 +29,10 @@ export async function linkLogin(page: Page, kind: Kind, email: string): Promise<
   await expect(page).toHaveURL(PATHS[kind].home);
 }
 
+/// The page's own button, not the one in the row for this device in the list
+/// of logged-in devices, whose name includes the device.
 export async function logOut(page: Page, kind: Kind): Promise<void> {
-  await page.locator(`form[action="${PATHS[kind].logout}"] button`).click();
+  await page.locator(`form[action="${PATHS[kind].logout}"]`)
+    .getByRole("button", { name: text("logout.submit"), exact: true }).click();
   await page.waitForLoadState("load");
 }

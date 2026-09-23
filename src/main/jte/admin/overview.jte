@@ -1,11 +1,14 @@
 @import java.util.List
 @import se.teaterihuskvarna.administrator.AdministratorDetails
 @import se.teaterihuskvarna.administrator.NewAdministrator
+@import se.teaterihuskvarna.login.DeviceDetails
+@import se.teaterihuskvarna.login.LoginStatus
 @import se.teaterihuskvarna.login.PasskeyDetails
 @import se.teaterihuskvarna.login.PasskeyUrls
 @import se.teaterihuskvarna.login.SignedIn
 @import se.teaterihuskvarna.web.Copy
 @import se.teaterihuskvarna.web.CsrfField
+@import se.teaterihuskvarna.web.DeviceUrls
 @import se.teaterihuskvarna.web.FieldErrors
 @param Copy copy
 @param CsrfField csrf
@@ -18,6 +21,9 @@
 @param List<PasskeyDetails> passkeys
 @param PasskeyUrls passkeyUrls
 @param boolean offerPasskey = false
+@param List<DeviceDetails> devices
+@param LoginStatus loginStatus
+@param DeviceUrls deviceUrls
 @template.layout(copy = copy, title = copy.text("admin.heading"), content = @`
     <h1>${copy.text("admin.heading")}</h1>
     <p>${copy.text("admin.signedInAs", signedIn.fullName())}</p>
@@ -74,5 +80,7 @@
     </form>
 
     @template.tag.passkeys(copy = copy, csrf = csrf, passkeys = passkeys, urls = passkeyUrls)
+    @template.tag.devices(copy = copy, csrf = csrf, devices = devices, urls = deviceUrls)
+    @template.tag.loginCountdown(copy = copy, status = loginStatus, urls = deviceUrls)
     <script src="/js/passkey.js" defer></script>
 `)

@@ -47,19 +47,22 @@ final class PasskeyLogin extends AbstractHttpConfigurer<PasskeyLogin, HttpSecuri
     private final UserCredentialRepository passkeys;
     private final LoginDirectory directory;
     private final Duration sessionLifetime;
+    private final DeviceNames devices;
 
     /// @param kind            the login these filters serve
     /// @param relyingParty    Spring's passkey logic, shared by both kinds
     /// @param passkeys        where registration stores a new passkey
     /// @param directory       the lookup for this kind of login
-    /// @param sessionLifetime how long a login lasts without a request
+    /// @param sessionLifetime how long a login lasts
+    /// @param devices         names the device a login happens on
     PasskeyLogin(LoginKind kind, WebAuthnRelyingPartyOperations relyingParty, UserCredentialRepository passkeys,
-            LoginDirectory directory, Duration sessionLifetime) {
+            LoginDirectory directory, Duration sessionLifetime, DeviceNames devices) {
         this.kind = kind;
         this.relyingParty = relyingParty;
         this.passkeys = passkeys;
         this.directory = directory;
         this.sessionLifetime = sessionLifetime;
+        this.devices = devices;
     }
 
     @Override
@@ -81,7 +84,7 @@ final class PasskeyLogin extends AbstractHttpConfigurer<PasskeyLogin, HttpSecuri
         login.setAuthenticationManager(
                 new ProviderManager(new PasskeyAuthenticationProvider(kind, relyingParty, directory)));
         login.setAuthenticationSuccessHandler(
-                LoginSuccessHandler.byPasskey(sessionLifetime, LoginUrls.of(kind).success()));
+                LoginSuccessHandler.byPasskey(sessionLifetime, devices, LoginUrls.of(kind).success()));
         SessionAuthenticationStrategy sessions = http.getSharedObject(SessionAuthenticationStrategy.class);
         if (sessions == null) {
             throw new IllegalStateException(

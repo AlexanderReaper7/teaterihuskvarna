@@ -13,6 +13,7 @@ import se.teaterihuskvarna.administrator.AdministratorAlreadyExists;
 import se.teaterihuskvarna.administrator.CannotRemoveSelf;
 import se.teaterihuskvarna.administrator.NoSuchAdministrator;
 import se.teaterihuskvarna.administrator.TooFewAdministrators;
+import se.teaterihuskvarna.login.NoSuchDevice;
 import se.teaterihuskvarna.login.NoSuchPasskey;
 
 /// Turns what a service throws into an HTTP status and an RFC 9457 problem body.
@@ -74,6 +75,13 @@ public class ProblemResponses {
     @ExceptionHandler
     public ProblemDetail noSuch(NoSuchPasskey exception) {
         return problem(HttpStatus.NOT_FOUND, "No such passkey", exception);
+    }
+
+    /// @param exception the service finding no device of the caller's with that id
+    /// @return 404
+    @ExceptionHandler
+    public ProblemDetail noSuch(NoSuchDevice exception) {
+        return problem(HttpStatus.NOT_FOUND, "No such device", exception);
     }
 
     private static ProblemDetail problem(HttpStatus status, String title, RuntimeException exception) {

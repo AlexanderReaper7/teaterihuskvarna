@@ -15,7 +15,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import se.teaterihuskvarna.login.SignedIn;
 import se.teaterihuskvarna.member.MemberService;
 
-/// The logged-in member's own page, with their passkeys. Spring Security lets
+/// The logged-in member's own page, with their passkeys and devices. Spring Security lets
 /// only a member's account reach it.
 @Controller
 public class MemberPageController {
@@ -24,10 +24,12 @@ public class MemberPageController {
 
     private final MemberService members;
     private final PasskeySection passkeys;
+    private final DeviceSection devices;
 
-    MemberPageController(MemberService members, PasskeySection passkeys) {
+    MemberPageController(MemberService members, PasskeySection passkeys, DeviceSection devices) {
         this.members = members;
         this.passkeys = passkeys;
+        this.devices = devices;
     }
 
     /// An account always belongs to a member, so an empty result means the member
@@ -36,7 +38,7 @@ public class MemberPageController {
     /// @param signedIn the logged-in account
     /// @param session  holds whether a link login just happened, which offers a passkey
     /// @param request  may say the offer was declined on this browser
-    /// @param model    receives the member's name, address, household and passkeys
+    /// @param model    receives the member's name, address, household, passkeys and devices
     /// @return the member page
     @GetMapping("/medlem")
     public String member(@AuthenticationPrincipal SignedIn signedIn, HttpSession session,
@@ -44,6 +46,7 @@ public class MemberPageController {
         model.addAttribute("member", members.findByAccount(signedIn.id())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND)));
         passkeys.addTo(model, signedIn, passkeys.offer(session, request));
+        devices.addTo(model, signedIn, session);
         return "member/overview";
     }
 
@@ -68,6 +71,31 @@ public class MemberPageController {
     public String removePasskey(@AuthenticationPrincipal SignedIn signedIn, @PathVariable String id,
             RedirectAttributes redirected) {
         passkeys.remove(signedIn, id, redirected);
+        return REDIRECT;
+    }
+
+    /// @param signedIn   the logged-in account, whose device it must be
+    /// @param id         the device to log out
+    /// @param session    the asking request's session
+    /// @param redirected receives the outcome, shown after the redirect
+    /// @return a redirect to the page
+    @PostMapping("/medlem/enheter/{id}/logga-ut")
+    public String endDevice(@AuthenticationPrincipal SignedIn signedIn, @PathVariable String id,
+            HttpSession session, RedirectAttributes redirected) {
+        devices.end(signedIn, id, session, redirected);
+        return REDIRECT;
+    }
+
+    /// "Logga ut överallt annars".
+    ///
+    /// @param signedIn   the logged-in account
+    /// @param session    the asking request's session, which stays logged in
+    /// @param redirected receives the outcome, shown after the redirect
+    /// @return a redirect to the page
+    @PostMapping("/medlem/enheter/andra/logga-ut")
+    public String endOtherDevices(@AuthenticationPrincipal SignedIn signedIn, HttpSession session,
+            RedirectAttributes redirected) {
+        devices.endOthers(signedIn, session, redirected);
         return REDIRECT;
     }
 }
