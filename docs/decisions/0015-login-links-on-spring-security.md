@@ -42,6 +42,17 @@ A member session lasts 30 days. In memory, every deploy would end it. Spring Ses
 
 `SPRING_SESSION.PRINCIPAL_NAME` is indexed and holds `SignedIn.getUsername()`, such as `administrator:7`. Removing an administrator deletes every session under that name, so the removal takes effect at once rather than when the 8 hours run out.
 
+That delete misses one session. A login that looked the administrator up just before the removal committed writes its session row just after the delete, and the row works for 8 hours. So since 2026-09-23 every request in the administrator chain also asks whether the administrator is still active, and deletes the session if not (`ActiveLoginFilter`). The user chose this after a review that day. The other fix considered was deleting the sessions after the removal commits, which narrows the window without closing it.
+
+The cost was measured the same day on the e2e stack, 5 000 sequential keep-alive requests after 2 000 warm-up, two runs per build. Median milliseconds without the check, then with it:
+
+| Path | Without | With |
+| --- | --- | --- |
+| `/admin` | 1.192, 1.130 | 1.203, 1.115 |
+| `/api/admin/administrators` | 1.009, 1.004 | 0.964, 1.060 |
+
+The difference is smaller than the spread between two runs of the same build. By itself, the lookup (`removed_at IS NULL` by primary key) took 0.014 ms in `pgbench`. Spring Session's own load of the session takes 0.023 ms. Members get no such check, because nothing removes an account yet. Whatever later removes one should add the filter to the member chain.
+
 ## Two filter chains
 
 One address may belong to both an account and an administrator account, so one lookup cannot decide who is logging in. Each login kind has its own filter chain, token service and authentication provider, under `/logga-in` and `/admin/logga-in`. The token row records its kind, and a member token cannot log in on the administrator page.

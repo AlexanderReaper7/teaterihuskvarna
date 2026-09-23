@@ -211,6 +211,26 @@ class AdministratorIT extends IntegrationTestSupport {
         assertRedirect(mockMvc.perform(get("/admin").with(sessionOf(login))).andReturn(), "/admin/logga-in");
     }
 
+    /// A login that races a removal writes its session after the removal has
+    /// deleted the others. The row update here stands in for that removal: it
+    /// marks the administrator removed and leaves the session in place.
+    @Test
+    void aSessionThatOutlivesTheRemovalStopsWorking() throws Exception {
+        long bo = insertAdministrator(BO, "Bo Berg");
+        MvcResult page = logInByLink(LoginKind.ADMINISTRATOR, BO);
+        MvcResult api = logInByLink(LoginKind.ADMINISTRATOR, BO);
+        mockMvc.perform(get("/admin").with(sessionOf(page))).andExpect(status().isOk());
+        mockMvc.perform(get(API).with(sessionOf(api))).andExpect(status().isOk());
+
+        jdbc.sql("UPDATE administrator SET removed_at = now(), removed_by = ? WHERE id = ?")
+                .params(firstAdministratorId(), bo)
+                .update();
+
+        assertRedirect(mockMvc.perform(get("/admin").with(sessionOf(page))).andReturn(), "/admin/logga-in");
+        mockMvc.perform(get(API).with(sessionOf(api))).andExpect(status().isUnauthorized());
+        assertThat(sessionsOf(bo)).isZero();
+    }
+
     @Test
     void aMemberCannotUseTheAdministratorApi() throws Exception {
         RequestPostProcessor member = user(new SignedIn(LoginKind.MEMBER, 1, "karin@example.test", "Karin"));

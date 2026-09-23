@@ -17,6 +17,7 @@ import org.springframework.security.config.annotation.web.configurers.SessionMan
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.access.intercept.AuthorizationFilter;
 import org.springframework.security.web.authentication.DelegatingAuthenticationEntryPoint;
 import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint;
@@ -84,6 +85,10 @@ class SecurityConfiguration {
                 .requestMatchers(urls.page(), urls.page() + "/**").permitAll()
                 .anyRequest().hasRole("ADMINISTRATOR"));
         login(http, LoginKind.ADMINISTRATOR, settings.administratorSession());
+        // Only this chain: a member cannot be removed, and an administrator
+        // can read the whole register.
+        http.addFilterBefore(new ActiveLoginFilter(Directories.of(LoginKind.ADMINISTRATOR, directories)),
+                AuthorizationFilter.class);
         return http.build();
     }
 
