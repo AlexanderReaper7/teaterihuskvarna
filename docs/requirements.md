@@ -6,20 +6,22 @@ Priority: **MUST** has to be in version 1, **SHOULD** ought to be, **COULD** can
 
 Requirement text is quoted verbatim in Swedish. A quotation does not get translated, and the produktägare has to be able to recognise his own wording. Everything around it is English, per [decisions/0001](decisions/0001-language-policy.md): the headings, the area labels and the priority values are all structural rather than quoted.
 
+Status is Not started, Done, or Partial followed by what is missing.
+
 | Id | Area | Requirement | Priority | Status |
 | --- | --- | --- | --- | --- |
 | P1 | Public site | Startsidan visar nästa evenemang överst | MUST | Not started |
 | P2 | Public site | Kalender med evenemang, filtrerbar per serie (Kaffe med drömmar, Teaterträdgården Smedbyn, Alf Henrikson-dagen m.fl.) | MUST | Not started |
 | P3 | Public site | Nyhetslista och nyhetssida | MUST | Not started |
 | P4 | Public site | Sidor för Om föreningen, Styrelsen, Partners, Produktioner, Ludde-priser, Kontakt | MUST | Not started |
-| P5 | Public site | Bli medlem-formulär som skapar en medlem med status “ej betald” och visar betalinstruktion | MUST | Not started |
+| P5 | Public site | Bli medlem-formulär som skapar en medlem med status “ej betald” och visar betalinstruktion | MUST | Partial: the form creates the member and shows the bankgiro, but no fee status exists yet |
 | P6 | Public site | Fungerar på mobil, tillgänglighet enligt WCAG 2.1 AA | MUST | Not started |
 | R1 | Editing | Innehållstyperna Evenemang, Nyhet, Sida, Erbjudande, Partner i Sanity | MUST | Not started |
 | R2 | Editing | Publicerat innehåll syns på sidan inom en minut | MUST | Not started |
 | R3 | Editing | Förhandsgranskning innan publicering | SHOULD | Not started |
-| I1 | Login | Lösenordsfri inloggning via engångslänk i e-post | MUST | Not started |
-| I2 | Login | Två roller: medlem och administratör | MUST | Not started |
-| M1 | Member pages | Visa och uppdatera egna kontaktuppgifter | MUST | Not started |
+| I1 | Login | Lösenordsfri inloggning via engångslänk i e-post | MUST | Done |
+| I2 | Login | Två roller: medlem och administratör | MUST | Done |
+| M1 | Member pages | Visa och uppdatera egna kontaktuppgifter | MUST | Partial: `/medlem` shows name, email and household, but not the phone number or postal address, and nothing can be changed |
 | M2 | Member pages | Se medlemsstatus och betalinstruktion för årets avgift | MUST | Not started |
 | M3 | Member pages | Se erbjudanden och anmäla sig, med antal platser kvar | MUST | Not started |
 | M4 | Member pages | Årsmöteshandlingar och medlemsbrev | SHOULD | Not started |

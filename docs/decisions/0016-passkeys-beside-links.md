@@ -61,6 +61,10 @@ The cookie is `p=1`, `HttpOnly`, `SameSite=Lax`, with `Path` set to the page's o
 
 It lasts 400 days, the longest Chrome accepts. After that the offer returns once per link login until declined again. `localStorage` was the other per-browser option, rejected because Safari deletes script-written storage after 7 days of browsing without a visit to the site, which a member logging in monthly would hit, and because nothing in the build could test it. EU ePrivacy rules, in Sweden the electronic communications act (LEK), cover the cookie either way. Article 29 Working Party Opinion 04/2012 treats a user interface customisation cookie as exempt from consent, and this is one the person asks for by pressing the button. Whether that holds for a cookie lasting 400 days was not checked against the opinion's text on 2026-09-23; it belongs in the association's privacy review, and the privacy text should mention the cookie either way.
 
+## User verification is preferred, not required
+
+A passkey login asks the authenticator for user verification, a PIN or a fingerprint, but accepts one that answers without it. That is Spring Security 7.1.1's default, `UserVerificationRequirement.PREFERRED`, which `Webauthn4JRelyingPartyOperations` sets for both registration and login. A review on 2026-09-23 pointed out that a stolen security key without a PIN then logs its owner in, administrators included, and suggested `REQUIRED`. The user kept `PREFERRED` the same day. `REQUIRED` would refuse every key without a PIN, including ones already registered, and their owners would fall back to login links.
+
 ## Personal data
 
 A passkey row holds a public key, the label (browser and system), when it was added and when it was last used. The last one says when the person last logged in with it. They sit in the same database as the member register and leave only with a backup. The association's record of personal data categories, per [projektplan.md](../projektplan.md), should list them.

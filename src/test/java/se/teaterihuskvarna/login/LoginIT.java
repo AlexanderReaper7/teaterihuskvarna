@@ -11,8 +11,15 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.time.Duration;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
@@ -33,7 +40,8 @@ import se.teaterihuskvarna.IntegrationTestSupport;
 /// - a link expires after the configured lifetime, one hour by default;
 /// - opening a link logs nobody in, pressing its button does, and only once;
 /// - the rate limits per address and per client stop the mail but not the
-///   response, which stays the same;
+///   response, which stays the same, and hold for requests sent at once;
+/// - expired links, and client addresses older than the window, are deleted;
 /// - member and administrator routes deny access unless a rule grants it, and
 ///   the REST adapter answers 401 rather than redirecting.
 ///
@@ -48,6 +56,12 @@ class LoginIT extends IntegrationTestSupport {
 
     @Autowired
     private LoginSettings settings;
+
+    @Autowired
+    private LinkRequestLimiter limiter;
+
+    @Autowired
+    private LoginCleanup cleanup;
 
     @Test
     void knownAndUnknownAddressesGetTheSameResponse() throws Exception {
@@ -282,6 +296,57 @@ class LoginIT extends IntegrationTestSupport {
 
         assertRedirect(first, "/logga-in/skickat");
         assertThat(awaitMails(limit)).allSatisfy(mail -> assertThat(mail.getTo()).containsExactly(KARIN));
+    }
+
+    /// Requests sent at the same moment count one another. Each would otherwise
+    /// count before any of them had recorded itself, and all would pass.
+    @Test
+    void requestsSentAtOnceStillStopAtTheAddressLimit() throws Exception {
+        int requests = settings.requestsPerAddress() * 4;
+        CountDownLatch start = new CountDownLatch(1);
+        List<Future<Boolean>> results = new ArrayList<>();
+        try (ExecutorService threads = Executors.newFixedThreadPool(requests)) {
+            for (int request = 0; request < requests; request++) {
+                String client = "10.0.0." + request;
+                results.add(threads.submit(() -> {
+                    start.await();
+                    return limiter.tryAcquire(KARIN, client);
+                }));
+            }
+            start.countDown();
+            long allowed = 0;
+            for (Future<Boolean> result : results) {
+                if (result.get()) {
+                    allowed++;
+                }
+            }
+
+            assertThat(allowed).isEqualTo(settings.requestsPerAddress());
+        }
+    }
+
+    /// `docs/projektplan.md`: "the IP addresses are deleted along with expired
+    /// tokens". [LoginCleanup] deletes links past their expiry, and requests
+    /// older than the rate limit's window with their client addresses, and
+    /// keeps the rest.
+    @Test
+    void theCleanupDeletesExpiredLinksAndOldClientAddresses() {
+        OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
+        OffsetDateTime windowStart = now.minus(settings.requestWindow());
+        jdbc.sql("INSERT INTO one_time_token (token_hash, kind, email, expires_at) VALUES "
+                + "('expired', 'member', ?, ?), ('live', 'member', ?, ?)")
+                .params(KARIN, now.minusSeconds(1), KARIN, now.plusHours(1))
+                .update();
+        jdbc.sql("INSERT INTO link_request (email, client_address, requested_at) VALUES (?, ?, ?), (?, ?, ?)")
+                .params(KARIN, "10.0.0.1", windowStart.minusSeconds(1), KARIN, "10.0.0.2", windowStart.plusMinutes(1))
+                .update();
+
+        cleanup.deleteExpired();
+
+        assertThat(jdbc.sql("SELECT token_hash FROM one_time_token").query(String.class).list())
+                .containsExactly("live");
+        assertThat(jdbc.sql("SELECT client_address FROM link_request").query(String.class).list())
+                .containsExactly("10.0.0.2");
     }
 
     @Test

@@ -56,8 +56,9 @@ final class PasskeyRegistrationConverter implements HttpMessageConverter<Object>
     @Override
     public Object read(Class<?> type, HttpInputMessage input) throws IOException {
         byte[] body = input.getBody().readAllBytes();
-        JsonNode label = json.readTree(body).path("publicKey").path("label");
-        if (label.isString() && label.asString().codePointCount(0, label.asString().length()) > MAX_LABEL) {
+        JsonNode node = json.readTree(body).path("publicKey").path("label");
+        String label = node.isString() ? node.asString() : "";
+        if (label.codePointCount(0, label.length()) > MAX_LABEL) {
             throw new HttpMessageNotReadableException("A passkey label is over " + MAX_LABEL + " characters", input);
         }
         return spring.read(type, new HttpInputMessage() {

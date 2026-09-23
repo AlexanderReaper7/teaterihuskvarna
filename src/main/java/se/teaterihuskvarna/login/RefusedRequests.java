@@ -48,11 +48,15 @@ final class RefusedRequests implements AccessDeniedHandler {
     @Override
     public void handle(HttpServletRequest request, HttpServletResponse response, AccessDeniedException denied)
             throws IOException, ServletException {
-        if (UnknownPaths.MARKED.matches(request) && !response.isCommitted()) {
+        if (response.isCommitted()) {
+            bare.handle(request, response, denied);
+            return;
+        }
+        if (UnknownPaths.MARKED.matches(request)) {
             UnknownPaths.notFound(request, response);
             return;
         }
-        if (API.matches(request) || response.isCommitted()) {
+        if (API.matches(request)) {
             bare.handle(request, response, denied);
             return;
         }

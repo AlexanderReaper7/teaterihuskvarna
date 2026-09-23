@@ -44,6 +44,13 @@ public class LinkRequestLimiter {
         String client = cut(clientAddress, CLIENT_WIDTH);
         OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
         OffsetDateTime since = now.minus(settings.requestWindow());
+        // Without the locks, requests sent at once all count before any of them
+        // inserts, so all of them pass. With them, each waits for the one
+        // before to commit, and then counts its row. The address is always
+        // locked before the client, so two requests cannot each hold the lock
+        // the other waits for.
+        lock("link_request email " + address);
+        lock("link_request client " + client);
         long byAddress = jdbc.sql("SELECT COUNT(*) FROM link_request WHERE email = ? AND requested_at > ?")
                 .param(address)
                 .param(since)
@@ -60,6 +67,15 @@ public class LinkRequestLimiter {
                 .param(now)
                 .update();
         return byAddress < settings.requestsPerAddress() && byClient < settings.requestsPerClient();
+    }
+
+    /// Held until the transaction ends. Two keys whose hashes collide only make
+    /// requests wait for each other, which costs time and nothing else.
+    private void lock(String key) {
+        jdbc.sql("SELECT 1 FROM (SELECT pg_advisory_xact_lock(hashtextextended(?, 0))) AS locked")
+                .param(key)
+                .query(Integer.class)
+                .single();
     }
 
     private static String cut(String value, int width) {

@@ -7,6 +7,11 @@ on:
   push:
   pull_request:
 
+# Read the repository and nothing else. No job here writes to GitHub, so a
+# compromised action gets a token that cannot push or change anything.
+permissions:
+  contents: read
+
 jobs:
   check:
     runs-on: ubuntu-latest

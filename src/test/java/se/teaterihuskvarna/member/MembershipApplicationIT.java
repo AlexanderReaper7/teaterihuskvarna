@@ -10,9 +10,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.mail.SimpleMailMessage;
@@ -29,6 +31,7 @@ import se.teaterihuskvarna.login.LoginKind;
 /// - confirming creates one member with one account and shows the payment
 ///   instruction with the configured bankgiro;
 /// - a confirmation link works once, and not after it expires;
+/// - an unconfirmed application is deleted 24 hours after it was sent;
 /// - an address that already has an account gets a login link instead, and the
 ///   response is the same as for a new address;
 /// - invalid input is refused before anything is stored or mailed.
@@ -40,9 +43,13 @@ class MembershipApplicationIT extends IntegrationTestSupport {
 
     private static final String CONFIRMATION = "/bli-medlem/bekrafta";
     private static final String KARIN = "karin@example.test";
+    private static final String ERIK = "erik@example.test";
 
     @Value("${teaterihuskvarna.association.bankgiro}")
     private String bankgiro;
+
+    @Autowired
+    private ExpiredApplications expiredApplications;
 
     @Test
     void anApplicationMailsAConfirmationLinkAndStoresNoMember() throws Exception {
@@ -141,6 +148,33 @@ class MembershipApplicationIT extends IntegrationTestSupport {
         assertThat(confirmed.getResponse().getStatus()).isLessThan(500);
         assertThat(rowsIn("member")).isZero();
         assertThat(rowsIn("account")).isZero();
+    }
+
+    /// `docs/projektplan.md`: "An application nobody confirms is deleted after 24
+    /// hours." The row expires then, and [ExpiredApplications] deletes what has
+    /// expired and nothing else.
+    @Test
+    void anUnconfirmedApplicationIsDeletedAfter24Hours() throws Exception {
+        apply("Karin Karlsson", KARIN);
+        awaitMail();
+        forgetMails();
+        apply("Erik Eriksson", ERIK);
+        awaitMail();
+        long keptSeconds = jdbc.sql("""
+                SELECT CAST(EXTRACT(EPOCH FROM expires_at - created_at) AS BIGINT)
+                FROM membership_application WHERE email = ?""")
+                .param(KARIN)
+                .query(Long.class)
+                .single();
+        jdbc.sql("UPDATE membership_application SET expires_at = now() - INTERVAL '1 second' WHERE email = ?")
+                .param(KARIN)
+                .update();
+
+        expiredApplications.delete();
+
+        assertThat(Duration.ofSeconds(keptSeconds)).isEqualTo(Duration.ofHours(24));
+        assertThat(jdbc.sql("SELECT email FROM membership_application").query(String.class).list())
+                .containsExactly(ERIK);
     }
 
     /// The form must not reveal that an address is already a member's, so the

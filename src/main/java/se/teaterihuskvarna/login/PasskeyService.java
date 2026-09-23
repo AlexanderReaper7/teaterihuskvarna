@@ -45,8 +45,8 @@ public class PasskeyService {
                 .toList();
     }
 
-    /// Removes one of the logged-in login's passkeys. The authenticator keeps
-    /// its half, so the browser may go on offering it until the person deletes
+    /// Removes one passkey of the logged-in account or administrator account.
+    /// The authenticator keeps its half, so the browser may go on offering it until the person deletes
     /// it there too; the site then refuses it.
     ///
     /// @param signedIn who is logged in

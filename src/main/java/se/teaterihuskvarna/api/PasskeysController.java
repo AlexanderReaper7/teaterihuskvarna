@@ -12,8 +12,8 @@ import se.teaterihuskvarna.login.PasskeyDetails;
 import se.teaterihuskvarna.login.PasskeyService;
 import se.teaterihuskvarna.login.SignedIn;
 
-/// The logged-in login's own passkeys: the same list and remove the `/medlem`
-/// and `/admin` pages offer. One path each for members and administrators,
+/// The passkeys of the logged-in account or administrator account: the same
+/// list and remove the `/medlem` and `/admin` pages offer. One path each for members and administrators,
 /// which the two filter chains guard by kind. Adding a passkey is a browser
 /// ceremony against Spring's registration filter, with no endpoint here.
 @RestController

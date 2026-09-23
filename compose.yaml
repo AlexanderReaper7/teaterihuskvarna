@@ -35,7 +35,9 @@ services:
     environment:
       DATABASE_URL: jdbc:postgresql://db:5432/${POSTGRES_DB:-teaterihuskvarna}
       DATABASE_USER: ${POSTGRES_USER:-teaterihuskvarna}
-      DATABASE_PASSWORD: ${POSTGRES_PASSWORD:-local-development-only}
+      # No default, so production cannot start on a password written in this
+      # file. Local development sets one in .env like any other value.
+      DATABASE_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
       # Brevo's relay and credentials: docs/decisions/0005. The dev profile
       # ignores these and sends to Mailpit.
       SMTP_ADDRESS: ${SMTP_ADDRESS:-}
@@ -65,7 +67,7 @@ services:
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-teaterihuskvarna}
       POSTGRES_USER: ${POSTGRES_USER:-teaterihuskvarna}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-local-development-only}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
     volumes:
       - postgres-data:/var/lib/postgresql
     healthcheck:

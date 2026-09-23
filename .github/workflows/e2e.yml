@@ -10,6 +10,11 @@ name: e2e
 on:
   workflow_dispatch:
 
+# Read the repository and nothing else. No job here writes to GitHub, so a
+# compromised action gets a token that cannot push or change anything.
+permissions:
+  contents: read
+
 jobs:
   e2e:
     runs-on: ubuntu-latest
