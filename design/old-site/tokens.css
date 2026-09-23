@@ -1,0 +1,100 @@
+/* The old site's design values, read off teaterihuskvarna.se on 2026-09-22.
+ *
+ * This is a record, not a stylesheet for the new site. Bricks Builder stores
+ * these under generated names (--bricks-color-cwmskc and so on) inside a <style>
+ * block in every page's <head>; the names below say what each one is for, which
+ * is the part worth carrying forward. See README.md for what to keep and what
+ * to drop.
+ *
+ * Bricks itself is commercially licensed, so none of its CSS is copied here.
+ * A colour value and a font size are facts about the design, not the theme's code.
+ */
+
+:root {
+  /* --- Colours the association chose --------------------------------------
+   * Seven in use. Header, footer and hero all sit on primary; body content sits
+   * on white. There is no dark mode and no neutral ramp.
+   */
+
+  /* Header, footer, hero background, primary button, active pagination. */
+  --color-primary: #006d68;
+
+  /* Body-copy links, and primary button hover. The only lighter teal. */
+  --color-primary-hover: #168a80;
+
+  /* The one warm colour. Link hover, social-icon hover, card hover fill.
+   * Never used as a resting background: it only appears under the pointer. */
+  --color-secondary: #ee6810;
+
+  /* Text and icons on primary, and the fill of light cards on white.
+   * Doubles as the default border colour site-wide. */
+  --color-light: #ebfaf5;
+
+  /* Fill of dark cards (Luddepriser, Produktioner lists) with light text. */
+  --color-muted: #3e3939;
+
+  --color-dark: #000000;
+  --color-white: #ffffff;
+
+  /* Declared in the palette but never referenced by any rule: #55726d.
+   * Recorded so a reader knows it was considered and dropped, not missed. */
+
+  /* --- Colours inherited from the theme, not chosen ------------------------
+   * These come from Bricks' defaults and were never overridden. They are the
+   * reason the design looks less consistent than it is: the production and
+   * news sidebars are theme grey while every other panel is mint.
+   */
+  --theme-body-text: #363636;   /* Bricks' default body colour */
+  --theme-nav-link: #f5f5f5;    /* main nav, near-white but not --color-light */
+  --theme-panel-grey: #f5f5f5;  /* sidebar fill on production and news pages */
+
+  /* --- Type ---------------------------------------------------------------
+   * Montserrat is the only webfont, and it is only used for display headings.
+   * Body copy falls through to whatever sans the visitor's OS supplies, so the
+   * site renders differently on Windows, macOS and Android. Deliberate or not,
+   * it is the single biggest thing to fix rather than copy.
+   */
+  --font-display: "Montserrat", sans-serif;
+  --font-body: -apple-system, "system-ui", "Segoe UI", roboto, helvetica, arial,
+    sans-serif;
+
+  --weight-display: 800;   /* hero lines */
+  --weight-h1: 900;        /* page titles */
+  --weight-link: 700;      /* every <a> in body copy */
+
+  --size-hero-lead: 48px;  /* "FÖRENINGEN" */
+  --size-hero-main: 83px;  /* "TEATER" */
+  --size-hero-tail: 46px;  /* "I HUS" + the typed word */
+  --size-h1: 70px;         /* uppercase page titles */
+  --size-card-title: 20px;
+  --size-meta: 12px;
+  --size-body: 15px;
+  --size-social-icon: 40px;
+
+  --line-height-body: 1.7;
+  --line-height-display: 1;
+
+  /* --- Space and form -----------------------------------------------------
+   * No rounded corners anywhere, no shadows anywhere. Every edge in the design
+   * is a right angle. Two breakpoints are declared and only one does work:
+   * 767px switches the whole layout, 478px drops a single heading to 50px.
+   * Above 767px nothing changes at any width.
+   */
+  --breakpoint: 767px;
+  --breakpoint-small: 478px;
+
+  --section-padding-top: 100px;
+  --section-padding-bottom: 150px;
+  --section-padding-mobile: 50px;
+
+  --footer-padding-top: 150px;
+  --footer-padding-bottom: 200px;
+
+  --card-padding: 40px;        /* news list on white */
+  --card-padding-compact: 20px; /* sidebar lists on muted */
+  --grid-gap: 20px;
+  --grid-gap-wide: 40px;
+
+  --radius: 0;
+  --shadow: none;
+}
