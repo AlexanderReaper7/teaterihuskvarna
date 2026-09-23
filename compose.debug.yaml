@@ -1,6 +1,6 @@
 # Debugging only. Compose does not load this on its own; it has to be named:
 #
-#   docker compose -f compose.yaml -f compose.debug.yaml up -d --build
+#   docker compose -f compose.yaml -f compose.dev.yaml -f compose.debug.yaml up -d --build
 #
 # The VS Code task "compose: up with the debugger port open" runs exactly that,
 # and the "Attach to the application" launch configuration runs the task first.

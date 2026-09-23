@@ -1,0 +1,387 @@
+/* The site's one stylesheet. Values come from the survey of the old site,
+ * design/old-site/tokens.css, and follow its "What to keep and what to drop"
+ * section: the palette, square edges, no shadows, no gradients, and Montserrat
+ * for all text instead of the visitor's system font.
+ *
+ * Requirement P6 is WCAG 2.1 AA. Every text pair below reaches 4.5:1 and every
+ * interface component 3:1. Change a colour or pair and measure it again.
+ *
+ * Where each file under static/ came from, and its licence: static/README.md.
+ */
+
+@font-face {
+  font-family: "Montserrat";
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("../fonts/montserrat-latin-normal.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: "Montserrat";
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("../fonts/montserrat-latin-ext-normal.woff2") format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329,
+    U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+@font-face {
+  font-family: "Montserrat";
+  font-style: italic;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("../fonts/montserrat-latin-italic.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: "Montserrat";
+  font-style: italic;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("../fonts/montserrat-latin-ext-italic.woff2") format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329,
+    U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+:root {
+  /* The old site has no dark variant, and neither does this one. */
+  color-scheme: light;
+
+  /* The association's palette, named by role as in tokens.css. */
+  --color-primary: #006d68;
+  --color-primary-hover: #168a80;
+  --color-light: #ebfaf5;
+  --color-muted: #3e3939;
+  --color-dark: #000000;
+  --color-white: #ffffff;
+
+  /* The secondary colour, orange #ee6810, is left out on purpose. It reaches
+   * 3.17:1 on white and 1.96:1 on teal, so it cannot carry text or a focus
+   * ring under P6. design/old-site/README.md proposes a darker value, and
+   * choosing it is the association's call, so nothing here uses orange until
+   * they have made it. */
+
+  /* Not in the palette. Error text needs a colour the palette lacks, and this
+   * red reaches 6.54:1 on white and 6.08:1 on mint. */
+  --color-error: #b3261e;
+
+  /* The three Bricks defaults the old site never overrode, resolved to palette
+   * values. #363636 body text becomes muted. The #f5f5f5 navigation text
+   * becomes light, like every other text on teal. The #f5f5f5 sidebar fill
+   * becomes light, like every other panel. */
+  --color-text: var(--color-muted);
+  --color-on-primary: var(--color-light);
+  --color-panel: var(--color-light);
+
+  --font-body: "Montserrat", sans-serif;
+  --weight-h1: 900;
+  --weight-link: 700;
+  --size-body: 0.9375rem; /* 15px at the default root size */
+  --line-height-body: 1.7;
+
+  /* The old site's content column, measured off join.png. */
+  --width-column: 68rem;
+  /* Line length for prose and forms inside that column. */
+  --width-text: 44rem;
+  --gutter: 1.5rem;
+  --focus-width: 3px;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  margin: 0;
+  background: var(--color-white);
+  color: var(--color-text);
+  font-family: var(--font-body);
+  font-size: var(--size-body);
+  line-height: var(--line-height-body);
+}
+
+/* A black ring clear of the element, so it reads against white and against a
+ * teal button alike. Inside the header and footer it turns light instead. */
+:focus-visible {
+  outline: var(--focus-width) solid var(--color-dark);
+  outline-offset: 2px;
+}
+
+/* Header and footer */
+
+.site-header,
+.site-footer {
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+}
+
+.site-header :focus-visible,
+.site-footer :focus-visible {
+  outline-color: var(--color-on-primary);
+}
+
+.site-header {
+  padding: 1rem var(--gutter);
+  text-align: center;
+}
+
+.site-header a {
+  display: inline-block;
+}
+
+.site-header img {
+  display: block;
+  width: auto;
+  height: 6rem;
+}
+
+.site-footer p {
+  max-width: var(--width-column);
+  margin: 0 auto;
+  padding: 3rem var(--gutter) 4rem;
+  font-weight: 700;
+}
+
+/* Content */
+
+main {
+  flex: 1;
+  width: 100%;
+  max-width: var(--width-column);
+  margin: 0 auto;
+  padding: 4rem var(--gutter) 6rem;
+}
+
+main > * {
+  max-width: var(--width-text);
+}
+
+main > table {
+  max-width: none;
+}
+
+h1 {
+  margin: 0 0 2rem;
+  font-size: 2.75rem;
+  font-weight: var(--weight-h1);
+  line-height: 1.1;
+  text-transform: uppercase;
+  overflow-wrap: break-word;
+  hyphens: auto;
+}
+
+h2 {
+  margin: 2.5rem 0 0.5rem;
+  color: var(--color-primary);
+  font-size: 1.25rem;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+p,
+ul,
+dl {
+  margin: 0 0 1rem;
+}
+
+ul {
+  padding-left: 1.25rem;
+}
+
+/* Bold as on the old site, and underlined because teal against the body text
+ * is only 1.83:1, too little to tell a link by colour alone. */
+a {
+  color: var(--color-primary);
+  font-weight: var(--weight-link);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.2em;
+}
+
+a:hover {
+  text-decoration-thickness: 3px;
+}
+
+dt {
+  font-weight: 700;
+}
+
+dd {
+  margin: 0 0 1rem;
+}
+
+/* Forms */
+
+form {
+  margin: 0 0 1.5rem;
+}
+
+/* The passkey section ends in a bare button rather than a form, so it keeps
+ * the gap a form would leave before whatever follows. */
+[data-passkeys] {
+  margin: 0 0 1.5rem;
+}
+
+label {
+  display: block;
+  margin-bottom: 0.25rem;
+  font-weight: 700;
+}
+
+input,
+button {
+  border-radius: 0;
+  font: inherit;
+}
+
+input {
+  width: 100%;
+  max-width: 28rem;
+  padding: 0.5rem 0.75rem;
+  border: 2px solid var(--color-muted);
+  background: var(--color-white);
+  color: var(--color-text);
+}
+
+input[aria-invalid="true"] {
+  border-color: var(--color-error);
+}
+
+.field-error {
+  display: block;
+  margin-top: 0.25rem;
+  color: var(--color-error);
+  font-weight: 700;
+}
+
+button {
+  padding: 0.625rem 1.5rem;
+  border: 2px solid var(--color-primary);
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+/* The old site's hover puts white text on primary-hover, 4.22:1, and the light
+ * text used at rest would be 3.92:1. Both fail 4.5:1. Black on primary-hover
+ * reaches 4.98:1, so the text turns black instead. */
+button:hover {
+  border-color: var(--color-primary-hover);
+  background: var(--color-primary-hover);
+  color: var(--color-dark);
+}
+
+.button-secondary {
+  background: var(--color-white);
+  color: var(--color-primary);
+}
+
+/* Buttons side by side. Without it the only gap is the space between the
+ * tags, and none at all once a narrow screen wraps them onto two lines. */
+.buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.button-secondary:hover {
+  border-color: var(--color-primary);
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+}
+
+/* Messages. An alert is an error, a status confirms that something happened. */
+
+[role="alert"],
+[role="status"] {
+  margin: 0 0 1.5rem;
+  padding: 1rem 1.25rem;
+  border-left: 6px solid var(--color-primary);
+  background: var(--color-panel);
+}
+
+[role="alert"] {
+  border-left-color: var(--color-error);
+}
+
+[role="alert"] > :last-child,
+[role="status"] > :last-child {
+  margin-bottom: 0;
+}
+
+/* Tables */
+
+table {
+  width: 100%;
+  margin: 0 0 2rem;
+  border-collapse: collapse;
+}
+
+caption {
+  margin-bottom: 0.5rem;
+  font-weight: 700;
+  text-align: left;
+}
+
+th,
+td {
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+  vertical-align: middle;
+  overflow-wrap: anywhere;
+}
+
+th {
+  border-bottom: 2px solid var(--color-primary);
+}
+
+tbody tr:nth-child(even) {
+  background: var(--color-panel);
+}
+
+td form {
+  margin: 0;
+}
+
+/* A text that wraps is how a long button fits a narrow screen, but a table
+ * squeezes its columns first, and a row's short button would break in two. */
+td button {
+  padding: 0.25rem 0.75rem;
+  white-space: nowrap;
+}
+
+/* The old site's one working breakpoint. */
+@media (max-width: 767px) {
+  :root {
+    --gutter: 1.25rem;
+  }
+
+  .site-header img {
+    height: 4.5rem;
+  }
+
+  main {
+    padding-top: 2.5rem;
+    padding-bottom: 3rem;
+  }
+
+  h1 {
+    font-size: 1.75rem;
+  }
+
+  th,
+  td {
+    padding: 0.5rem;
+  }
+}

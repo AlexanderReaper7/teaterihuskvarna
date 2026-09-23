@@ -1,0 +1,20 @@
+# Test values, so the validated settings records bind and the context starts.
+# Under config/ rather than beside the main application.yaml on purpose: Boot
+# reads classpath:/config/ after classpath:/ and lets it win key by key, while a
+# second classpath:/application.yaml would hide the main one entirely.
+
+spring:
+  mail:
+    properties:
+      # A test that sends mail does so to a plain, local SMTP server.
+      mail.smtp.starttls.required: false
+
+teaterihuskvarna:
+  mail:
+    site-url: http://localhost
+    from: noreply@example.test
+  association:
+    bankgiro: 123-4567
+  first-administrator:
+    email: admin@example.test
+    full-name: Ada Admin

@@ -1,4 +1,4 @@
-# 0012 — JPA over a schema Flyway owns
+# 0012: JPA over a schema Flyway owns
 
 2026-09-22
 

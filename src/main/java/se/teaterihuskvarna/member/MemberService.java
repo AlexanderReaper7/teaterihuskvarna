@@ -6,7 +6,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 /// Everything the system can do with the member register.
 ///
-/// This is the only way in. `MemberRepository` is package private so that no
+/// This is the only way in. The repositories are package private so that no
 /// adapter can reach the database around this class, and an ArchUnit rule keeps
 /// `web` and `api` off the entities as well.
 ///
@@ -18,17 +18,19 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 public class MemberService {
 
-    private final MemberRepository members;
+    private final AccountRepository accounts;
 
-    MemberService(MemberRepository members) {
-        this.members = members;
+    MemberService(AccountRepository accounts) {
+        this.accounts = accounts;
     }
 
-    /// Looks a member up by the address their login link would go to.
+    /// Looks up the member a logged-in account belongs to. The id comes from
+    /// `SignedIn.id()`, which for a member login is the account's id, not the
+    /// member's.
     ///
-    /// @param email the address to look up, in any case
-    /// @return the member with that address, or empty
-    public Optional<MemberDetails> findByEmail(String email) {
-        return members.findByEmailIgnoreCase(email).map(MemberDetails::of);
+    /// @param accountId the logged-in account's id
+    /// @return the member that account belongs to, or empty if the account is gone
+    public Optional<MemberDetails> findByAccount(long accountId) {
+        return accounts.findById(accountId).map(account -> MemberDetails.of(account.getMember(), account));
     }
 }

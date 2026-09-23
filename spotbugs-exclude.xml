@@ -8,7 +8,7 @@
 <FindBugsFilter>
 
     <!--
-        EI_EXPOSE_REP / EI_EXPOSE_REP2 in the entity package: an object that hands
+        EI_EXPOSE_REP / EI_EXPOSE_REP2 on entities: an object that hands
         out a reference to mutable state lets a caller change it from outside.
 
         In an entity that reference is the point. `member.getHousehold()` returns
@@ -17,24 +17,29 @@
         the database, and `==` against the same row loaded elsewhere in the
         persistence context would be false. The identity is the association.
 
-        The detector cannot tell an entity reference from a mutable value, so the
-        exclusion is scoped to the package rather than to the two methods. What
-        makes that safe is a check that can be run rather than trusted: every
-        field in this package is a Long, a String, an Instant or another entity,
-        and no getter returns a collection. A collection getter that appears here
-        later must return a copy, and a mutable value type must not be added at
-        all, because this exclusion would hide both.
+        The detector cannot tell an entity reference from a mutable value, so
+        the exclusion names the entity classes that hold an association. Each
+        one's fields are a Long, a String, an Instant or another entity, and none
+        has a getter that returns a collection. A collection getter added to one
+        of them later must return a copy, and a mutable value type must not be
+        added at all, because this exclusion would hide both.
 
-        Scoped to entities deliberately. A controller or service that leaks
-        mutable state is still worth a look, which is why this names one package
-        instead of the whole application. A second entity package gets its own
-        entry here only after the check above has been run against it.
+        Named by class, not by package. Until 2026-09-23 this matched the whole
+        `se.teaterihuskvarna.member` package, which then held only entities. It
+        now holds services too, and a service that leaks mutable state is worth
+        a look. Another entity gets its own line here only after the check above
+        has been run against it.
 
-        Seen to fire on 2026-09-22: Member.getHousehold and Member.setHousehold,
-        2 bugs, build failed. Removing this block reproduces that.
+        Seen to fire on 2026-09-22: Member.getHousehold and Member.setHousehold.
+        On 2026-09-23, with this block removed: those two plus Account.getMember
+        and the Account constructor, 4 bugs, build failed, and nothing else in
+        the application.
     -->
     <Match>
-        <Package name="se.teaterihuskvarna.member"/>
+        <Or>
+            <Class name="se.teaterihuskvarna.member.Member"/>
+            <Class name="se.teaterihuskvarna.member.Account"/>
+        </Or>
         <Bug pattern="EI_EXPOSE_REP,EI_EXPOSE_REP2"/>
     </Match>
 

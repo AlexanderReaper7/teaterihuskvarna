@@ -1,4 +1,4 @@
-# 0003 — No branch protection on main, for now
+# 0003: No branch protection on main, for now
 
 2026-09-22
 

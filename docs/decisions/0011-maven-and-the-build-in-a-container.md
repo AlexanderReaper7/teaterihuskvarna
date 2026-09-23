@@ -1,4 +1,4 @@
-# 0011 — Maven, and the build runs in a container
+# 0011: Maven, and the build runs in a container
 
 2026-09-22
 

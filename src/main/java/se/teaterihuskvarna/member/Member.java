@@ -11,7 +11,8 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import java.time.Instant;
 
-/// A member of the association.
+/// A member of the association. The email address is on the [Account], because
+/// a member added to a household may have none.
 ///
 /// Column lengths mirror `V1__member_register.sql` by hand. Nothing enforces
 /// that: `ddl-auto: validate` catches a missing table or column, but it does not
@@ -34,9 +35,6 @@ public class Member {
     @Column(name = "full_name", nullable = false, length = 100)
     private String fullName;
 
-    @Column(name = "email", nullable = false, length = 254)
-    private String email;
-
     @Column(name = "phone", length = 32)
     private String phone;
 
@@ -57,10 +55,8 @@ public class Member {
     }
 
     /// @param fullName the member's name as the association writes it
-    /// @param email     the address login links and mailings go to, unique case insensitively
-    public Member(String fullName, String email) {
+    public Member(String fullName) {
         this.fullName = fullName;
-        this.email = email;
     }
 
     public Long getId() {
@@ -74,15 +70,6 @@ public class Member {
     /// @param fullName the new name
     public void setFullName(String fullName) {
         this.fullName = fullName;
-    }
-
-    public String getEmail() {
-        return email;
-    }
-
-    /// @param email the new address, unique case insensitively across the register
-    public void setEmail(String email) {
-        this.email = email;
     }
 
     public Household getHousehold() {

@@ -9,21 +9,26 @@
 FROM eclipse-temurin:25.0.4_7-jdk-alpine AS build
 WORKDIR /build
 
+# The git plugin runs git itself here, so that untracked files count as
+# uncommitted changes: see the plugin's comment in pom.xml.
+RUN apk add --no-cache git
+
 # Dependencies resolve in their own layer, so editing a source file does not
 # re-download the world.
 COPY .mvn/ .mvn/
 COPY mvnw pom.xml ./
 RUN ./mvnw -B -ntp dependency:go-offline
 
-# Checkstyle is bound to `validate`, so it runs in this stage and needs its
-# ruleset in the context: docs/decisions/0013-three-static-analysis-gates.md.
-# SpotBugs and PMD run at `verify`, which `package` does not reach, so
-# spotbugs-exclude.xml is deliberately not copied.
-COPY checkstyle.xml suppressions.xml ./
-COPY src/ src/
+# The whole worktree, .git included, and not only what the build reads. The git
+# plugin records whether the worktree differed from the commit, and a tracked
+# file left out of the copy would count as deleted, so every image would claim
+# uncommitted changes. .dockerignore therefore lists only paths git ignores.
+# The cost is that editing any file, docs included, reruns the build below. The
+# build stage is discarded, so none of this reaches the runtime image.
+COPY . .
 # Unit tests run here. Integration tests (*IT) need a docker daemon this stage
 # does not have, so failsafe stays out of the image build.
-RUN ./mvnw -B -ntp package
+RUN ./mvnw -B -ntp -Dmaven.gitcommitid.nativegit=true package
 
 FROM eclipse-temurin:25.0.4_7-jre-alpine AS runtime
 WORKDIR /app

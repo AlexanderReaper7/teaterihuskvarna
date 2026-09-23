@@ -1,6 +1,0 @@
-# SITE_ADDRESS is ":80" locally and a hostname in production, where naming a
-# hostname is what turns on automatic HTTPS: docs/decisions/0008.
-{$SITE_ADDRESS} {
-	encode zstd gzip
-	reverse_proxy app:8080
-}

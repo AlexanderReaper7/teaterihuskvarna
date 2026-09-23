@@ -70,15 +70,19 @@ The accepted component choices and their costs are recorded in [0004](decisions/
 
 ## Member login must not reveal membership
 
-The member submits an email address and receives a short-lived, single-use login link if the address belongs to a member. The page gives the same response whether the address exists or not. Rate limits protect the request endpoint. Tokens live in PostgreSQL so deployment and process restarts do not invalidate them.
+The member submits an email address and receives a short-lived, single-use login link if the address belongs to an account. The page gives the same response whether the address exists or not. Rate limits protect the request endpoint. Tokens live in PostgreSQL so deployment and process restarts do not invalidate them.
 
 A login link is valid for one hour by default, and the lifetime is configurable. Tests must prove expiry, one-time use and identical user-visible responses for known and unknown addresses.
 
-Members and administrators log in on separate pages, because one email address may belong to both a member and an administrator account, and each page looks the address up only among its own accounts. A member session lasts 30 days and an administrator session 8 hours, since an administrator can read the whole register. The REST adapter accepts the same session cookie, with CSRF protection on changes, so both adapters authenticate the same way. Rate limits count recent requests per address and per IP address in PostgreSQL, next to the tokens, and the IP addresses are deleted along with expired tokens.
+Members and administrators log in on separate pages, because one email address may belong to both an account and an administrator account, and each page looks the address up only among its own kind. A member session lasts 30 days and an administrator session 8 hours, since an administrator can read the whole register. The REST adapter accepts the same session cookie, with CSRF protection on changes, so both adapters authenticate the same way. Rate limits count recent requests per address and per IP address in PostgreSQL, next to the tokens, and the IP addresses are deleted along with expired tokens.
+
+Members and administrators may also add passkeys on their own page and log in with one, which the requirement table does not ask for. A login link keeps working for everyone. The passkey login asks for no address, so it cannot reveal one either. [0016](decisions/0016-passkeys-beside-links.md) records the design.
 
 The first administrator account comes from configuration at startup, when none exists. After that, administrators create and remove each other in the application. Removal is refused while two or fewer administrators remain, which is how the application enforces the two-administrator rule under [ownership](#ownership-and-maintenance-are-release-work) without refusing to start with one.
 
-A membership application (P5) registers one person. The applicant gets a confirmation link, and the application becomes a member when they follow it. An application nobody confirms is deleted after 24 hours. The page gives the same response when the address already belongs to a member; that member gets a mail with a login link instead of a confirmation link. The form therefore falls under the same rate limit as the login page. What P5 creates is provisional, see [open-questions.md](open-questions.md).
+A membership application (P5) registers one person. The applicant gets a confirmation link, and the application becomes a member with an account when they follow it. An application nobody confirms is deleted after 24 hours. The page gives the same response when the address already belongs to an account; that account gets a mail with a login link instead of a confirmation link. The form therefore falls under the same rate limit as the login page. What P5 creates is provisional, see [open-questions.md](open-questions.md).
+
+An invitation is valid for 7 days by default, and the lifetime is configurable. It is longer than an application's 24 hours because a logged-in member or an administrator sends it, so the bot argument does not apply, and the recipient may not read their mail for days. The sender can send it again.
 
 ## The application prepares mailings and Brevo sends them
 
@@ -88,7 +92,7 @@ Brevo campaigns address lists or segments, not arbitrary application queries. Be
 
 ## The member model records only data the confirmed workflows need
 
-The register stores name, email, phone, address and household. It does not store a personal identity number. Development and test environments use invented data.
+The register stores name, phone, address and household for every member, and an email address for each account. A member added to a household has no account, and so no email address, until they accept an invitation sent by an administrator or by a member with an account in that household. Mailings therefore reach only members with an account. The register does not store a personal identity number. Development and test environments use invented data.
 
 The current fee rule is:
 

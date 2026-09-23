@@ -1,4 +1,4 @@
-# 0007 — PostgreSQL runs in a container, not as a managed service
+# 0007: PostgreSQL runs in a container, not as a managed service
 
 2026-09-22
 

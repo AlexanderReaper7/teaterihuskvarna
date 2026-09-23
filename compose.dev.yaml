@@ -1,0 +1,40 @@
+# Local development, loaded on top of compose.yaml: docs/decisions/0008.
+# COMPOSE_FILE in .env.example names both files, so `docker compose up` reads
+# them without flags. Never on the production host: the dev profile fills the
+# register with invented members.
+#
+# Deliberately not named compose.override.yaml. Compose reads that file
+# automatically, and production would then run with the dev profile.
+
+services:
+  proxy:
+    # Plain HTTP on one port, with no certificates and no redirect to HTTPS.
+    command: !override
+      - --providers.docker.exposedbydefault=false
+      - --entrypoints.web.address=:80
+    ports: !override
+      - "${PROXY_HTTP_PORT:-8000}:80"
+
+  app:
+    environment:
+      # Invented settings, DevSeed, and mail to Mailpit: application-dev.yaml.
+      SPRING_PROFILES_ACTIVE: dev
+      # application-dev.yaml builds login links from it.
+      PROXY_HTTP_PORT: ${PROXY_HTTP_PORT:-8000}
+    labels:
+      # Any host name, so the site answers on localhost, 127.0.0.1 and a
+      # Tailscale name alike.
+      traefik.http.routers.app.rule: PathPrefix(`/`)
+      traefik.http.routers.app.entrypoints: web
+    volumes:
+      # The dev profile serves static files from here before the jar's copy, so
+      # an edited stylesheet shows on reload: application-dev.yaml.
+      - ./src/main/resources/static:/app/static:ro
+
+  mail:
+    # Mailpit catches every mail the application sends and shows it in a web UI.
+    image: axllent/mailpit:v1.31.2
+    restart: unless-stopped
+    ports:
+      # Loopback only. The UI has no login and shows every login link sent.
+      - "127.0.0.1:8025:8025"

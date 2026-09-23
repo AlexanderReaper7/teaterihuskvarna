@@ -117,6 +117,21 @@
       }
     },
     {
+      "label": "e2e: playwright",
+      "detail": "Builds the image, starts the e2e stack, runs every Playwright test in Chromium and Firefox, removes the stack: docs/decisions/0017.",
+      "type": "shell",
+      "command": "sh",
+      "args": ["e2e/run.sh"],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": [],
+      "presentation": {
+        "clear": true
+      },
+      "group": "test"
+    },
+    {
       "label": "docs: check",
       "detail": "The guard AGENTS.md points at: quoted requirements, relative links, mermaid diagrams.",
       "type": "shell",
@@ -134,18 +149,18 @@
       "label": "compose: up",
       "type": "shell",
       "command": "docker",
-      "args": ["compose", "up", "-d", "--build"],
+      "args": ["compose", "-f", "compose.yaml", "-f", "compose.dev.yaml", "up", "-d", "--build"],
       "options": {
         "cwd": "${workspaceFolder}"
       },
       "problemMatcher": [],
-      "detail": "Builds the image and starts Caddy, the application and PostgreSQL. Site on http://localhost:8000/."
+      "detail": "Builds the image and starts the dev stack: Traefik, the application, PostgreSQL and Mailpit. Site on http://localhost:8000/."
     },
     {
       "label": "compose: up with the debugger port open",
       "type": "shell",
       "command": "docker",
-      "args": ["compose", "-f", "compose.yaml", "-f", "compose.debug.yaml", "up", "-d", "--build"],
+      "args": ["compose", "-f", "compose.yaml", "-f", "compose.dev.yaml", "-f", "compose.debug.yaml", "up", "-d", "--build"],
       "options": {
         "cwd": "${workspaceFolder}"
       },
@@ -156,7 +171,7 @@
       "label": "compose: down",
       "type": "shell",
       "command": "docker",
-      "args": ["compose", "down"],
+      "args": ["compose", "-f", "compose.yaml", "-f", "compose.dev.yaml", "down"],
       "options": {
         "cwd": "${workspaceFolder}"
       },
@@ -166,7 +181,7 @@
       "label": "compose: down and drop the database volume",
       "type": "shell",
       "command": "docker",
-      "args": ["compose", "down", "-v"],
+      "args": ["compose", "-f", "compose.yaml", "-f", "compose.dev.yaml", "down", "-v"],
       "options": {
         "cwd": "${workspaceFolder}"
       },
@@ -177,7 +192,7 @@
       "label": "compose: follow the application log",
       "type": "shell",
       "command": "docker",
-      "args": ["compose", "logs", "-f", "app"],
+      "args": ["compose", "-f", "compose.yaml", "-f", "compose.dev.yaml", "logs", "-f", "app"],
       "options": {
         "cwd": "${workspaceFolder}"
       },

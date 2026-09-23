@@ -18,6 +18,65 @@ spring:
     # database connection open. Templates get data the controller already loaded.
     open-in-view: false
 
+  # Login links and confirmation links. Mailpit locally, Brevo in production.
+  # An empty SMTP_LOGIN sends no AUTH, which is what Mailpit expects.
+  mail:
+    host: ${SMTP_ADDRESS:localhost}
+    port: ${SMTP_PORT:1025}
+    username: ${SMTP_LOGIN:}
+    password: ${SMTP_KEY:}
+    properties:
+      # Required, not only enabled: with "enable" alone, a server that does not
+      # offer STARTTLS gets the SMTP key in plain text. Mailpit offers no
+      # STARTTLS without a certificate, so application-dev.yaml turns this off.
+      mail.smtp.starttls.enable: true
+      mail.smtp.starttls.required: true
+      # Milliseconds. Jakarta Mail waits forever by default, and a hung relay
+      # would then hold a mail thread for good.
+      mail.smtp.connectiontimeout: 10000
+      mail.smtp.timeout: 10000
+      mail.smtp.writetimeout: 10000
+
+  session:
+    jdbc:
+      # Flyway owns these tables like every other, from V3: docs/decisions/0015.
+      initialize-schema: never
+    # No spring.session.timeout: a session before login lasts
+    # server.servlet.session.timeout, 30 minutes by default. Logging in sets the
+    # session's own lifetime from teaterihuskvarna.login, 30 days for a member
+    # and 8 hours for an administrator.
+
+server:
+  # Traefik sets X-Forwarded-For and X-Forwarded-Proto, and replaces any a
+  # client sent. The rate limit counts per client IP address, so the application
+  # has to read the forwarded address, or every request would count against
+  # Traefik's.
+  # "native" is Tomcat's RemoteIpValve, which trusts the header only from
+  # private-range addresses such as the compose network's.
+  forward-headers-strategy: native
+  tomcat:
+    # A redirect's Location is the path alone. Absolute, Tomcat builds it from
+    # the forwarded scheme and the port that scheme implies, so behind a proxy
+    # on a non-default port, such as a second local stack, every redirect loses
+    # the port. Seen behind Caddy on 2026-09-23. Browsers resolve a relative
+    # Location.
+    use-relative-redirects: true
+
+# Empty defaults on purpose. MailSettings and AssociationSettings are validated,
+# so a production without SITE_URL, MAIL_FROM or BANKGIRO refuses to start
+# rather than mailing a link to the wrong site or a wrong payment instruction.
+# application-dev.yaml sets invented values for local use.
+teaterihuskvarna:
+  mail:
+    site-url: ${SITE_URL:}
+    from: ${MAIL_FROM:}
+  association:
+    bankgiro: ${BANKGIRO:}
+  # The first administrator account, created at startup only when none exists.
+  first-administrator:
+    email: ${FIRST_ADMINISTRATOR_EMAIL:}
+    full-name: ${FIRST_ADMINISTRATOR_NAME:}
+
 gg:
   jte:
     development-mode: false

@@ -1,0 +1,9 @@
+# Only paths that .gitignore also ignores. The Dockerfile explains why a tracked
+# file must not be listed here. .env is here so that credentials never enter
+# the build context.
+.env
+target/
+**/__pycache__/
+e2e/node_modules/
+e2e/test-results/
+e2e/playwright-report/

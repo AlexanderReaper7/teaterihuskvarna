@@ -1,10 +1,10 @@
-# 0008 — The whole application runs in containers
+# 0008: The whole application runs in containers
 
 2026-09-22
 
 ## Decision
 
-Every running piece is a container on one host in an EU region: a reverse proxy, the Spring Boot application, and PostgreSQL. The same compose file describes local and production, differing only in an environment file and which image tags are pinned.
+Every running piece is a container on one host in an EU region: a reverse proxy, the Spring Boot application, and PostgreSQL. `compose.yaml` describes production, and local development loads `compose.dev.yaml` on top of it.
 
 This extends [0007](0007-postgres-in-a-container.md), which containerised the database. The application follows it for the same reason: what runs in production is then the artefact that was tested, not a jar copied onto a host whose Java version nobody checked.
 
@@ -12,7 +12,17 @@ This extends [0007](0007-postgres-in-a-container.md), which containerised the da
 
 A managed platform would have terminated TLS, held the registry and handled restarts. Containerising everything makes each of those an explicit component, and leaving any of them implicit is how a system arrives at week 12 without HTTPS.
 
-**TLS is now ours.** A reverse proxy container terminates it and obtains certificates from Let's Encrypt automatically. Caddy does this in a handful of lines of configuration and renews without a cron job. This is a component the plan did not previously name, and it is the one that would otherwise have been discovered late.
+**TLS is now ours.** A reverse proxy container terminates it and obtains certificates from Let's Encrypt automatically, renewing without a cron job. This is a component the plan did not previously name, and it is the one that would otherwise have been discovered late.
+
+## The proxy is Traefik
+
+2026-09-23, replacing Caddy.
+
+Traefik reads its routes from labels on the containers it routes to. A service gets a route by adding labels beside its own definition in `compose.yaml`, with no proxy configuration file to keep in step. Today that is one service, `app`, so the gain is for the services added later rather than for this one.
+
+The cost is the docker socket. Traefik's docker provider reads it, and whoever controls that socket controls the host, which holds the member register. Mounting it `:ro` makes the file read-only, not the API. A socket proxy that passes only the read-only calls Traefik makes was offered and declined. A flaw in Traefik, which faces the internet, is therefore a flaw in the host.
+
+Caddy did the same job in a four-line `Caddyfile` with no socket at all, and remains the fallback if the socket becomes the deciding cost.
 
 **The registry is GHCR.** Container storage and bandwidth there are free for private images as well as public, so the repository does not have to be made public to hold images. GitHub's own wording is "currently free", which is a hedge worth remembering rather than acting on.
 

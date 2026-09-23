@@ -1,4 +1,4 @@
-# 0010 — Flyway for schema migrations
+# 0010: Flyway for schema migrations
 
 2026-09-22
 

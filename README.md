@@ -14,9 +14,31 @@ docker compose up -d --build
 curl http://localhost:8000/
 ```
 
-The stack is Caddy on port 8000, the Spring Boot application behind it, and
-PostgreSQL 18.2. Flyway applies the migrations in
-`src/main/resources/db/migration` at startup.
+The stack is Traefik, the Spring Boot application behind it, and PostgreSQL
+18.2. Flyway applies the migrations in `src/main/resources/db/migration` at
+startup.
+
+`compose.yaml` alone is production. `COMPOSE_FILE` in `.env.example` adds
+`compose.dev.yaml`, which must never be loaded in production. It serves plain
+HTTP on `PROXY_HTTP_PORT` (8000 unless set), turns on the `dev` profile with
+invented settings (`application-dev.yaml`) and invented members, and starts
+Mailpit, which catches every mail the application sends.
+
+Under the `dev` profile, http://localhost:8000/ is a development index in place
+of the start page. It lists every route, has a button per seeded member and
+administrator that mails that address a login link, and shows the schema
+version, the commit the jar was built from, whether it was built with
+uncommitted changes, and who is logged in. Open the link in Mailpit's UI at
+http://localhost:8025. The same data is JSON under `/api/development/`, which
+answers 404 without the profile.
+
+`compose.dev.yaml` also mounts `src/main/resources/static` into the container,
+so an edited stylesheet or image shows on reload. Templates and Java still
+need `docker compose up -d --build`.
+
+V1 was edited on 2026-09-23, before any deploy, to move the email address from
+`member` to `account`. A database volume created before that fails Flyway's
+checksum; `docker compose down -v` deletes it and the next start rebuilds it.
 
 ## Tests
 
@@ -34,6 +56,20 @@ docker run --rm --network host \
 
 `docker build .` runs the unit tests only. A build stage has no docker daemon,
 so the integration tests run here and in CI instead.
+
+### End-to-end
+
+A Playwright suite in `e2e/` drives the running site in Chromium and Firefox ([0017](docs/decisions/0017-playwright-e2e-in-docker.md)). It needs only docker.
+
+```sh
+sh e2e/run.sh                        # build, start its own stack, run every test, remove the stack
+sh e2e/run.sh tests/login.spec.ts    # arguments go to `playwright test`
+E2E_KEEP=1 sh e2e/run.sh             # leave the stack on http://localhost:55556 afterwards
+```
+
+The stack is the compose project `teaterihuskvarna-e2e`, with its own database, and never touches the dev stack. The report lands in `e2e/playwright-report/`, and each failed test's trace in `e2e/test-results/`. A test marked `test.fail()` is a known bug listed in [docs/open-questions.md](docs/open-questions.md) under "Found by the e2e suite".
+
+CI runs the suite only when started by hand: `gh workflow run e2e.yml`, or "Run workflow" on the e2e workflow in the Actions tab. The report and traces are the run's `playwright-report` artifact.
 
 ## Static analysis
 
@@ -67,7 +103,7 @@ a service method that no endpoint exposes.
 
 Every task in `tasks.json` runs through docker, so nothing here needs a JDK or
 Maven on the machine. `Ctrl+Shift+B` runs `maven: verify`, the command
-`AGENTS.md` requires. The others cover `test`, `compile`, `checkstyle` alone,
+`AGENTS.md` requires. The others cover `test`, `compile`, `checkstyle` alone, the e2e suite,
 the docs check, the compose stack and the image build. Compiler and Checkstyle
 messages land in the Problems panel.
 
@@ -78,7 +114,7 @@ offer APIs the build rejects, and `./mvnw verify` is what catches that.
 through, for when that gap starts costing time.
 
 To debug the running application, pick "Attach to the application" in the Run
-view. It starts the stack with `compose.debug.yaml`, which opens JDWP on
+view. It starts the dev stack with `compose.debug.yaml`, which opens JDWP on
 `127.0.0.1:5005`. That file is named rather than called `compose.override.yaml`
 on purpose, so a plain `docker compose up` never opens a debug port.
 
@@ -100,5 +136,8 @@ documents and the Mermaid diagrams. CI runs it; see
 | `spotbugs-exclude.xml` | SpotBugs exclusions, each with its reasoning beside it |
 | `src/test/java/se/teaterihuskvarna/architecture/` | The adapter rules ([0014](docs/decisions/0014-one-service-layer-two-adapters.md)) |
 | `.vscode/` | Tasks, launch configurations and extension suggestions |
+| `compose.yaml` | The production stack ([0008](docs/decisions/0008-everything-in-containers.md)) |
+| `compose.dev.yaml` | Local development on top of it, loaded through `COMPOSE_FILE` |
 | `compose.debug.yaml` | JDWP on loopback, loaded only when named |
 | `docs/decisions/` | Why the technical choices are what they are |
+| `e2e/` | The Playwright suite, its compose file and `run.sh` ([0017](docs/decisions/0017-playwright-e2e-in-docker.md)) |

@@ -1,4 +1,4 @@
-# 0005 — The app drafts mailings, Brevo sends them
+# 0005: The app drafts mailings, Brevo sends them
 
 2026-09-22
 

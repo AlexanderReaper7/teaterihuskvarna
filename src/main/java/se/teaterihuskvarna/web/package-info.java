@@ -4,4 +4,7 @@
 /// than over HTTP through `se.teaterihuskvarna.api`. The two adapters are peers
 /// over one service layer, so neither may depend on the other:
 /// `docs/decisions/0014-one-service-layer-two-adapters.md`.
+///
+/// Templates read their Swedish through [Copy], which [PageModel] puts in every
+/// page's model, and forms get their CSRF field from [FormModel].
 package se.teaterihuskvarna.web;

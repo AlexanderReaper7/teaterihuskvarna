@@ -1,4 +1,4 @@
-# 0014 — One service layer, two adapters
+# 0014: One service layer, two adapters
 
 2026-09-22
 
@@ -6,8 +6,8 @@
 
 One deployable. Every capability the system has is a method on an application service in a domain package such as `se.teaterihuskvarna.member`. Two adapters sit over that layer as peers:
 
-- `se.teaterihuskvarna.web` — `@Controller` classes that call a service in process, as an ordinary method call, and name a JTE template.
-- `se.teaterihuskvarna.api` — `@RestController` classes, one endpoint per capability, each a thin wrapper around the same method.
+- `se.teaterihuskvarna.web`: `@Controller` classes that call a service in process, as an ordinary method call, and name a JTE template.
+- `se.teaterihuskvarna.api`: `@RestController` classes, one endpoint per capability, each a thin wrapper around the same method.
 
 The invariant: **anything `web` can do, `api` can do.** Same method, same transaction boundary, same validation. The only difference between the two paths is the HTTP layer the REST adapter adds.
 

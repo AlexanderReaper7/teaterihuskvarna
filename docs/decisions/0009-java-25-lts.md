@@ -1,4 +1,4 @@
-# 0009 — Java 25 LTS, not the newest release
+# 0009: Java 25 LTS, not the newest release
 
 2026-09-22
 

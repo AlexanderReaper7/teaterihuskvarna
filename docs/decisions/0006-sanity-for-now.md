@@ -1,4 +1,4 @@
-# 0006 — Sanity for now, self-hosted Directus as the noted alternative
+# 0006: Sanity for now, self-hosted Directus as the noted alternative
 
 2026-09-22
 

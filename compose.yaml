@@ -1,21 +1,30 @@
-# One compose file for local and production, per docs/decisions/0008. What
-# differs between them is the env file and SITE_ADDRESS, not this file.
+# The production stack. Local development loads compose.dev.yaml on top of this
+# file, through COMPOSE_FILE in .env.example: docs/decisions/0008.
 
 services:
   proxy:
-    image: caddy:2.11.4-alpine
+    image: traefik:v3.7.13
     restart: unless-stopped
-    environment:
-      # Local default is plain HTTP. Setting this to a hostname in production
-      # makes Caddy obtain and renew a Let's Encrypt certificate on its own.
-      SITE_ADDRESS: ${SITE_ADDRESS:-:80}
+    command:
+      # Routes come from labels on the services below. Only a container that
+      # sets traefik.enable gets one.
+      - --providers.docker.exposedbydefault=false
+      - --entrypoints.web.address=:80
+      - --entrypoints.web.http.redirections.entrypoint.to=websecure
+      - --entrypoints.websecure.address=:443
+      # Every router on websecure gets a Let's Encrypt certificate for the host
+      # in its rule, obtained and renewed by Traefik.
+      - --entrypoints.websecure.http.tls.certresolver=letsencrypt
+      - --certificatesresolvers.letsencrypt.acme.tlschallenge=true
+      - --certificatesresolvers.letsencrypt.acme.storage=/certificates/acme.json
     ports:
-      - "${PROXY_HTTP_PORT:-8000}:80"
-      - "${PROXY_HTTPS_PORT:-8443}:443"
+      - "80:80"
+      - "443:443"
     volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile:ro
-      - caddy-data:/data
-      - caddy-config:/config
+      # ":ro" makes the file read-only, not the API. Whoever controls Traefik
+      # controls the host. Accepted on 2026-09-23: docs/decisions/0008.
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - certificates:/certificates
     depends_on:
       - app
 
@@ -27,6 +36,24 @@ services:
       DATABASE_URL: jdbc:postgresql://db:5432/${POSTGRES_DB:-teaterihuskvarna}
       DATABASE_USER: ${POSTGRES_USER:-teaterihuskvarna}
       DATABASE_PASSWORD: ${POSTGRES_PASSWORD:-local-development-only}
+      # Brevo's relay and credentials: docs/decisions/0005. The dev profile
+      # ignores these and sends to Mailpit.
+      SMTP_ADDRESS: ${SMTP_ADDRESS:-}
+      SMTP_PORT: ${SMTP_PORT:-}
+      SMTP_LOGIN: ${SMTP_LOGIN:-}
+      SMTP_KEY: ${SMTP_KEY:-}
+      # No defaults. Without the dev profile the application refuses to start
+      # while any of the first three is empty: docs/decisions/0015.
+      SITE_URL: ${SITE_URL:-}
+      MAIL_FROM: ${MAIL_FROM:-}
+      BANKGIRO: ${BANKGIRO:-}
+      FIRST_ADMINISTRATOR_EMAIL: ${FIRST_ADMINISTRATOR_EMAIL:-}
+      FIRST_ADMINISTRATOR_NAME: ${FIRST_ADMINISTRATOR_NAME:-}
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.app.rule: Host(`${SITE_HOST:-}`)
+      traefik.http.routers.app.entrypoints: websecure
+      traefik.http.services.app.loadbalancer.server.port: "8080"
     depends_on:
       db:
         condition: service_healthy
@@ -39,10 +66,8 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-teaterihuskvarna}
       POSTGRES_USER: ${POSTGRES_USER:-teaterihuskvarna}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-local-development-only}
-    # A named volume, not the container layer, so a deployment cannot take the
-    # member register with it: docs/decisions/0008.
     volumes:
-      - postgres-data:/var/lib/postgresql/data
+      - postgres-data:/var/lib/postgresql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-teaterihuskvarna} -d ${POSTGRES_DB:-teaterihuskvarna}"]
       interval: 5s
@@ -51,5 +76,4 @@ services:
 
 volumes:
   postgres-data:
-  caddy-data:
-  caddy-config:
+  certificates:

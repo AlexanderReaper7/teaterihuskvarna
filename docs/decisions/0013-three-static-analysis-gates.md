@@ -1,4 +1,4 @@
-# 0013 — Three static analysis gates, and Markdown doc comments
+# 0013: Three static analysis gates, and Markdown doc comments
 
 2026-09-22
 

@@ -24,6 +24,9 @@
     <jte.version>3.2.4</jte.version>
     <flyway.version>13.7.0</flyway.version>
     <testcontainers.version>1.21.4</testcontainers.version>
+    <!-- Boot 4.1.1 manages 9.2.0. 10.0.1 is Maven Central's latest, checked on
+         2026-09-23. -->
+    <git-commit-id-maven-plugin.version>10.0.1</git-commit-id-maven-plugin.version>
     <!-- The three static analysis gates: docs/decisions/0013. Checked against
          Maven Central on 2026-09-22; each is the latest release. -->
     <checkstyle.plugin.version>3.6.0</checkstyle.plugin.version>
@@ -35,6 +38,10 @@
          cannot leave PMD reading class files it does not understand. -->
     <pmd.target.jdk>${java.version}</pmd.target.jdk>
     <archunit.version>1.5.0</archunit.version>
+    <!-- spring-security-webauthn 7.1.1 asks for 0.31.9.RELEASE, and Boot does
+         not manage it. 0.31.10.RELEASE is Maven Central's latest, checked on
+         2026-09-23. The test emulator is pinned to the same release. -->
+    <webauthn4j.version>0.31.10.RELEASE</webauthn4j.version>
   </properties>
 
   <dependencies>
@@ -45,6 +52,42 @@
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-data-jpa</artifactId>
+    </dependency>
+    <!-- Login by one-time link, sessions, CSRF and the access rules. The
+         links themselves are Spring Security's one-time-token login, with a
+         token store that keeps hashes: docs/decisions/0015. -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-security</artifactId>
+    </dependency>
+    <!-- Login with a passkey, beside the link. Spring's filters with this
+         project's paths and lookups: docs/decisions/0016. -->
+    <dependency>
+      <groupId>org.springframework.security</groupId>
+      <artifactId>spring-security-webauthn</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.webauthn4j</groupId>
+      <artifactId>webauthn4j-core</artifactId>
+      <version>${webauthn4j.version}</version>
+    </dependency>
+    <!-- Sessions in PostgreSQL, so a 30-day member login survives a deploy.
+         Flyway owns the tables, from V3: docs/decisions/0015. -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-session-jdbc</artifactId>
+    </dependency>
+    <!-- Login links and confirmation links over SMTP: Mailpit locally, Brevo
+         in production, per docs/decisions/0005. -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-mail</artifactId>
+    </dependency>
+    <!-- Validation on the service methods, so both adapters get the same
+         checks: docs/decisions/0014. -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-validation</artifactId>
     </dependency>
     <dependency>
       <groupId>gg.jte</groupId>
@@ -91,6 +134,19 @@
     </dependency>
     <dependency>
       <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-security-test</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <!-- A software authenticator, so the passkey tests run real registration
+         and login ceremonies against the server. -->
+    <dependency>
+      <groupId>com.webauthn4j</groupId>
+      <artifactId>webauthn4j-test</artifactId>
+      <version>${webauthn4j.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-testcontainers</artifactId>
       <scope>test</scope>
     </dependency>
@@ -108,9 +164,49 @@
 
   <build>
     <plugins>
+      <!-- build-info writes META-INF/build-info.properties, and the git plugin
+           writes git.properties, so the development index can show which build
+           and which commit is running. Boot's parent configures the git plugin;
+           it needs .git, which the Dockerfile copies into the build stage. -->
       <plugin>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-maven-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>build-info</id>
+            <goals>
+              <goal>build-info</goal>
+            </goals>
+            <configuration>
+              <!-- The default is project.build.outputTimestamp, which Maven 4
+                   fixes at 1980-02-01 for reproducible jars, so every build
+                   would claim that date. This one file then differs between
+                   two builds of the same commit; the jar's entry timestamps
+                   stay fixed. -->
+              <time>${maven.build.timestamp}</time>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <!-- git.dirty is true when the worktree differed from the commit, so a
+           build is never shown as that commit when it was not. The default
+           provider, JGit, ignores untracked files, so a new source file not
+           yet added would still read as clean. The Dockerfile therefore runs
+           this plugin on git itself, whose `git status -s` lists them.
+           Only these properties are written, because the rest put the
+           committer's email address and full commit message into the jar. -->
+      <plugin>
+        <groupId>io.github.git-commit-id</groupId>
+        <artifactId>git-commit-id-maven-plugin</artifactId>
+        <configuration>
+          <includeOnlyProperties>
+            <includeOnlyProperty>^git.commit.id$</includeOnlyProperty>
+            <includeOnlyProperty>^git.commit.id.abbrev$</includeOnlyProperty>
+            <includeOnlyProperty>^git.commit.time$</includeOnlyProperty>
+            <includeOnlyProperty>^git.dirty$</includeOnlyProperty>
+            <includeOnlyProperty>^git.branch$</includeOnlyProperty>
+          </includeOnlyProperties>
+        </configuration>
       </plugin>
       <!-- Compiles every .jte template to a Java class. This is the whole reason
            0004 chose JTE: a renamed field fails the build rather than a page. -->

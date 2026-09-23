@@ -1,4 +1,4 @@
-# 0004 — JTE rather than Thymeleaf for templates
+# 0004: JTE rather than Thymeleaf for templates
 
 2026-09-22
 

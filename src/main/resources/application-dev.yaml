@@ -1,0 +1,51 @@
+# Local development only. This profile also runs DevSeed, which fills the
+# register with invented members, so it must never be active in production.
+# Every value here is invented.
+#
+# Mail always goes to Mailpit under this profile, whatever .env says. The same
+# .env can hold the production relay's SMTP_* values, and on 2026-09-23 a local
+# run with the dev profile sent a login link for an invented seed address
+# through Brevo that way. A profile file beats the ${SMTP_*} placeholders in
+# application.yaml, so these lines are what keeps invented addresses local.
+
+spring:
+  web:
+    resources:
+      # compose.dev.yaml mounts src/main/resources/static at /app/static, so an
+      # edited stylesheet shows on reload without a rebuild. The classpath copy
+      # answers when the mount is absent, as in the tests.
+      static-locations: file:/app/static/, classpath:/static/
+      cache:
+        cachecontrol:
+          no-cache: true
+  mail:
+    host: mail
+    port: 1025
+    username: ""
+    password: ""
+    properties:
+      # Mailpit offers no STARTTLS without a certificate, and nothing leaves the
+      # machine, so plain SMTP is fine here and only here.
+      mail.smtp.starttls.required: false
+
+teaterihuskvarna:
+  development:
+    # The development index links here. compose.dev.yaml publishes it.
+    mailpit-url: http://localhost:8025
+  login:
+    # The development index sends links with one click, and the defaults of 5
+    # per address and 20 per client an hour would refuse them silently after a
+    # morning's testing. Set these back to 5 and 20 to see the limit at work.
+    requests-per-address: 50
+    requests-per-client: 200
+  mail:
+    # Traefik's local port, which compose.dev.yaml passes in.
+    site-url: http://localhost:${PROXY_HTTP_PORT:8000}
+    from: noreply@example.test
+  association:
+    # Invented. The association's real number is an open question:
+    # docs/open-questions.md.
+    bankgiro: 123-4567
+  first-administrator:
+    email: admin@example.test
+    full-name: Ada Admin
