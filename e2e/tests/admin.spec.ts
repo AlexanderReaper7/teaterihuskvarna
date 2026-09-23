@@ -2,7 +2,7 @@
 import { expect, test, type Page } from "@playwright/test";
 import { linkLogin } from "../support/auth";
 import { text } from "../support/copy";
-import { activeAdministrators, clearLinkRequests, resetAdministrators } from "../support/db";
+import { activeAdministrators, administratorId, clearLinkRequests, resetAdministrators } from "../support/db";
 import { clearMail, mailCountAfterWait } from "../support/mail";
 import { ADMINISTRATORS, freshAddress, MEMBERS, PATHS } from "../support/site";
 
@@ -113,11 +113,21 @@ test.describe("what a person might get wrong", () => {
     await expect(rows(page)).toHaveCount(2);
   });
 
-  test("an administrator who removes themselves is logged out", async ({ page }) => {
+  test("an administrator cannot remove themselves", async ({ page }) => {
     await linkLogin(page, "administrator", ADMINISTRATORS.ada);
-    await removeButton(page, "Ada Admin").click();
-    await expect(page).toHaveURL(PATHS.administrator.login);
-    expect(await activeAdministrators()).not.toContain(ADMINISTRATORS.ada);
+    await expect(rows(page).filter({ hasText: ADMINISTRATORS.ada })).toHaveCount(1);
+    await expect(removeButton(page, "Ada Admin")).toHaveCount(0);
+
+    // A form posted without the button, as an old tab or a script would.
+    const csrf = await page.locator("input[name=_csrf]").first().inputValue();
+    const id = await administratorId(ADMINISTRATORS.ada);
+    await page.request.post(`${PATHS.administrator.home}/administratorer/${id}/ta-bort`, {
+      form: { _csrf: csrf },
+      maxRedirects: 0,
+    });
+    await page.goto(PATHS.administrator.home);
+    await expect(page.getByRole("alert")).toHaveText(text("admin.error.self"));
+    expect(await activeAdministrators()).toContain(ADMINISTRATORS.ada);
   });
 
   test("pressing remove twice removes once and shows no error", async ({ page }) => {

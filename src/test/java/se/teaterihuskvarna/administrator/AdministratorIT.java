@@ -9,6 +9,7 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.flash;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -33,6 +34,7 @@ import org.springframework.test.web.servlet.request.RequestPostProcessor;
 import se.teaterihuskvarna.IntegrationTestSupport;
 import se.teaterihuskvarna.login.LoginKind;
 import se.teaterihuskvarna.login.SignedIn;
+import se.teaterihuskvarna.web.Copy;
 
 /// Proves the administrator rules in `docs/projektplan.md` (I2), through the REST
 /// endpoints and the `/admin` forms:
@@ -57,6 +59,9 @@ class AdministratorIT extends IntegrationTestSupport {
 
     @Autowired
     private AdministratorService administrators;
+
+    @Autowired
+    private Copy copy;
 
     @Test
     void theListShowsActiveAdministratorsOnly() throws Exception {
@@ -126,6 +131,39 @@ class AdministratorIT extends IntegrationTestSupport {
                 .containsExactly(firstAdministratorId());
         mockMvc.perform(get(API).with(asFirstAdministrator()))
                 .andExpect(jsonPath("$[*].email", not(hasItem(BO))));
+    }
+
+    /// Three administrators, so the refusal comes from the rule against removing
+    /// oneself and not from the minimum of two.
+    @Test
+    void anAdministratorCannotRemoveThemselves() throws Exception {
+        insertAdministrator(BO, "Bo Berg");
+        insertAdministrator(CILLA, "Cilla Carlsson");
+        long first = firstAdministratorId();
+
+        mockMvc.perform(removeByApi(first)).andExpect(status().isConflict());
+        MvcResult removed = mockMvc.perform(post("/admin/administratorer/" + first + "/ta-bort")
+                        .with(asFirstAdministrator())
+                        .with(csrf()))
+                .andExpect(flash().attribute("error", copy.text("admin.error.self")))
+                .andReturn();
+        assertRedirect(removed, "/admin");
+
+        assertThat(activeAdministrators()).isEqualTo(3);
+    }
+
+    @Test
+    void thePageOffersNoButtonToRemoveOneself() throws Exception {
+        long bo = insertAdministrator(BO, "Bo Berg");
+
+        String page = mockMvc.perform(get("/admin").with(asFirstAdministrator()))
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        assertThat(page)
+                .contains("/admin/administratorer/" + bo + "/ta-bort")
+                .doesNotContain("/admin/administratorer/" + firstAdministratorId() + "/ta-bort");
     }
 
     @Test

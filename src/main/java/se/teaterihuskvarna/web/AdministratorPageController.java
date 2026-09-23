@@ -16,6 +16,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import se.teaterihuskvarna.administrator.AdministratorAlreadyExists;
 import se.teaterihuskvarna.administrator.AdministratorDetails;
 import se.teaterihuskvarna.administrator.AdministratorService;
+import se.teaterihuskvarna.administrator.CannotRemoveSelf;
 import se.teaterihuskvarna.administrator.NewAdministrator;
 import se.teaterihuskvarna.administrator.NoSuchAdministrator;
 import se.teaterihuskvarna.administrator.TooFewAdministrators;
@@ -30,8 +31,8 @@ import se.teaterihuskvarna.login.SignedIn;
 /// message. Flash attributes live in the session, which Spring Session serialises
 /// to PostgreSQL, so they are plain strings.
 ///
-/// Removing oneself is allowed. The service refuses any removal that would leave
-/// fewer than two administrators, whoever does it.
+/// The page offers no button to remove oneself, and the service refuses it for a
+/// form posted anyway.
 @Controller
 public class AdministratorPageController {
 
@@ -88,6 +89,9 @@ public class AdministratorPageController {
             RedirectAttributes redirected) {
         try {
             administrators.remove(id, signedIn.id());
+        } catch (CannotRemoveSelf e) {
+            redirected.addFlashAttribute("error", copy.text("admin.error.self"));
+            return REDIRECT;
         } catch (TooFewAdministrators e) {
             redirected.addFlashAttribute("error", copy.text("admin.error.tooFew"));
             return REDIRECT;

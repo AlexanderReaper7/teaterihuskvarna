@@ -10,6 +10,7 @@ import org.springframework.http.ProblemDetail;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import se.teaterihuskvarna.administrator.AdministratorAlreadyExists;
+import se.teaterihuskvarna.administrator.CannotRemoveSelf;
 import se.teaterihuskvarna.administrator.NoSuchAdministrator;
 import se.teaterihuskvarna.administrator.TooFewAdministrators;
 import se.teaterihuskvarna.login.NoSuchPasskey;
@@ -45,6 +46,13 @@ public class ProblemResponses {
     @ExceptionHandler
     public ProblemDetail alreadyExists(AdministratorAlreadyExists exception) {
         return problem(HttpStatus.CONFLICT, "Administrator already exists", exception);
+    }
+
+    /// @param exception the service's refusal to let an administrator remove themselves
+    /// @return 409
+    @ExceptionHandler
+    public ProblemDetail self(CannotRemoveSelf exception) {
+        return problem(HttpStatus.CONFLICT, "Cannot remove oneself", exception);
     }
 
     /// @param exception the service's refusal to go below two administrators

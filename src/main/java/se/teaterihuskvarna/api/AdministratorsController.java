@@ -42,7 +42,7 @@ public class AdministratorsController {
     }
 
     /// @param signedIn the logged-in administrator, recorded as the one who removed
-    /// @param id       the administrator to remove, which may be the caller
+    /// @param id       the administrator to remove, never the caller
     @DeleteMapping("/api/admin/administrators/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void remove(@AuthenticationPrincipal SignedIn signedIn, @PathVariable long id) {

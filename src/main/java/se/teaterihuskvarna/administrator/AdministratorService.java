@@ -14,6 +14,7 @@ import se.teaterihuskvarna.login.Sessions;
 /// Administrators adding and removing each other. The first administrator comes
 /// from configuration ([FirstAdministrator]); every one after that is added
 /// here. Removal is refused while two or fewer remain: `docs/projektplan.md`.
+/// An administrator removes others, never themselves: `GLOSSARY.md`.
 @Service
 @Validated
 @Transactional(readOnly = true)
@@ -68,10 +69,14 @@ public class AdministratorService {
     ///
     /// @param id        the administrator to remove
     /// @param removedBy the id of the administrator doing the removing
+    /// @throws CannotRemoveSelf if `id` is `removedBy`
     /// @throws NoSuchAdministrator if no active administrator has that id
     /// @throws TooFewAdministrators if two or fewer administrators remain
     @Transactional
     public void remove(long id, long removedBy) {
+        if (id == removedBy) {
+            throw new CannotRemoveSelf();
+        }
         // Counting without the lock lets two administrators remove each other at
         // the same moment: each sees three, each removes one, one is left. With
         // every active row locked, the second removal waits for the first to

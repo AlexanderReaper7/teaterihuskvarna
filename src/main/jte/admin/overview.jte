@@ -48,12 +48,14 @@
                     <td>${administrator.fullName()}</td>
                     <td>${administrator.email()}</td>
                     <td>
-                        <form method="post" action="/admin/administratorer/${administrator.id()}/ta-bort">
-                            @template.tag.csrf(csrf = csrf)
-                            <button type="submit" class="button-secondary" aria-label="${removeLabel}">
-                                ${copy.text("admin.remove")}
-                            </button>
-                        </form>
+                        @if(administrator.id() != signedIn.id())
+                            <form method="post" action="/admin/administratorer/${administrator.id()}/ta-bort">
+                                @template.tag.csrf(csrf = csrf)
+                                <button type="submit" class="button-secondary" aria-label="${removeLabel}">
+                                    ${copy.text("admin.remove")}
+                                </button>
+                            </form>
+                        @endif
                     </td>
                 </tr>
             @endfor
