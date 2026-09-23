@@ -21,6 +21,11 @@
     // This renders them in the Markdown preview.
     "bierner.markdown-mermaid",
 
+    // The built-in preview has no footnote syntax and shows [^x] as literal
+    // text. docs/research/ cites its sources in footnotes, and docs/check.py
+    // verifies they match. Last released 2022-11-18.
+    "bierner.markdown-footnotes",
+
     // Syntax highlighting for src/main/jte/*.jte. A small extension, around
     // 1300 installs as of 2026-09-22: a TextMate grammar and nothing else.
     // Weigh that before installing.

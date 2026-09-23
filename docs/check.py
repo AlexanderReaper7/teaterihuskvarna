@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Checks the docs tree for the three things that rot silently.
+"""Checks the docs tree for the four things that rot silently.
 
 1. requirements.md quotes the produktagare's Swedish word for word. A quotation
    that drifts from projektplan-original.md is no longer a quotation.
@@ -7,6 +7,10 @@
    prose look identical in a diff, so the citations get checked mechanically.
 3. Every mermaid block parses. A broken diagram renders as a grey code block on
    GitHub rather than as an error, so nobody notices in review.
+4. Every footnote reference has exactly one definition, and every definition is
+   referenced. GitHub renders a reference without a definition as literal
+   "[^x]" text and drops an unreferenced definition, so a source can vanish from
+   a page without anything looking broken.
 
 The mermaid check needs mmdc on PATH. Without it the check is skipped and says
 so loudly; --require-mermaid turns that skip into a failure, which is what CI
@@ -27,7 +31,10 @@ DOCS = Path(__file__).resolve().parent
 ROOT = DOCS.parent
 # The produktagare writes M/B/K; the working copy spells them out. Same meaning.
 PRIORITY = {"M": "MUST", "B": "SHOULD", "K": "COULD"}
-EXPECTED_TOTALS = {"MUST": 20, "SHOULD": 4, "COULD": 1}
+# Where the produktagare's document contradicts itself, its version 1 scope
+# table wins over the row's own letter. requirements.md says why for each.
+OVERRIDES = {"V1": "MUST"}
+EXPECTED_TOTALS = {"MUST": 21, "SHOULD": 3, "COULD": 1}
 REQ_ID = re.compile(r"[PRIMVAU]\d")
 
 problems = []
@@ -69,11 +76,12 @@ def check_requirements():
                 f"    original: {f[2]}\n"
                 f"    working : {w[2]}"
             )
-        expected = PRIORITY.get(f[3])
-        if expected is None:
+        frozen_priority = PRIORITY.get(f[3])
+        expected = OVERRIDES.get(f[0], frozen_priority)
+        if frozen_priority is None:
             problems.append(f"{f[0]}: unknown priority {f[3]!r} in the frozen source")
         elif w[3] != expected:
-            problems.append(f"{w[0]}: priority is {w[3]!r}, frozen source says {f[3]!r} ({expected})")
+            problems.append(f"{w[0]}: priority is {w[3]!r}, expected {expected!r} (frozen source says {f[3]!r})")
 
     totals = {name: sum(1 for w in working if w[3] == name) for name in EXPECTED_TOTALS}
     if totals != EXPECTED_TOTALS:
@@ -146,6 +154,27 @@ def check_mermaid(require):
     return len(blocks)
 
 
+FENCE = re.compile(r"^```.*?^```", re.S | re.M)
+INLINE_CODE = re.compile(r"`[^`\n]*`")
+FOOTNOTE_DEF = re.compile(r"^\[\^([^\]\s]+)\]:", re.M)
+FOOTNOTE_REF = re.compile(r"\[\^([^\]\s]+)\](?!:)")
+
+
+def check_footnotes():
+    for md in markdown_files():
+        text = FENCE.sub("", md.read_text(encoding="utf-8"))
+        text = INLINE_CODE.sub("", text)
+        rel = md.relative_to(ROOT)
+        defined = FOOTNOTE_DEF.findall(text)
+        referenced = set(FOOTNOTE_REF.findall(text))
+        for name in sorted({d for d in defined if defined.count(d) > 1}):
+            problems.append(f"{rel}: footnote [^{name}] is defined {defined.count(name)} times")
+        for name in sorted(referenced - set(defined)):
+            problems.append(f"{rel}: footnote [^{name}] is referenced but never defined")
+        for name in sorted(set(defined) - referenced):
+            problems.append(f"{rel}: footnote [^{name}] is defined but never referenced")
+
+
 def check_links():
     for md in sorted(ROOT.rglob("*.md")):
         if ".git" in md.parts:
@@ -162,6 +191,7 @@ def check_links():
 
 check_requirements()
 check_links()
+check_footnotes()
 diagrams = check_mermaid("--require-mermaid" in sys.argv[1:])
 
 if problems:
@@ -171,5 +201,5 @@ if problems:
     sys.exit(1)
 print(
     f"docs ok: {sum(EXPECTED_TOTALS.values())} requirements quoted intact, "
-    f"all relative links resolve, {diagrams} mermaid diagrams parse"
+    f"all relative links resolve, footnotes match, {diagrams} mermaid diagrams parse"
 )

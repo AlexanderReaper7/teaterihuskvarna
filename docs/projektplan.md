@@ -30,7 +30,7 @@ Version 1 must let the association:
 
 ## MUST requirements determine whether version 1 can launch
 
-Version 1 must satisfy all 20 MUST requirements in [requirements.md](requirements.md). The four SHOULD requirements remain planned work but may be cut before a MUST requirement. The one COULD requirement comes last.
+Version 1 must satisfy all 21 MUST requirements in [requirements.md](requirements.md). The three SHOULD requirements remain planned work but may be cut before a MUST requirement. The one COULD requirement comes last.
 
 | Required for launch | Outside version 1 |
 | --- | --- |
@@ -39,10 +39,11 @@ Version 1 must satisfy all 20 MUST requirements in [requirements.md](requirement
 | Passwordless member login by email link | Ticket sales |
 | Member contact details, fee status, offers and registrations | Member chat or forum |
 | Member administration, family membership, manual fee marking and CSV export | Automatic bank reconciliation |
+| Volunteer booking | |
 | Mailings to selected member groups | SMS |
 | Migration of relevant content from WordPress | More than one visitor language |
 
-Volunteer booking is a SHOULD requirement even though the original scope table listed it inside version 1. The priority and cut rule govern delivery: build it if the MUST requirements are secure, but do not hold the launch for it.
+Volunteer booking is a MUST requirement even though the original's requirement row V1 says B, because the original's scope table lists it inside version 1. Where the customer's document contradicts itself, the scope table wins. [requirements.md](requirements.md) records the exception.
 
 ## Public content and member data stay in separate systems
 
@@ -71,7 +72,13 @@ The accepted component choices and their costs are recorded in [0004](decisions/
 
 The member submits an email address and receives a short-lived, single-use login link if the address belongs to a member. The page gives the same response whether the address exists or not. Rate limits protect the request endpoint. Tokens live in PostgreSQL so deployment and process restarts do not invalidate them.
 
-The token lifetime is ten minutes unless the board records a different value. Tests must prove expiry, one-time use and identical user-visible responses for known and unknown addresses.
+A login link is valid for one hour by default, and the lifetime is configurable. Tests must prove expiry, one-time use and identical user-visible responses for known and unknown addresses.
+
+Members and administrators log in on separate pages, because one email address may belong to both a member and an administrator account, and each page looks the address up only among its own accounts. A member session lasts 30 days and an administrator session 8 hours, since an administrator can read the whole register. The REST adapter accepts the same session cookie, with CSRF protection on changes, so both adapters authenticate the same way. Rate limits count recent requests per address and per IP address in PostgreSQL, next to the tokens, and the IP addresses are deleted along with expired tokens.
+
+The first administrator account comes from configuration at startup, when none exists. After that, administrators create and remove each other in the application. Removal is refused while two or fewer administrators remain, which is how the application enforces the two-administrator rule under [ownership](#ownership-and-maintenance-are-release-work) without refusing to start with one.
+
+A membership application (P5) registers one person. The applicant gets a confirmation link, and the application becomes a member when they follow it. An application nobody confirms is deleted after 24 hours. The page gives the same response when the address already belongs to a member; that member gets a mail with a login link instead of a confirmation link. The form therefore falls under the same rate limit as the login page. What P5 creates is provisional, see [open-questions.md](open-questions.md).
 
 ## The application prepares mailings and Brevo sends them
 
@@ -101,7 +108,7 @@ An offer is therefore split across both systems, deliberately. Sanity holds what
 
 ## Accessibility needs automated and manual checks
 
-The public site and member pages must meet WCAG 2.1 AA and work on a phone. CI runs an accessibility checker against rendered pages. A person must also test keyboard-only navigation, focus order, content alternatives and the main flows with a screen reader. The automated result does not replace the manual pass.
+The public site and member pages must meet WCAG 2.1 AA and work on a phone. CI runs an accessibility checker against rendered pages.
 
 Swedish is the visitor and member language. English is used for code and project documentation under [0001](decisions/0001-language-policy.md).
 
@@ -120,7 +127,7 @@ Java 25 LTS and Spring Boot 4.1.1 are the committed runtime versions. GitHub Act
 
 ## The association remains responsible for personal data
 
-The member register lives in PostgreSQL and reaches Brevo only as required for login mail and mailings. Published names and photographs may live in Sanity. The association must document the purpose and lawful basis for each category of personal data.
+The member register lives in PostgreSQL and reaches Brevo only as required for login mail and mailings. Published names and photographs may live in Sanity, although the original says Sanity gets no personal data, because requirement P4's board and production pages cannot exist without them. Sanity's backend runs in three data centres in Belgium, and its [Data Processing Addendum](https://www.sanity.io/legal/dpa) binds it as processor as soon as the account is used, with standard contractual clauses for transfers ([security](https://www.sanity.io/security), [subprocessors](https://www.sanity.io/third-party-sub-processors)). The member register never goes there. How that content can still leave Belgium, including to AI providers in the US, is in [research/sanity-personal-data.md](research/sanity-personal-data.md). The association must document the purpose and lawful basis for each category of personal data.
 
 The association must have processor terms with each service that processes personal data on its behalf, including the host, Brevo and Sanity. It must also:
 
@@ -140,17 +147,17 @@ The delivery includes:
 
 - a runbook for deployment, update, rollback, backup and restore;
 - short editor instructions for content and mailings;
+- optionally, short screen recordings showing the same tasks. The original asks for recordings; written instructions are required and recordings are a COULD.
 - an architecture description corrected to match the delivered system;
 - a README that gets a new developer running within one hour.
 
-A named person or company must accept maintenance responsibility before launch. Dependabot and tests reduce routine work but do not replace an owner.
+A named person or company must accept maintenance responsibility by week 10. Dependabot and tests reduce routine work but do not replace an owner.
 
 ## A change is done only when its own evidence passes
 
 A change is done when:
 
 - tests cover its behavior and pass in CI;
-- the relevant test has been seen to fail for the reason it claims to detect;
 - the behavior works in the deployed test environment and on a phone;
 - affected documentation changes in the same commit;
 - a product owner accepts visible behavior at a demo;
@@ -162,12 +169,12 @@ A change is done when:
 
 The release is complete when:
 
-- all 20 MUST requirements pass their acceptance checks;
-- the site is live on the association's domain, or the board has recorded a decision to defer the WordPress cutover;
+- all 21 MUST requirements pass their acceptance checks;
+- the site runs in production. Moving the association's domain from WordPress to it is deferred until the board answers the domain question in [open-questions.md](open-questions.md);
 - real editors have published real content;
 - real administrators have marked a fee paid, exported the register and sent a mailing;
-- the association owns every production account, or an exception records the owner and transfer cost;
-- the automated accessibility check and manual keyboard and screen-reader pass are complete;
+- the association owns every **production** account. Development and testing necessarily use accounts held by developers until an alternative is in effect;
+- the automated accessibility check passes;
 - a production-format database backup has been restored successfully;
 - the named maintainer has received the runbook and credentials.
 

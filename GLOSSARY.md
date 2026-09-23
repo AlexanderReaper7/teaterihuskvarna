@@ -18,7 +18,7 @@ _Avoid:_ anonymous user, public user
 
 ### Member
 
-A person recorded in the member register. A member may lack a paid fee for the current year.
+A person recorded in the member register. A member may lack a paid fee for the current year, and may lack an email address. A member without an email address cannot log in.
 
 _Avoid:_ user, contact, subscriber
 
@@ -42,7 +42,7 @@ _Avoid:_ administrator, content administrator
 
 ### Administrator
 
-A person authorised to manage members, fees, registrations, volunteer bookings and mailing audiences. Administrator permission is separate from editor permission.
+A person with an administrator account, authorised to manage members, fees, registrations, volunteer bookings and mailing audiences. An administrator account is not a membership: being an administrator neither requires nor grants membership, and losing membership does not remove administrator access. Administrators create and remove other administrator accounts, but not below two. Administrator permission is separate from editor permission.
 
 _Avoid:_ editor, webmaster
 
@@ -62,7 +62,7 @@ _Avoid:_ family, family account
 
 ### Membership application
 
-A visitor's request to enter the member register. A new application starts without a paid fee.
+A visitor's request to enter the member register, for themselves alone. It becomes a member, without a paid fee, when the applicant confirms their email address, and it is deleted if they have not confirmed within 24 hours. Family members are added afterwards, not through the application. Provisional until the customer decides, see [open-questions.md](docs/open-questions.md).
 
 _Avoid:_ registration, sign-up
 
