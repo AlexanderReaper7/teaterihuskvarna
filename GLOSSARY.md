@@ -2,202 +2,175 @@
 
 > When a name or meaning changes, this file must also change in the same commit.
 
-Canonical terms are English because code and project documentation are English. Swedish quotations remain unchanged in the customer document and requirement text.
+Canonical terms are English because code and project documentation are English.
+
+Each heading gives the English term, then the Swedish word the site's copy uses for it, or should use once the site shows it.
 
 ## People and roles
 
-### Association
+### Association | Föreningen
 
 Föreningen Teater i Huskvarna, the organisation that owns the site, member register and production accounts.
 
-### Visitor
+### Visitor | Besökare
 
 A person using the public site without member access.
 
-_Avoid:_ anonymous user, public user
+### Member | Medlem
 
-### Member
+A person recorded in the member register. A member may lack a paid fee for the current year, and may lack an account. A member added to a household, such as a child, has no account until they accept an invitation.
 
-A person recorded in the member register. A member may lack a paid fee for the current year, and may lack an email address. A member without an email address cannot log in.
+### Account | Konto
 
-_Avoid:_ user, contact, subscriber
+A member's login. It holds the email address that login links and mailings go to, and it belongs to exactly one member. A member without an account cannot log in and receives no mailings. An administrator account is not an account in this sense.
 
-### Membership
+### Passkey | Lösenordsnyckel
+
+A key a person's device or password manager holds, which logs them in to the site without a login link. It belongs to one account or one administrator account, and works only on that kind's login page. A person may have several, one per device, and removes them on their own page. A login link always works as well.
+
+The Swedish plural is lösenordsnycklar. Why this word: [0016](docs/decisions/0016-passkeys-beside-links.md), "The Swedish word".
+
+### Membership | Medlemskap
 
 The association's recorded relationship with a member. Membership and fee status are separate facts.
 
-_Avoid:_ subscription
-
-### Paying member
+### Paying member | Betalande medlem
 
 A member covered by a paid individual fee or household fee for the stated year. The year matters because payment does not carry forward.
 
-_Avoid:_ active member
-
-### Editor
+### Editor | Redaktör
 
 A person authorised to create and publish public content. Editor permission does not grant access to the member register.
 
-_Avoid:_ administrator, content administrator
+### Administrator | Administratör
 
-### Administrator
-
-A person with an administrator account, authorised to manage members, fees, registrations, volunteer bookings and mailing audiences. An administrator account is not a membership: being an administrator neither requires nor grants membership, and losing membership does not remove administrator access. Administrators create and remove other administrator accounts, but not below two. Administrator permission is separate from editor permission.
-
-_Avoid:_ editor, webmaster
+A person with an administrator account, authorised to manage members, fees, registrations, volunteer bookings and mailing audiences. An administrator account is separate from an account: being an administrator neither requires nor grants membership, and losing membership does not remove administrator access. A board member who administers and is a member has both. Administrators create and remove other administrator accounts, but not below two. Administrator permission is separate from editor permission.
 
 ## Membership
 
-### Member register
+### Member register | Medlemsregister
 
 The association's authoritative collection of members, contact details, household membership and annual fee records.
 
-_Avoid:_ mailing list, address book
-
-### Household
+### Household | Hushåll
 
 A grouping used to let one household fee cover several members. A household is not itself a member.
 
-_Avoid:_ family, family account
+### Household member addition | Tillägg i hushållet
 
-### Membership application
+A member with an account, or an administrator, adding a person to that member's household. It creates a member without an account.
 
-A visitor's request to enter the member register, for themselves alone. It becomes a member, without a paid fee, when the applicant confirms their email address, and it is deleted if they have not confirmed within 24 hours. Family members are added afterwards, not through the application. Provisional until the customer decides, see [open-questions.md](docs/open-questions.md).
+### Invitation | Inbjudan
 
-_Avoid:_ registration, sign-up
+An offer of an account to a member who has none, sent to an email address by an administrator or by a member with an account in the same household. It becomes an account when the recipient confirms the address.
 
-### Membership fee
+### Membership application | Ansökan om medlemskap
+
+A visitor's request to enter the member register, for themselves alone. It becomes a member with an account, without a paid fee, when the applicant confirms their email address, and it is deleted if they have not confirmed within 24 hours. Household members are added afterwards, not through the application. Provisional until the customer decides, see [open-questions.md](docs/open-questions.md).
+
+### Membership fee | Medlemsavgift
 
 An annual payment recorded against one member. Its kind determines whether it covers that member or the member's household. ([system plan](docs/projektplan.md#the-member-model-records-only-data-the-confirmed-workflows-need))
 
-### Individual fee
+### Individual fee | Avgift för enskild medlem
 
 A membership fee that covers only the member against whom the payment is recorded.
 
-### Household fee
+### Household fee | Avgift för familj
 
 A membership fee that covers the payer and every member in the payer's household.
 
-_Avoid:_ family fee
-
-### Fee status
+### Fee status | Avgiftsstatus
 
 Whether a member is covered by a paid membership fee for a stated year.
 
-_Avoid:_ membership status, active status
-
 ## Content and participation
 
-### Public content
+### Public content | Publikt innehåll
 
 Content that a visitor may read without member access, including news, events and association pages.
 
-### Event
+### Event | Evenemang
 
 A scheduled public activity listed on the site.
 
-_Avoid:_ offer, performance when the event is not a performance
-
-### Event series
+### Event series | Serie
 
 A named grouping of related events, such as Kaffe med drömmar or Alf Henrikson-dagen.
 
-_Avoid:_ category
-
-### Offer
+### Offer | Erbjudande
 
 A member benefit or limited-capacity activity for which a member may register.
 
-_Avoid:_ event, discount when the benefit is not a discount
-
-### Offer capacity
+### Offer capacity | Antal platser
 
 The number of places an offer has. Stored in PostgreSQL, not in Sanity, so that taking a place and checking the limit happen in one transaction. See the member model section of [projektplan.md](docs/projektplan.md).
 
-_Avoid:_ seats, slots, places left (that is the remainder, not the capacity)
-
-### Offer registration
+### Offer registration | Anmälan
 
 A member's reservation of a place in an offer.
 
-_Avoid:_ membership application, booking
-
-### Volunteer shift
+### Volunteer shift | Volontärpass
 
 A dated task for volunteers at a performance, such as cloakroom or serving work.
 
-_Avoid:_ event, offer
-
-### Volunteer booking
+### Volunteer booking | Volontärbokning
 
 A member's reservation of one volunteer shift.
 
-_Avoid:_ offer registration
-
 ## Communication
 
-### Mailing audience
+### Mailing audience | Målgrupp
 
-The members selected for one mailing by an explicit rule, such as all paying members or all volunteers.
+The members selected for one mailing by an explicit rule, such as all paying members or all volunteers. Only the selected members with an account receive it.
 
-_Avoid:_ mailing list, because a list may persist after membership data changes
-
-### Mailing
+### Mailing | Utskick
 
 One bulk message sent to a mailing audience. A login email is not a mailing.
 
-_Avoid:_ login email, newsletter when the message is not a newsletter
-
 ## System
 
-### Capability
+### Capability | Förmåga
 
 One thing the system can do, such as looking a member up by email or recording a fee. A capability is a method on an application service, never logic inside a controller or a template. ([0014](docs/decisions/0014-one-service-layer-two-adapters.md))
 
-_Avoid:_ feature, use case, endpoint
-
-### Application service
+### Application service | Applikationstjänst
 
 The class that holds the capabilities for one part of the domain, and the only thing allowed to reach the database for it.
 
-_Avoid:_ manager, business layer, backend
-
-### Adapter
+### Adapter | Adapter
 
 A way into the application services. There are two, and they are peers: the JTE pages, which call a service in process, and the REST API, which wraps the same method in HTTP. Anything one adapter can do, the other can.
 
-_Avoid:_ frontend, backend, because both adapters are in the same deployable
-
 ## Delivery
 
-### Requirement
+### Requirement | Krav
 
 An accepted behavior or result tracked in [requirements.md](docs/requirements.md).
 
-### MUST
+### MUST | Måste (M)
 
 A requirement that version 1 must satisfy before launch.
 
-### SHOULD
+### SHOULD | Bör (B)
 
 A planned requirement that may be cut before any MUST requirement if time runs out.
 
-### COULD
+### COULD | Kan (K)
 
 An optional requirement that is cut before SHOULD requirements and may wait until a later release.
 
-### Version 1
+### Version 1 | Version 1
 
 The first production release, due at the end of week 12 with every MUST requirement complete.
 
-_Avoid:_ prototype, minimum viable product
-
 ## WIP
 
-### Former member
+### Former member | Tidigare medlem
 
-Provisional. A member who has not renewed, with the exact transition and retention period still awaiting a board decision.
+A member who has not renewed, with the exact transition and retention period still awaiting a board decision.
 
-### Member-only offer detail
+### Member-only offer detail | Erbjudandeinformation för medlemmar
 
-Provisional. Offer information that a visitor must not read, if the board decides that offers contain such information.
+Offer information that a visitor must not read, if the board decides that offers contain such information.
+
