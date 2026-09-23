@@ -66,7 +66,7 @@ for (const width of WIDTHS) {
   test.describe(`${width} px wide`, () => {
     test.use({ viewport: { width, height: 900 } });
 
-    for (const path of [PATHS.member.login, PATHS.administrator.login, "/bli-medlem"]) {
+    for (const path of [PATHS.member.login, PATHS.administrator.login, "/bli-medlem", "/finns-inte"]) {
       test(`${path} has no layout problems`, async ({ page }) => {
         await page.goto(path);
         expect(await problems(page)).toEqual([]);

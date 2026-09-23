@@ -93,6 +93,15 @@ test.describe("what a client might get wrong", () => {
     }
   });
 
+  test("a path no rule mentions gets a bare 404, with a session or without", async ({ request }) => {
+    const client = await loggedIn("member", MEMBERS.erik);
+    for (const response of [await request.get("/api/finns-inte"), await client.get("/api/finns-inte")]) {
+      expect(response.status()).toBe(404);
+      expect(await response.text()).toBe("");
+    }
+    await client.dispose();
+  });
+
   test("a member's session gets 403 on the administrator API", async () => {
     const client = await loggedIn("member", MEMBERS.erik);
     expect((await client.get("/api/admin/administrators", { maxRedirects: 0 })).status()).toBe(403);

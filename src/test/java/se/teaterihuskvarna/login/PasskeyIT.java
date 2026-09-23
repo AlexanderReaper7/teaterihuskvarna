@@ -51,6 +51,7 @@ import tools.jackson.databind.json.JsonMapper;
 /// - a member's passkey does not log anyone in on the administrator page;
 /// - the password manager sees the address, not the principal name;
 /// - nobody adds a passkey without a login of the right kind;
+/// - a label longer than the database holds is refused with 400;
 /// - both adapters list and remove passkeys, and only one's own;
 /// - removing an administrator removes their passkeys;
 /// - the page offers a passkey once after a link login, and never after a
@@ -153,6 +154,27 @@ class PasskeyIT extends IntegrationTestSupport {
         assertRedirect(anonymous, "/logga-in");
         assertRedirect(memberOnAdministratorPath, "/admin/logga-in");
         assertThat(rowsIn("user_entities")).as("no owner row stored for a refused request").isZero();
+    }
+
+    /// The label column holds 1000 characters as PostgreSQL counts them. 🎭 is
+    /// one character there and two UTF-16 units in Java, so a check on
+    /// `String.length()` would refuse the 1000 that fit.
+    @Test
+    void aLabelLongerThanTheColumnIsRefused() throws Exception {
+        insertAccount("Karin Karlsson", KARIN);
+        RequestPostProcessor karin = sessionOf(logInByLink(LoginKind.MEMBER, KARIN));
+        String mask = "\uD83C\uDFAD";
+        String tooLong = mask.repeat(PasskeyRegistrationConverter.MAX_LABEL + 1);
+        String longest = mask.repeat(PasskeyRegistrationConverter.MAX_LABEL);
+
+        int refused = sendRegistration(LoginKind.MEMBER, authenticator(), karin, tooLong).getResponse().getStatus();
+        long storedAfterRefusal = rowsIn("user_credentials");
+        int stored = sendRegistration(LoginKind.MEMBER, authenticator(), karin, longest).getResponse().getStatus();
+
+        assertThat(refused).isEqualTo(400);
+        assertThat(storedAfterRefusal).isZero();
+        assertThat(stored).isEqualTo(200);
+        assertThat(jdbc.sql("SELECT label FROM user_credentials").query(String.class).single()).isEqualTo(longest);
     }
 
     @Test
@@ -272,6 +294,15 @@ class PasskeyIT extends IntegrationTestSupport {
     /// Adds a passkey the way `/js/passkey.js` does, and fails unless the server
     /// stores it.
     private void register(LoginKind kind, ClientPlatform device, RequestPostProcessor session) throws Exception {
+        MvcResult stored = sendRegistration(kind, device, session, "JUnit på Testcontainers");
+        assertThat(stored.getResponse().getStatus()).as("registration: %s", stored.getResponse().getContentAsString())
+                .isEqualTo(200);
+    }
+
+    /// Asks for a challenge, has `device` sign it, and sends the result with
+    /// `label` in the body `/js/passkey.js` sends.
+    private MvcResult sendRegistration(LoginKind kind, ClientPlatform device, RequestPostProcessor session,
+            String label) throws Exception {
         JsonNode options = registerOptions(kind, session);
         JsonNode rp = options.get("rp");
         JsonNode user = options.get("user");
@@ -291,7 +322,7 @@ class PasskeyIT extends IntegrationTestSupport {
                         null));
         AuthenticatorAttestationResponse response = credential.getResponse();
         Map<String, Object> body = Map.of("publicKey", Map.of(
-                "label", "JUnit på Testcontainers",
+                "label", label,
                 "credential", Map.of(
                         "id", credential.getId(),
                         "rawId", ENCODE.encodeToString(credential.getRawId()),
@@ -301,11 +332,9 @@ class PasskeyIT extends IntegrationTestSupport {
                                 "transports", List.of()),
                         "type", credential.getType(),
                         "clientExtensionResults", Map.of())));
-        MvcResult stored = mockMvc.perform(post(PasskeyUrls.of(kind).register()).with(session).with(csrf())
+        return mockMvc.perform(post(PasskeyUrls.of(kind).register()).with(session).with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(JSON.writeValueAsString(body))).andReturn();
-        assertThat(stored.getResponse().getStatus()).as("registration: %s", stored.getResponse().getContentAsString())
-                .isEqualTo(200);
     }
 
     /// Asks for a login challenge from a browser with no session yet, as on

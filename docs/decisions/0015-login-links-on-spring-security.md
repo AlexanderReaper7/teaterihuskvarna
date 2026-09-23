@@ -48,11 +48,17 @@ One address may belong to both an account and an administrator account, so one l
 
 Both chains keep the security context in the same session attribute, so a browser holds one login at a time. Logging in as the other kind replaces the first.
 
-A page the login does not reach, such as `/admin` for a member, sends the person to that chain's login page, where an anonymous visitor goes too. Spring's default is a 403, which showed the Whitelabel error page; `RefusedRequests` replaced it on 2026-09-23. Under `/api/` it stays 403.
+A page the login does not reach, such as `/admin` for a member, sends the person to that chain's login page, where an anonymous visitor goes too. Spring's default is a 403, which showed the Whitelabel error page; `RefusedRequests` replaced it on 2026-09-23. Under `/api/` it stays 403. The administrator login page says it is for administrators and links to the member one, because that is where a member lands. It does not check who is logged in: the user asked on 2026-09-23 only that the page make clear whose it is.
+
+A path no rule mentions, such as `/finns-inte`, answers 404 for everyone, anonymous or logged in, since 2026-09-23. Before that it sent the person to log in, which cannot help: no login reaches a page that does not exist. The last rule still denies the request, so the plan's "deny unless a rule grants it" holds and a controller added later stays shut until a rule names it. The rule marks the request as it denies it, and the refusal handlers answer a marked request with 404 (`UnknownPaths`). That keeps the rules the only list of paths. Under `/api/` the 404 has no body, as the 401 there has none. The cost is that anyone can tell an unknown path from one behind a login, which the plan does not forbid. Browsers see one error page, for this 404 and for every other error (`ErrorPage`), in place of Whitelabel.
+
+A form whose CSRF token no longer matches a session, because the browser restarted or the session timed out while the page stayed open, goes back to its page with a line asking the person to send it again. The address they typed is lost. The user kept it that way on 2026-09-23 over two ways to keep the address. Carrying it in the redirect puts an address in the URL, and so in browser history and access logs. Dropping the CSRF check on the two forms that ask for a link would make an exception to a rule every other form follows. Typing an address again after a browser restart costs less than either.
 
 ## A new session row at login
 
 Logging in moves the session to a new row (`migrateSession`), rather than giving the same row a new id, which is Spring's default (`changeSessionId`). Changed on 2026-09-23, after the e2e suite lost logins. Spring Session JDBC 4.1.1 saves a session by its row and writes the id with it, so a request that loaded the session before the login and saved after it put the old id back, and the browser's new cookie found nothing. Static files load the session too, and the link page submits while its fonts are still loading, so this hit the first visit from a phone: 17 of 20 attempts in the e2e test. With a new row, the late save finds no row to update. The cost is copying the session's attributes at every login, a few rows.
+
+Spring's request cache is off in both chains since 2026-09-23. It saves a refused anonymous request in the session, to go back to after login, but `LoginSuccessHandler` always goes to the chain's own page and never reads it. Each save still wrote a session row, so every refused request, a bot's 404s included, left one in the database until it expired. Going back to the page someone first asked for would need that cache, and turning it on again means `LoginSuccessHandler` reading it too.
 
 ## The REST adapter shares the filters
 

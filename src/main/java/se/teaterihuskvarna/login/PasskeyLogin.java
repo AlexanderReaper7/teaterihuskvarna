@@ -38,7 +38,8 @@ import org.springframework.security.web.webauthn.registration.WebAuthnRegistrati
 /// only a logged-in member reaches `/medlem/passkeys/alternativ`; before them,
 /// anyone could make Spring store an owner row. And the registration filter's
 /// DELETE never matches: [PasskeyService] removes passkeys, so both adapters
-/// can.
+/// can. The registration filter also reads with [PasskeyRegistrationConverter],
+/// which refuses a label the database cannot hold.
 final class PasskeyLogin extends AbstractHttpConfigurer<PasskeyLogin, HttpSecurity> {
 
     private final LoginKind kind;
@@ -104,6 +105,7 @@ final class PasskeyLogin extends AbstractHttpConfigurer<PasskeyLogin, HttpSecuri
         register.setRegisterCredentialMatcher(post(urls.register()));
         register.setRemoveCredentialMatcher(request -> false);
         register.setCreationOptionsRepository(registerChallenges);
+        register.setConverter(new PasskeyRegistrationConverter());
 
         http.addFilterBefore(loginOptions, AuthorizationFilter.class);
         http.addFilterBefore(login, BasicAuthenticationFilter.class);

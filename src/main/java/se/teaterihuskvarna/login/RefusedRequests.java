@@ -18,6 +18,8 @@ import org.springframework.web.util.UriComponentsBuilder;
 /// What a refused request gets in place of Spring's Whitelabel 403 page. Under
 /// `/api/` it is still a bare 403.
 ///
+/// A path no rule mentions answers 404, as [UnknownPaths] explains.
+///
 /// A form whose CSRF token matches no session goes back to the page it came
 /// from, with `gammal` added to the query so the page can ask the person to send
 /// it again. That happens when the browser restarted, or the session timed out,
@@ -30,10 +32,12 @@ import org.springframework.web.util.UriComponentsBuilder;
 /// page, where an anonymous visitor goes too.
 final class RefusedRequests implements AccessDeniedHandler {
 
+    /// The REST adapter's paths, which get status codes rather than pages.
+    static final RequestMatcher API = PathPatternRequestMatcher.withDefaults().matcher("/api/**");
+
     private static final String STALE = "gammal";
 
     private final LoginUrls urls;
-    private final RequestMatcher api = PathPatternRequestMatcher.withDefaults().matcher("/api/**");
     private final AccessDeniedHandler bare = new AccessDeniedHandlerImpl();
 
     /// @param urls the chain's login paths
@@ -44,7 +48,11 @@ final class RefusedRequests implements AccessDeniedHandler {
     @Override
     public void handle(HttpServletRequest request, HttpServletResponse response, AccessDeniedException denied)
             throws IOException, ServletException {
-        if (api.matches(request) || response.isCommitted()) {
+        if (UnknownPaths.MARKED.matches(request) && !response.isCommitted()) {
+            UnknownPaths.notFound(request, response);
+            return;
+        }
+        if (API.matches(request) || response.isCommitted()) {
             bare.handle(request, response, denied);
             return;
         }

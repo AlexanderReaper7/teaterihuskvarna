@@ -24,7 +24,6 @@ import org.springframework.security.web.authentication.SimpleUrlAuthenticationFa
 import org.springframework.security.web.authentication.ott.GenerateOneTimeTokenFilter;
 import org.springframework.security.web.authentication.ott.GenerateOneTimeTokenRequestResolver;
 import org.springframework.security.web.authentication.ott.RedirectOneTimeTokenGenerationSuccessHandler;
-import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
 import org.springframework.security.web.webauthn.management.UserCredentialRepository;
 import org.springframework.security.web.webauthn.management.WebAuthnRelyingPartyOperations;
 import org.springframework.session.jdbc.PostgreSqlJdbcIndexedSessionRepositoryCustomizer;
@@ -35,8 +34,9 @@ import org.springframework.util.StringUtils;
 /// kind logs in by link or by passkey ([PasskeyLogin]).
 ///
 /// Every path is denied unless a rule below grants it, as `docs/projektplan.md`
-/// requires. The administrator chain comes first and owns `/admin/**` and
-/// `/api/admin/**`; the member chain takes every other request. Each chain has
+/// requires. A path no rule mentions answers 404 ([UnknownPaths]). The
+/// administrator chain comes first and owns `/admin/**` and `/api/admin/**`;
+/// the member chain takes every other request. Each chain has
 /// its own login page, token store and lookup, because one address may belong
 /// to both an account and an administrator account, and each page must look
 /// only among its own kind.
@@ -52,8 +52,6 @@ import org.springframework.util.StringUtils;
 @Configuration(proxyBeanMethods = false)
 @EnableWebSecurity
 class SecurityConfiguration {
-
-    private static final String API = "/api/**";
 
     private final LoginLinks links;
     private final LinkRequestLimiter limiter;
@@ -115,7 +113,7 @@ class SecurityConfiguration {
                 // /icons/icon-*, none of which this application serves.
                 .requestMatchers(HttpMethod.GET, "/css/**", "/fonts/**", "/img/**", "/js/**").permitAll()
                 .requestMatchers("/medlem", "/medlem/**", "/api/member", "/api/member/**").hasRole("MEMBER")
-                .anyRequest().denyAll());
+                .anyRequest().access(UnknownPaths.denied()));
         login(http, LoginKind.MEMBER, settings.memberSession());
         return http.build();
     }
@@ -192,6 +190,11 @@ class SecurityConfiguration {
         // strategy, so this covers both ways in.
         http.sessionManagement(sessions -> sessions
                 .sessionFixation(SessionManagementConfigurer.SessionFixationConfigurer::migrateSession));
+        // Spring saves a refused anonymous request in the session, to go back
+        // to after login. LoginSuccessHandler always goes to the chain's own
+        // page and never reads it, so the save only wrote a session row for
+        // every refused request, a bot's 404s included.
+        http.requestCache(cache -> cache.disable());
     }
 
     /// Reads the address from the form field `email`, not Spring's `username`,
@@ -208,7 +211,8 @@ class SecurityConfiguration {
         };
     }
 
-    /// 401 under `/api/`, a redirect to the login page everywhere else.
+    /// 404 for a path no rule mentions, then 401 under `/api/`, and a redirect
+    /// to the login page everywhere else.
     ///
     /// Built whole and set as the chain's only entry point, rather than added
     /// with `defaultAuthenticationEntryPointFor`. That method falls back to the
@@ -218,8 +222,9 @@ class SecurityConfiguration {
     private static AuthenticationEntryPoint entryPoint(LoginUrls urls) {
         return DelegatingAuthenticationEntryPoint.builder()
                 .addEntryPointFor(
-                        new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED),
-                        PathPatternRequestMatcher.withDefaults().matcher(API))
+                        (request, response, refused) -> UnknownPaths.notFound(request, response),
+                        UnknownPaths.MARKED)
+                .addEntryPointFor(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED), RefusedRequests.API)
                 .defaultEntryPoint(new LoginUrlAuthenticationEntryPoint(urls.page()))
                 .build();
     }

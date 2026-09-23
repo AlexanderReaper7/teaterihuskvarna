@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Checks the docs tree for the four things that rot silently.
+"""Checks the docs tree for the five things that rot silently.
 
 1. requirements.md quotes the produktagare's Swedish word for word. A quotation
    that drifts from projektplan-original.md is no longer a quotation.
@@ -11,6 +11,8 @@
    referenced. GitHub renders a reference without a definition as literal
    "[^x]" text and drops an unreferenced definition, so a source can vanish from
    a page without anything looking broken.
+5. Every glossary entry's heading reads "English | Swedish". The Swedish word is
+   the one the site's copy uses, and an entry added without one looks finished.
 
 The mermaid check needs mmdc on PATH. Without it the check is skipped and says
 so loudly; --require-mermaid turns that skip into a failure, which is what CI
@@ -94,8 +96,16 @@ def check_requirements():
 
 
 def markdown_files():
-    for md in sorted(ROOT.rglob("*.md")):
-        if ".git" not in md.parts:
+    """Tracked files and new ones git would add, so nothing under .gitignore:
+    node_modules/ and target/ hold other projects' Markdown, with links into
+    trees that are not here."""
+    listed = subprocess.run(
+        ["git", "ls-files", "--cached", "--others", "--exclude-standard", "-z", "--", "*.md"],
+        cwd=ROOT, capture_output=True, text=True, check=True,
+    ).stdout
+    for name in sorted(set(filter(None, listed.split("\0")))):
+        md = ROOT / name
+        if md.exists():
             yield md
 
 
@@ -175,10 +185,19 @@ def check_footnotes():
             problems.append(f"{rel}: footnote [^{name}] is defined but never referenced")
 
 
+GLOSSARY_ENTRY = re.compile(r"### (?P<english>[^|]*?) \| (?P<swedish>[^|]+)")
+
+
+def check_glossary():
+    for number, line in enumerate((ROOT / "GLOSSARY.md").read_text(encoding="utf-8").splitlines(), 1):
+        if line.startswith("### ") and not (
+            (entry := GLOSSARY_ENTRY.fullmatch(line.rstrip())) and entry["english"].strip()
+        ):
+            problems.append(f"GLOSSARY.md:{number}: heading {line!r} is not 'English | Swedish'")
+
+
 def check_links():
-    for md in sorted(ROOT.rglob("*.md")):
-        if ".git" in md.parts:
-            continue
+    for md in markdown_files():
         text = md.read_text(encoding="utf-8")
         for label, target in re.findall(r"\[([^\]]*)\]\(([^)]+)\)", text):
             if target.startswith(("http://", "https://", "#", "mailto:")):
@@ -192,6 +211,7 @@ def check_links():
 check_requirements()
 check_links()
 check_footnotes()
+check_glossary()
 diagrams = check_mermaid("--require-mermaid" in sys.argv[1:])
 
 if problems:
@@ -201,5 +221,6 @@ if problems:
     sys.exit(1)
 print(
     f"docs ok: {sum(EXPECTED_TOTALS.values())} requirements quoted intact, "
-    f"all relative links resolve, footnotes match, {diagrams} mermaid diagrams parse"
+    f"all relative links resolve, footnotes match, glossary headings name both words, "
+    f"{diagrams} mermaid diagrams parse"
 )

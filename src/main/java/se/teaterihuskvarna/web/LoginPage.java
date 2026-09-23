@@ -4,8 +4,9 @@ import se.teaterihuskvarna.login.LoginKind;
 import se.teaterihuskvarna.login.PasskeyUrls;
 
 /// The two login pages, one for members' accounts and one for administrator
-/// accounts. They share templates and differ only in where their forms post and
-/// what the heading says. The POST handlers at these paths are Spring Security's,
+/// accounts. They share templates and differ in where their forms post and what
+/// the heading says, and the administrator page says whom it is for and links
+/// to the member page. The POST handlers at these paths are Spring Security's,
 /// configured in `se.teaterihuskvarna.login`.
 public enum LoginPage {
 

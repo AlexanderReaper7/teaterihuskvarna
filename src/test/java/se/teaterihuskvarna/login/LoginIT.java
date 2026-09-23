@@ -15,8 +15,10 @@ import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.MediaType;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.test.web.servlet.request.RequestPostProcessor;
 import se.teaterihuskvarna.IntegrationTestSupport;
 
 /// Proves the login rules in `docs/projektplan.md`, "Member login must not reveal
@@ -372,7 +374,7 @@ class LoginIT extends IntegrationTestSupport {
     }
 
     /// The files every page links to load without a session, and only those: the
-    /// provenance README beside them in `static/` stays denied.
+    /// provenance README beside them in `static/` stays denied, which answers 404.
     @Test
     void theStaticFilesArePublic() throws Exception {
         mockMvc.perform(get("/css/site.css")).andExpect(status().isOk());
@@ -380,7 +382,7 @@ class LoginIT extends IntegrationTestSupport {
         mockMvc.perform(get("/img/logo-negative.png")).andExpect(status().isOk());
         mockMvc.perform(get("/img/favicon.png")).andExpect(status().isOk());
         mockMvc.perform(get("/js/login-link.js")).andExpect(status().isOk());
-        assertDenied(mockMvc.perform(get("/README.md")).andReturn(), "/logga-in");
+        mockMvc.perform(get("/README.md")).andExpect(status().isNotFound());
     }
 
     @Test
@@ -392,19 +394,44 @@ class LoginIT extends IntegrationTestSupport {
     }
 
     /// Fails closed: a path no rule mentions is denied, not passed on to a
-    /// controller that might one day exist there. A visitor without a session is
-    /// sent to log in, and so is a logged-in member. The REST adapter answers 401,
-    /// or 403 once logged in.
+    /// controller that might one day exist there, and the refusal is a 404
+    /// whoever asks. `static/README.md` is a real file no rule grants, so a
+    /// request that got past the rules would get it with 200. The body of the
+    /// 404, the error page or nothing under `/api/`, is `ErrorPageIT`'s and the
+    /// e2e suite's, because MockMvc does not follow `sendError`.
+    ///
+    /// `/admin/**` is a rule, so an unknown path there asks an anonymous visitor
+    /// to log in, and an administrator gets Spring MVC's own 404.
     @Test
-    void aPathNoRuleMentionsIsDenied() throws Exception {
-        assertDenied(mockMvc.perform(get("/finns-inte")).andReturn(), "/logga-in");
-        assertDenied(mockMvc.perform(get("/admin/finns-inte")).andReturn(), "/admin/logga-in");
-        mockMvc.perform(get("/api/finns-inte")).andExpect(status().isUnauthorized());
+    void aPathNoRuleMentionsIsNotFound() throws Exception {
+        for (String path : List.of("/finns-inte", "/README.md", "/api/finns-inte")) {
+            assertThat(mockMvc.perform(get(path)).andReturn().getResponse().getStatus()).as(path).isEqualTo(404);
+        }
+        assertRedirect(mockMvc.perform(get("/admin/finns-inte")).andReturn(), "/admin/logga-in");
 
         insertAccount("Karin Karlsson", KARIN);
-        MvcResult login = logInByLink(LoginKind.MEMBER, KARIN);
-        assertRedirect(mockMvc.perform(get("/finns-inte").with(sessionOf(login))).andReturn(), "/logga-in");
-        mockMvc.perform(get("/api/finns-inte").with(sessionOf(login))).andExpect(status().isForbidden());
+        RequestPostProcessor member = sessionOf(logInByLink(LoginKind.MEMBER, KARIN));
+        RequestPostProcessor administrator = sessionOf(logInByLink(LoginKind.ADMINISTRATOR, firstAdministratorEmail));
+        for (RequestPostProcessor session : List.of(member, administrator)) {
+            for (String path : List.of("/finns-inte", "/README.md", "/api/finns-inte")) {
+                assertThat(mockMvc.perform(get(path).with(session)).andReturn().getResponse().getStatus())
+                        .as(path).isEqualTo(404);
+            }
+        }
+        assertThat(mockMvc.perform(get("/admin/finns-inte").with(administrator)).andReturn().getResponse()
+                .getStatus()).isEqualTo(404);
+    }
+
+    /// A refused request from someone without a session leaves no session
+    /// behind. Spring's request cache saved each one in a new session, to go
+    /// back to after login, and nothing read it.
+    @Test
+    void aRefusedVisitorGetsNoSession() throws Exception {
+        for (String path : List.of("/finns-inte", "/medlem", "/admin", "/api/member")) {
+            mockMvc.perform(get(path).accept(MediaType.TEXT_HTML));
+        }
+
+        assertThat(rowsIn("spring_session")).isZero();
     }
 
     /// A failed login stores its error in a new, anonymous session, so only
@@ -413,17 +440,5 @@ class LoginIT extends IntegrationTestSupport {
         return jdbc.sql("SELECT principal_name FROM spring_session WHERE principal_name IS NOT NULL")
                 .query(String.class)
                 .list();
-    }
-
-    /// Denied means 401, 403, or a redirect to the login page. Which one depends
-    /// on the chain and on whether there is a session, and each keeps the
-    /// response away from the controller.
-    private static void assertDenied(MvcResult result, String loginPage) {
-        int status = result.getResponse().getStatus();
-        if (status >= 300 && status < 400) {
-            assertThat(locationOf(result)).isEqualTo(loginPage);
-        } else {
-            assertThat(status).isIn(401, 403);
-        }
     }
 }

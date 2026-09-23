@@ -239,10 +239,13 @@ test.describe("what a person might get wrong", () => {
     await expect(page.getByText("Erik Lindqvist")).toHaveCount(0);
   });
 
-  test("a member cannot open the administrator page", async ({ page }) => {
+  test("a member who opens the administrator page lands on a login that says it is not theirs", async ({ page }) => {
     await linkLogin(page, "member", MEMBERS.erik);
     await page.goto(PATHS.administrator.home);
     await expect(page).toHaveURL(PATHS.administrator.login);
+    await expect(page.getByText(text("login.administrator.audience"))).toBeVisible();
+    await page.getByRole("link", { name: text("login.administrator.member") }).click();
+    await expect(page).toHaveURL(PATHS.member.login);
   });
 
   test("a member opening someone else's link, on a shared computer, becomes that person", async ({ page }) => {

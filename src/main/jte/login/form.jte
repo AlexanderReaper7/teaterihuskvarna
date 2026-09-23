@@ -8,6 +8,12 @@
 @param boolean failed
 @template.layout(copy = copy, title = copy.text(page.headingKey()), content = @`
     <h1>${copy.text(page.headingKey())}</h1>
+    @if(page == LoginPage.ADMINISTRATOR)
+        <p>
+            ${copy.text("login.administrator.audience")}
+            <a href="${LoginPage.MEMBER.path()}">${copy.text("login.administrator.member")}</a>
+        </p>
+    @endif
     @if(stale)
         <p role="alert">${copy.text("form.stale")}</p>
     @endif
