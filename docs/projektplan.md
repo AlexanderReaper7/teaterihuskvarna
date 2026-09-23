@@ -46,7 +46,7 @@ Volunteer booking is a SHOULD requirement even though the original scope table l
 
 ## Public content and member data stay in separate systems
 
-Sanity holds public content. The Spring Boot application holds member data and renders the public site, member pages and administration pages with JTE. PostgreSQL stores members, fees, registrations and volunteer bookings. Brevo sends login links and member mailings. The application, database and TLS proxy run as containers on one host in an EU region.
+Sanity holds public content. The Spring Boot application holds member data and renders the public site, member pages and administration pages with JTE. Every capability it has lives in an application service, which the JTE pages call in process and a REST API exposes over HTTP; the two must stay in step, and [0014](decisions/0014-one-service-layer-two-adapters.md) records how that is checked. PostgreSQL stores members, fees, registrations and volunteer bookings. Brevo sends login links and member mailings. The application, database and TLS proxy run as containers on one host in an EU region.
 
 ```mermaid
 flowchart LR
@@ -63,7 +63,7 @@ flowchart LR
     host --- db
 ```
 
-The application renders usable HTML on the server. Reading a page and submitting a form must not require browser JavaScript. Sanity content is cached, a publish webhook clears the cache, and the cache expires within one minute if the webhook fails.
+The application renders usable HTML on the server. Sanity content is cached, a publish webhook clears the cache, and the cache expires within one minute if the webhook fails.
 
 The accepted component choices and their costs are recorded in [0004](decisions/0004-jte-for-templates.md), [0005](decisions/0005-brevo-campaign-drafts.md), [0006](decisions/0006-sanity-for-now.md), [0007](decisions/0007-postgres-in-a-container.md), [0008](decisions/0008-everything-in-containers.md) and [0009](decisions/0009-java-25-lts.md).
 
@@ -96,6 +96,8 @@ The current fee rule is:
 Before building reconciliation, compare this rule with real anonymised bankgiro examples. A payer's name may differ from the covered member's name. If the examples break the rule, update the model and record the reason before implementation.
 
 Offer registrations, volunteer bookings and mailing records refer to members by identifier. No member-register field may appear in a Sanity content type.
+
+An offer is therefore split across both systems, deliberately. Sanity holds what an editor writes: title, description, images, dates. PostgreSQL holds the seat capacity and the registrations against it. Requirement M3 promises a member the number of places left, and a count is only correct if the same transaction that takes a place checks the limit. Capacity stored in Sanity could be lowered by an editor while a member is registering, with the application unable to refuse the extra booking. The cost of the split is an administration screen for setting capacity, and an offer that no single editor owns end to end.
 
 ## Accessibility needs automated and manual checks
 

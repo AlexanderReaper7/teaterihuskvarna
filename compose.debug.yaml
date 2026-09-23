@@ -1,0 +1,22 @@
+# Debugging only. Compose does not load this on its own; it has to be named:
+#
+#   docker compose -f compose.yaml -f compose.debug.yaml up -d --build
+#
+# The VS Code task "compose: up with the debugger port open" runs exactly that,
+# and the "Attach to the application" launch configuration runs the task first.
+#
+# Deliberately not named compose.override.yaml. Compose reads that file
+# automatically, so `docker compose up` in production would open a debug port
+# nobody asked for.
+
+services:
+  app:
+    environment:
+      # suspend=n, so the container starts and serves whether or not a debugger
+      # ever connects. suspend=y would hang the stack until someone attached.
+      JAVA_TOOL_OPTIONS: "-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5005"
+    ports:
+      # Bound to 127.0.0.1 on purpose. JDWP has no authentication: anything that
+      # can reach the port can load a class and run it. It must never listen on
+      # a routable address.
+      - "127.0.0.1:5005:5005"

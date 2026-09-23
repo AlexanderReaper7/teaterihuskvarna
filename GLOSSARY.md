@@ -110,6 +110,12 @@ A member benefit or limited-capacity activity for which a member may register.
 
 _Avoid:_ event, discount when the benefit is not a discount
 
+### Offer capacity
+
+The number of places an offer has. Stored in PostgreSQL, not in Sanity, so that taking a place and checking the limit happen in one transaction. See the member model section of [projektplan.md](docs/projektplan.md).
+
+_Avoid:_ seats, slots, places left (that is the remainder, not the capacity)
+
 ### Offer registration
 
 A member's reservation of a place in an offer.
@@ -141,6 +147,26 @@ _Avoid:_ mailing list, because a list may persist after membership data changes
 One bulk message sent to a mailing audience. A login email is not a mailing.
 
 _Avoid:_ login email, newsletter when the message is not a newsletter
+
+## System
+
+### Capability
+
+One thing the system can do, such as looking a member up by email or recording a fee. A capability is a method on an application service, never logic inside a controller or a template. ([0014](docs/decisions/0014-one-service-layer-two-adapters.md))
+
+_Avoid:_ feature, use case, endpoint
+
+### Application service
+
+The class that holds the capabilities for one part of the domain, and the only thing allowed to reach the database for it.
+
+_Avoid:_ manager, business layer, backend
+
+### Adapter
+
+A way into the application services. There are two, and they are peers: the JTE pages, which call a service in process, and the REST API, which wraps the same method in HTTP. Anything one adapter can do, the other can.
+
+_Avoid:_ frontend, backend, because both adapters are in the same deployable
 
 ## Delivery
 

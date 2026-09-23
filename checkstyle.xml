@@ -1,0 +1,89 @@
+<?xml version="1.0"?>
+<!DOCTYPE module PUBLIC
+    "-//Checkstyle//DTD Checkstyle Configuration 1.3//EN"
+    "https://checkstyle.org/dtds/configuration_1_3.dtd">
+
+<!--
+    Ported from C:\Projects\Lexicon-flight-reservation, whose own record is
+    docs/decisions/0010-static-analysis-gates.md there. Reasoning for this copy,
+    and the three places it differs, is in docs/decisions/0013.
+
+    Severity is "error" on the Checker so the plugin's violationSeverity can
+    reach it. A gate that cannot fail is a log nobody reads.
+-->
+<module name="Checker">
+    <property name="severity" value="error"/>
+    <module name="SuppressionFilter">
+        <property name="file" value="${config_loc}/suppressions.xml"/>
+    </module>
+    <module name="TreeWalker">
+        <!-- Naming -->
+        <module name="TypeName"/>
+        <module name="MethodName"/>
+        <module name="LocalVariableName"/>
+        <module name="MemberName"/>
+        <module name="ConstantName"/>
+        <module name="PackageName"/>
+
+        <!-- Disallow var (inferred local variable type) -->
+        <module name="IllegalType">
+            <property name="illegalClassNames" value="var"/>
+        </module>
+
+        <!-- No Javadoc rules here, deliberately. Checkstyle 14.1.0 has no
+             Markdown Javadoc parser, so JavadocMethod and JavadocType read a
+             `///` comment as an ordinary comment and check nothing in it. The
+             same missing `@param` fails as `/** */` and passes as `///`, which
+             was measured, not assumed: docs/decisions/0013. A rule that reports
+             success while checking nothing is worse than no rule, so the two are
+             gone and the regex below keeps the comment style uniform instead. -->
+
+        <!-- Compact style -->
+        <module name="SingleSpaceSeparator">
+            <property name="validateComments" value="true"/>
+        </module>
+
+        <!-- Braces -->
+        <module name="NeedBraces"/>
+        <module name="RightCurly"/>
+
+        <!-- Indentation -->
+        <module name="Indentation">
+            <property name="basicOffset" value="4"/>
+            <property name="caseIndent" value="4"/>
+        </module>
+
+        <!-- Imports. No excludes: the reference project allows star imports in
+             six packages, and this one has no star import to grandfather. -->
+        <module name="AvoidStarImport"/>
+        <module name="UnusedImports"/>
+
+        <!-- Misc -->
+        <module name="EmptyBlock"/>
+        <module name="SimplifyBooleanExpression"/>
+        <module name="SimplifyBooleanReturn"/>
+    </module>
+
+    <!-- Line length -->
+    <module name="LineLength">
+        <property name="max" value="120"/>
+    </module>
+
+    <!-- No tabs -->
+    <module name="FileTabCharacter"/>
+
+    <!-- Trailing whitespace -->
+    <module name="RegexpSingleline">
+        <property name="format" value="\s+$"/>
+        <property name="message" value="Line has trailing whitespace."/>
+    </module>
+
+    <!-- Doc comments are Markdown (JEP 467), never `/** */`. This is the gate on
+         that, and it is the only Javadoc-related check the ruleset can enforce:
+         docs/decisions/0013. -->
+    <module name="RegexpSingleline">
+        <property name="format" value="^\s*/\*\*"/>
+        <property name="message"
+                  value="Use a /// Markdown doc comment (JEP 467), not /** */."/>
+    </module>
+</module>

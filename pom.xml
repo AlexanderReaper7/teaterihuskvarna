@@ -1,0 +1,246 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-parent</artifactId>
+    <version>4.1.1</version>
+    <relativePath/>
+  </parent>
+
+  <groupId>se.teaterihuskvarna</groupId>
+  <artifactId>teaterihuskvarna</artifactId>
+  <version>0.1.0-SNAPSHOT</version>
+  <name>teaterihuskvarna</name>
+  <description>Website and member register for Teater i Huskvarna</description>
+
+  <properties>
+    <java.version>25</java.version>
+    <!-- Versions newer than the ones Spring Boot 4.1.1 manages. Checked against
+         Maven Central on 2026-09-22; see docs/decisions/0010 and 0011. -->
+    <jte.version>3.2.4</jte.version>
+    <flyway.version>13.7.0</flyway.version>
+    <testcontainers.version>1.21.4</testcontainers.version>
+    <!-- The three static analysis gates: docs/decisions/0013. Checked against
+         Maven Central on 2026-09-22; each is the latest release. -->
+    <checkstyle.plugin.version>3.6.0</checkstyle.plugin.version>
+    <checkstyle.version>14.1.0</checkstyle.version>
+    <spotbugs.plugin.version>4.10.4.1</spotbugs.plugin.version>
+    <pmd.plugin.version>3.28.0</pmd.plugin.version>
+    <pmd.version>7.27.0</pmd.version>
+    <!-- Tie PMD's analysis target to the compiler target, so a Java upgrade
+         cannot leave PMD reading class files it does not understand. -->
+    <pmd.target.jdk>${java.version}</pmd.target.jdk>
+    <archunit.version>1.5.0</archunit.version>
+  </properties>
+
+  <dependencies>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-web</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-data-jpa</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>gg.jte</groupId>
+      <artifactId>jte-spring-boot-starter-4</artifactId>
+      <version>${jte.version}</version>
+    </dependency>
+    <!-- Boot 4 moved Flyway auto-configuration out of spring-boot-autoconfigure
+         into its own module. With only flyway-core on the classpath, migrations
+         silently do not run: MemberRegisterSchemaIT is the guard against that. -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-flyway</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.flywaydb</groupId>
+      <artifactId>flyway-database-postgresql</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.postgresql</groupId>
+      <artifactId>postgresql</artifactId>
+      <scope>runtime</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-test</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <!-- Reads the compiled classes to check the adapter rules in
+         docs/decisions/0014, including the one nothing else can check: that
+         every capability a JTE page uses also has a REST endpoint. -->
+    <dependency>
+      <groupId>com.tngtech.archunit</groupId>
+      <artifactId>archunit-junit5</artifactId>
+      <version>${archunit.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <!-- Boot 4 splits the test slices per technology: @WebMvcTest is here, not in
+         spring-boot-test-autoconfigure the way Boot 3 had it. -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-webmvc-test</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-testcontainers</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.testcontainers</groupId>
+      <artifactId>junit-jupiter</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.testcontainers</groupId>
+      <artifactId>postgresql</artifactId>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-maven-plugin</artifactId>
+      </plugin>
+      <!-- Compiles every .jte template to a Java class. This is the whole reason
+           0004 chose JTE: a renamed field fails the build rather than a page. -->
+      <plugin>
+        <groupId>gg.jte</groupId>
+        <artifactId>jte-maven-plugin</artifactId>
+        <version>${jte.version}</version>
+        <configuration>
+          <sourceDirectory>${project.basedir}/src/main/jte</sourceDirectory>
+          <targetDirectory>${project.build.outputDirectory}</targetDirectory>
+          <contentType>Html</contentType>
+          <binaryStaticContent>true</binaryStaticContent>
+        </configuration>
+        <executions>
+          <execution>
+            <id>precompile</id>
+            <phase>process-classes</phase>
+            <goals><goal>precompile</goal></goals>
+          </execution>
+        </executions>
+      </plugin>
+      <!--
+           Three static analysis gates, all failing the build. Ported from
+           C:\Projects\Lexicon-flight-reservation; reasoning and the
+           divergences are in docs/decisions/0013.
+
+           checkstyle runs at `validate`, so a style violation stops the build
+           before anything compiles, which means `docker build` runs it too.
+           spotbugs and pmd need bytecode and run in their default phase,
+           `verify`, which is after the tests and therefore outside the image
+           build. `./mvnw verify` is the command that runs all three.
+      -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-checkstyle-plugin</artifactId>
+        <version>${checkstyle.plugin.version}</version>
+        <dependencies>
+          <dependency>
+            <groupId>com.puppycrawl.tools</groupId>
+            <artifactId>checkstyle</artifactId>
+            <version>${checkstyle.version}</version>
+          </dependency>
+        </dependencies>
+        <configuration>
+          <configLocation>checkstyle.xml</configLocation>
+          <!-- checkstyle.xml resolves suppressions.xml through ${config_loc},
+               which the plugin does not define on its own. Without this the
+               goal dies with "Property ${config_loc} has not been set" rather
+               than quietly skipping the suppressions. -->
+          <propertyExpansion>config_loc=${project.basedir}</propertyExpansion>
+          <violationSeverity>error</violationSeverity>
+          <!-- `failOnViolation` and not `failsOnError`, which the plugin's own
+               help says fails "immediately ... before checking the log for
+               logViolationsToConsole". With `failsOnError` the build reported
+               "There is 1 error" and never printed the file or the line.
+               Measured 2026-09-22; the VS Code task parses these lines into the
+               Problems panel. -->
+          <failOnViolation>true</failOnViolation>
+          <logViolationsToConsole>true</logViolationsToConsole>
+          <includeTestSourceDirectory>true</includeTestSourceDirectory>
+        </configuration>
+        <executions>
+          <execution>
+            <id>checkstyle</id>
+            <phase>validate</phase>
+            <goals><goal>check</goal></goals>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>com.github.spotbugs</groupId>
+        <artifactId>spotbugs-maven-plugin</artifactId>
+        <version>${spotbugs.plugin.version}</version>
+        <configuration>
+          <effort>Max</effort>
+          <threshold>Medium</threshold>
+          <failOnError>true</failOnError>
+          <excludeFilterFile>spotbugs-exclude.xml</excludeFilterFile>
+        </configuration>
+        <executions>
+          <execution>
+            <goals><goal>check</goal></goals>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-pmd-plugin</artifactId>
+        <version>${pmd.plugin.version}</version>
+        <configuration>
+          <failOnViolation>true</failOnViolation>
+          <printFailingErrors>true</printFailingErrors>
+          <targetJdk>${pmd.target.jdk}</targetJdk>
+        </configuration>
+        <executions>
+          <execution>
+            <goals><goal>check</goal></goals>
+          </execution>
+        </executions>
+        <!-- PMD is pinned ahead of the version the plugin bundles. A bundled PMD
+             that cannot read this project's class files still parses sources, so
+             syntactic rules fire and the build looks healthy while every
+             type-aware rule silently checks nothing. docs/decisions/0013. -->
+        <dependencies>
+          <dependency>
+            <groupId>net.sourceforge.pmd</groupId>
+            <artifactId>pmd-core</artifactId>
+            <version>${pmd.version}</version>
+          </dependency>
+          <dependency>
+            <groupId>net.sourceforge.pmd</groupId>
+            <artifactId>pmd-java</artifactId>
+            <version>${pmd.version}</version>
+          </dependency>
+        </dependencies>
+      </plugin>
+      <!-- Integration tests need a docker daemon, which a docker build stage does
+           not have. They run through compose or CI instead: docs/decisions/0011. -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-failsafe-plugin</artifactId>
+        <executions>
+          <execution>
+            <goals>
+              <goal>integration-test</goal>
+              <goal>verify</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+</project>

@@ -1,6 +1,11 @@
 # Agent instructions
 
 - Product work: read [the system plan](docs/projektplan.md), [requirements](docs/requirements.md), and [glossary](GLOSSARY.md). Update the glossary in the same commit when a term changes meaning or is added.
-- Technical choices: read the relevant record in [decisions](docs/decisions/). New evidence may overturn a decision, but the record and plan must change with it.
+- Technical choices: read the relevant record in [decisions](docs/decisions/). New evidence may overturn a decision, but the record and plan must change with it, git provides additional history.
 - Customer source: keep `docs/projektplan-original.md` and `docs/projektplan-original.en.md` frozen.
-- Documentation changes: run `nix shell nixpkgs#mermaid-cli --command uv run python docs/check.py --require-mermaid`.
+- Documentation changes: run the check defined in [.github/workflows/docs.yml](.github/workflows/docs.yml).
+- Code changes: build and test through docker, never a local JDK. Commands are in [README.md](README.md), and as VS Code tasks in `.vscode/tasks.json`, reasoning in [decisions/0011](docs/decisions/0011-maven-and-the-build-in-a-container.md). Run `verify`, not `test`: Checkstyle runs at `validate`, SpotBugs and PMD at `verify`, and all three fail the build ([decisions/0013](docs/decisions/0013-three-static-analysis-gates.md)).
+- Java doc comments are `///` Markdown (JEP 467), never `/** */`. Checkstyle rejects `/** */`, but nothing checks what a `///` comment contains, so `@param` and `@return` on public methods are on the author. Why, and the measurement behind it, in [decisions/0013](docs/decisions/0013-three-static-analysis-gates.md).
+- New capability: it goes on an application service, and both adapters get it. A JTE controller in `se.teaterihuskvarna.web` calls the service method directly; a `@RestController` in `se.teaterihuskvarna.api` wraps the same method. `AdapterRulesTest` fails the build if `api` falls behind, and the reasoning is in [decisions/0014](docs/decisions/0014-one-service-layer-two-adapters.md).
+- Adapters never touch a repository or an entity. Services return records built inside the transaction, because `open-in-view` is off ([decisions/0012](docs/decisions/0012-jpa-over-a-schema-flyway-owns.md)). Keep repositories package private so the compiler enforces this before the test does.
+- Do not add a SpotBugs exclusion without writing, beside it in `spotbugs-exclude.xml`, what the detector protects against and why that cannot reach this code. Do not raise the PMD pin or the `var` ban without reading [decisions/0013](docs/decisions/0013-three-static-analysis-gates.md) first: both look redundant and are not.

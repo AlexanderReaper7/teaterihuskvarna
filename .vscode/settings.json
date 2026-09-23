@@ -1,0 +1,41 @@
+// Workspace settings. Machine-specific paths do not belong here, so a JDK
+// location goes in user settings, not in this file.
+{
+  // docs/decisions/0011 chose Maven. The Extension Pack for Java bundles the
+  // Gradle importer, which otherwise scans this project and finds nothing.
+  "java.import.gradle.enabled": false,
+
+  // The build compiles against Java 25 (pom.xml <java.version>, and
+  // docs/decisions/0009). The language server runs on whichever JDK it finds,
+  // which on the machine 0011 was written on is Temurin 26. JDT takes the
+  // compliance level from the pom but does not emulate `--release`, so a Java
+  // 26 API can autocomplete here and fail the build. `./mvnw verify` is the
+  // check that catches it. Reopening in .devcontainer/ removes the gap.
+  "java.configuration.updateBuildConfiguration": "automatic",
+
+  // Checkstyle is a build gate and rejects trailing whitespace outright
+  // (RegexpSingleline in checkstyle.xml). Letting the editor satisfy it means
+  // never learning about it from a failed build.
+  "files.trimTrailingWhitespace": true,
+  "files.insertFinalNewline": true,
+  "files.eol": "\n",
+
+  // target/ holds generated JTE classes and the analysis reports. Searching it
+  // returns the same code twice.
+  "search.exclude": { "**/target": true },
+  "files.watcherExclude": { "**/target/**": true },
+
+  // Frozen customer source: AGENTS.md. Read-only in the editor so an autofix or
+  // a stray keystroke cannot edit it.
+  "files.readonlyInclude": {
+    "docs/projektplan-original.md": true,
+    "docs/projektplan-original.en.md": true
+  },
+
+  "[java]": { "editor.tabSize": 4, "editor.insertSpaces": true },
+  "[xml]": { "editor.tabSize": 2 },
+  "[yaml]": { "editor.tabSize": 2 },
+
+  // Checkstyle's LineLength is 120.
+  "editor.rulers": [120]
+}

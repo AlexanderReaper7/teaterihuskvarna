@@ -1,0 +1,27 @@
+<?xml version="1.0"?>
+<!DOCTYPE suppressions PUBLIC
+    "-//Checkstyle//DTD SuppressionFilter Configuration 1.2//EN"
+    "https://checkstyle.org/dtds/suppressions_1_2.dtd">
+
+<!--
+    Path patterns accept either separator. Checkstyle sees Windows paths with
+    backslashes here and forward slashes elsewhere, and a pattern matching only
+    one of them suppresses nothing on the other platform without saying so.
+-->
+<suppressions>
+    <!-- Generated sources under target/, which includes the JTE templates
+         compiled to Java by the precompile goal. -->
+    <suppress files=".*[\\/]target[\\/].*\.java" checks=".*"/>
+
+    <!-- Spring Data derived query methods carry underscores by design
+         (findByHousehold_Name), which MethodName cannot be taught to allow.
+         Matched on the file name rather than a repository/ directory: this
+         project keeps a repository next to the entity it loads. -->
+    <suppress files=".*Repository\.java"
+              checks="com\.puppycrawl\.tools\.checkstyle\.checks\.naming\.MethodNameCheck"/>
+
+    <!-- Javadoc is required on production API, not on test methods, whose names
+         are the documentation. Everything else in the ruleset still applies to
+         tests: a 200-character line in a test is still a 200-character line. -->
+    <suppress files=".*[\\/]src[\\/]test[\\/]java[\\/].*\.java" checks="Javadoc.*"/>
+</suppressions>

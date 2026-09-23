@@ -1,0 +1,37 @@
+// Suggestions, not installs. VS Code offers these once when the folder opens.
+{
+  "recommendations": [
+    // redhat.java, plus the Maven, test, debug and project-view extensions.
+    // Pulls in vscjava.vscode-gradle as well, which settings.json switches off.
+    "vscjava.vscode-java-pack",
+
+    // Dockerfile and compose linting, and container management. The whole build
+    // runs through these: docs/decisions/0011.
+    "docker.docker",
+    "ms-azuretools.vscode-containers",
+
+    // For .devcontainer/, the fallback when the host JDK is not 25.
+    "ms-vscode-remote.remote-containers",
+
+    // compose.yaml, compose.debug.yaml and the GitHub workflows.
+    "redhat.vscode-yaml",
+    "github.vscode-github-actions",
+
+    // docs/ is mermaid-heavy and docs/check.py verifies the diagrams parse.
+    // This renders them in the Markdown preview.
+    "bierner.markdown-mermaid",
+
+    // Syntax highlighting for src/main/jte/*.jte. A small extension, around
+    // 1300 installs as of 2026-09-22: a TextMate grammar and nothing else.
+    // Weigh that before installing.
+    "maj2c.jte-template-syntax-highlight"
+  ],
+
+  // Deliberately absent: shengchen.vscode-checkstyle. It runs its own copy of
+  // Checkstyle, set by java.checkstyle.version, and pom.xml pins 14.1.0 for the
+  // build. Two version numbers in two files with nothing checking they agree is
+  // the coupling docs/decisions/0012 rejected for Hibernate's allocationSize.
+  // The "checkstyle" task in tasks.json runs the pinned version instead and
+  // puts the violations in the Problems panel.
+  "unwantedRecommendations": []
+}

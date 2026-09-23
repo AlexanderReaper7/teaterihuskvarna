@@ -1,0 +1,215 @@
+// Every task runs through docker. No JDK, no Maven on the host is required to
+// build or test anything here: docs/decisions/0011.
+//
+// The workspace is mounted at /w, so javac reports /w/src/..., and the problem
+// matcher drops that prefix to get a path VS Code can open. Checkstyle already
+// prints relative paths and needs no prefix, which is why the matcher makes it
+// optional rather than assuming one form.
+//
+// The matcher covers javac and Checkstyle. SpotBugs and PMD are not covered:
+// neither prints file:[line,col] on a single line, so wiring them into the
+// Problems panel means parsing target/spotbugsXml.xml instead of the console.
+//
+// ${workspaceFolder} and ${userHome}, not $PWD and $HOME, so one task works
+// from PowerShell and from a POSIX shell.
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "maven: verify (tests and all three gates)",
+      "detail": "The command AGENTS.md requires. Checkstyle, unit tests, integration tests, SpotBugs, PMD.",
+      "type": "shell",
+      "command": "docker",
+      "args": ["run", "--rm", "--network", "host", "-v", "${workspaceFolder}:/w", "-w", "/w", "-v", "${userHome}/.m2:/root/.m2", "-v", "/var/run/docker.sock:/var/run/docker.sock", "eclipse-temurin:25.0.4_7-jdk-alpine", "./mvnw", "-B", "-ntp", "verify"],
+      "problemMatcher": [
+        {
+          "owner": "java",
+          "fileLocation": ["relative", "${workspaceFolder}"],
+          "severity": "error",
+          "pattern": {
+            "regexp": "^\\[ERROR\\]\\s+(?:/w/)?(\\S+\\.java):\\[(\\d+),(\\d+)\\]\\s+(.*)$",
+            "file": 1,
+            "line": 2,
+            "column": 3,
+            "message": 4
+          }
+        }
+      ],
+      "presentation": {
+        "clear": true
+      },
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      }
+    },
+    {
+      "label": "maven: test (unit tests only)",
+      "detail": "Faster. No *IT integration tests, so no docker socket is mounted.",
+      "type": "shell",
+      "command": "docker",
+      "args": ["run", "--rm", "-v", "${workspaceFolder}:/w", "-w", "/w", "-v", "${userHome}/.m2:/root/.m2", "eclipse-temurin:25.0.4_7-jdk-alpine", "./mvnw", "-B", "-ntp", "test"],
+      "problemMatcher": [
+        {
+          "owner": "java",
+          "fileLocation": ["relative", "${workspaceFolder}"],
+          "severity": "error",
+          "pattern": {
+            "regexp": "^\\[ERROR\\]\\s+(?:/w/)?(\\S+\\.java):\\[(\\d+),(\\d+)\\]\\s+(.*)$",
+            "file": 1,
+            "line": 2,
+            "column": 3,
+            "message": 4
+          }
+        }
+      ],
+      "presentation": {
+        "clear": true
+      },
+      "group": "test"
+    },
+    {
+      "label": "maven: compile",
+      "detail": "Compiles the sources and the JTE templates. Fastest answer to 'does it build'.",
+      "type": "shell",
+      "command": "docker",
+      "args": ["run", "--rm", "-v", "${workspaceFolder}:/w", "-w", "/w", "-v", "${userHome}/.m2:/root/.m2", "eclipse-temurin:25.0.4_7-jdk-alpine", "./mvnw", "-B", "-ntp", "compile"],
+      "problemMatcher": [
+        {
+          "owner": "java",
+          "fileLocation": ["relative", "${workspaceFolder}"],
+          "severity": "error",
+          "pattern": {
+            "regexp": "^\\[ERROR\\]\\s+(?:/w/)?(\\S+\\.java):\\[(\\d+),(\\d+)\\]\\s+(.*)$",
+            "file": 1,
+            "line": 2,
+            "column": 3,
+            "message": 4
+          }
+        }
+      ],
+      "presentation": {
+        "clear": true
+      }
+    },
+    {
+      "label": "checkstyle",
+      "detail": "Checkstyle alone, at the version pom.xml pins. Violations land in the Problems panel.",
+      "type": "shell",
+      "command": "docker",
+      "args": ["run", "--rm", "-v", "${workspaceFolder}:/w", "-w", "/w", "-v", "${userHome}/.m2:/root/.m2", "eclipse-temurin:25.0.4_7-jdk-alpine", "./mvnw", "-B", "-ntp", "checkstyle:check"],
+      "problemMatcher": [
+        {
+          "owner": "java",
+          "fileLocation": ["relative", "${workspaceFolder}"],
+          "severity": "error",
+          "pattern": {
+            "regexp": "^\\[ERROR\\]\\s+(?:/w/)?(\\S+\\.java):\\[(\\d+),(\\d+)\\]\\s+(.*)$",
+            "file": 1,
+            "line": 2,
+            "column": 3,
+            "message": 4
+          }
+        }
+      ],
+      "presentation": {
+        "clear": true
+      }
+    },
+    {
+      "label": "docs: check",
+      "detail": "The guard AGENTS.md points at: quoted requirements, relative links, mermaid diagrams.",
+      "type": "shell",
+      "command": "python3",
+      "args": ["docs/check.py", "--require-mermaid"],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": [],
+      "presentation": {
+        "clear": true
+      }
+    },
+    {
+      "label": "compose: up",
+      "type": "shell",
+      "command": "docker",
+      "args": ["compose", "up", "-d", "--build"],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": [],
+      "detail": "Builds the image and starts Caddy, the application and PostgreSQL. Site on http://localhost:8000/."
+    },
+    {
+      "label": "compose: up with the debugger port open",
+      "type": "shell",
+      "command": "docker",
+      "args": ["compose", "-f", "compose.yaml", "-f", "compose.debug.yaml", "up", "-d", "--build"],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": [],
+      "detail": "Same stack plus JDWP on 127.0.0.1:5005. The attach launch configuration runs this first."
+    },
+    {
+      "label": "compose: down",
+      "type": "shell",
+      "command": "docker",
+      "args": ["compose", "down"],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "compose: down and drop the database volume",
+      "type": "shell",
+      "command": "docker",
+      "args": ["compose", "down", "-v"],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": [],
+      "detail": "Discards the local member register. Flyway rebuilds the schema on the next start."
+    },
+    {
+      "label": "compose: follow the application log",
+      "type": "shell",
+      "command": "docker",
+      "args": ["compose", "logs", "-f", "app"],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": [],
+      "isBackground": true
+    },
+    {
+      "label": "image: build",
+      "detail": "What CI builds. Runs Checkstyle and the unit tests, not the integration tests.",
+      "type": "shell",
+      "command": "docker",
+      "args": ["build", "-t", "teaterihuskvarna:dev", "."],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": [
+        {
+          "owner": "java",
+          "fileLocation": ["relative", "${workspaceFolder}"],
+          "severity": "error",
+          "pattern": {
+            "regexp": "^\\[ERROR\\]\\s+(?:/w/)?(\\S+\\.java):\\[(\\d+),(\\d+)\\]\\s+(.*)$",
+            "file": 1,
+            "line": 2,
+            "column": 3,
+            "message": 4
+          }
+        }
+      ],
+      "presentation": {
+        "clear": true
+      }
+    }
+  ]
+}

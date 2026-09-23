@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    Exclusions must earn their place. Each one states what the detector is
+    protecting against and why that threat cannot reach this code, so a future
+    reader can check the claim rather than trust it. Nothing is excluded here
+    that has not first been seen to fire.
+-->
+<FindBugsFilter>
+
+    <!--
+        EI_EXPOSE_REP / EI_EXPOSE_REP2 in the entity package: an object that hands
+        out a reference to mutable state lets a caller change it from outside.
+
+        In an entity that reference is the point. `member.getHousehold()` returns
+        the household row this member belongs to, and returning a copy would hand
+        back an object Hibernate does not manage: writes to it would never reach
+        the database, and `==` against the same row loaded elsewhere in the
+        persistence context would be false. The identity is the association.
+
+        The detector cannot tell an entity reference from a mutable value, so the
+        exclusion is scoped to the package rather than to the two methods. What
+        makes that safe is a check that can be run rather than trusted: every
+        field in this package is a Long, a String, an Instant or another entity,
+        and no getter returns a collection. A collection getter that appears here
+        later must return a copy, and a mutable value type must not be added at
+        all, because this exclusion would hide both.
+
+        Scoped to entities deliberately. A controller or service that leaks
+        mutable state is still worth a look, which is why this names one package
+        instead of the whole application. A second entity package gets its own
+        entry here only after the check above has been run against it.
+
+        Seen to fire on 2026-09-22: Member.getHousehold and Member.setHousehold,
+        2 bugs, build failed. Removing this block reproduces that.
+    -->
+    <Match>
+        <Package name="se.teaterihuskvarna.member"/>
+        <Bug pattern="EI_EXPOSE_REP,EI_EXPOSE_REP2"/>
+    </Match>
+
+</FindBugsFilter>

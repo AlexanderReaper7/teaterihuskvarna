@@ -1,0 +1,76 @@
+// The fallback, not the default. .vscode/settings.json assumes the Java
+// language server runs on the host JDK, which is the arrangement chosen for
+// this project. Reopen in this container when the host JDK is not 25 and the
+// editor starts disagreeing with the build.
+//
+// Building and testing never need this. Those already run in a pinned
+// container from any host: docs/decisions/0011.
+{
+  "name": "teaterihuskvarna, JDK 25",
+
+  // Not eclipse-temurin:25.0.4_7-jdk-alpine, the image the Dockerfile builds
+  // with: the Java language server needs glibc and does not run on musl. This
+  // is the Debian-based devcontainer image, carrying Microsoft OpenJDK
+  // 25.0.4+7, the same Java version as the build's Temurin 25.0.4_7 from a
+  // different vendor. Checked on 2026-09-22.
+  //
+  // Pinned rather than floating, for the reason docs/decisions/0008 gives: a
+  // tag that moves on its own is a change nobody reviewed.
+  "image": "mcr.microsoft.com/devcontainers/java:3.0-25-jdk-bookworm",
+
+  "features": {
+    // The docker CLI plus the host's socket. Testcontainers starts real
+    // PostgreSQL containers and cannot work without a daemon, and the tasks in
+    // .vscode/tasks.json are all docker commands: docs/decisions/0011.
+    "ghcr.io/devcontainers/features/docker-outside-of-docker:1.9.1": {
+      "moby": false
+    }
+  },
+
+  // Those tasks mount ${workspaceFolder} into a second container. Inside a
+  // devcontainer that path would be a container path while the daemon is the
+  // host's, so the mount would be empty. Binding the workspace at the same path
+  // the host uses keeps every task working unchanged.
+  // The compose stack runs on the host's daemon and publishes JDWP on the
+  // host's 127.0.0.1:5005. On the default bridge network, localhost in here is
+  // this container's own loopback and the attach configuration finds nothing:
+  // measured 2026-09-22, "Connection refused" on bridge, a JDWP handshake with
+  // host networking. Docker Desktop needs host networking switched on in its
+  // settings for this to work; on Linux it works as is.
+  "runArgs": ["--network=host"],
+
+  "workspaceMount": "source=${localWorkspaceFolder},target=${localWorkspaceFolder},type=bind",
+  "workspaceFolder": "${localWorkspaceFolder}",
+
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "vscjava.vscode-java-pack",
+        "redhat.vscode-yaml",
+        "bierner.markdown-mermaid"
+      ],
+      "settings": {
+        // Here the JDK is 25 and matches the build, so the version drift
+        // .vscode/settings.json warns about is gone. Path read from the image
+        // on 2026-09-22, not assumed: JAVA_HOME=/usr/lib/jvm/msopenjdk-current.
+        "java.configuration.runtimes": [
+          {
+            "name": "JavaSE-25",
+            "path": "/usr/lib/jvm/msopenjdk-current",
+            "default": true
+          }
+        ]
+      }
+    }
+  }
+
+  // No postCreateCommand. The image already has python3, which is all
+  // docs/check.py needs to run.
+  //
+  // One gap: `docs/check.py --require-mermaid`, the "docs: check" task, also
+  // needs mmdc, and this image has no node. Inside the container that task
+  // fails loudly rather than skipping the diagrams, which is what
+  // --require-mermaid is for. Run it on the host, or install
+  // @mermaid-js/mermaid-cli@11.17.0, the version .github/workflows/docs.yml
+  // pins.
+}

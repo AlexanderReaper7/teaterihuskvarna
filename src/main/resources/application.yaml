@@ -1,0 +1,24 @@
+spring:
+  application:
+    name: teaterihuskvarna
+  datasource:
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/teaterihuskvarna}
+    username: ${DATABASE_USER:teaterihuskvarna}
+    password: ${DATABASE_PASSWORD:}
+  flyway:
+    enabled: true
+
+  jpa:
+    hibernate:
+      # Flyway owns every table. Hibernate checks that every table and column an
+      # entity maps actually exists, and refuses to start if one does not. It
+      # does not check column lengths: docs/decisions/0012.
+      ddl-auto: validate
+    # This application renders its own HTML, but a view must not be what keeps a
+    # database connection open. Templates get data the controller already loaded.
+    open-in-view: false
+
+gg:
+  jte:
+    development-mode: false
+    use-precompiled-templates: true

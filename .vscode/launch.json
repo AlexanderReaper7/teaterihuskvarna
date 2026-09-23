@@ -1,0 +1,37 @@
+// Attach only, no launch. A launch configuration makes VS Code start the JVM
+// itself, on the host JDK, which is the thing docs/decisions/0011 avoids. The
+// application runs in its container instead, with the JDWP agent listening
+// (compose.debug.yaml), and the debugger connects to that socket. Breakpoints
+// travel over JDWP as class name plus line number, so the JVM stops at the
+// line whether it runs on the host or in a container.
+//
+// A breakpoint only means something while the source matches the bytecode.
+// The first configuration rebuilds the image before attaching; after editing
+// code, restart the debug session rather than trusting old breakpoints.
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "java",
+      "name": "Attach to the application",
+      "request": "attach",
+      "hostName": "localhost",
+      "port": 5005,
+      // Starts the stack with JDWP open before attaching. Already running
+      // without the debug port? The task rebuilds and restarts the app service.
+      "preLaunchTask": "compose: up with the debugger port open",
+      // Names the workspace project the debugger resolves classes against.
+      // JDWP reports class names, not paths, so nothing has to map /app back to
+      // the workspace; the language server finds the source by class name.
+      "projectName": "teaterihuskvarna"
+    },
+    {
+      "type": "java",
+      "name": "Attach without starting anything",
+      "request": "attach",
+      "hostName": "localhost",
+      "port": 5005,
+      "projectName": "teaterihuskvarna"
+    }
+  ]
+}
