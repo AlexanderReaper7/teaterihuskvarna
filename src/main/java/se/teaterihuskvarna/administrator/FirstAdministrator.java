@@ -5,7 +5,7 @@ import org.springframework.boot.ApplicationRunner;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
-import se.teaterihuskvarna.login.Addresses;
+import se.teaterihuskvarna.login.Email;
 
 /// Creates the first administrator account on a database that has none, from
 /// [FirstAdministratorSettings]. Without it nobody could log in to add anyone.
@@ -40,6 +40,6 @@ class FirstAdministrator implements ApplicationRunner {
             throw new IllegalStateException("No administrator exists, so FIRST_ADMINISTRATOR_EMAIL and"
                     + " FIRST_ADMINISTRATOR_NAME must both be set to create the first one.");
         }
-        administrators.save(new Administrator(Addresses.normalise(email), fullName.strip(), null));
+        administrators.save(new Administrator(new Email(email), fullName.strip(), null));
     }
 }

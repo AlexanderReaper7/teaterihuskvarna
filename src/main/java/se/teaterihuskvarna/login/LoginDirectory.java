@@ -10,9 +10,9 @@ public interface LoginDirectory {
     /// @return the kind of login this directory answers for
     LoginKind kind();
 
-    /// @param email an address, already normalised by [Addresses#normalise]
+    /// @param email an address
     /// @return who is logged in by that address, or empty if nobody of this kind has it
-    Optional<SignedIn> find(String email);
+    Optional<SignedIn> find(Email email);
 
     /// A passkey names its owner by principal name, such as `member:7`, and not
     /// by address, so passkey login looks up by id.

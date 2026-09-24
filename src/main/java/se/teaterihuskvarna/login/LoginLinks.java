@@ -59,7 +59,7 @@ public class LoginLinks {
     /// @param email   the address as somebody typed it
     /// @param browser the [LoginBrowser] value of the browser that asked, the only one the link will work in
     public void send(LoginKind kind, String email, String browser) {
-        String address = Addresses.normalise(email);
+        Email address = new Email(email);
         background.run(() -> create(kind, address, browser));
     }
 
@@ -91,7 +91,7 @@ public class LoginLinks {
         return here ? LinkOpening.HERE : LinkOpening.ELSEWHERE;
     }
 
-    private void create(LoginKind kind, String address, String browser) {
+    private void create(LoginKind kind, Email address, String browser) {
         Optional<SignedIn> found = Directories.of(kind, directories).find(address);
         if (found.isEmpty()) {
             return;
@@ -103,7 +103,7 @@ public class LoginLinks {
                         VALUES (?, ?, ?, ?, ?, ?)""")
                 .param(Tokens.hash(token))
                 .param(kind.code())
-                .param(address)
+                .param(address.value())
                 .param(OffsetDateTime.now(ZoneOffset.UTC).plus(settings.linkLifetime()))
                 .param(Tokens.hash(browser))
                 .param(Tokens.hash(code))

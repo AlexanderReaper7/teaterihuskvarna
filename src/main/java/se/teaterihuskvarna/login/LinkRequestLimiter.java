@@ -40,7 +40,7 @@ public class LinkRequestLimiter {
     /// @return true if both the address and the client are within their limits
     @Transactional
     public boolean tryAcquire(String email, String clientAddress) {
-        String address = cut(Addresses.normalise(email), EMAIL_WIDTH);
+        String address = cut(new Email(email).value(), EMAIL_WIDTH);
         String client = cut(clientAddress, CLIENT_WIDTH);
         OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
         OffsetDateTime since = now.minus(settings.requestWindow());

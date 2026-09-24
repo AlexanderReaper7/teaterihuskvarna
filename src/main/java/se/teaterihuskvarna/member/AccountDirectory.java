@@ -3,6 +3,7 @@ package se.teaterihuskvarna.member;
 import java.util.Optional;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
+import se.teaterihuskvarna.login.Email;
 import se.teaterihuskvarna.login.LoginDirectory;
 import se.teaterihuskvarna.login.LoginKind;
 import se.teaterihuskvarna.login.SignedIn;
@@ -27,8 +28,8 @@ class AccountDirectory implements LoginDirectory {
     }
 
     @Override
-    public Optional<SignedIn> find(String email) {
-        return accounts.findByEmailIgnoreCase(email).map(AccountDirectory::signedIn);
+    public Optional<SignedIn> find(Email email) {
+        return accounts.findByEmailIgnoreCase(email.value()).map(AccountDirectory::signedIn);
     }
 
     @Override

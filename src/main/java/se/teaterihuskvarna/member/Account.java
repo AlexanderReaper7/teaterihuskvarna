@@ -10,6 +10,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import java.time.Instant;
+import se.teaterihuskvarna.login.Email;
 
 /// A member's login, and the address login links and mailings go to. A member
 /// has one at most, and a member added to a household has none until they
@@ -41,10 +42,10 @@ public class Account {
     }
 
     /// @param member the member this account logs in as
-    /// @param email  the address, already normalised, unique case insensitively across accounts
-    public Account(Member member, String email) {
+    /// @param email  the address, unique case insensitively across accounts
+    public Account(Member member, Email email) {
         this.member = member;
-        this.email = email;
+        this.email = email.value();
     }
 
     public Long getId() {

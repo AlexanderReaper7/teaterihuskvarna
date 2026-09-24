@@ -47,10 +47,10 @@ public class Mailer {
     /// @param to      the recipient's address
     /// @param subject the subject line
     /// @param body    the plain text body
-    public void send(String to, String subject, String body) {
+    public void send(Email to, String subject, String body) {
         SimpleMailMessage message = new SimpleMailMessage();
         message.setFrom(settings.from());
-        message.setTo(to);
+        message.setTo(to.value());
         message.setSubject(subject);
         message.setText(body);
         AfterCommit.run(() -> dispatch(message));

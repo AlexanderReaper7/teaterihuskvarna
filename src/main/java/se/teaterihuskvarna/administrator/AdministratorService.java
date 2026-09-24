@@ -6,7 +6,7 @@ import java.util.Optional;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.validation.annotation.Validated;
-import se.teaterihuskvarna.login.Addresses;
+import se.teaterihuskvarna.login.Email;
 import se.teaterihuskvarna.login.LoginKind;
 import se.teaterihuskvarna.login.PasskeyService;
 import se.teaterihuskvarna.login.Sessions;
@@ -48,9 +48,9 @@ public class AdministratorService {
     /// @throws jakarta.validation.ConstraintViolationException if the form breaks a constraint
     @Transactional
     public AdministratorDetails add(@Valid NewAdministrator form, long addedBy) {
-        String email = Addresses.normalise(form.email());
+        Email email = new Email(form.email());
         String fullName = form.fullName().strip();
-        Optional<Administrator> existing = administrators.findByEmail(email);
+        Optional<Administrator> existing = administrators.findByEmail(email.value());
         if (existing.isEmpty()) {
             return AdministratorDetails.of(administrators.save(new Administrator(email, fullName, addedBy)));
         }

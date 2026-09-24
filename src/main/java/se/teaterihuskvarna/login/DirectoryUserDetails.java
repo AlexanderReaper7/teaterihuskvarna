@@ -25,7 +25,7 @@ final class DirectoryUserDetails implements UserDetailsService {
     /// @throws UsernameNotFoundException if nobody of this kind has the address any more
     @Override
     public UserDetails loadUserByUsername(String username) {
-        return directory.find(Addresses.normalise(username))
+        return directory.find(new Email(username))
                 .orElseThrow(() -> new UsernameNotFoundException("No " + directory.kind().code() + " login"));
     }
 }

@@ -8,6 +8,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.Instant;
 import org.jspecify.annotations.Nullable;
+import se.teaterihuskvarna.login.Email;
 
 /// An administrator account. Not an account in the member sense: an
 /// administrator need not be a member, and one address may belong to both.
@@ -50,11 +51,11 @@ public class Administrator {
         // for JPA
     }
 
-    /// @param email     the address, already normalised, unique case insensitively across every row
+    /// @param email     the address, unique case insensitively across every row
     /// @param fullName  the name to greet them by
     /// @param createdBy the administrator who added this one, or null for the first administrator
-    public Administrator(String email, String fullName, @Nullable Long createdBy) {
-        this.email = email;
+    public Administrator(Email email, String fullName, @Nullable Long createdBy) {
+        this.email = email.value();
         this.fullName = fullName;
         this.createdBy = createdBy;
     }

@@ -3,6 +3,7 @@ package se.teaterihuskvarna.administrator;
 import java.util.Optional;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
+import se.teaterihuskvarna.login.Email;
 import se.teaterihuskvarna.login.LoginDirectory;
 import se.teaterihuskvarna.login.LoginKind;
 import se.teaterihuskvarna.login.SignedIn;
@@ -26,8 +27,8 @@ class AdministratorDirectory implements LoginDirectory {
     }
 
     @Override
-    public Optional<SignedIn> find(String email) {
-        return administrators.findActiveByEmail(email).map(AdministratorDirectory::signedIn);
+    public Optional<SignedIn> find(Email email) {
+        return administrators.findActiveByEmail(email.value()).map(AdministratorDirectory::signedIn);
     }
 
     @Override

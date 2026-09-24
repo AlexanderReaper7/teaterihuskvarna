@@ -9,8 +9,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.validation.annotation.Validated;
 import se.teaterihuskvarna.Swedish;
-import se.teaterihuskvarna.login.Addresses;
 import se.teaterihuskvarna.login.Background;
+import se.teaterihuskvarna.login.Email;
 import se.teaterihuskvarna.login.Lifetimes;
 import se.teaterihuskvarna.login.LinkRequestLimiter;
 import se.teaterihuskvarna.login.LoginKind;
@@ -86,15 +86,15 @@ public class MembershipApplicationService {
     /// @throws jakarta.validation.ConstraintViolationException if the form breaks a constraint
     @Transactional
     public void apply(@Valid ApplicationForm form, String clientAddress) {
-        String email = Addresses.normalise(form.email());
-        if (!limiter.tryAcquire(email, clientAddress)) {
+        Email email = new Email(form.email());
+        if (!limiter.tryAcquire(email.value(), clientAddress)) {
             return;
         }
         background.run(() -> receive(form, email));
     }
 
-    private void receive(ApplicationForm form, String email) {
-        if (accounts.findByEmailIgnoreCase(email).isPresent()) {
+    private void receive(ApplicationForm form, Email email) {
+        if (accounts.findByEmailIgnoreCase(email.value()).isPresent()) {
             alreadyMember(email);
             return;
         }
@@ -104,7 +104,7 @@ public class MembershipApplicationService {
         Instant now = Instant.now();
         applications.replace(
                 fullName,
-                email,
+                email.value(),
                 blankToNull(form.phone()),
                 blankToNull(form.address()),
                 blankToNull(form.postalCode()),
@@ -126,7 +126,7 @@ public class MembershipApplicationService {
     /// login link here would work in any browser, since the application form
     /// sets no login cookie, and would reopen what [se.teaterihuskvarna.login.LoginBrowser]
     /// closes: anyone applying with their own address could pass the link on.
-    private void alreadyMember(String email) {
+    private void alreadyMember(Email email) {
         String login = mail.link(LoginUrls.of(LoginKind.MEMBER).page(), null);
         mailer.send(
                 email,
@@ -170,7 +170,7 @@ public class MembershipApplicationService {
         member.setPostalCode(application.getPostalCode());
         member.setCity(application.getCity());
         members.save(member);
-        accounts.save(new Account(member, application.getEmail()));
+        accounts.save(new Account(member, new Email(application.getEmail())));
 
         return Optional.of(new Welcome(member.getFullName(), application.getEmail(), association.bankgiro()));
     }
