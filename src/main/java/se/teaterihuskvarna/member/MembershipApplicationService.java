@@ -105,10 +105,11 @@ public class MembershipApplicationService {
         applications.replace(
                 fullName,
                 email.value(),
-                blankToNull(form.phone()),
-                blankToNull(form.address()),
-                blankToNull(form.postalCode()),
-                blankToNull(form.city()),
+                new ContactDetails(
+                        blankToNull(form.phone()),
+                        blankToNull(form.address()),
+                        blankToNull(form.postalCode()),
+                        blankToNull(form.city())),
                 Tokens.hash(token),
                 now,
                 now.plus(login.applicationLifetime()));
@@ -165,10 +166,7 @@ public class MembershipApplicationService {
         }
 
         Member member = new Member(application.getFullName());
-        member.setPhone(application.getPhone());
-        member.setAddress(application.getAddress());
-        member.setPostalCode(application.getPostalCode());
-        member.setCity(application.getCity());
+        member.setContact(application.getContact());
         members.save(member);
         accounts.save(new Account(member, new Email(application.getEmail())));
 

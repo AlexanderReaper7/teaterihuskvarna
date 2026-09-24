@@ -1,6 +1,7 @@
 package se.teaterihuskvarna.member;
 
 import jakarta.persistence.Column;
+import jakarta.persistence.Embedded;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -19,7 +20,7 @@ import java.time.Instant;
 /// with SQL, because a second application for the same address has to replace
 /// the first in one statement: see that method.
 ///
-/// Column lengths mirror `V2__login.sql` by hand, because `ddl-auto: validate`
+/// Column lengths mirror `V2__login.sql` by hand, here and in [ContactDetails], because `ddl-auto: validate`
 /// does not compare them: `docs/decisions/0012-jpa-over-a-schema-flyway-owns.md`.
 @Entity
 @Table(name = "membership_application")
@@ -35,17 +36,8 @@ public class MembershipApplication {
     @Column(name = "email", nullable = false, length = 254)
     private String email;
 
-    @Column(name = "phone", length = 32)
-    private String phone;
-
-    @Column(name = "address", length = 200)
-    private String address;
-
-    @Column(name = "postal_code", length = 10)
-    private String postalCode;
-
-    @Column(name = "city", length = 100)
-    private String city;
+    @Embedded
+    private ContactDetails contact;
 
     @Column(name = "token_hash", nullable = false, length = 64)
     private String tokenHash;
@@ -72,20 +64,9 @@ public class MembershipApplication {
         return email;
     }
 
-    public String getPhone() {
-        return phone;
-    }
-
-    public String getAddress() {
-        return address;
-    }
-
-    public String getPostalCode() {
-        return postalCode;
-    }
-
-    public String getCity() {
-        return city;
+    /// @return the phone and postal address the applicant gave, [ContactDetails#NONE] if none
+    public ContactDetails getContact() {
+        return contact == null ? ContactDetails.NONE : contact;
     }
 
     public String getTokenHash() {

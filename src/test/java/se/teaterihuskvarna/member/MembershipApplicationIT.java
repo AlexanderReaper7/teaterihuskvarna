@@ -51,6 +51,9 @@ class MembershipApplicationIT extends IntegrationTestSupport {
     @Autowired
     private ExpiredApplications expiredApplications;
 
+    @Autowired
+    private MemberRepository members;
+
     @Test
     void anApplicationMailsAConfirmationLinkAndStoresNoMember() throws Exception {
         MvcResult applied = apply("Karin Karlsson", KARIN);
@@ -104,6 +107,27 @@ class MembershipApplicationIT extends IntegrationTestSupport {
                 "city", "Huskvarna",
                 "email", KARIN));
         assertThat(rowsIn("membership_application")).isZero();
+    }
+
+    /// Hibernate reads an embeddable whose columns are all null as null, and the
+    /// member gives [ContactDetails#NONE] instead.
+    @Test
+    void aMemberWhoGaveOnlyNameAndEmailHasNoContactDetails() throws Exception {
+        mockMvc.perform(post("/bli-medlem")
+                        .param("fullName", "Karin Karlsson")
+                        .param("email", KARIN)
+                        .param("phone", " ")
+                        .with(csrf()))
+                .andReturn();
+        String token = tokenIn(awaitMail(), CONFIRMATION);
+        mockMvc.perform(post(CONFIRMATION).param("token", token).with(csrf())).andExpect(status().isOk());
+
+        Map<String, Object> row = jdbc.sql("SELECT id, phone, address, postal_code, city FROM member")
+                .query().singleRow();
+        assertThat(row).containsEntry("phone", null).containsEntry("address", null)
+                .containsEntry("postal_code", null).containsEntry("city", null);
+        long id = ((Number) row.get("id")).longValue();
+        assertThat(members.findById(id).orElseThrow().getContact()).isEqualTo(ContactDetails.NONE);
     }
 
     /// The account a confirmation creates is a real one: its address can log in.

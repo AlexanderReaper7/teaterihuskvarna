@@ -3,7 +3,6 @@ package se.teaterihuskvarna.member;
 import jakarta.persistence.LockModeType;
 import java.time.Instant;
 import java.util.Optional;
-import org.jspecify.annotations.Nullable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Modifying;
@@ -25,10 +24,7 @@ interface MembershipApplicationRepository extends JpaRepository<MembershipApplic
     ///
     /// @param fullName   the applicant's name
     /// @param email      the address, already normalised
-    /// @param phone      the phone number, or null
-    /// @param address    the street address, or null
-    /// @param postalCode the postal code, or null
-    /// @param city       the city, or null
+    /// @param contact    the phone and postal address, parts of it null where not given
     /// @param tokenHash  [se.teaterihuskvarna.login.Tokens#hash] of the token in the mailed link
     /// @param createdAt  when the application was made
     /// @param expiresAt  when the link stops working and the row may be deleted
@@ -38,7 +34,8 @@ interface MembershipApplicationRepository extends JpaRepository<MembershipApplic
             INSERT INTO membership_application
                 (full_name, email, phone, address, postal_code, city, token_hash, created_at, expires_at)
             VALUES
-                (:fullName, :email, :phone, :address, :postalCode, :city, :tokenHash, :createdAt, :expiresAt)
+                (:fullName, :email, :#{#contact.phone()}, :#{#contact.address()}, :#{#contact.postalCode()},
+                 :#{#contact.city()}, :tokenHash, :createdAt, :expiresAt)
             ON CONFLICT ((LOWER(email))) DO UPDATE SET
                 full_name = EXCLUDED.full_name,
                 email = EXCLUDED.email,
@@ -53,10 +50,7 @@ interface MembershipApplicationRepository extends JpaRepository<MembershipApplic
     int replace(
             @Param("fullName") String fullName,
             @Param("email") String email,
-            @Param("phone") @Nullable String phone,
-            @Param("address") @Nullable String address,
-            @Param("postalCode") @Nullable String postalCode,
-            @Param("city") @Nullable String city,
+            @Param("contact") ContactDetails contact,
             @Param("tokenHash") String tokenHash,
             @Param("createdAt") Instant createdAt,
             @Param("expiresAt") Instant expiresAt);

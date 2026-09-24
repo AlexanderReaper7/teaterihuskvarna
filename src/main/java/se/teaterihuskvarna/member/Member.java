@@ -1,6 +1,7 @@
 package se.teaterihuskvarna.member;
 
 import jakarta.persistence.Column;
+import jakarta.persistence.Embedded;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
@@ -14,7 +15,7 @@ import java.time.Instant;
 /// A member of the association. The email address is on the [Account], because
 /// a member added to a household may have none.
 ///
-/// Column lengths mirror `V1__member_register.sql` by hand. Nothing enforces
+/// Column lengths mirror `V1__member_register.sql` by hand, here and in [ContactDetails]. Nothing enforces
 /// that: `ddl-auto: validate` catches a missing table or column, but it does not
 /// compare lengths, which was measured rather than assumed. See
 /// `docs/decisions/0012-jpa-over-a-schema-flyway-owns.md`.
@@ -35,17 +36,8 @@ public class Member {
     @Column(name = "full_name", nullable = false, length = 100)
     private String fullName;
 
-    @Column(name = "phone", length = 32)
-    private String phone;
-
-    @Column(name = "address", length = 200)
-    private String address;
-
-    @Column(name = "postal_code", length = 10)
-    private String postalCode;
-
-    @Column(name = "city", length = 100)
-    private String city;
+    @Embedded
+    private ContactDetails contact;
 
     @Column(name = "created_at", nullable = false)
     private Instant createdAt = Instant.now();
@@ -81,40 +73,14 @@ public class Member {
         this.household = household;
     }
 
-    public String getPhone() {
-        return phone;
+    /// @return the member's phone and postal address, [ContactDetails#NONE] if none is known
+    public ContactDetails getContact() {
+        return contact == null ? ContactDetails.NONE : contact;
     }
 
-    /// @param phone the new phone number
-    public void setPhone(String phone) {
-        this.phone = phone;
-    }
-
-    public String getAddress() {
-        return address;
-    }
-
-    /// @param address the new street address
-    public void setAddress(String address) {
-        this.address = address;
-    }
-
-    public String getPostalCode() {
-        return postalCode;
-    }
-
-    /// @param postalCode the new postal code
-    public void setPostalCode(String postalCode) {
-        this.postalCode = postalCode;
-    }
-
-    public String getCity() {
-        return city;
-    }
-
-    /// @param city the new city
-    public void setCity(String city) {
-        this.city = city;
+    /// @param contact the new phone and postal address
+    public void setContact(ContactDetails contact) {
+        this.contact = contact;
     }
 
     public Instant getCreatedAt() {
