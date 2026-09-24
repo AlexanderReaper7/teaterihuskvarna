@@ -100,39 +100,39 @@ The order starts with a fact, moves to what the site does and how it looks while
 ### The association today
 
 - [ ] **C5. Hur många medlemmar har föreningen idag?** From the original plan. The number decides the Brevo plan, because the free plan stops at 300 mails a day, and the size of the system.
-
+ **115 members, be able to grow to 200.**
 ### What the site does
 
-- [ ] **C9. Does a Bli medlem application become a member when the applicant confirms their email address, or when an administrator approves it?** Requirement P5 says the form creates a member, but a form that writes straight into the register lets bots fill it and puts them in every mailing, so one of the two is needed. Built for now as "a member with an account once the email address is confirmed".
-- [ ] **C11. Must a household have added all its members before it pays the family fee, or is the family fee bound to the account, so members can be added and changed after paying?** The produktägare's wording is "50 kr enskild, 100 kr familj". An application is for one person, and household members are added only after the member exists, by an administrator or by a member of the household. The answer decides what the page after a confirmed application says about the fee, and what "paid" means for a person added to a household later in the year.
-- [ ] **C16. Are offer descriptions and discount details public, or for members only?** Anything published in a Free Sanity dataset is public. Member-only details need the nonprofit plan's private dataset from C8, or storage in the application.
+- [ ] **C9. Does a Bli medlem application become a member when the applicant confirms their email address, or when an administrator approves it?** Requirement P5 says the form creates a member, but a form that writes straight into the register lets bots fill it and puts them in every mailing, so one of the two is needed. Built for now as "a member with an account once the email address is confirmed".decide later
+- [ ] **C11. Must a household have added all its members before it pays the family fee, or is the family fee bound to the account, so members can be added and changed after paying?** The produktägare's wording is "50 kr enskild, 100 kr familj". An application is for one person, and household members are added only after the member exists, by an administrator or by a member of the household. The answer decides what the page after a confirmed application says about the fee, and what "paid" means for a person added to a household later in the year. **Upto the team to decide.**
+- [ ] **C16. Are offer descriptions and discount details public, or for members only?** Anything published in a Free Sanity dataset is public. Member-only details need the nonprofit plan's private dataset from C8, or storage in the application. **members only** **
 - [ ] **C18. May mailings be sent from Brevo instead of the admin view?** The original flow previews, sends and logs a mailing in the application. [decisions/0005](../decisions/0005-brevo-campaign-drafts.md) has the application create a draft in Brevo, where the administrator test-sends and sends it, and Brevo's campaign history is the log (U2, U4). Built as 0005 says until this is answered.
-
+**YES**
 ### How the site looks
 
 The produktägare said they liked the old site's graphics. [design/old-site](../../design/old-site/README.md) surveys that design. Have its screenshots open.
 
-- [ ] **C20. Which part of the old graphics should the new site keep?** The typing hero ("FÖRENINGEN TEATER I HUS" + VAGN, KUR, DJUR, ARREST, KVARNA), the teal and mint palette, the layout, or the logo. The survey's guess is the typing hero, so show [home.png](../../design/old-site/screenshots/home.png) first.
-- [ ] **C23. May the orange `#ee6810` be darkened to `#b64f0c`?** The current orange fails the WCAG 2.1 AA contrast that requirement P6 makes a MUST. The darker value passes on white and on mint and reads as the same colour. Orange on teal has no passing value, so footer icon hover would change to white or mint.
+- [ ] **C20. Which part of the old graphics should the new site keep?** The typing hero ("FÖRENINGEN TEATER I HUS" + VAGN, KUR, DJUR, ARREST, KVARNA), the teal and mint palette, the layout, or the logo. The survey's guess is the typing hero, so show [home.png](../../design/old-site/screenshots/home.png) first. **members should be recognize thenewpagefrom the old pages visual style.**
+- [ ] **C23. May the orange `#ee6810` be darkened to `#b64f0c`?** The current orange fails the WCAG 2.1 AA contrast that requirement P6 makes a MUST. The darker value passes on white and on mint and reads as the same colour. Orange on teal has no passing value, so footer icon hover would change to white or mint. **up to the team**
 - [ ] **C21. Does the association have original files for its artwork, and the right to use them?** The website only has raster copies, and neither can be scaled up.
-  - The logo, as a vector file, and in a dark-on-light version. The web copy is a white-on-dark PNG that cannot be recoloured.
+  - The logo, as a vector file, and in a dark-on-light version. The web copy is a white-on-dark PNG that cannot be recoloured.**the original files exist and the art is owned.**
   - Jätten Vist. Who drew it, and does the association have the original and the right to use it? The web copy is 180x338 pixels.
-
+ **we are allowed to use it. dontknow if we have the original file.**
 ### Personal data
 
 The board's obligations, which the system cannot carry for them.
 
-- [ ] **C13. How long is data about members who have not renewed kept?** From the original plan. The answer covers database backups too, not only the live database ([decisions/0007](../decisions/0007-postgres-in-a-container.md)).
-- [ ] **C14. How is consent for photographs handled, and who holds it?** Requirement P4's board and production pages publish names and photographs of identifiable people. That needs a lawful basis, an image release for performers, a practice for audience shots, and an answer for when someone asks to be removed. **Children in productions need this settled before the first photo is uploaded.** The board runs this process, and the system cannot enforce it.
+- [ ] **C13. How long is data about members who have not renewed kept?** From the original plan. The answer covers database backups too, not only the live database ([decisions/0007](../decisions/0007-postgres-in-a-container.md)). **send a reminder to pay the year in january, if they havent paid by end of june then they will be removed from the member list.**
+- [ ] **C14. How is consent for photographs handled, and who holds it?** Requirement P4's board and production pages publish names and photographs of identifiable people. That needs a lawful basis, an image release for performers, a practice for audience shots, and an answer for when someone asks to be removed. **Children in productions need this settled before the first photo is uploaded.** The board runs this process, and the system cannot enforce it. **consent is managed manually, and removal is manual.**
 - [ ] **C15. Who writes down the purpose and lawful basis for each kind of personal data the association keeps?** The plan requires it. Sanity holds names and photographs, the application holds the member register, and Brevo holds mail addresses.
-
+ **up to the board. its on the board to be responsible. **
 ### Who does what
 
 Each answer here is a name and a date, so the meeting ends with its action items.
 
-- [ ] **C6. Should the domain and the WordPress site be moved or shut down at launch?** Pointing teaterihuskvarna.se at the new site waits for this answer. If anything keeps running on a subdomain such as `www.`, that affects how login cookies are scoped ([decisions/0015](../decisions/0015-login-links-on-spring-security.md)).
-- [ ] **C7. Who creates a GitHub organisation for the association, on `webb@teaterihuskvarna.se`?** The repository currently lives under the personal account AlexanderReaper7 and moves there once it exists ([decisions/0002](../decisions/0002-accounts-under-a-personal-login.md)).
-- [ ] **C8. Who applies for the three nonprofit programmes, and when?** Each is a separate application, and the association has to validate as a nonprofit first.
+- [ ] **C6. Should the domain and the WordPress site be moved or shut down at launch?** Pointing teaterihuskvarna.se at the new site waits for this answer. If anything keeps running on a subdomain such as `www.`, that affects how login cookies are scoped ([decisions/0015](../decisions/0015-login-links-on-spring-security.md)). **same domain, just change which application is running
+- [ ] **C7. Who creates a GitHub organisation for the association, on `webb@teaterihuskvarna.se`?** The repository currently lives under the personal account AlexanderReaper7 and moves there once it exists ([decisions/0002](../decisions/0002-accounts-under-a-personal-login.md)). **Klas does (the customer)**
+- [ ] **C8. Who applies for the three nonprofit programmes, and when?** Each is a separate application, and the association has to validate as a nonprofit first. **Klas does. will do it by next meeting.**
   - GitHub for Nonprofits, needs the organisation from C7. It gives free GitHub Team, which is what makes branch protection on a private repository possible ([decisions/0003](../decisions/0003-no-branch-protection-yet.md)).
   - [Sanity's nonprofit plan](https://www.sanity.io/docs/platform-management/non-profit-plan), after the Sanity project exists. It gives private datasets, Growth roles and 25 users at no charge. The Free plan is the fallback ([decisions/0006](../decisions/0006-sanity-for-now.md)).
   - Microsoft's Azure credit. The original plan asks whether to apply at all. It is 2 000 USD a year, does not roll over, and expires 90 days after issuance if not activated. Hosting is costed without it ([decisions/0007](../decisions/0007-postgres-in-a-container.md)), so this is headroom, not a blocker.
