@@ -9,8 +9,6 @@ import org.springframework.mail.MailException;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.support.TransactionSynchronization;
-import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 /// Sends plain text mail, never on the request thread, and never lets a failure
 /// reach the caller.
@@ -55,16 +53,7 @@ public class Mailer {
         message.setTo(to);
         message.setSubject(subject);
         message.setText(body);
-        if (TransactionSynchronizationManager.isSynchronizationActive()) {
-            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-                @Override
-                public void afterCommit() {
-                    dispatch(message);
-                }
-            });
-        } else {
-            dispatch(message);
-        }
+        AfterCommit.run(() -> dispatch(message));
     }
 
     /// A full queue would otherwise throw on the request thread, and only for a

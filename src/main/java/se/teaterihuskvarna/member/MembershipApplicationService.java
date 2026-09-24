@@ -2,14 +2,13 @@ package se.teaterihuskvarna.member;
 
 import jakarta.validation.Valid;
 import java.time.Instant;
-import java.util.Locale;
 import java.util.Optional;
 import org.jspecify.annotations.Nullable;
 import org.springframework.context.MessageSource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.validation.annotation.Validated;
-import org.springframework.web.util.UriComponentsBuilder;
+import se.teaterihuskvarna.Swedish;
 import se.teaterihuskvarna.login.Addresses;
 import se.teaterihuskvarna.login.Background;
 import se.teaterihuskvarna.login.Lifetimes;
@@ -33,7 +32,6 @@ import se.teaterihuskvarna.login.Tokens;
 @Transactional(readOnly = true)
 public class MembershipApplicationService {
 
-    private static final Locale SWEDISH = Locale.of("sv", "SE");
     private static final String CONFIRMATION_PATH = "/bli-medlem/bekrafta";
 
     private final MembershipApplicationRepository applications;
@@ -115,16 +113,13 @@ public class MembershipApplicationService {
                 now,
                 now.plus(login.applicationLifetime()));
 
-        String link = UriComponentsBuilder.fromUri(mail.siteUrl())
-                .path(CONFIRMATION_PATH)
-                .queryParam("token", token)
-                .build()
-                .toUriString();
+        String link = mail.link(CONFIRMATION_PATH, token);
         String lifetime = Lifetimes.describe(messages, login.applicationLifetime());
         mailer.send(
                 email,
-                messages.getMessage("application.mail.subject", null, SWEDISH),
-                messages.getMessage("application.mail.body", new Object[] {fullName, link, lifetime}, SWEDISH));
+                messages.getMessage("application.mail.subject", null, Swedish.LOCALE),
+                messages.getMessage("application.mail.body", new Object[] {fullName, link, lifetime},
+                        Swedish.LOCALE));
     }
 
     /// Points a member who applied again to the login page, with no token. A
@@ -132,14 +127,11 @@ public class MembershipApplicationService {
     /// sets no login cookie, and would reopen what [se.teaterihuskvarna.login.LoginBrowser]
     /// closes: anyone applying with their own address could pass the link on.
     private void alreadyMember(String email) {
-        String login = UriComponentsBuilder.fromUri(mail.siteUrl())
-                .path(LoginUrls.of(LoginKind.MEMBER).page())
-                .build()
-                .toUriString();
+        String login = mail.link(LoginUrls.of(LoginKind.MEMBER).page(), null);
         mailer.send(
                 email,
-                messages.getMessage("application.mail.member.subject", null, SWEDISH),
-                messages.getMessage("application.mail.member.body", new Object[] {login}, SWEDISH));
+                messages.getMessage("application.mail.member.subject", null, Swedish.LOCALE),
+                messages.getMessage("application.mail.member.body", new Object[] {login}, Swedish.LOCALE));
     }
 
     /// Follows a confirmation link. The application is deleted whatever the

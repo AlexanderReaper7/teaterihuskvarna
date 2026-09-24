@@ -28,13 +28,15 @@ class AccountDirectory implements LoginDirectory {
 
     @Override
     public Optional<SignedIn> find(String email) {
-        return accounts.findByEmailIgnoreCase(email).map(account -> new SignedIn(
-                LoginKind.MEMBER, account.getId(), account.getEmail(), account.getMember().getFullName()));
+        return accounts.findByEmailIgnoreCase(email).map(AccountDirectory::signedIn);
     }
 
     @Override
     public Optional<SignedIn> findById(long id) {
-        return accounts.findById(id).map(account -> new SignedIn(
-                LoginKind.MEMBER, account.getId(), account.getEmail(), account.getMember().getFullName()));
+        return accounts.findById(id).map(AccountDirectory::signedIn);
+    }
+
+    private static SignedIn signedIn(Account account) {
+        return new SignedIn(LoginKind.MEMBER, account.getId(), account.getEmail(), account.getMember().getFullName());
     }
 }

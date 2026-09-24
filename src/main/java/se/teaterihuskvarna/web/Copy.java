@@ -4,8 +4,8 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
-import java.util.Locale;
 import org.springframework.context.MessageSource;
+import se.teaterihuskvarna.Swedish;
 import se.teaterihuskvarna.login.Lifetimes;
 
 /// Fixed Swedish copy, for templates to read by key. Every page gets one as the
@@ -19,14 +19,13 @@ import se.teaterihuskvarna.login.Lifetimes;
 /// Always Swedish, whatever the browser asks for: there is one bundle.
 public final class Copy {
 
-    private static final Locale SWEDISH = Locale.of("sv", "SE");
-
     /// The association is in Huskvarna, so a date is the date there, whatever
     /// zone the container runs in.
     private static final ZoneId SWEDEN = ZoneId.of("Europe/Stockholm");
-    private static final DateTimeFormatter DATE = DateTimeFormatter.ofPattern("d MMMM yyyy", SWEDISH)
+    private static final DateTimeFormatter DATE = DateTimeFormatter.ofPattern("d MMMM yyyy", Swedish.LOCALE)
             .withZone(SWEDEN);
-    private static final DateTimeFormatter DATE_TIME = DateTimeFormatter.ofPattern("d MMMM yyyy 'kl.' HH:mm", SWEDISH)
+    private static final DateTimeFormatter DATE_TIME = DateTimeFormatter
+            .ofPattern("d MMMM yyyy 'kl.' HH:mm", Swedish.LOCALE)
             .withZone(SWEDEN);
 
     private final MessageSource messages;
@@ -43,7 +42,7 @@ public final class Copy {
     /// @param args values for `{0}`, `{1}` and so on
     /// @return the Swedish text
     public String text(String key, Object... args) {
-        return messages.getMessage(key, args, SWEDISH);
+        return messages.getMessage(key, args, Swedish.LOCALE);
     }
 
     /// @param lifetime how long a link works

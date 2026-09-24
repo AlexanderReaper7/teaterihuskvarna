@@ -7,8 +7,6 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.core.task.TaskExecutor;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.PlatformTransactionManager;
-import org.springframework.transaction.support.TransactionSynchronization;
-import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /// Runs work that depends on whether an address is known, off the request
@@ -41,16 +39,7 @@ public class Background {
     ///
     /// @param work what to run, in a new transaction on the executor
     public void run(Runnable work) {
-        if (TransactionSynchronizationManager.isSynchronizationActive()) {
-            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-                @Override
-                public void afterCommit() {
-                    dispatch(work);
-                }
-            });
-        } else {
-            dispatch(work);
-        }
+        AfterCommit.run(() -> dispatch(work));
     }
 
     private void dispatch(Runnable work) {

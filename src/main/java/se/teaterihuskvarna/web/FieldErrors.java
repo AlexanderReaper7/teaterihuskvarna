@@ -2,11 +2,11 @@ package se.teaterihuskvarna.web;
 
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
-import jakarta.validation.Path;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import org.jspecify.annotations.Nullable;
+import se.teaterihuskvarna.Violations;
 
 /// What was wrong with a submitted form, field by field, for the page that shows
 /// the form again.
@@ -29,8 +29,8 @@ public final class FieldErrors {
         return NONE;
     }
 
-    /// A violation on `apply(form, clientAddress)` has the path `apply.form.fullName`,
-    /// so the last node names the form field. Sorted by field so the summary does not
+    /// The field is the last node of the violation's path ([Violations#field]).
+    /// Sorted by field so the summary does not
     /// change order between two submissions of the same form, which it would if it
     /// followed the validator's unordered set.
     ///
@@ -39,7 +39,7 @@ public final class FieldErrors {
     public static FieldErrors of(ConstraintViolationException exception) {
         List<InvalidField> fields = new ArrayList<>();
         for (ConstraintViolation<?> violation : exception.getConstraintViolations()) {
-            fields.add(new InvalidField(field(violation.getPropertyPath()), violation.getMessage()));
+            fields.add(new InvalidField(Violations.field(violation), violation.getMessage()));
         }
         fields.sort(Comparator.comparing(InvalidField::field).thenComparing(InvalidField::message));
         return new FieldErrors(List.copyOf(fields));
@@ -64,15 +64,6 @@ public final class FieldErrors {
             }
         }
         return null;
-    }
-
-    private static String field(Path path) {
-        String last = "";
-        for (Path.Node node : path) {
-            String name = node.getName();
-            last = name == null ? "" : name;
-        }
-        return last;
     }
 
     /// One error on one field.

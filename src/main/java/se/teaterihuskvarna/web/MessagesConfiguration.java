@@ -1,10 +1,10 @@
 package se.teaterihuskvarna.web;
 
-import java.util.Locale;
 import org.springframework.context.MessageSource;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.support.ResourceBundleMessageSource;
+import se.teaterihuskvarna.Swedish;
 
 /// Fixed Swedish copy lives in `messages_sv.properties`, per
 /// `docs/decisions/0001-language-policy.md`.
@@ -27,8 +27,6 @@ import org.springframework.context.support.ResourceBundleMessageSource;
 @Configuration(proxyBeanMethods = false)
 public class MessagesConfiguration {
 
-    private static final Locale SWEDISH = Locale.of("sv", "SE");
-
     /// The default locale matters for validation messages. The validator resolves them
     /// in the locale of the request, so a browser asking for English would find no
     /// `messages_en` bundle, no base bundle either, and show the raw
@@ -42,7 +40,7 @@ public class MessagesConfiguration {
         source.setBasename("messages");
         source.setDefaultEncoding("UTF-8");
         source.setFallbackToSystemLocale(false);
-        source.setDefaultLocale(SWEDISH);
+        source.setDefaultLocale(Swedish.LOCALE);
         return source;
     }
 

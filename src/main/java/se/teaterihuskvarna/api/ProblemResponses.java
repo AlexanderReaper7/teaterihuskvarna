@@ -2,13 +2,13 @@ package se.teaterihuskvarna.api;
 
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
-import jakarta.validation.Path;
 import java.util.Map;
 import java.util.TreeMap;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import se.teaterihuskvarna.Violations;
 import se.teaterihuskvarna.administrator.AdministratorAlreadyExists;
 import se.teaterihuskvarna.administrator.CannotRemoveSelf;
 import se.teaterihuskvarna.administrator.NoSuchAdministrator;
@@ -33,7 +33,7 @@ public class ProblemResponses {
     public ProblemDetail invalid(ConstraintViolationException exception) {
         Map<String, String> errors = new TreeMap<>();
         for (ConstraintViolation<?> violation : exception.getConstraintViolations()) {
-            errors.merge(field(violation.getPropertyPath()), violation.getMessage(),
+            errors.merge(Violations.field(violation), violation.getMessage(),
                     (first, second) -> first + " " + second);
         }
         ProblemDetail problem = ProblemDetail.forStatus(HttpStatus.BAD_REQUEST);
@@ -89,14 +89,5 @@ public class ProblemResponses {
         problem.setTitle(title);
         problem.setDetail(exception.getMessage());
         return problem;
-    }
-
-    private static String field(Path path) {
-        String last = "";
-        for (Path.Node node : path) {
-            String name = node.getName();
-            last = name == null ? "" : name;
-        }
-        return last;
     }
 }

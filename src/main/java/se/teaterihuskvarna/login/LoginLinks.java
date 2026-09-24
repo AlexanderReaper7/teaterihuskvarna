@@ -5,13 +5,12 @@ import java.security.MessageDigest;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
-import java.util.Locale;
 import java.util.Optional;
 import org.jspecify.annotations.Nullable;
 import org.springframework.context.MessageSource;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Component;
-import org.springframework.web.util.UriComponentsBuilder;
+import se.teaterihuskvarna.Swedish;
 
 /// Creates login links and their codes, and mails them. A link and its code
 /// work only in the browser that asked for them ([LoginBrowser]).
@@ -31,8 +30,6 @@ import org.springframework.web.util.UriComponentsBuilder;
 /// administrator logs in somewhere else and for other reasons.
 @Component
 public class LoginLinks {
-
-    private static final Locale SWEDISH = Locale.of("sv", "SE");
 
     private final List<LoginDirectory> directories;
     private final JdbcClient jdbc;
@@ -111,17 +108,13 @@ public class LoginLinks {
                 .param(Tokens.hash(browser))
                 .param(Tokens.hash(code))
                 .update();
-        String link = UriComponentsBuilder.fromUri(mail.siteUrl())
-                .path(LoginUrls.of(kind).link())
-                .queryParam("token", token)
-                .build()
-                .toUriString();
+        String link = mail.link(LoginUrls.of(kind).link(), token);
         Object[] arguments = {
             link, Lifetimes.describe(messages, settings.linkLifetime()), found.get().fullName(), code};
         String prefix = "login.mail." + kind.code();
         mailer.send(
                 address,
-                messages.getMessage(prefix + ".subject", null, SWEDISH),
-                messages.getMessage(prefix + ".body", arguments, SWEDISH));
+                messages.getMessage(prefix + ".subject", null, Swedish.LOCALE),
+                messages.getMessage(prefix + ".body", arguments, Swedish.LOCALE));
     }
 }

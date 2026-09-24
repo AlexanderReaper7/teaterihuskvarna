@@ -1,11 +1,11 @@
 package se.teaterihuskvarna.login;
 
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.regex.Pattern;
 import org.jspecify.annotations.Nullable;
 import org.springframework.context.MessageSource;
+import se.teaterihuskvarna.Swedish;
 
 /// Names the device a login happens on, such as "Firefox på Windows", for the
 /// list of logged-in devices ([DeviceService]). Read from the `User-Agent` once,
@@ -14,8 +14,6 @@ import org.springframework.context.MessageSource;
 /// The same two tables are in `static/js/passkey.js`, which names a new passkey
 /// the same way in the browser. A browser added to one belongs in the other.
 final class DeviceNames {
-
-    private static final Locale SWEDISH = Locale.of("sv", "SE");
 
     /// First match wins, so Edge and Opera, whose headers also say Chrome and
     /// Safari, come before them.
@@ -46,10 +44,10 @@ final class DeviceNames {
     /// @param userAgent the request's `User-Agent`, if it sent one
     /// @return the browser and the system, such as "Firefox på Windows", with "okänd" for a part not recognised
     String of(@Nullable String userAgent) {
-        String unknown = messages.getMessage("device.unknown", null, SWEDISH);
+        String unknown = messages.getMessage("device.unknown", null, Swedish.LOCALE);
         String agent = userAgent == null ? "" : userAgent;
         return messages.getMessage("device.name",
-                new Object[] {find(BROWSERS, agent, unknown), find(SYSTEMS, agent, unknown)}, SWEDISH);
+                new Object[] {find(BROWSERS, agent, unknown), find(SYSTEMS, agent, unknown)}, Swedish.LOCALE);
     }
 
     private static String find(List<Map.Entry<Pattern, String>> table, String agent, String unknown) {

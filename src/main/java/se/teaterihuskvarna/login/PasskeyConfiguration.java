@@ -1,7 +1,6 @@
 package se.teaterihuskvarna.login;
 
 import java.net.URI;
-import java.util.Locale;
 import java.util.Objects;
 import java.util.Set;
 import org.springframework.context.MessageSource;
@@ -19,6 +18,7 @@ import org.springframework.security.web.webauthn.management.PublicKeyCredentialU
 import org.springframework.security.web.webauthn.management.UserCredentialRepository;
 import org.springframework.security.web.webauthn.management.WebAuthnRelyingPartyOperations;
 import org.springframework.security.web.webauthn.management.Webauthn4JRelyingPartyOperations;
+import se.teaterihuskvarna.Swedish;
 
 /// The passkey store and the relying party, shared by both kinds of login. The
 /// filters that use them are per kind, in [PasskeyLogin].
@@ -29,8 +29,6 @@ import org.springframework.security.web.webauthn.management.Webauthn4JRelyingPar
 /// log in by link again. See `docs/decisions/0016-passkeys-beside-links.md`.
 @Configuration(proxyBeanMethods = false)
 class PasskeyConfiguration {
-
-    private static final Locale SWEDISH = Locale.of("sv", "SE");
 
     /// @param jdbc Spring's JDBC template
     /// @return who owns passkeys, in `user_entities`
@@ -64,7 +62,7 @@ class PasskeyConfiguration {
         URI site = mail.siteUrl();
         PublicKeyCredentialRpEntity party = PublicKeyCredentialRpEntity.builder()
                 .id(Objects.requireNonNull(site.getHost(), "teaterihuskvarna.mail.site-url has no host"))
-                .name(messages.getMessage("site.name", null, SWEDISH))
+                .name(messages.getMessage("site.name", null, Swedish.LOCALE))
                 .build();
         Webauthn4JRelyingPartyOperations operations = new Webauthn4JRelyingPartyOperations(
                 owners, passkeys, party, Set.of(site.getScheme() + "://" + site.getRawAuthority()));
@@ -91,7 +89,7 @@ class PasskeyConfiguration {
         return switch (signedIn.kind()) {
             case MEMBER -> signedIn.email();
             case ADMINISTRATOR -> messages.getMessage(
-                    "passkey.name.administrator", new Object[] {signedIn.email()}, SWEDISH);
+                    "passkey.name.administrator", new Object[] {signedIn.email()}, Swedish.LOCALE);
         };
     }
 }
