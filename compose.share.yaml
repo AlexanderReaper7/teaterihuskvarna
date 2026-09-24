@@ -1,0 +1,24 @@
+# Shows the dev stack to people outside this machine, loaded after compose.yaml
+# and compose.dev.yaml by adding it to COMPOSE_FILE in .env. A Tailscale Funnel
+# forwards the public address to PROXY_HTTP_PORT: README.md, "Sharing the dev
+# stack".
+#
+# The dev index mails a login link for any seeded account with one click, the
+# administrator included, and Mailpit shows the link. Whoever reaches the site
+# can log in as anyone, so the site and Mailpit sit behind one password.
+
+services:
+  app:
+    environment:
+      # Login links and the passkey relying party use this address instead of
+      # localhost. An environment variable beats application-dev.yaml.
+      TEATERIHUSKVARNA_MAIL_SITE_URL: ${SHARE_URL:?set SHARE_URL in .env}
+    labels:
+      traefik.http.routers.app.middlewares: share-auth
+      # htpasswd lines. Compose does not interpolate a value it substituted, so
+      # the $ in a bcrypt hash needs no doubling here, only single quotes in .env.
+      traefik.http.middlewares.share-auth.basicauth.users: ${SHARE_BASIC_AUTH:?set SHARE_BASIC_AUTH in .env}
+
+  mail:
+    labels:
+      traefik.http.routers.mail.middlewares: share-auth

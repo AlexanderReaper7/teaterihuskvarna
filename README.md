@@ -29,12 +29,23 @@ of the start page. It lists every route, has a button per seeded member and
 administrator that mails that address a login link, and shows the schema
 version, the commit the jar was built from, whether it was built with
 uncommitted changes, and who is logged in. Open the link in Mailpit's UI at
-http://localhost:8025. The same data is JSON under `/api/development/`, which
+http://localhost:8000/mailpit/, which Traefik routes to Mailpit. The same data is JSON under `/api/development/`, which
 answers 404 without the profile.
 
 `compose.dev.yaml` also mounts `src/main/resources/static` into the container,
 so an edited stylesheet or image shows on reload. Templates and Java still
 need `docker compose up -d --build`.
+
+### Sharing the dev stack
+
+A Tailscale Funnel shows the dev stack to people off the tailnet. `compose.share.yaml` puts the site and Mailpit behind a password and points login links at the public address. Add it to `COMPOSE_FILE`, set `SHARE_URL` and `SHARE_BASIC_AUTH` as `.env.example` describes, then:
+
+```sh
+docker compose up -d --build
+tailscale funnel --bg --https=8443 "$PROXY_HTTP_PORT"   # tailscale funnel --https=8443 off to close it
+```
+
+Funnel publishes a machine name, never a Tailscale Service name, so the address is `https://<machine>.<tailnet>.ts.net:8443`. Port 8443 because 443 on the machine may already serve something tailnet-only. The dev index sends a login link for any seeded account, administrator included, which is why the password covers everything.
 
 V1 was edited on 2026-09-23, before any deploy, to move the email address from
 `member` to `account`. A database volume created before that fails Flyway's

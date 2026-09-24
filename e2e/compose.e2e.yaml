@@ -36,5 +36,8 @@ services:
       - "127.0.0.1:55433:5432"
 
   mail:
+    labels:
+      # Kept away from the dev Traefik, like the app above.
+      traefik.enable: "false"
     ports: !override
       - "127.0.0.1:55025:8025"

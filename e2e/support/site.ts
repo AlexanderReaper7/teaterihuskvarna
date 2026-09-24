@@ -2,7 +2,8 @@
 // database. e2e/compose.e2e.yaml publishes the ports.
 
 export const SITE = "http://localhost:55556";
-export const MAILPIT = "http://localhost:55025";
+// compose.dev.yaml serves Mailpit under /mailpit/ (MP_WEBROOT).
+export const MAILPIT = "http://localhost:55025/mailpit";
 
 export type Kind = "member" | "administrator";
 

@@ -35,6 +35,15 @@ services:
     # Mailpit catches every mail the application sends and shows it in a web UI.
     image: axllent/mailpit:v1.31.2
     restart: unless-stopped
-    ports:
-      # Loopback only. The UI has no login and shows every login link sent.
-      - "127.0.0.1:8025:8025"
+    environment:
+      # Mailpit's pages link to absolute paths, so it has to know the prefix
+      # Traefik routes it under. Stripping the prefix in Traefik breaks them.
+      MP_WEBROOT: /mailpit/
+    labels:
+      # The UI has no login and shows every login link sent. Traefik publishes
+      # it only as far as it publishes the site: compose.share.yaml puts both
+      # behind one password.
+      traefik.enable: "true"
+      traefik.http.routers.mail.rule: PathPrefix(`/mailpit`)
+      traefik.http.routers.mail.entrypoints: web
+      traefik.http.services.mail.loadbalancer.server.port: "8025"

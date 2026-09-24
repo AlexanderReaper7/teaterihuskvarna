@@ -30,8 +30,9 @@ spring:
 
 teaterihuskvarna:
   development:
-    # The development index links here. compose.dev.yaml publishes it.
-    mailpit-url: http://localhost:8025
+    # The development index links here. Traefik routes the path to Mailpit
+    # (compose.dev.yaml), so the link works on whatever host the site answers.
+    mailpit-url: /mailpit/
   login:
     # The development index sends links with one click, and the defaults of 5
     # per address and 20 per client an hour would refuse them silently after a
