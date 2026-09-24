@@ -1,0 +1,9 @@
+# LF everywhere, whatever core.autocrlf says on a Windows clone. The build runs
+# in a Linux container: a CRLF mvnw fails there as "./mvnw: not found", because
+# the shebang becomes "/bin/sh\r". The Dockerfile also copies .git into the
+# build, and CRLF working files would make the git plugin mark every image as
+# having uncommitted changes.
+* text=auto eol=lf
+
+# cmd.exe needs CRLF.
+*.cmd text eol=crlf
