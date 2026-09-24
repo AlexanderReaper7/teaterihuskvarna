@@ -120,7 +120,7 @@ public class LoginPagesController {
                 yield "login/link";
             }
             case ELSEWHERE -> "login/elsewhere";
-            case UNUSABLE -> "redirect:" + page.path() + "?fel";
+            case UNUSABLE -> "redirect:" + page.failurePath();
         };
     }
 }

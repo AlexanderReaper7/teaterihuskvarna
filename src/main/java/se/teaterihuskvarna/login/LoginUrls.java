@@ -3,7 +3,9 @@ package se.teaterihuskvarna.login;
 /// The paths one kind of login uses. The filter chains, the rate limit and the
 /// link in the mail all read them from here, so the link a mail carries and the
 /// path the filter listens on cannot drift apart. The pages themselves are JTE
-/// controllers in `se.teaterihuskvarna.web`, which name the same paths again.
+/// controllers in `se.teaterihuskvarna.web`, whose `@GetMapping`s name the same
+/// paths again because an annotation takes only a constant. Their forms and
+/// links read them from here.
 ///
 /// @param page      GET shows the form, POST asks for a link
 /// @param sent      the page shown after asking, whether or not a mail went out
