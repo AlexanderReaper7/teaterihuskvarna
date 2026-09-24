@@ -6,7 +6,7 @@ The WordPress site closes at launch. [projektplan.md](../../docs/projektplan.md)
 
 ## Which graphics were praised is still unknown
 
-"Liked the graphics" is the whole of what was said, and nobody asked which part. So this survey covers the entire design rather than guessing. The screenshots are here to be put in front of the board with a narrower question attached, and [Questions for the board](#questions-for-the-board) lists what to ask.
+"Liked the graphics" is the whole of what was said, and nobody asked which part. So this survey covers the entire design rather than guessing. The screenshots are here to be put in front of the board with a narrower question attached, and the questions to ask are under "Design" in [open-questions.md](../../docs/open-questions.md).
 
 ## The design is seven colours, one typeface and no curved edges
 
@@ -116,12 +116,7 @@ One thing cannot be carried at all. The logo exists only as a 1534x1444 PNG in i
 
 ## Questions for the board
 
-These are not in [open-questions.md](../../docs/open-questions.md) yet. They belong there once the produktägare confirms the design is in scope at all.
-
-- [ ] Which part of the old site's graphics should the new one keep? The typing hero, the teal and mint palette, the layout, or the logo. The praise was general and the answer changes how much of this directory gets used.
-- [ ] Does the association hold vector originals of the logo, in any format, and a dark-on-light variant? The web copies are raster only and cannot be scaled or recoloured.
-- [ ] Who drew Jätten Vist, and does the association hold the original artwork and the right to use it? The web copy is 180x338 and cannot be enlarged.
-- [ ] Is `#ee6810` fixed, or may it be darkened to meet the contrast that P6 requires?
+They are C19, C20, C21 and C23 in [open-questions.md](../../docs/open-questions.md), with the rest of the questions for the customer.
 
 ## Files here, and where they came from
 
@@ -130,7 +125,7 @@ Everything here was captured from the live site on 2026-09-22 and is not meant t
 | Path | Source | Licence |
 | --- | --- | --- |
 | `assets/brand/logo-negative.png` | `wp-content/uploads/2023/06/FTH_ALF_neg_SV.png` | The association's mark |
-| `assets/brand/jatten-vist.png` | `wp-content/uploads/2023/06/jatten_vist.png` | Unknown artist, see the questions above |
+| `assets/brand/jatten-vist.png` | `wp-content/uploads/2023/06/jatten_vist.png` | Unknown artist, see C21 in [open-questions.md](../../docs/open-questions.md) |
 | `assets/brand/favicon.png` | `wp-content/uploads/2023/06/favicon-32x32-1.png` | The association's mark |
 | `assets/fonts/montserrat-*.woff2` | Google Fonts, variable 100 to 900, latin and latin-ext | SIL OFL 1.1, text in `OFL.txt` |
 | `assets/fonts/montserrat.css` | Rewritten from the Google Fonts stylesheet to point at the local files | |
