@@ -227,4 +227,5 @@ checks. CI runs it; see [.github/workflows/docs.yml](.github/workflows/docs.yml)
 | `docs/decisions/` | Why the technical choices are what they are |
 | `docs/requirements.md` | What the system has to do, by requirement id |
 | `docs/meetings/` | One document per meeting, with its questions and answers |
+| `docs/board-guide.md` | How to use the Kanban board, for someone who has never used one |
 | `e2e/` | The Playwright suite, its compose file and `run.sh` ([0017](docs/decisions/0017-playwright-e2e-in-docker.md)) |
