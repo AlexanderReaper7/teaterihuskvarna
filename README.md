@@ -2,17 +2,70 @@
 
 Website and member register for the Teater i Huskvarna association. What the system has to do is in [docs/projektplan.md](docs/projektplan.md); why it is built this way is in [docs/decisions/](docs/decisions/).
 
-## Running it
+## Getting started
 
-Docker is the only thing that has to be installed. No JDK, no Maven: the build
-uses the pinned JDK 25 image and the checked-in Maven wrapper, per
-[decisions/0011](docs/decisions/0011-maven-and-the-build-in-a-container.md).
+### What to install
 
-```sh
-cp .env.example .env     # local defaults work; fill in credentials when needed
-docker compose up -d --build
-curl http://localhost:8000/
-```
+- Git.
+- Docker Desktop on Windows or macOS, or Docker Engine with the compose plugin on Linux. Docker Desktop has to be running before any `docker` command works.
+- VS Code if you want it. It is optional, and the [VS Code](#vs-code) section covers what `.vscode/` sets up.
+
+Nothing else. Java and Maven are not installed on your machine: the build runs inside a container with a pinned JDK 25 and the checked-in Maven wrapper (`mvnw`), per [decisions/0011](docs/decisions/0011-maven-and-the-build-in-a-container.md). Every command in this section works in PowerShell and in a POSIX shell. The multi-line commands further down are written for a POSIX shell, so on Windows use the VS Code tasks for those, or Git Bash, which `sh e2e/run.sh` needs too.
+
+### First run
+
+1. Clone the repository and go into it: `git clone https://github.com/AlexanderReaper7/teaterihuskvarna.git` then `cd teaterihuskvarna`.
+2. Create your own settings file from the template: `cp .env.example .env`. Git ignores `.env`, so what you put in it stays on your machine.
+3. Open `.env` and give `POSTGRES_PASSWORD` a value, such as `POSTGRES_PASSWORD=local-development-only`. It has no default on purpose, and the stack refuses to start without it. Leave everything else as it is. Sanity, Brevo and SMTP stay empty locally.
+4. Build and start the stack: `docker compose up -d --build`. The first build downloads Maven and every dependency and takes a few minutes. Later builds reuse them.
+5. Check that four containers are running: `docker compose ps` lists `proxy`, `app`, `db` and `mail`.
+6. Open http://localhost:8000/. If the page does not load yet, the application is still starting. `docker compose logs -f app` shows it, and it is ready at the line `Started Application in ... seconds`. Ctrl+C stops following the log, not the application.
+
+### Logging in
+
+Nobody has a password. Logging in works by a link sent by mail, and locally every mail goes to Mailpit instead of a real inbox.
+
+1. On http://localhost:8000/, which is the development index, pick a seeded member or administrator and press its button. The application mails that address a login link.
+2. Open http://localhost:8000/mailpit/, open the newest mail and follow the link.
+
+The seeded people are invented, under `.test` addresses that cannot reach anyone. Karin Holmberg has both a member account and an administrator account on the same address, which is the case the two login pages (`/logga-in` and `/admin/logga-in`) exist for.
+
+### Everyday commands
+
+| To | Run |
+| --- | --- |
+| Start the stack | `docker compose up -d` |
+| See a change to Java code or a template | `docker compose up -d --build` |
+| See a change to CSS or an image | Reload the page. `src/main/resources/static` is mounted into the container. |
+| Follow the application's log | `docker compose logs -f app` |
+| Stop the stack, keep the database | `docker compose down` |
+| Stop the stack and delete the database | `docker compose down -v`. The next start seeds it again. |
+| Run every test and check before a commit | `Ctrl+Shift+B` in VS Code, or the command under [Tests](#tests) |
+
+### Updating an existing clone
+
+A clone made before `f9df7d5` (2026-09-24) needs these steps once. On Windows the build otherwise fails with `./mvnw: not found`, because git checked `mvnw` out with CRLF line endings. `.gitattributes` now pins them to LF.
+
+1. Commit or stash your own changes. The reset in step 3 throws away anything uncommitted.
+2. Pull: `git pull`
+3. Check the files out again with the new line endings: `git rm --cached -r -q .` then `git reset --hard`
+4. Delete the old database volume, which fails Flyway's checksum since V1 changed: `docker compose down -v`
+5. Make sure `.env` exists and sets `POSTGRES_PASSWORD`, as in [First run](#first-run) steps 2 and 3.
+6. Build and start: `docker compose up -d --build`
+
+`git ls-files --eol mvnw` should print `i/lf    w/lf`. If it prints `w/crlf`, step 3 did not run.
+
+### When something goes wrong
+
+- **`required variable POSTGRES_PASSWORD is missing a value`.** `.env` is missing or leaves `POSTGRES_PASSWORD` empty. See [First run](#first-run) step 3.
+- **`./mvnw: not found` during the build.** `mvnw` has Windows line endings. Follow [Updating an existing clone](#updating-an-existing-clone).
+- **The app container stops, and its log says `Migration checksum mismatch`.** The database volume was created by an older version of a migration. `docker compose down -v` deletes it, and the next start builds it again.
+- **`address already in use` or `port is already allocated` on 8000.** Another program has the port. Set `PROXY_HTTP_PORT=8001` in `.env`, run `docker compose up -d` again and use http://localhost:8001/.
+- **`Cannot connect to the Docker daemon`, or on Windows `error during connect`.** Docker is not running. Start Docker Desktop and wait until it says it is running.
+- **The build fails at `checkstyle`, `spotbugs` or `pmd`.** The code breaks one of the static analysis rules, and the message names the file and line. See [Static analysis](#static-analysis).
+- **Anything else.** Read the end of `docker compose logs app`. The first `ERROR` line usually names the problem.
+
+## The local stack
 
 The stack is Traefik, the Spring Boot application behind it, and PostgreSQL
 18.2. Flyway applies the migrations in `src/main/resources/db/migration` at
