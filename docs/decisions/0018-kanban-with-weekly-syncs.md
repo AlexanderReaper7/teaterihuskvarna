@@ -16,6 +16,8 @@ Work is tracked on the [Kanban project](https://github.com/users/AlexanderReaper
 - The board holds issues only, no pull request cards: "No PR cards. atleast on this board."
 - The `Priority` field has the values MUST, SHOULD and COULD.
 - The `Item reopened` and `Auto-archive items` workflows are on.
+- `Pull request linked to issue` is off, and a card moves to In review by hand. A draft pull request must not move an issue, and the workflow has no way to skip drafts. Decided by the user on 2026-09-25.
+- A card in In progress has its branch linked, if the work has one, and a card in In review must have a pull request linked to it. Decided by the user on 2026-09-25. Nothing checks either.
 
 ## Kanban, in weeks
 
@@ -31,12 +33,13 @@ The `Week` field has twelve one-week iterations, Monday to Sunday. The APL perio
 | Product owner meeting with Klas | Weekly, tentatively Thursday | At least 1 hour |
 | Retrospective | Friday of weeks 3, 5, 7, 9 and 11, and a closing one in week 12 | Not set |
 | Sync | When anyone calls it, or when an item passes its maximum | At most 15 minutes |
+| Refill meeting | When Ready holds fewer items than there are people | At most 30 minutes, the whole team |
 
-- The week-start sync is also the weekly refill of Ready.
+- The week-start sync is also the weekly refill of Ready, so it doubles as a sync and a refill meeting. Decided by the user on 2026-09-25.
 - The product owner meeting is "as regular as can be. preferably weekly or so, minimum 1 hour allocated. this is also review."
 - The team agrees the retrospective's time of day.
 - A sync ends when every problem raised has an owner and a next step, and after that only the people involved stay. An agent proposed this, and the user accepted it.
-- Replenishment: Klas orders the requirements at the product owner meeting. Besides the Monday refill, the team breaks down the next requirement whenever Ready holds fewer items than there are people. An agent proposed this, and the user accepted it.
+- Replenishment: Klas orders the requirements at the product owner meeting. Besides the Monday refill, the team refills Ready whenever it holds fewer items than there are people. An agent proposed this, and the user accepted it. The refill is a meeting that the team calls, the whole team comes, and it lasts at most 30 minutes. Decided by the user on 2026-09-25.
 
 The recurring events are in [calendar.ics](../meetings/calendar.ics), written from the meetings in [kanban.toml](../../kanban.toml) by the template's `kanban/ics.py`. It holds only the Monday sync until the other two have times.
 
@@ -59,6 +62,7 @@ The sizes:
 - Review is separate from the maximum: only days In progress count toward it. Decided by the user on 2026-09-25.
 - An item gets its size when it enters Ready, before anyone is assigned to it, and the size does not change after it leaves Ready. An agent proposed this, and the user accepted it.
 - A size is the same whoever does the work.
+- A supertask stays in Backlog while its sub-issues are worked on. Whoever closes its last open sub-issue closes the supertask too, and nothing enforces this. Decided by the user on 2026-09-25.
 - An item may enter Ready when it has a size, acceptance criteria, and no open question to Klas. An agent proposed this, and the user accepted it.
 - Work under about an hour gets no size. The user prefers it as a checklist line in the issue it belongs to, and deferred any firmer rule "for when/if it becomes a problem". A smaller size, Tiny, was considered and removed.
 
@@ -93,7 +97,7 @@ Written by an agent on 2026-09-25. None of this is the user's reasoning.
   - The auto-add filter is `is:issue is:open`.
   - The Swedish words for the new glossary terms.
 - **Why the priority values are words.** The template's P0, P1 and P2 collided with the requirement ids of the time, P1 to P6, which are now R001 to R006.
-- **Pull request cards.** With them, one piece of work is two cards. `Pull request linked to issue` and `Pull request merged` move the issue card instead, but only when a pull request names its issue with a closing keyword such as `Closes #12`, and nothing enforces that.
+- **Pull request cards.** With them, one piece of work is two cards. `Pull request merged` moves the issue card instead, but only when a pull request names its issue with a closing keyword such as `Closes #12`, and nothing enforces that.
 - **The rules the agent proposed, and the reasons it gave for them.**
   - The 15-minute sync cap. A meeting called about one problem otherwise grows into everyone watching two people solve it.
   - The Tiny size was removed because every exception in this design came from it:
@@ -110,6 +114,8 @@ Written by an agent on 2026-09-25. None of this is the user's reasoning.
   - The post-lunch dip is real, and occurs even without lunch (Monk 2005, [PubMed 15892914](https://pubmed.ncbi.nlm.nih.gov/15892914/)).
   - Developers rate their own productivity differently over the day. Meyer et al. 2017 ([PDF](https://gwern.net/doc/psychology/writing/2017-meyer.pdf)) asked 20 developers every hour for three weeks. They found morning people (20%), low-at-lunch people and afternoon people (40%).
   - The agent's reading: the evidence for a biological daily curve in 18 to 25 year olds is weak. The evidence that breaks and interruptions cost time is stronger. Either way, counting whole days absorbs both without modelling them.
+- **Closing a supertask.** GitHub has no workflow that closes a parent when its last sub-issue closes. The alternatives to closing it by hand were a repository workflow that closes it then, and Klas accepting it at the product owner meeting. The agent recommended keeping supertasks in Backlog until they close, because GitHub's column totals would otherwise count them as work in progress.
+- **Pull request linked to issue.** GitHub's default sets In progress, which sends a card already in review back. Setting In review instead was the agent's proposal, and it moved a card to review as soon as a draft was linked. The workflow page offers no filter. A repository workflow on `pull_request` `ready_for_review` could set In review, but it needs a token that can write to the project, the machine account in #30.
 - **Why a script.** GitHub column limits count one column for the whole team, and only warn. The per-person limits, the maximums and the sync trigger need a script.
 - **Choices in kanban-weeks the agent made alone.**
   - A supertask counts toward no WIP limit, since its work items already do.

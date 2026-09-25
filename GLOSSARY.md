@@ -192,7 +192,7 @@ An issue without sub-issues, with a size. The unit that moves across the board. 
 
 ### Supertask | Huvuduppgift
 
-An issue with several work items as sub-issues. Anything larger than a Large is a supertask. Decided by the user on 2026-09-25.
+An issue with several work items as sub-issues. Anything larger than a Large is a supertask. It stays in Backlog until it closes, and whoever closes its last sub-issue closes it. Decided by the user on 2026-09-25.
 
 ### Size | Storlek
 
@@ -209,6 +209,10 @@ The most work one person may have in progress, by item count and by total nomina
 ### Sync | Avstämning
 
 A short team meeting to unblock work. The week-start sync is mandatory every Monday; any other sync is called by anyone, or by a work item passing its maximum. Decided by the user on 2026-09-25.
+
+### Refill meeting | Påfyllningsmöte
+
+A meeting of the whole team, at most 30 minutes, that splits and sizes the next requirement into work items and moves them to Ready. Called when Ready holds fewer items than there are people. The week-start sync doubles as one. See [decisions/0018](docs/decisions/0018-kanban-with-weekly-syncs.md). Decided by the user on 2026-09-25.
 
 ## WIP
 

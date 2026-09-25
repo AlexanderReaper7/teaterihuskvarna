@@ -14,7 +14,7 @@ Documents must make clear what the user decided and what an agent decided or wro
 
 ## Front matter
 
-Metadata goes in front matter, starting with the decision records, the design README and the research document. The fields are a creation date, the provenance, a short description of what the document is about, and an optional `superseded_by`:
+Decision records keep their metadata in front matter. Any other document may use front matter or a `Provenance:` line, and a guide such as [onboarding.md](../onboarding.md) does not need front matter. Decided by the user on 2026-09-25. The line may be hidden in an HTML comment, `<!-- Provenance: user. -->`, in a document written for the team rather than for agents, as [onboarding.md](../onboarding.md) is. Decided by the user on 2026-09-25. The fields are a creation date, the provenance, a short description of what the document is about, and an optional `superseded_by`:
 
 ```yaml
 ---
@@ -45,7 +45,7 @@ Every Markdown file under `docs/`, `design/`, `GLOSSARY.md` and `AGENTS.md` stat
 - `agent`: an agent decided or wrote it, and the user has not approved it. It is a default, open to a better idea.
 - `unreviewed`: an agent wrote it before this record, and some of it may be the user's, but nobody has marked which. Treat it as `agent`. Where the user has since confirmed a part, that part ends with "Decided by the user on" and a date.
 
-Decision records, research and `design/` state it in front matter, and the other files move to front matter one at a time. Until a file moves, it has a line starting `Provenance:` within its first ten lines. The `created` of 0010 to 0014 is the date the record states, 2026-09-22; git first saw them on 2026-09-23. `design/old-site/README.md` states no date, so its `created` is git's. Each `description` is the question the document answers, since the title already gives the answer, and every one was worded by an agent.
+Decision records state it in front matter. Other files state it either in front matter or in a line starting `Provenance:` within their first ten lines. Research, `design/`, the plan and the requirements already had front matter when it became optional on 2026-09-25, and kept it. The `created` of 0010 to 0014 is the date the record states, 2026-09-22; git first saw them on 2026-09-23. `design/old-site/README.md` states no date, so its `created` is git's. Each `description` is the question the document answers, since the title already gives the answer, and every one was worded by an agent.
 
 The two frozen customer documents, `projektplan-original.md` and `projektplan-original.en.md`, carry no line, because they must not change. They are the customer's words.
 

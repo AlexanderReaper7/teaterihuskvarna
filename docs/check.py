@@ -15,9 +15,10 @@
    the one the site's copy uses, and an entry added without one looks finished.
 6. Every document under docs/, GLOSSARY.md, AGENTS.md and design/ says who
    stands behind it, user, agent or unreviewed, see decisions/0019. Decision
-   records, research, design/, the plan and the requirements say so in front matter with a creation date
-   and a description; the rest still in a "Provenance:" line in their first ten
-   lines, until each moves to front matter. Meeting notes carry neither. The
+   records say so in front matter with a creation date and a description. Any
+   other document may use front matter too, or a "Provenance:" line in its
+   first ten lines, which may be an HTML comment so that readers do not see
+   it. Meeting notes carry neither. The
    check cannot tell whether a value is true, only that it is there.
 7. Every meeting document is named YYYY-MM-DD-<slug>.md, per
    meetings/naming-convention.md.
@@ -215,14 +216,14 @@ def check_glossary():
             problems.append(f"GLOSSARY.md:{number}: heading {line!r} is not 'English | Swedish'")
 
 
-PROVENANCE = re.compile(r"Provenance: (user|agent|unreviewed)\.")
+PROVENANCE = re.compile(r"(?:<!-- )?Provenance: (user|agent|unreviewed)\.")
 # The customer's own words, which must not change, not even by one line.
 FROZEN = {"docs/projektplan-original.md", "docs/projektplan-original.en.md"}
 FIELDS = {"created", "provenance", "description", "superseded_by"}
 REQUIRED = {"created", "provenance", "description"}
-# Front matter is required here; elsewhere it replaces the Provenance line as
-# each document is reviewed.
-IN_FRONT_MATTER = ("docs/decisions/", "docs/research/", "design/", "docs/projektplan.md", "docs/requirements.md")
+# Front matter is required here; elsewhere it is optional, and a Provenance
+# line does the same job.
+IN_FRONT_MATTER = ("docs/decisions/",)
 # A value outside YAML's plain scalars would parse here and differently in
 # GitHub's renderer, so it is refused rather than quoted.
 YAML_LEADING = tuple("[]{}&*!|>'\"%@`,-?:#")

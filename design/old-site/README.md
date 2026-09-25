@@ -122,7 +122,7 @@ One thing cannot be carried at all. The logo exists only as a 1534x1444 PNG in i
 
 ## Questions for the board
 
-C20, C21 and C23 were answered at [the first meeting](../../docs/meetings/2026-09-24-meeting-1.md#how-the-site-looks). C23 went to the team as T5 in [open-questions.md](../../docs/open-questions.md). C19, and C24 for the original files, are in [the next meeting](../../docs/meetings/2026-10-01-meeting-2.md).
+C20, C21 and C23 were answered at [the first meeting](../../docs/meetings/2026-09-24-meeting-1.md#how-the-site-looks). C23 went to the team as T5 in [open-questions.md](../../docs/open-questions.md). C19, and C24 for the original files, are in [the next meeting](../../docs/meetings/2026-09-30-meeting-2.md).
 
 ## Files here, and where they came from
 
