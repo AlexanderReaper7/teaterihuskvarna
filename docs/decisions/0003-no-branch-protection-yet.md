@@ -1,6 +1,10 @@
-# 0003: No branch protection on main, for now
+---
+created: 2026-09-22
+provenance: unreviewed
+description: Whether main has branch protection rules.
+---
 
-2026-09-22
+# 0003: No branch protection on main, for now
 
 ## Decision
 

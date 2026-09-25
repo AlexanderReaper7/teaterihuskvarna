@@ -1,10 +1,16 @@
+---
+created: 2026-09-23
+provenance: unreviewed
+description: Which personal data goes into Sanity, which countries and companies it reaches, and what limits that.
+---
+
 # Personal data in Sanity, and where it can end up
 
-2026-09-23. Researched against Sanity's own legal and documentation pages on that date. They change, and the subprocessor list changed as recently as 2026-01-19, so re-read the sources before relying on a detail here.
+Researched against Sanity's own legal and documentation pages on 2026-09-23. They change, and the subprocessor list changed as recently as 2026-01-19, so re-read the sources before relying on a detail here.
 
 ## TL;DR
 
-- Sanity will hold personal data. Requirement P4 puts names and photographs of board members and performers, children included, in Sanity, although the original says "Sanity får inga personuppgifter". The member register stays out.
+- Sanity will hold personal data. Requirement R004 puts names and photographs of board members and performers, children included, in Sanity, although the original says "Sanity får inga personuppgifter". The member register stays out.
 - The data is stored in Belgium today, but the DPA lets Sanity process it "in any country where Sanity or its Subprocessors operate". Whether the association contracts with the US or the Norwegian Sanity entity is not verified.
 - Data leaves Belgium by default through the API CDN, which caches published content worldwide, and through photographs, which are public URLs even in a private dataset. Linking `cdn.sanity.io` from the site sends every visitor's IP address to Sanity.
 - Studio errors and telemetry go to Sentry in the US. Opting out is per developer and per editor.
@@ -14,7 +20,7 @@
 
 ## Sanity will hold personal data, and the original said it would not
 
-The produktägare's document says "Personuppgifter lagras bara i appens egen databas, aldrig i Sanity" and "Sanity får inga personuppgifter".[^original] Requirement P4 contradicts that. The board page and the production pages show names and photographs of identifiable people, and news items name people too. The plan keeps Sanity for that content and keeps the member register out of it ([projektplan.md](../projektplan.md), [0006](../decisions/0006-sanity-for-now.md)).
+The produktägare's document says "Personuppgifter lagras bara i appens egen databas, aldrig i Sanity" and "Sanity får inga personuppgifter".[^original] Requirement R004 contradicts that. The board page and the production pages show names and photographs of identifiable people, and news items name people too. The plan keeps Sanity for that content and keeps the member register out of it ([projektplan.md](../projektplan.md), [0006](../decisions/0006-sanity-for-now.md)).
 
 What Sanity would hold for this site:
 
@@ -139,7 +145,7 @@ These are options. None has been decided.
 - **Assign someone to watch the subprocessor list**, with the ten-day window in mind. In practice that is the maintainer, who is still unnamed.
 - **Strip EXIF metadata before upload**, or check whether Sanity keeps it. A phone photo can carry GPS coordinates. Whether Sanity's original asset keeps them has not been checked.
 
-The photo consent question in [open-questions.md](../open-questions.md) still decides whether any of these photographs may be published at all. Nothing on this page answers it.
+The board handles photograph consent and removal by hand ([first meeting](../meetings/2026-09-24-meeting-1.md#personal-data)). Nothing on this page replaces that.
 
 ## Sources
 

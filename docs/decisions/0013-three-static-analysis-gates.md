@@ -1,6 +1,10 @@
-# 0013: Three static analysis gates, and Markdown doc comments
+---
+created: 2026-09-22
+provenance: unreviewed
+description: Which static analysis fails the build, and how Java doc comments are written.
+---
 
-2026-09-22
+# 0013: Three static analysis gates, and Markdown doc comments
 
 ## Decision
 

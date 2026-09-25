@@ -1,6 +1,10 @@
-# 0007: PostgreSQL runs in a container, not as a managed service
+---
+created: 2026-09-22
+provenance: unreviewed
+description: Where PostgreSQL runs.
+---
 
-2026-09-22
+# 0007: PostgreSQL runs in a container, not as a managed service
 
 ## Decision
 

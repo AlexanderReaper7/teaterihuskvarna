@@ -1,6 +1,10 @@
-# 0012: JPA over a schema Flyway owns
+---
+created: 2026-09-22
+provenance: unreviewed
+description: How the application reads and writes the database, and who owns the schema.
+---
 
-2026-09-22
+# 0012: JPA over a schema Flyway owns
 
 ## Decision
 

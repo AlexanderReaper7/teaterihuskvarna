@@ -1,6 +1,10 @@
-# 0011: Maven, and the build runs in a container
+---
+created: 2026-09-22
+provenance: unreviewed
+description: Which build tool builds the project, and where the build runs.
+---
 
-2026-09-22
+# 0011: Maven, and the build runs in a container
 
 ## Decision
 

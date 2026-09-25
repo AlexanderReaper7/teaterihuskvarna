@@ -1,6 +1,10 @@
-# 0015: Login links on Spring Security
+---
+created: 2026-09-23
+provenance: unreviewed
+description: How members and administrators log in.
+---
 
-2026-09-23
+# 0015: Login links on Spring Security
 
 ## Decision
 
@@ -49,7 +53,7 @@ How other services handle it, looked up on 2026-09-23:
 - [Supabase's PKCE flow](https://supabase.com/docs/guides/auth/sessions/pkce-flow) keeps a secret in the browser that asked, and its [passwordless docs](https://supabase.com/docs/guides/auth/auth-email-passwordless) say the link works only there. [Its users report](https://github.com/orgs/supabase/discussions/15708) the cost on phones whose mail program opens links in its own browser.
 - [Clerk](https://clerk.com/docs/guides/secure/best-practices/protect-email-links) calls it "Require the same device and browser" and turns it on by default.
 - [Auth0's email magic link](https://auth0.com/docs/authenticate/passwordless/authentication-methods/email-magic-link) requires the request and the link to happen in the same browser.
-- [Slack](https://slack.com/help/articles/212681477-Sign-in-to-Slack) mails a code that is typed where the person asked. A code alone would meet the threat as well, but requirement I1 asks for "engångslänk i e-post".
+- [Slack](https://slack.com/help/articles/212681477-Sign-in-to-Slack) mails a code that is typed where the person asked. A code alone would meet the threat as well, but requirement R010 asks for "engångslänk i e-post".
 
 This design uses both: a link bound to the browser, and a code for every other case. No large site that sends both in the same mail was found, and none was looked for beyond these four.
 

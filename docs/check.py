@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Checks the docs tree for the five things that rot silently.
+"""Checks the docs tree for the eight things that rot silently.
 
 1. requirements.md quotes the produktagare's Swedish word for word. A quotation
    that drifts from projektplan-original.md is no longer a quotation.
@@ -13,6 +13,17 @@
    a page without anything looking broken.
 5. Every glossary entry's heading reads "English | Swedish". The Swedish word is
    the one the site's copy uses, and an entry added without one looks finished.
+6. Every document under docs/, GLOSSARY.md, AGENTS.md and design/ says who
+   stands behind it, user, agent or unreviewed, see decisions/0019. Decision
+   records, research, design/, the plan and the requirements say so in front matter with a creation date
+   and a description; the rest still in a "Provenance:" line in their first ten
+   lines, until each moves to front matter. Meeting notes carry neither. The
+   check cannot tell whether a value is true, only that it is there.
+7. Every meeting document is named YYYY-MM-DD-<slug>.md, per
+   meetings/naming-convention.md.
+8. A requirement id followed by its issue, "R005 #8", names the same issue in
+   every document, and no issue follows two ids. Whether that issue really is
+   the requirement's on GitHub is not checked, because the check runs offline.
 
 The mermaid check needs mmdc on PATH. Without it the check is skipped and says
 so loudly; --require-mermaid turns that skip into a failure, which is what CI
@@ -22,6 +33,7 @@ check, because it reports success it did not earn.
 Run: python3 docs/check.py [--require-mermaid]
      (exit 0 clean, 1 with findings on stderr)
 """
+import datetime
 import re
 import shutil
 import subprocess
@@ -35,9 +47,14 @@ ROOT = DOCS.parent
 PRIORITY = {"M": "MUST", "B": "SHOULD", "K": "COULD"}
 # Where the produktagare's document contradicts itself, its version 1 scope
 # table wins over the row's own letter. requirements.md says why for each.
+# Keyed by the frozen source's id.
 OVERRIDES = {"V1": "MUST"}
 EXPECTED_TOTALS = {"MUST": 21, "SHOULD": 3, "COULD": 1}
-REQ_ID = re.compile(r"[PRIMVAU]\d")
+# The frozen source's ids, and the working copy's, which follow its row order.
+ORIGINAL_ID = re.compile(r"[PRIMVAU]\d")
+REQ_ID = re.compile(r"R\d{3}")
+# A requirement id, optionally followed directly by its issue: "R005 #8".
+REQ_ISSUE = re.compile(r"\b(R\d{3}) #(\d+)\b")
 
 problems = []
 
@@ -57,8 +74,10 @@ def rows(text, ncols):
 
 def check_requirements():
     frozen = rows((DOCS / "projektplan-original.md").read_text(encoding="utf-8"), 4)
-    frozen = [r for r in frozen if REQ_ID.fullmatch(r[0])]
-    working = rows((DOCS / "requirements.md").read_text(encoding="utf-8"), 5)
+    frozen = [r for r in frozen if ORIGINAL_ID.fullmatch(r[0])]
+    working = rows((DOCS / "requirements.md").read_text(encoding="utf-8"), 4)
+    for r in working:
+        r[0] = r[0].split(" #")[0]
     working = [r for r in working if REQ_ID.fullmatch(r[0])]
 
     if len(frozen) != len(working):
@@ -68,9 +87,9 @@ def check_requirements():
         )
         return
 
-    for f, w in zip(frozen, working):
-        if f[0] != w[0]:
-            problems.append(f"requirement order diverged: {f[0]} vs {w[0]}")
+    for number, (f, w) in enumerate(zip(frozen, working), 1):
+        if w[0] != f"R{number:03}":
+            problems.append(f"requirement {number} is {w[0]}, expected R{number:03}, the row of {f[0]} in the frozen source")
             continue
         if f[2] != w[2]:
             problems.append(
@@ -196,6 +215,115 @@ def check_glossary():
             problems.append(f"GLOSSARY.md:{number}: heading {line!r} is not 'English | Swedish'")
 
 
+PROVENANCE = re.compile(r"Provenance: (user|agent|unreviewed)\.")
+# The customer's own words, which must not change, not even by one line.
+FROZEN = {"docs/projektplan-original.md", "docs/projektplan-original.en.md"}
+FIELDS = {"created", "provenance", "description", "superseded_by"}
+REQUIRED = {"created", "provenance", "description"}
+# Front matter is required here; elsewhere it replaces the Provenance line as
+# each document is reviewed.
+IN_FRONT_MATTER = ("docs/decisions/", "docs/research/", "design/", "docs/projektplan.md", "docs/requirements.md")
+# A value outside YAML's plain scalars would parse here and differently in
+# GitHub's renderer, so it is refused rather than quoted.
+YAML_LEADING = tuple("[]{}&*!|>'\"%@`,-?:#")
+
+
+def front_matter(rel, text):
+    """The front matter's fields, or None when the file has none. Only flat
+    `key: value` lines, the part of YAML these files use."""
+    lines = text.splitlines()
+    if not lines or lines[0] != "---":
+        return None
+    if "---" not in lines[1:]:
+        problems.append(f"{rel}: front matter has no closing '---'")
+        return {}
+    fields = {}
+    for line in lines[1:lines.index("---", 1)]:
+        key, sep, value = line.partition(": ")
+        if not sep or not value or key not in FIELDS or key in fields:
+            problems.append(f"{rel}: front matter line {line!r} is not one of {sorted(FIELDS)}, once, with a value")
+        elif value.startswith(YAML_LEADING) or ": " in value or " #" in value or value != value.strip():
+            problems.append(f"{rel}: front matter value {value!r} is not a plain YAML scalar")
+        else:
+            fields[key] = value
+    return fields
+
+
+def check_front_matter(md, rel, fields):
+    for key in sorted(REQUIRED - fields.keys()):
+        problems.append(f"{rel}: front matter lacks {key}")
+    try:
+        datetime.date.fromisoformat(fields.get("created", ""))
+    except ValueError:
+        if "created" in fields:
+            problems.append(f"{rel}: created {fields['created']!r} is not a YYYY-MM-DD date")
+    if fields.get("provenance", "user") not in ("user", "agent", "unreviewed"):
+        problems.append(f"{rel}: provenance {fields['provenance']!r} is not user, agent or unreviewed")
+    if "superseded_by" in fields and not (md.parent / fields["superseded_by"]).is_file():
+        problems.append(f"{rel}: superseded_by {fields['superseded_by']!r} points at nothing")
+
+
+def check_provenance():
+    """Returns how many documents are still marked unreviewed."""
+    unreviewed = 0
+    for md in markdown_files():
+        rel = md.relative_to(ROOT).as_posix()
+        text = md.read_text(encoding="utf-8")
+        fields = front_matter(rel, text)
+        lines = [line for line in text.splitlines()[:10] if PROVENANCE.match(line)]
+        if rel.startswith("docs/meetings/"):
+            if fields is not None or lines:
+                problems.append(f"{rel}: meeting notes carry no front matter and no Provenance line")
+            continue
+        if rel in FROZEN or not (rel.startswith(("docs/", "design/")) or rel in ("GLOSSARY.md", "AGENTS.md")):
+            continue
+        if fields is not None:
+            check_front_matter(md, rel, fields)
+            if lines:
+                problems.append(f"{rel}: has front matter and a Provenance line; the line goes")
+            unreviewed += fields.get("provenance") == "unreviewed"
+        elif rel.startswith(IN_FRONT_MATTER):
+            problems.append(f"{rel}: needs front matter with {sorted(REQUIRED)}")
+        elif len(lines) != 1:
+            problems.append(f"{rel}: needs front matter, or exactly one 'Provenance: user|agent|unreviewed.' line in its first ten lines, has {len(lines)}")
+        else:
+            unreviewed += PROVENANCE.match(lines[0])[1] == "unreviewed"
+    return unreviewed
+
+
+# See meetings/naming-convention.md.
+MEETING_NAME = re.compile(r"(\d{4}-\d\d-\d\d)-(S|[^\d\W][\w-]*)\.md")
+MEETING_EXEMPT = {"notes.md", "naming-convention.md"}
+
+
+def check_meeting_names():
+    for md in markdown_files():
+        rel = md.relative_to(ROOT).as_posix()
+        if not rel.startswith("docs/meetings/") or md.name in MEETING_EXEMPT:
+            continue
+        match = MEETING_NAME.fullmatch(md.name)
+        try:
+            ok = match is not None and datetime.date.fromisoformat(match[1]) is not None
+        except ValueError:
+            ok = False
+        if not ok:
+            problems.append(f"{rel}: a meeting document is YYYY-MM-DD-<slug>.md, the slug not starting with a digit, see meetings/naming-convention.md")
+
+
+def check_requirement_issues():
+    """An id followed by an issue names the same issue everywhere."""
+    seen = {}
+    for md in markdown_files():
+        for req, issue in REQ_ISSUE.findall(md.read_text(encoding="utf-8")):
+            first = seen.setdefault(req, (issue, md.relative_to(ROOT)))
+            if first[0] != issue:
+                problems.append(f"{md.relative_to(ROOT)}: {req} #{issue}, but {first[1]} has {req} #{first[0]}")
+    by_issue = {}
+    for req, (issue, where) in seen.items():
+        if by_issue.setdefault(issue, req) != req:
+            problems.append(f"#{issue} follows both {by_issue[issue]} and {req}")
+
+
 def check_links():
     for md in markdown_files():
         text = md.read_text(encoding="utf-8")
@@ -212,6 +340,9 @@ check_requirements()
 check_links()
 check_footnotes()
 check_glossary()
+unreviewed = check_provenance()
+check_meeting_names()
+check_requirement_issues()
 diagrams = check_mermaid("--require-mermaid" in sys.argv[1:])
 
 if problems:
@@ -222,5 +353,6 @@ if problems:
 print(
     f"docs ok: {sum(EXPECTED_TOTALS.values())} requirements quoted intact, "
     f"all relative links resolve, footnotes match, glossary headings name both words, "
-    f"{diagrams} mermaid diagrams parse"
+    f"{diagrams} mermaid diagrams parse, every document states its provenance "
+    f"({unreviewed} still unreviewed)"
 )

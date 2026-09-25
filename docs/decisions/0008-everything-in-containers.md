@@ -1,6 +1,10 @@
-# 0008: The whole application runs in containers
+---
+created: 2026-09-22
+provenance: unreviewed
+description: How the application is deployed and run in production and locally.
+---
 
-2026-09-22
+# 0008: The whole application runs in containers
 
 ## Decision
 

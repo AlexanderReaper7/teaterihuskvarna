@@ -1,6 +1,10 @@
-# 0006: Sanity for now, self-hosted Directus as the noted alternative
+---
+created: 2026-09-22
+provenance: unreviewed
+description: Which CMS holds the site's content in version 1.
+---
 
-2026-09-22
+# 0006: Sanity for now, self-hosted Directus as the noted alternative
 
 ## Decision
 
@@ -53,6 +57,6 @@ One content export, one API client, and deleting the commonmark-java rendering p
 
 ## Amendment, 2026-09-22
 
-This record originally leaned on the claim, inherited from the produktägare's document, that Sanity receives no personal data at all. That is wrong: requirement P4 asks for pages about the board and about productions, so names and photographs of identifiable people are published to Sanity by design. The claim has been narrowed here and in [projektplan.md](../projektplan.md) to the member register, which is the part that actually holds. The decision itself does not change, but the public-dataset argument above is slightly weaker than it first read, and Sanity now needs a data processing agreement it was previously exempted from.
+This record originally leaned on the claim, inherited from the produktägare's document, that Sanity receives no personal data at all. That is wrong: requirement R004 asks for pages about the board and about productions, so names and photographs of identifiable people are published to Sanity by design. The claim has been narrowed here and in [projektplan.md](../projektplan.md) to the member register, which is the part that actually holds. The decision itself does not change, but the public-dataset argument above is slightly weaker than it first read, and Sanity now needs a data processing agreement it was previously exempted from.
 
 The same review found two newer facts. Sanity now documents a nonprofit plan that mirrors Growth within quota at no charge, and its public-dataset documentation says unauthenticated requests cannot read drafts. Both change the cost comparison but not the CMS choice. The project now applies for the nonprofit plan and uses Free as the fallback.

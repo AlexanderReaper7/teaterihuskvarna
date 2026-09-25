@@ -1,6 +1,10 @@
-# 0016: Passkeys beside login links
+---
+created: 2026-09-23
+provenance: unreviewed
+description: Whether members and administrators can log in with passkeys.
+---
 
-2026-09-23
+# 0016: Passkeys beside login links
 
 ## Decision
 

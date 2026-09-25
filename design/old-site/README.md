@@ -1,12 +1,18 @@
+---
+created: 2026-09-23
+provenance: agent
+description: What the old site's design looks like, measured off the live site.
+---
+
 # The old site's design, surveyed
 
 Read off the live [teaterihuskvarna.se](https://teaterihuskvarna.se/) on 2026-09-22, because the produktägare said they liked its graphics. Nothing here is a decision. It records what the old site actually does, so that the choice of what to carry into the new one is argued against measured values instead of a memory of them.
 
-The WordPress site closes at launch. [projektplan.md](../../docs/projektplan.md) puts migration of its content inside version 1, and [open-questions.md](../../docs/open-questions.md) still has the question of whether the old install is moved or shut down. Either answer ends with the old design gone, and after that this directory is the only copy of it.
+The WordPress site closes at launch. [projektplan.md](../../docs/projektplan.md) puts migration of its content inside version 1, and the new site replaces it on the same domain ([first meeting](../../docs/meetings/2026-09-24-meeting-1.md#who-does-what)). That ends with the old design gone, and after that this directory is the only copy of it.
 
 ## Which graphics were praised is still unknown
 
-"Liked the graphics" is the whole of what was said, and nobody asked which part. So this survey covers the entire design rather than guessing. The screenshots are here to be put in front of the board with a narrower question attached, and the questions to ask are under "Design" in [open-questions.md](../../docs/open-questions.md).
+"Liked the graphics" is the whole of what was said, and nobody asked which part. So this survey covers the entire design rather than guessing. The screenshots are here to be put in front of the board with a narrower question attached. At [the first meeting](../../docs/meetings/2026-09-24-meeting-1.md#how-the-site-looks) Klas answered that members should recognise the new site from the old one's visual style, which still names no single part.
 
 ## The design is seven colours, one typeface and no curved edges
 
@@ -66,9 +72,9 @@ The front-page hero types itself. "FÖRENINGEN TEATER I HUS" is static, and then
 
 Everything else on the site is a competent, quiet layout. This is the part someone actually thought of, and it is the single most likely answer to what "the graphics" meant. Ask about it first.
 
-## The accent colour cannot carry text, and P6 is a MUST
+## The accent colour cannot carry text, and R006 is a MUST
 
-Requirement P6 commits version 1 to WCAG 2.1 AA. Measured against it, the teal core passes and the orange accent does not. AA wants 4.5:1 for body text and 3:1 for large text and interface components.
+Requirement R006 commits version 1 to WCAG 2.1 AA. Measured against it, the teal core passes and the orange accent does not. AA wants 4.5:1 for body text and 3:1 for large text and interface components.
 
 | Pair | Ratio | Verdict |
 | --- | --- | --- |
@@ -100,10 +106,10 @@ Every email address, phone number and postal address in them is covered by a bla
 | [news-index.png](screenshots/news-index.png) | The full news list. The longest page on the site at 8945px |
 | [news-article.png](screenshots/news-article.png) | An article, and how body copy is set |
 | [about.png](screenshots/about.png) | Two-column prose with a document sidebar, and the clearest view of the footer |
-| [board.png](screenshots/board.png) | Person cards with photographs, which requirement P4 asks for again |
+| [board.png](screenshots/board.png) | Person cards with photographs, which requirement R004 asks for again |
 | [production.png](screenshots/production.png) | A production page. Shows the 70px uppercase title and the grey Bricks-default sidebar |
 | [ludde-award.png](screenshots/ludde-award.png) | A Ludde award page |
-| [join.png](screenshots/join.png) | The membership page the new P5 form replaces |
+| [join.png](screenshots/join.png) | The membership page the new R005 form replaces |
 | [partners.png](screenshots/partners.png) | Partners, which is prose and links with no partner logos to carry over |
 
 ## What to keep and what to drop
@@ -116,7 +122,7 @@ One thing cannot be carried at all. The logo exists only as a 1534x1444 PNG in i
 
 ## Questions for the board
 
-They are C19, C20, C21 and C23 in [open-questions.md](../../docs/open-questions.md), with the rest of the questions for the customer.
+C20, C21 and C23 were answered at [the first meeting](../../docs/meetings/2026-09-24-meeting-1.md#how-the-site-looks). C23 went to the team as T5 in [open-questions.md](../../docs/open-questions.md). C19, and C24 for the original files, are in [the next meeting](../../docs/meetings/2026-10-01-meeting-2.md).
 
 ## Files here, and where they came from
 
@@ -125,7 +131,7 @@ Everything here was captured from the live site on 2026-09-22 and is not meant t
 | Path | Source | Licence |
 | --- | --- | --- |
 | `assets/brand/logo-negative.png` | `wp-content/uploads/2023/06/FTH_ALF_neg_SV.png` | The association's mark |
-| `assets/brand/jatten-vist.png` | `wp-content/uploads/2023/06/jatten_vist.png` | Unknown artist, see C21 in [open-questions.md](../../docs/open-questions.md) |
+| `assets/brand/jatten-vist.png` | `wp-content/uploads/2023/06/jatten_vist.png` | Unknown artist. The association may use it ([first meeting](../../docs/meetings/2026-09-24-meeting-1.md#how-the-site-looks)) |
 | `assets/brand/favicon.png` | `wp-content/uploads/2023/06/favicon-32x32-1.png` | The association's mark |
 | `assets/fonts/montserrat-*.woff2` | Google Fonts, variable 100 to 900, latin and latin-ext | SIL OFL 1.1, text in `OFL.txt` |
 | `assets/fonts/montserrat.css` | Rewritten from the Google Fonts stylesheet to point at the local files | |

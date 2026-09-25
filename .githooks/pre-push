@@ -1,0 +1,59 @@
+#!/bin/sh
+# Refuses three kinds of push before they leave the machine. The build copies
+# this file into .git/hooks (maven-antrun-plugin in pom.xml), so every clone that
+# has run `./mvnw verify` has it. It guards against mistakes, not intent:
+# `git push --no-verify` skips it, and it never sees the merge button on GitHub.
+#
+# 1. Any push to main. Changes reach main through a pull request, merged by the
+#    repository owner. The owner's clone opts out with
+#    `git config hooks.allowMainPush true`.
+# 2. A force-push to main, which rewrites history under everyone else's clone.
+#    This applies to the owner too; a deliberate rewrite uses --no-verify.
+# 3. Any ref that contains a denied commit, one taken off main by rewriting
+#    history. A clone made before the rewrite still has it, and pushing a branch
+#    built on it would bring it back.
+
+# 5f57ec0: the merge of pull request #2 (Sanity), removed from main 2026-09-25.
+denied_commits="5f57ec0ea65ad4c00f46536224796b8b8242e292"
+
+zero=0000000000000000000000000000000000000000
+status=0
+
+while read -r local_ref local_sha remote_ref remote_sha; do
+  if [ "$remote_ref" = "refs/heads/main" ]; then
+    if [ "$(git config --bool hooks.allowMainPush)" != "true" ]; then
+      echo "pre-push: refusing to push to main." >&2
+      echo "  Push a branch and open a pull request instead:" >&2
+      echo "  git switch -c <branch-name> && git push -u origin <branch-name>" >&2
+      status=1
+      continue
+    fi
+    if [ "$local_sha" = "$zero" ]; then
+      echo "pre-push: refusing to delete main." >&2
+      status=1
+      continue
+    fi
+    if [ "$remote_sha" != "$zero" ] \
+      && ! git merge-base --is-ancestor "$remote_sha" "$local_sha" 2>/dev/null; then
+      echo "pre-push: refusing to force-push main; it would drop commits already on GitHub." >&2
+      echo "  For a deliberate rewrite: git push --force-with-lease --no-verify" >&2
+      status=1
+      continue
+    fi
+  fi
+
+  [ "$local_sha" = "$zero" ] && continue
+  for denied in $denied_commits; do
+    # A clone made after the rewrite never had the commit, so it cannot be in
+    # anything pushed from there.
+    git cat-file -e "$denied^{commit}" 2>/dev/null || continue
+    if git merge-base --is-ancestor "$denied" "$local_sha"; then
+      echo "pre-push: $local_ref contains $denied, a commit taken off main." >&2
+      echo "  Move your own commits onto the current main:" >&2
+      echo "  git fetch && git rebase --onto origin/main $denied ${local_ref#refs/heads/}" >&2
+      status=1
+    fi
+  done
+done
+
+exit $status

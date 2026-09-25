@@ -7,3 +7,6 @@
 
 # cmd.exe needs CRLF.
 *.cmd text eol=crlf
+
+# RFC 5545 requires CRLF in calendar files.
+*.ics text eol=crlf

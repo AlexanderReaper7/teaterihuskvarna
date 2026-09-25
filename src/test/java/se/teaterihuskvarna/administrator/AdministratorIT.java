@@ -36,7 +36,7 @@ import se.teaterihuskvarna.login.LoginKind;
 import se.teaterihuskvarna.login.SignedIn;
 import se.teaterihuskvarna.web.Copy;
 
-/// Proves the administrator rules in `docs/projektplan.md` (I2), through the REST
+/// Proves the administrator rules in `docs/projektplan.md` (R011), through the REST
 /// endpoints and the `/admin` forms:
 ///
 /// - the list shows active administrators only;

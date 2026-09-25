@@ -228,6 +228,53 @@
           </execution>
         </executions>
       </plugin>
+      <!-- Copies .githooks/pre-push into .git/hooks, so any clone that builds
+           gets the hook with no setup step. core.hooksPath would need a git
+           command per clone, and this image has no git. Skipped when .git is
+           not a directory: a worktree, or a copy without history.
+
+           The Dockerfile build copies into the image's own .git, so a clone
+           that only ever builds through docker compose never gets the hook.
+           `verify`, the VS Code default build task, is what installs it.
+
+           Overwrites any hook of your own there. On a Linux host the copy is
+           owned by root, like target/, because the build container runs as
+           root; on Windows that does not apply, and git ignores the mode. -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-antrun-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>install-git-hooks</id>
+            <phase>validate</phase>
+            <goals><goal>run</goal></goals>
+            <configuration>
+              <target xmlns:if="ant:if">
+                <condition property="git.hooks.install">
+                  <available file="${project.basedir}/.git" type="dir"/>
+                </condition>
+                <condition property="git.hooks.replaced">
+                  <and>
+                    <isset property="git.hooks.install"/>
+                    <available file="${project.basedir}/.git/hooks/pre-push"/>
+                    <not>
+                      <filesmatch file1="${project.basedir}/.githooks/pre-push"
+                                  file2="${project.basedir}/.git/hooks/pre-push"/>
+                    </not>
+                  </and>
+                </condition>
+                <echo if:set="git.hooks.replaced" level="warning"
+                      message="Replacing .git/hooks/pre-push with .githooks/pre-push"/>
+                <copy if:set="git.hooks.install" overwrite="true"
+                      file="${project.basedir}/.githooks/pre-push"
+                      todir="${project.basedir}/.git/hooks"/>
+                <chmod if:set="git.hooks.install" perm="755"
+                       file="${project.basedir}/.git/hooks/pre-push"/>
+              </target>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
       <!--
            Three static analysis gates, all failing the build. Ported from
            C:\Projects\Lexicon-flight-reservation; reasoning and the

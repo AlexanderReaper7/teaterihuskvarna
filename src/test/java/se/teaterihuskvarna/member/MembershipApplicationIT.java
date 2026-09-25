@@ -23,7 +23,7 @@ import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilde
 import se.teaterihuskvarna.IntegrationTestSupport;
 import se.teaterihuskvarna.login.LoginKind;
 
-/// Proves the membership application rules (P5) in `docs/projektplan.md`, through
+/// Proves the membership application rules (R005) in `docs/projektplan.md`, through
 /// both adapters, the JTE form and the REST endpoints:
 ///
 /// - an application stores nothing in the register until its link is confirmed,

@@ -1,10 +1,14 @@
-# Teater i Huskvarna, system plan
+---
+created: 2026-09-22
+provenance: agent
+description: What version 1 of the system is, the rules it follows, and when it may be released.
+---
 
-2026-09-22
+# Teater i Huskvarna, system plan
 
 This file is the committed baseline for version 1. The customer's document is preserved in [projektplan-original.md](projektplan-original.md), with a translation in [projektplan-original.en.md](projektplan-original.en.md). Its technical sketch was a proposal. The project reviewed that proposal, and the accepted choices are recorded in [decisions/](decisions/).
 
-[requirements.md](requirements.md) tracks the feature requirements. [open-questions.md](open-questions.md) tracks decisions that need an answer from the association. [GLOSSARY.md](../GLOSSARY.md) defines the project terms. This plan states the result, the system rules and the release conditions. It leaves detailed reasoning in the decision records.
+[requirements.md](requirements.md) tracks the feature requirements. The next meeting's document under [meetings/](meetings/) holds the questions for the association, and [open-questions.md](open-questions.md) the ones that cannot be asked there. [GLOSSARY.md](../GLOSSARY.md) defines the project terms. This plan states the result, the system rules and the release conditions. It leaves detailed reasoning in the decision records.
 
 ## The system replaces private inboxes as well as the old website
 
@@ -43,7 +47,7 @@ Version 1 must satisfy all 21 MUST requirements in [requirements.md](requirement
 | Mailings to selected member groups | SMS |
 | Migration of relevant content from WordPress | More than one visitor language |
 
-Volunteer booking is a MUST requirement even though the original's requirement row V1 says B, because the original's scope table lists it inside version 1. Where the customer's document contradicts itself, the scope table wins. [requirements.md](requirements.md) records the exception.
+Volunteer booking is a MUST requirement even though its row in the original, V1, says B, because the original's scope table lists it inside version 1. Where the customer's document contradicts itself, the scope table wins. [requirements.md](requirements.md) records the exception.
 
 ## Public content and member data stay in separate systems
 
@@ -80,7 +84,7 @@ Members and administrators may also add passkeys on their own page and log in wi
 
 The first administrator account comes from configuration at startup, when none exists. After that, administrators create and remove each other in the application, and nobody removes themselves: a last active administrator removing their own account would lock the association out. Removal is refused while two or fewer administrators remain, which is how the application enforces the two-administrator rule under [ownership](#ownership-and-maintenance-are-release-work) without refusing to start with one.
 
-A membership application (P5) registers one person. The applicant gets a confirmation link, and the application becomes a member with an account when they follow it. An application nobody confirms is deleted after 24 hours. The page gives the same response when the address already belongs to an account; that account gets a mail pointing to the login page instead of a confirmation link, with no login link in it. The form therefore falls under the same rate limit as the login page. What P5 creates is provisional, see [open-questions.md](open-questions.md).
+A membership application (R005) registers one person. The applicant gets a confirmation link, and the application becomes a member with an account when they follow it. An application nobody confirms is deleted after 24 hours. The page gives the same response when the address already belongs to an account; that account gets a mail pointing to the login page instead of a confirmation link, with no login link in it. The form therefore falls under the same rate limit as the login page. What R005 creates is provisional, see [open-questions.md](open-questions.md).
 
 An invitation is valid for 7 days by default, and the lifetime is configurable. It is longer than an application's 24 hours because a logged-in member or an administrator sends it, so the bot argument does not apply, and the recipient may not read their mail for days. The sender can send it again.
 
@@ -108,7 +112,7 @@ Before building reconciliation, compare this rule with real anonymised bankgiro 
 
 Offer registrations, volunteer bookings and mailing records refer to members by identifier. No member-register field may appear in a Sanity content type.
 
-An offer is therefore split across both systems, deliberately. Sanity holds what an editor writes: title, description, images, dates. PostgreSQL holds the seat capacity and the registrations against it. Requirement M3 promises a member the number of places left, and a count is only correct if the same transaction that takes a place checks the limit. Capacity stored in Sanity could be lowered by an editor while a member is registering, with the application unable to refuse the extra booking. The cost of the split is an administration screen for setting capacity, and an offer that no single editor owns end to end.
+An offer is therefore split across both systems, deliberately. Sanity holds what an editor writes: title, description, images, dates. PostgreSQL holds the seat capacity and the registrations against it. Requirement R014 promises a member the number of places left, and a count is only correct if the same transaction that takes a place checks the limit. Capacity stored in Sanity could be lowered by an editor while a member is registering, with the application unable to refuse the extra booking. The cost of the split is an administration screen for setting capacity, and an offer that no single editor owns end to end.
 
 ## Accessibility needs automated and manual checks
 
@@ -131,17 +135,17 @@ Java 25 LTS and Spring Boot 4.1.1 are the committed runtime versions. GitHub Act
 
 ## The association remains responsible for personal data
 
-The member register lives in PostgreSQL and reaches Brevo only as required for login mail and mailings. Published names and photographs may live in Sanity, although the original says Sanity gets no personal data, because requirement P4's board and production pages cannot exist without them. Sanity's backend runs in three data centres in Belgium, and its [Data Processing Addendum](https://www.sanity.io/legal/dpa) binds it as processor as soon as the account is used, with standard contractual clauses for transfers ([security](https://www.sanity.io/security), [subprocessors](https://www.sanity.io/third-party-sub-processors)). The member register never goes there. How that content can still leave Belgium, including to AI providers in the US, is in [research/sanity-personal-data.md](research/sanity-personal-data.md). The association must document the purpose and lawful basis for each category of personal data.
+The member register lives in PostgreSQL and reaches Brevo only as required for login mail and mailings. Published names and photographs may live in Sanity, although the original says Sanity gets no personal data, because requirement R004's board and production pages cannot exist without them. Sanity's backend runs in three data centres in Belgium, and its [Data Processing Addendum](https://www.sanity.io/legal/dpa) binds it as processor as soon as the account is used, with standard contractual clauses for transfers ([security](https://www.sanity.io/security), [subprocessors](https://www.sanity.io/third-party-sub-processors)). The member register never goes there. How that content can still leave Belgium, including to AI providers in the US, is in [research/sanity-personal-data.md](research/sanity-personal-data.md). The association must document the purpose and lawful basis for each category of personal data, and the board is responsible for it ([first meeting](meetings/2026-09-24-meeting-1.md#personal-data)).
 
 The association must have processor terms with each service that processes personal data on its behalf, including the host, Brevo and Sanity. It must also:
 
 - restrict production access to named administrators;
 - record the processing activities;
 - decide and apply a retention period for former members and backups;
-- provide a process for photograph consent and removal requests;
+- handle photograph consent and removal requests, which the board does by hand ([first meeting](meetings/2026-09-24-meeting-1.md#personal-data));
 - put an unsubscribe link in every member mailing and honour suppression in later mailings.
 
-Sanity's Free plan exposes published documents, not drafts, through unauthenticated queries. Drafts require authentication. Published member-only offer details must therefore stay outside a public dataset. Apply for [Sanity's nonprofit plan](https://www.sanity.io/docs/platform-management/non-profit-plan), which provides the Growth plan within quota at no charge for eligible organisations. Until approval, the Free plan and its public-dataset rules remain the fallback.
+Sanity's Free plan exposes published documents, not drafts, through unauthenticated queries. Drafts require authentication. Offer descriptions and discount details are for members only ([first meeting](meetings/2026-09-24-meeting-1.md#what-the-site-does)), so they must stay outside a public dataset. Klas applies for [Sanity's nonprofit plan](https://www.sanity.io/docs/platform-management/non-profit-plan), which provides the Growth plan within quota at no charge for eligible organisations. Until approval, the Free plan and its public-dataset rules remain the fallback.
 
 ## Ownership and maintenance are release work
 
@@ -174,7 +178,7 @@ A change is done when:
 The release is complete when:
 
 - all 21 MUST requirements pass their acceptance checks;
-- the site runs in production. Moving the association's domain from WordPress to it is deferred until the board answers the domain question in [open-questions.md](open-questions.md);
+- the site runs in production on the association's domain, in place of WordPress ([first meeting](meetings/2026-09-24-meeting-1.md#who-does-what));
 - real editors have published real content;
 - real administrators have marked a fee paid, exported the register and sent a mailing;
 - the association owns every **production** account. Development and testing necessarily use accounts held by developers until an alternative is in effect;
@@ -187,8 +191,8 @@ SHOULD and COULD requirements are cut before any MUST requirement. No technical 
 ## Four unresolved items can still change implementation
 
 - The board must set the retention period for former-member data and backups.
-- The board must decide whether offers contain member-only details. Such details cannot be published in a public Sanity dataset.
+- Member-only offer details need a private Sanity dataset or storage in the application, T6 in [open-questions.md](open-questions.md).
 - The Brevo integration needs a recorded recipient synchronisation and suppression rule.
 - A maintainer and the association-owned service accounts must exist before launch.
 
-The remaining customer questions live in [open-questions.md](open-questions.md). A resolved question updates this plan or a decision record in the same change.
+The remaining questions are in the next meeting's document under [meetings/](meetings/) and in [open-questions.md](open-questions.md).

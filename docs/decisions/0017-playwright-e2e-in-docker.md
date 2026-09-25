@@ -1,6 +1,10 @@
-# 0017: Playwright end-to-end tests, run in docker against their own stack
+---
+created: 2026-09-23
+provenance: unreviewed
+description: How the end-to-end tests are written and run.
+---
 
-2026-09-23
+# 0017: Playwright end-to-end tests, run in docker against their own stack
 
 ## Decision
 

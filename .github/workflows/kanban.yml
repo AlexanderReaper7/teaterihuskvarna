@@ -1,0 +1,19 @@
+# Checks the board every weekday morning. 05:00 UTC is 07:00 in Swedish summer
+# time and 06:00 in winter, before the Monday sync. GitHub may start a
+# scheduled run late when it is busy. BOARD_TOKEN is a machine account's token, see
+# https://github.com/AlexanderReaper7/kanban-weeks#the-machine-account.
+name: kanban
+
+on:
+  schedule:
+    - cron: "0 5 * * 1-5"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  board:
+    uses: AlexanderReaper7/kanban-weeks/.github/workflows/board.yml@v1.0.1
+    secrets:
+      board_token: ${{ secrets.BOARD_TOKEN }}

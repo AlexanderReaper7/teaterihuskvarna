@@ -1,6 +1,10 @@
-# 0005: The app drafts mailings, Brevo sends them
+---
+created: 2026-09-22
+provenance: unreviewed
+description: How the system sends mail, and which part Brevo does.
+---
 
-2026-09-22
+# 0005: The app drafts mailings, Brevo sends them
 
 ## Decision
 
@@ -11,6 +15,8 @@ Login links are transactional mail, sent by the application over SMTP through `J
 Mailings to members are campaigns. The application builds the HTML from CMS content and posts it to Brevo's [`createEmailCampaign`](https://developers.brevo.com/reference/create-email-campaign), which creates campaigns in **draft** status by default. An administrator then opens Brevo, reviews the draft in Brevo's own editor, and sends it from there.
 
 The application does not contain a mailing editor.
+
+Klas accepted sending mailings from Brevo at [the first meeting](../meetings/2026-09-24-meeting-1.md#what-the-site-does), question C18. The association has 115 members and expects up to 200 (C5), within the free plan's 300 mails a day.
 
 ## Why Brevo survived being reconsidered
 
@@ -24,16 +30,16 @@ Brevo also does transactional and campaigns in one account, which is unusual and
 
 ## Why the app does not send the mailings itself
 
-Requirements U1 to U4 read as a specification for a mailing feature inside the admin view: pick an audience, preview, send, log. Building that literally means building a mail editor.
+Requirements R022 to R025 read as a specification for a mailing feature inside the admin view: pick an audience, preview, send, log. Building that literally means building a mail editor.
 
 It would be a bad one. Brevo's editor has template management, previews across mail clients, a test send, bounce and complaint handling, unsubscribe management, and delivery statistics. Anything built here in twelve weeks is a worse version of all of that, and then it has to be maintained on a budget of a few hours a year.
 
 Handing Brevo a draft keeps what the requirements actually wanted:
 
-- U1, the mailing is based on CMS content, so the text is written once. The application still builds the HTML, so this is unchanged.
-- U2, preview and test send to yourself. Brevo's, which is better than ours would be.
-- U3, an unsubscribe link in every mailing. Brevo manages the unsubscribe list, which also means an unsubscribe is honoured across every future campaign rather than depending on our own bookkeeping being right. This is the one with legal consequences if it goes wrong.
-- U4, a log of what was sent. Brevo's campaign history, with open and bounce data the application would not otherwise have.
+- R022, the mailing is based on CMS content, so the text is written once. The application still builds the HTML, so this is unchanged.
+- R023, preview and test send to yourself. Brevo's, which is better than ours would be.
+- R024, an unsubscribe link in every mailing. Brevo manages the unsubscribe list, which also means an unsubscribe is honoured across every future campaign rather than depending on our own bookkeeping being right. This is the one with legal consequences if it goes wrong.
+- R025, a log of what was sent. Brevo's campaign history, with open and bounce data the application would not otherwise have.
 
 The requirement text in [requirements.md](../requirements.md) is a verbatim quotation and does not change. What changes is which component satisfies it.
 

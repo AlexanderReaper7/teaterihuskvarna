@@ -1,6 +1,10 @@
-# 0010: Flyway for schema migrations
+---
+created: 2026-09-22
+provenance: unreviewed
+description: Which tool migrates the database schema.
+---
 
-2026-09-22
+# 0010: Flyway for schema migrations
 
 ## Decision
 

@@ -1,6 +1,10 @@
-# 0014: One service layer, two adapters
+---
+created: 2026-09-22
+provenance: unreviewed
+description: How the web pages and the REST API share the application's logic.
+---
 
-2026-09-22
+# 0014: One service layer, two adapters
 
 ## Decision
 

@@ -1,5 +1,7 @@
 # Glossary
 
+Provenance: unreviewed. An agent wrote this, and the user has not marked which parts are the user's decisions. Treat every claim as an agent's, see [decisions/0019](docs/decisions/0019-provenance-of-documents.md).
+
 > When a name or meaning changes, this file must also change in the same commit.
 
 Canonical terms are English because code and project documentation are English.
@@ -174,7 +176,39 @@ An optional requirement that is cut before SHOULD requirements and may wait unti
 
 ### Version 1 | Version 1
 
-The first production release, due at the end of week 12 with every MUST requirement complete.
+The first production release, due at the end of week 12, 2026-12-06, with every MUST requirement complete.
+
+### APL period | APL-period
+
+The twelve weeks the students work on the project, from 2026-09-14 to 2026-12-06. Week 1 was lost before the customer was assigned, so there are 11 working weeks. See [decisions/0018](docs/decisions/0018-kanban-with-weekly-syncs.md). Decided by the user on 2026-09-25.
+
+### Week | Vecka
+
+One week of the APL period, Monday to Sunday, numbered from week 1 starting 2026-09-14. The team works in continuous flow, and a week is a unit of the calendar, not a commitment. Replaces "sprint". Decided by the user on 2026-09-25.
+
+### Work item | Arbetsuppgift
+
+An issue without sub-issues, with a size. The unit that moves across the board. Decided by the user on 2026-09-25.
+
+### Supertask | Huvuduppgift
+
+An issue with several work items as sub-issues. Anything larger than a Large is a supertask. Decided by the user on 2026-09-25.
+
+### Size | Storlek
+
+A work item's estimate: Small, Medium or Large, each with a nominal time and a maximum in working days. Set when the item enters Ready, before anyone is assigned, and never changed afterwards. See [decisions/0018](docs/decisions/0018-kanban-with-weekly-syncs.md). Decided by the user on 2026-09-25.
+
+### Cycle time | Cykeltid
+
+The number of working days a work item was in progress on, counting both the first and the last day. Decided by the user on 2026-09-25.
+
+### WIP limit | WIP-gräns
+
+The most work one person may have in progress, by item count and by total nominal time. Decided by the user on 2026-09-25.
+
+### Sync | Avstämning
+
+A short team meeting to unblock work. The week-start sync is mandatory every Monday; any other sync is called by anyone, or by a work item passing its maximum. Decided by the user on 2026-09-25.
 
 ## WIP
 

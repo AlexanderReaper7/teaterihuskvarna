@@ -1,6 +1,10 @@
-# 0009: Java 25 LTS, not the newest release
+---
+created: 2026-09-22
+provenance: unreviewed
+description: Which Java version the application runs on.
+---
 
-2026-09-22
+# 0009: Java 25 LTS, not the newest release
 
 ## Decision
 

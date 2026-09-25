@@ -3,7 +3,7 @@
  * section: the palette, square edges, no shadows, no gradients, and Montserrat
  * for all text instead of the visitor's system font.
  *
- * Requirement P6 is WCAG 2.1 AA. Every text pair below reaches 4.5:1 and every
+ * Requirement R006 is WCAG 2.1 AA. Every text pair below reaches 4.5:1 and every
  * interface component 3:1. Change a colour or pair and measure it again.
  *
  * Where each file under static/ came from, and its licence: static/README.md.
@@ -63,7 +63,7 @@
 
   /* The secondary colour, orange #ee6810, is left out on purpose. It reaches
    * 3.17:1 on white and 1.96:1 on teal, so it cannot carry text or a focus
-   * ring under P6. design/old-site/README.md proposes a darker value, and
+   * ring under R006. design/old-site/README.md proposes a darker value, and
    * choosing it is the association's call, so nothing here uses orange until
    * they have made it. */
 

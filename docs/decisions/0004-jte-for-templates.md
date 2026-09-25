@@ -1,6 +1,10 @@
-# 0004: JTE rather than Thymeleaf for templates
+---
+created: 2026-09-22
+provenance: unreviewed
+description: Which template engine renders the HTML.
+---
 
-2026-09-22
+# 0004: JTE rather than Thymeleaf for templates
 
 ## Decision
 

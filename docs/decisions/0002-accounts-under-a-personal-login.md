@@ -1,6 +1,10 @@
-# 0002: Accounts under a personal login
+---
+created: 2026-09-21
+provenance: unreviewed
+description: Which accounts own the repository and the Sanity project.
+---
 
-2026-09-21
+# 0002: Accounts under a personal login
 
 ## Decision
 
@@ -22,4 +26,4 @@ The same reasoning covers Sanity: `npm create sanity@latest` wants a login and b
 
 ## Open
 
-The transfer is tracked in [open-questions.md](../open-questions.md) under "Raised during setup". Risk number one in the plan's own risk table is a system nobody owns after week 12, and an account on one student's login is that risk in miniature.
+Klas creates the association's organisation ([first meeting](../meetings/2026-09-24-meeting-1.md#who-does-what)), and the repository moves there once it exists. Risk number one in the plan's own risk table is a system nobody owns after week 12, and an account on one student's login is that risk in miniature.

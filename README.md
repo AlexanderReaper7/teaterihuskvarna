@@ -20,6 +20,7 @@ Nothing else. Java and Maven are not installed on your machine: the build runs i
 4. Build and start the stack: `docker compose up -d --build`. The first build downloads Maven and every dependency and takes a few minutes. Later builds reuse them.
 5. Check that four containers are running: `docker compose ps` lists `proxy`, `app`, `db` and `mail`.
 6. Open http://localhost:8000/. If the page does not load yet, the application is still starting. `docker compose logs -f app` shows it, and it is ready at the line `Started Application in ... seconds`. Ctrl+C stops following the log, not the application.
+7. Run every test and check once: `Ctrl+Shift+B` in VS Code, or the command under [Tests](#tests). Besides the tests, this installs the git hook described in [How changes reach main](#how-changes-reach-main). `docker compose up --build` does not install it.
 
 ### Logging in
 
@@ -42,6 +43,17 @@ The seeded people are invented, under `.test` addresses that cannot reach anyone
 | Stop the stack and delete the database | `docker compose down -v`. The next start seeds it again. |
 | Run every test and check before a commit | `Ctrl+Shift+B` in VS Code, or the command under [Tests](#tests) |
 
+### How changes reach main
+
+Only Alexander Öberg merges into `main`. Everyone else works on a branch and opens a pull request:
+
+1. Start from the current main: `git switch main`, `git pull`, then `git switch -c <branch-name>`.
+2. Commit, then push the branch: `git push -u origin <branch-name>`.
+3. Open a pull request on GitHub and wait for CI and a review. Do not press the merge button, even though GitHub shows it to you.
+4. After the merge, delete the branch and start the next one from step 1. Do not keep committing on a merged branch.
+
+GitHub cannot enforce this on the repository's current plan ([0003](docs/decisions/0003-no-branch-protection-yet.md)), so a `pre-push` hook enforces part of it on your machine. It refuses a push to `main`, a force-push to `main`, and any branch that contains a commit taken off `main`. The build installs it from `.githooks/pre-push` into `.git/hooks/` (step 7 of [First run](#first-run)). `git push --no-verify` skips it, and it cannot see the merge button on GitHub, so the rule above still holds for everything the hook misses.
+
 ### Updating an existing clone
 
 A clone made before `f9df7d5` (2026-09-24) needs these steps once. On Windows the build otherwise fails with `./mvnw: not found`, because git checked `mvnw` out with CRLF line endings. `.gitattributes` now pins them to LF.
@@ -52,6 +64,7 @@ A clone made before `f9df7d5` (2026-09-24) needs these steps once. On Windows th
 4. Delete the old database volume, which fails Flyway's checksum since V1 changed: `docker compose down -v`
 5. Make sure `.env` exists and sets `POSTGRES_PASSWORD`, as in [First run](#first-run) steps 2 and 3.
 6. Build and start: `docker compose up -d --build`
+7. Run every test and check once, as in [First run](#first-run) step 7, to install the git hook.
 
 `git ls-files --eol mvnw` should print `i/lf    w/lf`. If it prints `w/crlf`, step 3 did not run.
 
@@ -62,6 +75,8 @@ A clone made before `f9df7d5` (2026-09-24) needs these steps once. On Windows th
 - **The app container stops, and its log says `Migration checksum mismatch`.** The database volume was created by an older version of a migration. `docker compose down -v` deletes it, and the next start builds it again.
 - **`address already in use` or `port is already allocated` on 8000.** Another program has the port. Set `PROXY_HTTP_PORT=8001` in `.env`, run `docker compose up -d` again and use http://localhost:8001/.
 - **`Cannot connect to the Docker daemon`, or on Windows `error during connect`.** Docker is not running. Start Docker Desktop and wait until it says it is running.
+- **`pre-push: refusing to push to main`.** Your commits are on `main` instead of a branch. `git switch -c <branch-name>` moves them onto a new branch, then push that. Your local `main` still points at them, so reset it afterwards: `git switch main` then `git reset --hard origin/main`.
+- **`pre-push: ... contains 5f57ec0...`.** The branch was started before `main` was rewritten on 2026-09-25. The message prints the `git rebase` command that moves your own commits onto the current `main`.
 - **The build fails at `checkstyle`, `spotbugs` or `pmd`.** The code breaks one of the static analysis rules, and the message names the file and line. See [Static analysis](#static-analysis).
 - **Anything else.** Read the end of `docker compose logs app`. The first `ERROR` line usually names the problem.
 
@@ -185,8 +200,14 @@ on purpose, so a plain `docker compose up` never opens a debug port.
 ## Documentation
 
 `docs/check.py` guards the quoted requirement text, the relative links between
-documents and the Mermaid diagrams. CI runs it; see
-[.github/workflows/docs.yml](.github/workflows/docs.yml).
+documents, the Mermaid diagrams, every document's provenance and front matter,
+the names of meeting documents, and that a requirement id followed by an issue
+(`R005 #8`) names the same issue everywhere. Its docstring lists all eight
+checks. CI runs it; see [.github/workflows/docs.yml](.github/workflows/docs.yml).
+
+- Requirements are numbered `R001` upwards, in [docs/requirements.md](docs/requirements.md), which says how ids are given out.
+- Meeting documents are named `YYYY-MM-DD-<slug>.md`, per [docs/meetings/naming-convention.md](docs/meetings/naming-convention.md). A question for the customer goes in the next meeting's document, which also records the answer. [docs/open-questions.md](docs/open-questions.md) holds only what cannot be asked there.
+- Front matter and provenance are described in [docs/decisions/0019](docs/decisions/0019-provenance-of-documents.md).
 
 ## Where things are
 
@@ -204,4 +225,6 @@ documents and the Mermaid diagrams. CI runs it; see
 | `compose.dev.yaml` | Local development on top of it, loaded through `COMPOSE_FILE` |
 | `compose.debug.yaml` | JDWP on loopback, loaded only when named |
 | `docs/decisions/` | Why the technical choices are what they are |
+| `docs/requirements.md` | What the system has to do, by requirement id |
+| `docs/meetings/` | One document per meeting, with its questions and answers |
 | `e2e/` | The Playwright suite, its compose file and `run.sh` ([0017](docs/decisions/0017-playwright-e2e-in-docker.md)) |
