@@ -80,7 +80,7 @@ All probes reverted; the working tree has no `Probe` classes.
 
 The rules first named the packages `..web..` and `..api..`, which reads naturally and is wrong. `..web..` also matches `org.springframework.web.bind.annotation`, so `@RestController` on any class in `api` counted as a dependency on `web` and `theAdaptersDoNotKnowAboutEachOther` failed against correct code. The packages are now written out in full, `se.teaterihuskvarna.web` and `se.teaterihuskvarna.api`, with the reason in a comment beside the constants.
 
-This is the mirror image of the Javadoc finding in 0013. There the rule passed while checking nothing; here it failed while checking the wrong thing. Both were only visible because the probe ran.
+This is the mirror image of the Javadoc finding in [0013](0013-three-static-analysis-gates.md). There the rule passed while checking nothing; here it failed while checking the wrong thing. Both were only visible because the probe ran.
 
 ## What this costs
 

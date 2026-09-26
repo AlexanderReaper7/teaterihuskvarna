@@ -36,4 +36,4 @@ For this codebase that is close to free. Nothing in a server-rendered site with 
 
 ## What it costs to undo
 
-One line in the `pom.xml` and one in the `Dockerfile`. Moving up to a newer JDK later is cheap and stays cheap. That asymmetry is part of the argument: choosing LTS now forecloses nothing, while choosing the newest release commits to a recurring obligation.
+One line in the [`pom.xml`](../../pom.xml) and one in the [`Dockerfile`](../../Dockerfile). Moving up to a newer JDK later is cheap and stays cheap. That asymmetry is part of the argument: choosing LTS now forecloses nothing, while choosing the newest release commits to a recurring obligation.

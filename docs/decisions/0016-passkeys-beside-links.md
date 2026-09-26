@@ -17,7 +17,7 @@ What a person sees:
 - The login pages have a passkey button, and the address field lists passkeys among its autofill suggestions (`autocomplete="email webauthn"`). Picking one logs in.
 - `/medlem` and `/admin` list the person's passkeys with a label, the date added and the date last used, and have buttons to add and remove them.
 - After a login by link, the page offers once to add a passkey. "Inte nu" hides the offer until the next link login. "Fråga inte igen" stops it on that browser; see "Declining is per browser" below.
-- The label is the browser and system, such as "Firefox på Windows", read from the user agent in `static/js/passkey.js`. Nobody types a name.
+- The label is the browser and system, such as "Firefox på Windows", read from the user agent in [`static/js/passkey.js`](../../src/main/resources/static/js/passkey.js). Nobody types a name.
 
 ## The Swedish word
 
@@ -33,7 +33,7 @@ Three departures from Spring's configurer, each on purpose:
 
 - **Session fixation.** Spring's configurer in 7.1.1 does not give its login filter the chain's `SessionAuthenticationStrategy`, so a passkey login keeps the session id it arrived with. `PasskeyLogin.configure` sets it, and fails at startup if it is missing. `PasskeyIT.aMemberAddsAPasskeyAndLogsInWithIt` checks that the session id changes.
 - **Registration after the access rules.** Spring places the filter that hands out registration challenges before `AuthorizationFilter`. There, an anonymous POST would make Spring write an owner row to `user_entities`. Here both registration filters run after the access rules, so only a logged-in person of the right kind reaches them.
-- **Removal through a service.** Spring's registration filter also answers DELETE. Here that matcher never matches, and `PasskeyService.remove` does the job, so the page and the REST API remove passkeys the same way ([0014](0014-one-service-layer-two-adapters.md)). Adding a passkey has no service method: the browser's ceremony talks to the filter, as login does in 0015, "The REST adapter shares the filters".
+- **Removal through a service.** Spring's registration filter also answers DELETE. Here that matcher never matches, and `PasskeyService.remove` does the job, so the page and the REST API remove passkeys the same way ([0014](0014-one-service-layer-two-adapters.md)). Adding a passkey has no service method: the browser's ceremony talks to the filter, as login does in [0015](0015-login-links-on-spring-security.md), "The REST adapter shares the filters".
 
 ## Who a passkey belongs to
 
@@ -75,7 +75,7 @@ A passkey row holds a public key, the label (browser and system), when it was ad
 
 ## webauthn4j is pinned
 
-spring-security-webauthn 7.1.1 asks for webauthn4j-core 0.31.9.RELEASE, and Spring Boot does not manage the version. `pom.xml` pins 0.31.10.RELEASE, Maven Central's latest on 2026-09-23, with `webauthn4j-test` at the same release for the software authenticator the tests use. A Spring Security upgrade means checking which release it asks for.
+spring-security-webauthn 7.1.1 asks for webauthn4j-core 0.31.9.RELEASE, and Spring Boot does not manage the version. [`pom.xml`](../../pom.xml) pins 0.31.10.RELEASE, Maven Central's latest on 2026-09-23, with `webauthn4j-test` at the same release for the software authenticator the tests use. A Spring Security upgrade means checking which release it asks for.
 
 ## Rejected
 

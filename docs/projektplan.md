@@ -171,7 +171,7 @@ A change is done when:
 - a product owner accepts visible behavior at a demo;
 - no personal-data field appears without a documented purpose and retention rule.
 
-`docs/check.py` verifies the copied requirement text, relative document links and Mermaid syntax. CI runs it with `--require-mermaid`.
+[`docs/check.py`](check.py) verifies the copied requirement text, relative document links and Mermaid syntax. CI runs it with `--require-mermaid`.
 
 ## Week 12 ends with a usable system and a handover
 

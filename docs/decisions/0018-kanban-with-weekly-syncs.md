@@ -12,7 +12,7 @@ The decisions are the user's. Where an agent proposed a rule and the user accept
 
 Work is tracked on the [Kanban project](https://github.com/users/AlexanderReaper7/projects/1), linked to this repository.
 
-- Each row of [requirements.md](../requirements.md) is one issue, and the work on a requirement goes in sub-issues of that issue. A requirement's progress is on the board, and requirements.md has no Status column. Decided by the user on 2026-09-25. Issues #4 to #28 were created from the table on 2026-09-25.
+- Each row of [requirements.md](../requirements.md) is one issue, and the work on a requirement goes in sub-issues of that issue. A requirement's progress is on the board, and [requirements.md](../requirements.md) has no Status column. Decided by the user on 2026-09-25. Issues #4 to #28 were created from the table on 2026-09-25.
 - The board holds issues only, no pull request cards: "No PR cards. atleast on this board."
 - The `Priority` field has the values MUST, SHOULD and COULD.
 - The `Item reopened` and `Auto-archive items` workflows are on.
@@ -80,7 +80,7 @@ The limits are per person, by count and by total nominal time, and allow "atleas
 
 The Status column descriptions on the board state the rule for each column, so the Ready rules show where an item is pulled. A script reads the board every weekday morning, and reports items past their maximum, broken WIP limits, a Ready column with fewer items than people, and broken rules. The user asked for the script, and approved setting the Ready rules through the API.
 
-The script lives in the template repository [kanban-weeks](https://github.com/AlexanderReaper7/kanban-weeks), so other projects can reuse it. [kanban.toml](../../kanban.toml) holds this project's numbers, and `.github/workflows/kanban.yml` calls the template's workflow at a pinned tag. The token is a machine account's, which can reach only this repository and the project. Decided by the user on 2026-09-25.
+The script lives in the template repository [kanban-weeks](https://github.com/AlexanderReaper7/kanban-weeks), so other projects can reuse it. [kanban.toml](../../kanban.toml) holds this project's numbers, and [`.github/workflows/kanban.yml`](../../.github/workflows/kanban.yml) calls the template's workflow at a pinned tag. The token is a machine account's, which can reach only this repository and the project. Decided by the user on 2026-09-25.
 
 The report is a comment on the closed issue labelled `board report`, posted when the findings change. Subscribe to that issue to get it.
 
@@ -91,7 +91,7 @@ Written by an agent on 2026-09-25. None of this is the user's reasoning.
 - **Choices the agent made alone.**
   - The iteration names "Week 1" to "Week 12".
   - The Size colours, and the option descriptions that state each size's nominal and maximum.
-  - Moving R010 and R011 to Done and closing them, R005 and R012 to In progress, and the rest to Backlog, following their Status in requirements.md.
+  - Moving R010 and R011 to Done and closing them, R005 and R012 to In progress, and the rest to Backlog, following their Status in [requirements.md](../requirements.md).
   - `Item reopened` sets Backlog.
   - `Auto-archive items` uses `is:issue is:closed updated:<@today-4w`, and four weeks is the agent's number.
   - The auto-add filter is `is:issue is:open`.

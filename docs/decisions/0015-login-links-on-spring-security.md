@@ -36,7 +36,7 @@ The request thread does only what every request does: the CSRF check, the rate l
 
 The link in the mail opens a page with a form that POSTs the token. Mail scanners follow GET links to check them, and a link that logged in on GET would be spent before its owner clicked it.
 
-2026-09-23: a script on that page, `static/js/login-link.js`, submits the form as soon as the page loads, so a person who follows the link is logged in without pressing anything. The button stays for browsers without JavaScript. This keeps out scanners that only fetch the HTML. Some gateways open links in a headless browser that runs JavaScript, and those will still spend the token; for such a mailbox the page behaves as if the server logged in on GET. Logging in on GET was rejected for that reason: it would lose every scanned mailbox rather than only those. The script is a file rather than inline, so a later Content-Security-Policy need not allow inline script.
+2026-09-23: a script on that page, [`static/js/login-link.js`](../../src/main/resources/static/js/login-link.js), submits the form as soon as the page loads, so a person who follows the link is logged in without pressing anything. The button stays for browsers without JavaScript. This keeps out scanners that only fetch the HTML. Some gateways open links in a headless browser that runs JavaScript, and those will still spend the token; for such a mailbox the page behaves as if the server logged in on GET. Logging in on GET was rejected for that reason: it would lose every scanned mailbox rather than only those. The script is a file rather than inline, so a later Content-Security-Policy need not allow inline script.
 
 ## A link works only in the browser that asked for it
 
@@ -44,7 +44,7 @@ Since 2026-09-23. Before that, anyone could ask for a link to their own address 
 
 Asking for a link sets a cookie, `login-browser` (`LoginBrowser`, `LoginBrowserFilter`), and the token row stores its SHA-256 in `browser_hash`. The POST that redeems a link has to carry the same cookie, or it redeems nothing and leaves the row alone, so the link still works where it was asked for. The cookie is a random value of 256 bits, like a token. A browser that asks again keeps its value, so its older links keep working. Every request for a link gets the cookie, whether the address is known, unknown or over the rate limit, so the response still does not tell them apart.
 
-The cost is the person who asks on a laptop and reads the mail on a phone. That includes an iPhone whose mail program opens links in its own browser. So the mail also carries a six digit code, which the person types on the "link sent" page that the asking browser is still showing. The code is bound to the browser in the same way, its hash is in `code_hash`, and redeeming it deletes the row, just as the link does. Opening the link in another browser shows a page that says to type the code there or to ask for a new link here (`login/elsewhere.jte`), rather than a button that would fail.
+The cost is the person who asks on a laptop and reads the mail on a phone. That includes an iPhone whose mail program opens links in its own browser. So the mail also carries a six digit code, which the person types on the "link sent" page that the asking browser is still showing. The code is bound to the browser in the same way, its hash is in `code_hash`, and redeeming it deletes the row, just as the link does. Opening the link in another browser shows a page that says to type the code there or to ask for a new link here ([`login/elsewhere.jte`](../../src/main/jte/login/elsewhere.jte)), rather than a button that would fail.
 
 The mail says, next to the code: "Ge aldrig koden till någon. Föreningen frågar aldrig efter den." A code brings a risk the link did not have: someone can phone the person and ask them to read it out, the usual scam with WhatsApp codes. That attacker needs the person's help. The link attack needed nothing but a click.
 
@@ -99,7 +99,7 @@ Since 2026-09-23 a member login lasts 30 days and an administrator login 8 hours
 
 The end is a session attribute, set at login by `LoginSuccessHandler` for a link and a passkey alike. A filter in both chains, before the access rules, deletes a logged-in session whose end has passed, and a logged-in session without an end, which only one from before the change can be. The access rules then answer as for anyone: the login page, or 401 under `/api/`. Spring Session's idle timeout stays set to the same length, only so that its cleanup job deletes rows nobody comes back to.
 
-Two minutes before the end, `/medlem` and `/admin` beep once, count down and offer "Fortsätt vara inloggad", which starts the full 30 days or 8 hours again (`static/js/session.js`, `DeviceService.extend`). The user chose one click, a restart of the full period and two minutes on 2026-09-23. At the end, or when the server says the login is gone, the page stays and says the person is logged out, with a link to the plain login page and never a login link, because the user asked that a login that ended must not be one click away from starting again. Browsers play sound only on a page the person has clicked or typed on, so on a page left untouched the beep stays silent and only the text shows.
+Two minutes before the end, `/medlem` and `/admin` beep once, count down and offer "Fortsätt vara inloggad", which starts the full 30 days or 8 hours again ([`static/js/session.js`](../../src/main/resources/static/js/session.js), `DeviceService.extend`). The user chose one click, a restart of the full period and two minutes on 2026-09-23. At the end, or when the server says the login is gone, the page stays and says the person is logged out, with a link to the plain login page and never a login link, because the user asked that a login that ended must not be one click away from starting again. Browsers play sound only on a page the person has clicked or typed on, so on a page left untouched the beep stays silent and only the text shows.
 
 The page gets the seconds left rather than the time of the end, since the computer's clock may be wrong. It asks the server again before it warns, at zero, and when the tab comes back into view after a minute or more, because another tab may have extended the login or another device may have ended it. Each question counts as a use and moves "Senast använd" below. Extending changes only the attribute. The session keeps its id, and the cookie needs no new expiry, since the login already set it to last as long as the browser keeps it.
 
@@ -111,7 +111,7 @@ A device is a row in `SPRING_SESSION`, found through the principal name index th
 
 A device's id in the list is the SHA-256 of its session id, never the session id itself, which is the cookie value and would log in whoever reads it. Ending a device looks the id up among the asking person's own sessions only, so another person's id is a 404. Ending the asking device goes through the request's own session, which Spring Session then deletes.
 
-`DeviceNames` and `static/js/passkey.js` read the `User-Agent` with the same two tables, since a new passkey is named the same way. The duplication is a smell: naming the passkey on the server would leave one table.
+`DeviceNames` and [`static/js/passkey.js`](../../src/main/resources/static/js/passkey.js) read the `User-Agent` with the same two tables, since a new passkey is named the same way. The duplication is a smell: naming the passkey on the server would leave one table.
 
 ## Two filter chains
 
@@ -139,7 +139,7 @@ Spring's request cache is off in both chains since 2026-09-23. It saves a refuse
 
 A filter in front of the token filter counts link requests per address and per client IP address in `link_request`. Over the limit, it answers with the same redirect a successful request gets and sends nothing. A distinct error would tell a caller the address had been asked for recently, which is itself a hint that it exists.
 
-The client IP address is the one Traefik forwards: `server.forward-headers-strategy: native` in `application.yaml`, with the reasoning beside it.
+The client IP address is the one Traefik forwards: `server.forward-headers-strategy: native` in [`src/main/resources/application.yaml`](../../src/main/resources/application.yaml), with the reasoning beside it.
 
 ## Rejected
 

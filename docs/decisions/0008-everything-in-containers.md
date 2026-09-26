@@ -8,7 +8,7 @@ description: How the application is deployed and run in production and locally.
 
 ## Decision
 
-Every running piece is a container on one host in an EU region: a reverse proxy, the Spring Boot application, and PostgreSQL. `compose.yaml` describes production, and local development loads `compose.dev.yaml` on top of it.
+Every running piece is a container on one host in an EU region: a reverse proxy, the Spring Boot application, and PostgreSQL. [`compose.yaml`](../../compose.yaml) describes production, and local development loads [`compose.dev.yaml`](../../compose.dev.yaml) on top of it.
 
 This extends [0007](0007-postgres-in-a-container.md), which containerised the database. The application follows it for the same reason: what runs in production is then the artefact that was tested, not a jar copied onto a host whose Java version nobody checked.
 
@@ -22,7 +22,7 @@ A managed platform would have terminated TLS, held the registry and handled rest
 
 2026-09-23, replacing Caddy.
 
-Traefik reads its routes from labels on the containers it routes to. A service gets a route by adding labels beside its own definition in `compose.yaml`, with no proxy configuration file to keep in step. Today that is one service, `app`, so the gain is for the services added later rather than for this one.
+Traefik reads its routes from labels on the containers it routes to. A service gets a route by adding labels beside its own definition in [`compose.yaml`](../../compose.yaml), with no proxy configuration file to keep in step. Today that is one service, `app`, so the gain is for the services added later rather than for this one.
 
 The cost is the docker socket. Traefik's docker provider reads it, and whoever controls that socket controls the host, which holds the member register. Mounting it `:ro` makes the file read-only, not the API. A socket proxy that passes only the read-only calls Traefik makes was offered and declined. A flaw in Traefik, which faces the internet, is therefore a flaw in the host.
 
@@ -34,13 +34,13 @@ Caddy did the same job in a four-line `Caddyfile` with no socket at all, and rem
 
 ## Building the image
 
-A layered `Dockerfile` with a pinned JRE base image, not `spring-boot:build-image`.
+A layered [`Dockerfile`](../../Dockerfile) with a pinned JRE base image, not `spring-boot:build-image`.
 
 Buildpacks are the tempting option because they need no Dockerfile at all. They lose here on the project's own maintenance model. Routine maintenance in this project is approving a green Dependabot pull request, and Dependabot reads a `FROM` line but cannot see the JDK buried inside a buildpack. Choosing buildpacks means the base operating system and the Java runtime update on somebody else's schedule, invisibly, which is the opposite of what the rest of the setup is arranged to do.
 
 The secondary gains are real but not the argument: a layered Dockerfile lands near 100 MB against roughly 300 MB for the Ubuntu-based buildpack, and layer caching means a code change pushes kilobytes rather than the whole image.
 
-The cost is about twenty lines of `Dockerfile` to own.
+The cost is about twenty lines of [`Dockerfile`](../../Dockerfile) to own.
 
 ## Deploying
 

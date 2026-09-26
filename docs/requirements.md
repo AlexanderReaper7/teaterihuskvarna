@@ -42,6 +42,6 @@ Requirement text is quoted verbatim in Swedish. A quotation does not get transla
 
 Totals: 21 MUST, 3 SHOULD, 1 COULD.
 
-R016 is MUST although its row in the original, V1, says B. The original's scope table lists "Volontärbokning för garderob och servering" under "I version 1", and where the document contradicts itself, the scope table wins (decided 2026-09-23). `docs/check.py` holds the same exception, so the two cannot drift apart.
+R016 is MUST although its row in the original, V1, says B. The original's scope table lists "Volontärbokning för garderob och servering" under "I version 1", and where the document contradicts itself, the scope table wins (decided 2026-09-23). [`docs/check.py`](check.py) holds the same exception, so the two cannot drift apart.
 
 If scope has to be cut, COULD goes first and then SHOULD. That is the produktägare's own rule and it is the reason this column exists.

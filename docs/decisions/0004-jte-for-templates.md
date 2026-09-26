@@ -10,7 +10,7 @@ description: Which template engine renders the HTML.
 
 The application renders HTML with [JTE](https://jte.gg/), through `gg.jte:jte-spring-boot-starter-4` 3.2.4. Not Thymeleaf, which the produktägare's document names under "Teknikval" and which the system sketch shows inside the application box.
 
-Swedish visitor-facing text does not live in template files. It lives in `messages_sv.properties` and in Sanity. Templates hold markup and message keys.
+Swedish visitor-facing text does not live in template files. It lives in [`messages_sv.properties`](../../src/main/resources/messages_sv.properties) and in Sanity. Templates hold markup and message keys.
 
 ## Why not Thymeleaf, given the plan says Thymeleaf
 
@@ -44,7 +44,7 @@ Thymeleaf templates are valid standalone HTML and open in a browser showing plac
 
 The first version of this decision leaned the other way, towards an engine a non-developer could read, with Pebble as the candidate on the strength of its Twig and Jinja syntax. That collapsed under one question: what is the user story for a non-developer editing a template?
 
-Every candidate turned out to belong somewhere else. Adding news or events is Sanity. Footer text, opening hours and contact details are a Sanity settings document. Reordering sections on the start page is Sanity page composition. Rewording a form label or a validation message is `messages_sv.properties`. Colours and the logo are CSS and an asset. Adding a whole new page type needs a schema change and a renderer, which is development work under any engine.
+Every candidate turned out to belong somewhere else. Adding news or events is Sanity. Footer text, opening hours and contact details are a Sanity settings document. Reordering sections on the start page is Sanity page composition. Rewording a form label or a validation message is [`messages_sv.properties`](../../src/main/resources/messages_sv.properties). Colours and the logo are CSS and an asset. Adding a whole new page type needs a schema change and a renderer, which is development work under any engine.
 
 Each of those is content sitting in the wrong place. Friendlier template syntax does not fix any of them, and fixing them properly removes the reason to care about template syntax.
 

@@ -130,15 +130,15 @@ Everything here was captured from the live site on 2026-09-22 and is not meant t
 
 | Path | Source | Licence |
 | --- | --- | --- |
-| `assets/brand/logo-negative.png` | `wp-content/uploads/2023/06/FTH_ALF_neg_SV.png` | The association's mark |
-| `assets/brand/jatten-vist.png` | `wp-content/uploads/2023/06/jatten_vist.png` | Unknown artist. The association may use it ([first meeting](../../docs/meetings/2026-09-24-meeting-1.md#how-the-site-looks)) |
-| `assets/brand/favicon.png` | `wp-content/uploads/2023/06/favicon-32x32-1.png` | The association's mark |
-| `assets/fonts/montserrat-*.woff2` | Google Fonts, variable 100 to 900, latin and latin-ext | SIL OFL 1.1, text in `OFL.txt` |
-| `assets/fonts/montserrat.css` | Rewritten from the Google Fonts stylesheet to point at the local files | |
+| [`assets/brand/logo-negative.png`](assets/brand/logo-negative.png) | `wp-content/uploads/2023/06/FTH_ALF_neg_SV.png` | The association's mark |
+| [`assets/brand/jatten-vist.png`](assets/brand/jatten-vist.png) | `wp-content/uploads/2023/06/jatten_vist.png` | Unknown artist. The association may use it ([first meeting](../../docs/meetings/2026-09-24-meeting-1.md#how-the-site-looks)) |
+| [`assets/brand/favicon.png`](assets/brand/favicon.png) | `wp-content/uploads/2023/06/favicon-32x32-1.png` | The association's mark |
+| `assets/fonts/montserrat-*.woff2` | Google Fonts, variable 100 to 900, latin and latin-ext | SIL OFL 1.1, text in [`assets/fonts/OFL.txt`](assets/fonts/OFL.txt) |
+| [`assets/fonts/montserrat.css`](assets/fonts/montserrat.css) | Rewritten from the Google Fonts stylesheet to point at the local files | |
 | `assets/icons/*.svg` | Font Awesome Free 6.7.2, from the upstream repository | CC BY 4.0, attribution required |
 | `screenshots/*.png` | Rendered from the live pages | The association's content |
-| `tokens.css` | Read out of the pages' inline CSS by hand | |
+| [`tokens.css`](tokens.css) | Read out of the pages' inline CSS by hand | |
 
-Three things are deliberately absent. The Bricks theme's own CSS is not copied, because Bricks is commercially licensed. A colour value and a font size are facts about the design and are recorded in `tokens.css`; the theme's expression of them is not. The article photography under `wp-content/uploads` is not mirrored either, because most of it is stock imagery the association licensed for the old site and it is content rather than identity. The icons come from Font Awesome upstream rather than from the copy the theme bundles, for the same licensing reason.
+Three things are deliberately absent. The Bricks theme's own CSS is not copied, because Bricks is commercially licensed. A colour value and a font size are facts about the design and are recorded in [`tokens.css`](tokens.css); the theme's expression of them is not. The article photography under `wp-content/uploads` is not mirrored either, because most of it is stock imagery the association licensed for the old site and it is content rather than identity. The icons come from Font Awesome upstream rather than from the copy the theme bundles, for the same licensing reason.
 
 The fonts are self-hosted here on purpose. The old site requests Montserrat from `fonts.googleapis.com` on every page load, which sends every visitor's IP address to Google before they have consented to anything.
