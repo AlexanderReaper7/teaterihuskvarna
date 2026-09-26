@@ -29,7 +29,14 @@ services:
       - app
 
   app:
-    build: .
+    build:
+      context: .
+      # The git directory, which the Dockerfile's git stage explains. In a git
+      # worktree the post-checkout hook sets both variables in .env.
+      additional_contexts:
+        git: ${BUILD_GIT_DIR:-.git}
+      args:
+        BUILD_GIT_WORKTREE: ${BUILD_GIT_WORKTREE:-}
     image: ${APP_IMAGE:-teaterihuskvarna:dev}
     restart: unless-stopped
     environment:

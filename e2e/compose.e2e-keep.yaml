@@ -1,0 +1,16 @@
+# Loaded by e2e/run.sh only under E2E_KEEP=1, to look at a kept stack from the
+# host. The ports are fixed, so only one kept stack can run on a machine at a
+# time; a second fails to start with "port is already allocated".
+
+services:
+  app:
+    ports:
+      - "127.0.0.1:55556:55556"
+
+  db:
+    ports:
+      - "127.0.0.1:55433:5432"
+
+  mail:
+    ports: !override
+      - "127.0.0.1:55025:8025"

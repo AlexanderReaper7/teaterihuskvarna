@@ -35,3 +35,4 @@ The Playwright suite in `e2e/` ([decisions/0017](decisions/0017-playwright-e2e-i
 
 - [ ] **E1.** Headless Chromium says passkey autofill is available and then refuses it. Whether a desktop Chrome does the same is not checked. Either way the page now shows nothing until the person presses the passkey button.
 - [ ] **E2.** In about one Firefox run in 60, a click on the link request button was delivered and no POST was sent. Not found yet.
+- [ ] **E3.** With two suites running at once on 2026-09-26, each failed one different Firefox test in `login.spec.ts`, and neither failed alone. Both times the list of logged-in devices had rows with an empty device name, which `DeviceNames` never returns, so under load a session reaches the list without the device attribute its login set. The row's button is then named plain "Logga ut", and `logOut` in `e2e/support/auth.ts` matches two buttons. Not found yet. Not marked `test.fail()`, since the test passes when run alone.

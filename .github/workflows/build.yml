@@ -25,13 +25,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7.0.1
       - name: Tests and the three static analysis gates
-        run: |
-          docker run --rm --network host \
-            -v "$PWD":/w -w /w \
-            -v "$HOME/.m2":/root/.m2 \
-            -v /var/run/docker.sock:/var/run/docker.sock \
-            eclipse-temurin:25.0.4_7-jdk-alpine \
-            ./mvnw -B -ntp verify
+        run: sh scripts/maven.sh verify
 
   image:
     runs-on: ubuntu-latest
@@ -39,4 +33,4 @@ jobs:
     steps:
       - uses: actions/checkout@v7.0.1
       - name: Build the image
-        run: docker build -t teaterihuskvarna:${{ github.sha }} .
+        run: docker build --build-context git=.git -t teaterihuskvarna:${{ github.sha }} .

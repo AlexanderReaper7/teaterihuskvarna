@@ -1,11 +1,21 @@
 # The e2e suite's own stack, loaded after compose.yaml and compose.dev.yaml by
-# e2e/run.sh under the project name teaterihuskvarna-e2e, so it has its own
-# database volume and never touches the dev stack: docs/decisions/0017.
+# e2e/run.sh under a project name taken from the checkout's directory, so each
+# checkout has its own containers and database volume and never touches the dev
+# stack or another checkout's suite: docs/decisions/0017.
+#
+# Nothing is published on the host. Playwright runs inside the application
+# container's network namespace, where the application is localhost and the
+# database and Mailpit are reachable by service name, so parallel runs cannot
+# collide on a port. E2E_KEEP=1 adds e2e/compose.e2e-keep.yaml, which does
+# publish them. The image is named after the project too, per compose.dev.yaml.
+#
+# e2e/run.sh sets the database name, user and password, so none come from the
+# dev stack's .env. The suite reads and changes rows directly, to expire links
+# and set up administrators: e2e/support/db.ts.
 #
 # No proxy. Traefik finds apps through container labels on the whole docker
-# host, so a second Traefik would see the dev app and the dev Traefik would see
-# this one, both under the router name "app". The app is published directly
-# instead, and its label keeps the dev Traefik away from it.
+# host, and compose.dev.yaml's constraint is the only thing keeping a dev
+# Traefik away from this app, so its label says so as well.
 
 services:
   proxy:
@@ -13,10 +23,12 @@ services:
     profiles: [disabled]
 
   app:
-    image: teaterihuskvarna:e2e
     environment:
+      # The application listens on the port it builds links with, so a link in
+      # a mail works inside the namespace and, under E2E_KEEP, on the host.
       # application-dev.yaml builds login links and the passkey relying party
       # from http://localhost:${PROXY_HTTP_PORT}.
+      SERVER_PORT: "55556"
       PROXY_HTTP_PORT: "55556"
       # Back to production's per-address limit, so the suite can see it refuse.
       # The per-client limit stays at the dev profile's 200, since every
@@ -24,20 +36,7 @@ services:
       TEATERIHUSKVARNA_LOGIN_REQUESTS_PER_ADDRESS: "5"
     labels:
       traefik.enable: "false"
-    ports:
-      - "127.0.0.1:55556:8080"
-
-  db:
-    # e2e/run.sh sets the database name, user and password, so none come from
-    # the dev stack's .env.
-    ports:
-      # The suite reads and changes rows directly, to expire links and set up
-      # administrators: e2e/support/db.ts.
-      - "127.0.0.1:55433:5432"
 
   mail:
     labels:
-      # Kept away from the dev Traefik, like the app above.
       traefik.enable: "false"
-    ports: !override
-      - "127.0.0.1:55025:8025"

@@ -1,0 +1,21 @@
+#!/bin/sh
+# Copies .env.example to .env when the checkout has none, so the dev stack starts
+# in a new worktree without a manual step. Git runs this after every checkout,
+# `git worktree add` included, from the top of the checked-out tree. The build
+# copies this file into .git/hooks, like pre-push.
+if [ ! -f .env ] && [ -f .env.example ]; then
+  cp .env.example .env
+fi
+
+# In a git worktree, .git is a file naming a directory outside the checkout,
+# which the image build cannot reach through its context. compose.yaml passes
+# the shared git directory as a second context and the worktree's name as a
+# build argument, read from these two lines: see the Dockerfile's git stage.
+if [ -f .git ] && [ -f .env ] && ! grep -q '^BUILD_GIT_DIR=' .env; then
+  {
+    echo
+    echo "# Written by the post-checkout hook, because this checkout is a git worktree."
+    echo "BUILD_GIT_DIR=$(git rev-parse --path-format=absolute --git-common-dir)"
+    echo "BUILD_GIT_WORKTREE=$(basename "$(git rev-parse --git-dir)")"
+  } >> .env
+fi

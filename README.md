@@ -15,12 +15,10 @@ Nothing else. Java and Maven are not installed on your machine: the build runs i
 ### First run
 
 1. Clone the repository and go into it: `git clone https://github.com/AlexanderReaper7/teaterihuskvarna.git` then `cd teaterihuskvarna`.
-2. Create your own settings file from the template: `cp .env.example .env`. Git ignores `.env`, so what you put in it stays on your machine.
-3. Open `.env` and give `POSTGRES_PASSWORD` a value, such as `POSTGRES_PASSWORD=local-development-only`. It has no default on purpose, and the stack refuses to start without it. Leave everything else as it is. Sanity, Brevo and SMTP stay empty locally.
-4. Build and start the stack: `docker compose up -d --build`. The first build downloads Maven and every dependency and takes a few minutes. Later builds reuse them.
-5. Check that four containers are running: `docker compose ps` lists `proxy`, `app`, `db` and `mail`.
-6. Open http://localhost:8000/. If the page does not load yet, the application is still starting. `docker compose logs -f app` shows it, and it is ready at the line `Started Application in ... seconds`. Ctrl+C stops following the log, not the application.
-7. Run every test and check once: `Ctrl+Shift+B` in VS Code, or the command under [Tests](#tests). Besides the tests, this installs the git hook described in [How changes reach main](#how-changes-reach-main). `docker compose up --build` does not install it.
+2. Run every test and check once: `Ctrl+Shift+B` in VS Code, or the command under [Tests](#tests). The first build downloads Maven and every dependency and takes a few minutes; later builds reuse them. Besides the tests, it creates `.env` from `.env.example` and installs the [git hooks](#git-hooks). Git ignores `.env`, so what you put in it stays on your machine. The template works locally as it is.
+3. Build and start the stack: `docker compose up -d --build`.
+4. Check that four containers are running: `docker compose ps` lists `proxy`, `app`, `db` and `mail`.
+5. Open http://localhost:8000/. If the page does not load yet, the application is still starting. `docker compose logs -f app` shows it, and it is ready at the line `Started Application in ... seconds`. Ctrl+C stops following the log, not the application.
 
 ### Logging in
 
@@ -52,7 +50,20 @@ Only Alexander Öberg merges into `main`. Everyone else works on a branch and op
 3. Open a pull request on GitHub and wait for CI and a review. Do not press the merge button, even though GitHub shows it to you.
 4. After the merge, delete the branch and start the next one from step 1. Do not keep committing on a merged branch.
 
-GitHub cannot enforce this on the repository's current plan ([0003](docs/decisions/0003-no-branch-protection-yet.md)), so a `pre-push` hook enforces part of it on your machine. It refuses a push to `main`, a force-push to `main`, and any branch that contains a commit taken off `main`. The build installs it from `.githooks/pre-push` into `.git/hooks/` (step 7 of [First run](#first-run)). `git push --no-verify` skips it, and it cannot see the merge button on GitHub, so the rule above still holds for everything the hook misses.
+GitHub cannot enforce this on the repository's current plan ([0003](docs/decisions/0003-no-branch-protection-yet.md)), so the `pre-push` [git hook](#git-hooks) enforces part of it on your machine. It cannot see the merge button on GitHub, so the rule above still holds for everything the hook misses.
+
+### Git hooks
+
+The hooks live in `.githooks/`. Every Maven build (`verify`, `test`, any of the VS Code Maven tasks) copies them into `.git/hooks/` at its first step, so a clone gets them from its first build and every later build keeps them current. `docker compose up --build` does not install them, because the image build works on a copy of the repository.
+
+| Hook | Runs | Does |
+| --- | --- | --- |
+| `pre-push` | Before `git push` sends anything | Refuses a push to `main`, a force-push to `main`, and any branch that contains a commit taken off `main`. `git push --no-verify` skips it. |
+| `post-checkout` | After `git switch`, `git checkout` and `git worktree add`. Not after `git clone`, which runs before any hook is installed. | Copies `.env.example` to `.env` when there is none. In a git worktree it also adds `BUILD_GIT_DIR` and `BUILD_GIT_WORKTREE` to `.env`, which the image build needs to find the repository's history. |
+
+The build overwrites a hook of your own with the same name, and warns when it replaces a different `pre-push`. A git worktree uses the main checkout's `.git/hooks/`, so the build skips the copy there.
+
+`.env` is created in more places than the hook: the Maven build and the VS Code compose tasks also copy `.env.example` when `.env` is missing. None of them ever changes an existing `.env`.
 
 ### Updating an existing clone
 
@@ -62,15 +73,14 @@ A clone made before `f9df7d5` (2026-09-24) needs these steps once. On Windows th
 2. Pull: `git pull`
 3. Check the files out again with the new line endings: `git rm --cached -r -q .` then `git reset --hard`
 4. Delete the old database volume, which fails Flyway's checksum since V1 changed: `docker compose down -v`
-5. Make sure `.env` exists and sets `POSTGRES_PASSWORD`, as in [First run](#first-run) steps 2 and 3.
+5. Run every test and check once, as in [First run](#first-run) step 2, to install the git hooks and create `.env` if it is missing. An existing `.env` must set `POSTGRES_PASSWORD`; `.env.example` sets it to `local-development-only` in the local development lines.
 6. Build and start: `docker compose up -d --build`
-7. Run every test and check once, as in [First run](#first-run) step 7, to install the git hook.
 
 `git ls-files --eol mvnw` should print `i/lf    w/lf`. If it prints `w/crlf`, step 3 did not run.
 
 ### When something goes wrong
 
-- **`required variable POSTGRES_PASSWORD is missing a value`.** `.env` is missing or leaves `POSTGRES_PASSWORD` empty. See [First run](#first-run) step 3.
+- **`required variable POSTGRES_PASSWORD is missing a value`.** `.env` is missing or leaves `POSTGRES_PASSWORD` empty. `docker compose` reads `.env` before anything in this repository runs, so in a fresh clone it cannot create one. Run a build first, as in [First run](#first-run) step 2, or `cp .env.example .env`.
 - **`./mvnw: not found` during the build.** `mvnw` has Windows line endings. Follow [Updating an existing clone](#updating-an-existing-clone).
 - **The app container stops, and its log says `Migration checksum mismatch`.** The database volume was created by an older version of a migration. `docker compose down -v` deletes it, and the next start builds it again.
 - **`address already in use` or `port is already allocated` on 8000.** Another program has the port. Set `PROXY_HTTP_PORT=8001` in `.env`, run `docker compose up -d` again and use http://localhost:8001/.
@@ -125,16 +135,13 @@ Unit tests need nothing. Integration tests (`*IT`) start a real PostgreSQL
 container through Testcontainers, so they need a docker socket.
 
 ```sh
-docker run --rm --network host \
-  -v "$PWD":/w -w /w \
-  -v "$HOME/.m2":/root/.m2 \
-  -v /var/run/docker.sock:/var/run/docker.sock \
-  eclipse-temurin:25.0.4_7-jdk-alpine \
-  ./mvnw -B -ntp verify
+sh scripts/maven.sh verify
 ```
 
-`docker build .` runs the unit tests only. A build stage has no docker daemon,
-so the integration tests run here and in CI instead.
+The script runs `./mvnw` in the pinned JDK container with the docker socket mounted. On Linux it runs as your user, so `target/` stays yours. Maven's downloads are kept in the docker volume `teaterihuskvarna-cache`, shared by every checkout on the machine. On Windows the VS Code tasks run the same container directly, since PowerShell has no `sh`.
+
+`docker build --build-context git=.git .` runs the unit tests only. A build stage has no docker daemon,
+so the integration tests run here and in CI instead. The image build needs the git directory as its own context, and fails without it; `docker compose up --build` passes it itself. In a git worktree the `post-checkout` hook writes the two `BUILD_GIT_*` lines to `.env` that make this work, and `git worktree add` runs that hook.
 
 ### End-to-end
 
@@ -143,10 +150,10 @@ A Playwright suite in `e2e/` drives the running site in Chromium and Firefox ([0
 ```sh
 sh e2e/run.sh                        # build, start its own stack, run every test, remove the stack
 sh e2e/run.sh tests/login.spec.ts    # arguments go to `playwright test`
-E2E_KEEP=1 sh e2e/run.sh             # leave the stack on http://localhost:55556 afterwards
+E2E_KEEP=1 sh e2e/run.sh             # leave the stack running, published on http://localhost:55556
 ```
 
-The stack is the compose project `teaterihuskvarna-e2e`, with its own database, and never touches the dev stack. The report lands in `e2e/playwright-report/`, and each failed test's trace in `e2e/test-results/`. A test marked `test.fail()` is a known bug listed in [docs/open-questions.md](docs/open-questions.md) under "Found by the e2e suite".
+The stack is the compose project `teaterihuskvarna-e2e-<directory>`, with its own database, and never touches the dev stack. Nothing is published on the host unless `E2E_KEEP` is set, so several checkouts can run the suite at once. The report lands in `e2e/playwright-report/`, and each failed test's trace in `e2e/test-results/`. A test marked `test.fail()` is a known bug listed in [docs/open-questions.md](docs/open-questions.md) under "Found by the e2e suite".
 
 CI runs the suite only when started by hand: `gh workflow run e2e.yml`, or "Run workflow" on the e2e workflow in the Actions tab. The report and traces are the run's `playwright-report` artifact.
 

@@ -10,7 +10,7 @@ description: How the end-to-end tests are written and run.
 
 `e2e/` holds a Playwright suite in TypeScript that drives the real application in Chromium and Firefox. It covers link login for both kinds, the membership application, adding and removing administrators, the member and administrator pages, passkeys, the passkey offer and its decline cookie, the REST API and the layout at four widths. Each spec has a "what works" part and a "what a person might get wrong" part: double presses, links used twice or cut short, two tabs, the back button, a stale page, markup in names.
 
-`sh e2e/run.sh` is the whole command. It builds the image, starts the application, PostgreSQL and Mailpit under the compose project `teaterihuskvarna-e2e`, runs `mcr.microsoft.com/playwright:v1.63.0-noble` against it, and removes the stack with its volume. Arguments go to `playwright test`, and `E2E_KEEP=1` leaves the stack running.
+`sh e2e/run.sh` is the whole command. It builds the image, starts the application, PostgreSQL and Mailpit under the compose project `teaterihuskvarna-e2e-<directory>`, runs `mcr.microsoft.com/playwright:v1.63.0-noble` against it, and removes the stack with its volume and image. Arguments go to `playwright test`, and `E2E_KEEP=1` leaves the stack running.
 
 CI runs the suite only when someone starts it by hand: `.github/workflows/e2e.yml` has `workflow_dispatch` and no other trigger, and keeps the report and the traces as an artifact for 14 days. The user decided this on 2026-09-23, after the first fixes. A run costs about three minutes and an image build, and a few tests are timing-sensitive where the product is (see "What it costs"), so a push that changes no page would wait on it and could fail for a reason it did not cause. `build.yml` stays the check on every push.
 
@@ -24,11 +24,9 @@ Node, the browsers and their system libraries come from Microsoft's image, pinne
 
 The suite changes data: it expires links, removes administrators and fills the per-address rate limit. Run against the dev stack, it would change whatever the developer was looking at and depend on what they had done. So `run.sh` starts a separate compose project with its own database volume, removed before and after every run. A fresh database also resets the rate limit's counts.
 
-`e2e/compose.e2e.yaml` publishes the ports on loopback, apart from the dev stack's: the application on 55556, Mailpit on 55025 and PostgreSQL on 55433. The suite reads mail through Mailpit's API, and reads and changes rows directly through `e2e/support/db.ts`, to expire a link without waiting a day.
+Each checkout gets its own stack, so agents in several worktrees can run the suite at once. Decided by the user on 2026-09-26. The project name comes from the checkout's directory, and so does the image's, since `compose.dev.yaml` leaves the tag to compose. Nothing is published on the host: Playwright runs in the application container's network namespace (`--network container:`), where the application is `localhost:55556` and Mailpit and PostgreSQL are `mail` and `db`. The application listens on 55556 inside its container, the same port it builds login links with. The suite reads mail through Mailpit's API, and reads and changes rows directly through `e2e/support/db.ts`, to expire a link without waiting a day. `E2E_KEEP=1` adds `e2e/compose.e2e-keep.yaml`, which publishes the application on 55556, Mailpit on 55025 and PostgreSQL on 55433, so only one kept stack fits on a machine.
 
-Traefik is left out. It finds applications through container labels on the whole docker host, so a second Traefik would route to the dev application and the dev Traefik would route to this one, both under the router name `app`. The e2e application is published directly and labelled `traefik.enable=false`. What this skips is the proxy itself; both stacks serve plain HTTP, so no forwarded `https` is lost.
-
-The per-address link limit is set back to production's 5, so the suite can watch it refuse. The per-client limit stays at the dev profile's 200, since every request comes from one address.
+Traefik is left out. It finds applications through container labels on the whole docker host. `compose.dev.yaml` limits a dev Traefik to its own compose project, and the e2e application is labelled `traefik.enable=false` as well. What this skips is the proxy itself; both stacks serve plain HTTP, so no forwarded `https` is lost.
 
 ## Passkeys in Chromium only
 

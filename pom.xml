@@ -228,18 +228,17 @@
           </execution>
         </executions>
       </plugin>
-      <!-- Copies .githooks/pre-push into .git/hooks, so any clone that builds
-           gets the hook with no setup step. core.hooksPath would need a git
-           command per clone, and this image has no git. Skipped when .git is
-           not a directory: a worktree, or a copy without history.
+      <!-- Copies the hooks in .githooks into .git/hooks, so any clone that
+           builds gets them with no setup step. core.hooksPath would need a git
+           command run once per clone, which is the setup step this avoids.
+           Skipped when .git is not a directory: a git worktree, which uses
+           the main checkout's hooks, or a copy without history.
 
            The Dockerfile build copies into the image's own .git, so a clone
            that only ever builds through docker compose never gets the hook.
            `verify`, the VS Code default build task, is what installs it.
 
-           Overwrites any hook of your own there. On a Linux host the copy is
-           owned by root, like target/, because the build container runs as
-           root; on Windows that does not apply, and git ignores the mode. -->
+           Overwrites any hook of your own with the same name. -->
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-antrun-plugin</artifactId>
@@ -266,10 +265,31 @@
                 <echo if:set="git.hooks.replaced" level="warning"
                       message="Replacing .git/hooks/pre-push with .githooks/pre-push"/>
                 <copy if:set="git.hooks.install" overwrite="true"
-                      file="${project.basedir}/.githooks/pre-push"
-                      todir="${project.basedir}/.git/hooks"/>
-                <chmod if:set="git.hooks.install" perm="755"
-                       file="${project.basedir}/.git/hooks/pre-push"/>
+                      todir="${project.basedir}/.git/hooks">
+                  <fileset dir="${project.basedir}/.githooks"/>
+                </copy>
+                <chmod if:set="git.hooks.install" perm="755">
+                  <fileset dir="${project.basedir}/.git/hooks"
+                           includes="pre-push post-checkout"/>
+                </chmod>
+              </target>
+            </configuration>
+          </execution>
+          <!-- Copies .env.example to .env when there is none, like the
+               post-checkout hook, so the first build of a fresh clone creates
+               it before any `docker compose up`. The condition is needed
+               because ant's copy replaces a target older than its source. -->
+          <execution>
+            <id>create-env</id>
+            <phase>validate</phase>
+            <goals><goal>run</goal></goals>
+            <configuration>
+              <target xmlns:if="ant:if">
+                <condition property="env.missing">
+                  <not><available file="${project.basedir}/.env"/></not>
+                </condition>
+                <copy if:set="env.missing" file="${project.basedir}/.env.example"
+                      tofile="${project.basedir}/.env"/>
               </target>
             </configuration>
           </execution>

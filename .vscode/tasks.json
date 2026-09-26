@@ -10,8 +10,15 @@
 // neither prints file:[line,col] on a single line, so wiring them into the
 // Problems panel means parsing target/spotbugsXml.xml instead of the console.
 //
-// ${workspaceFolder} and ${userHome}, not $PWD and $HOME, so one task works
-// from PowerShell and from a POSIX shell.
+// The Maven tasks run scripts/maven.sh, which builds as the host user on Linux
+// so target/ is not left owned by root. Windows has no sh on the PATH by
+// default, and Docker Desktop maps ownership itself, so there the tasks run the
+// plain JDK container directly, as root. That container has no git, so the git
+// plugin falls back to JGit: untracked files do not count as changes, and in a
+// git worktree the jar records the main checkout's commit.
+//
+// ${workspaceFolder}, not $PWD, so one task works from PowerShell and from a
+// POSIX shell.
 {
   "version": "2.0.0",
   "tasks": [
@@ -19,8 +26,15 @@
       "label": "maven: verify (tests and all three gates)",
       "detail": "The command AGENTS.md requires. Checkstyle, unit tests, integration tests, SpotBugs, PMD.",
       "type": "shell",
-      "command": "docker",
-      "args": ["run", "--rm", "--network", "host", "-v", "${workspaceFolder}:/w", "-w", "/w", "-v", "${userHome}/.m2:/root/.m2", "-v", "/var/run/docker.sock:/var/run/docker.sock", "eclipse-temurin:25.0.4_7-jdk-alpine", "./mvnw", "-B", "-ntp", "verify"],
+      "command": "sh",
+      "args": ["scripts/maven.sh", "verify"],
+      "windows": {
+        "command": "docker",
+        "args": ["run", "--rm", "--network", "host", "-e", "HOME=/cache", "-v", "teaterihuskvarna-cache:/cache", "-v", "${workspaceFolder}:/w", "-w", "/w", "-v", "/var/run/docker.sock:/var/run/docker.sock", "eclipse-temurin:25.0.4_7-jdk-alpine", "./mvnw", "-B", "-ntp", "verify"]
+      },
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
       "problemMatcher": [
         {
           "owner": "java",
@@ -45,10 +59,17 @@
     },
     {
       "label": "maven: test (unit tests only)",
-      "detail": "Faster. No *IT integration tests, so no docker socket is mounted.",
+      "detail": "Faster. No *IT integration tests.",
       "type": "shell",
-      "command": "docker",
-      "args": ["run", "--rm", "-v", "${workspaceFolder}:/w", "-w", "/w", "-v", "${userHome}/.m2:/root/.m2", "eclipse-temurin:25.0.4_7-jdk-alpine", "./mvnw", "-B", "-ntp", "test"],
+      "command": "sh",
+      "args": ["scripts/maven.sh", "test"],
+      "windows": {
+        "command": "docker",
+        "args": ["run", "--rm", "--network", "host", "-e", "HOME=/cache", "-v", "teaterihuskvarna-cache:/cache", "-v", "${workspaceFolder}:/w", "-w", "/w", "-v", "/var/run/docker.sock:/var/run/docker.sock", "eclipse-temurin:25.0.4_7-jdk-alpine", "./mvnw", "-B", "-ntp", "test"]
+      },
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
       "problemMatcher": [
         {
           "owner": "java",
@@ -72,8 +93,15 @@
       "label": "maven: compile",
       "detail": "Compiles the sources and the JTE templates. Fastest answer to 'does it build'.",
       "type": "shell",
-      "command": "docker",
-      "args": ["run", "--rm", "-v", "${workspaceFolder}:/w", "-w", "/w", "-v", "${userHome}/.m2:/root/.m2", "eclipse-temurin:25.0.4_7-jdk-alpine", "./mvnw", "-B", "-ntp", "compile"],
+      "command": "sh",
+      "args": ["scripts/maven.sh", "compile"],
+      "windows": {
+        "command": "docker",
+        "args": ["run", "--rm", "--network", "host", "-e", "HOME=/cache", "-v", "teaterihuskvarna-cache:/cache", "-v", "${workspaceFolder}:/w", "-w", "/w", "-v", "/var/run/docker.sock:/var/run/docker.sock", "eclipse-temurin:25.0.4_7-jdk-alpine", "./mvnw", "-B", "-ntp", "compile"]
+      },
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
       "problemMatcher": [
         {
           "owner": "java",
@@ -96,8 +124,15 @@
       "label": "checkstyle",
       "detail": "Checkstyle alone, at the version pom.xml pins. Violations land in the Problems panel.",
       "type": "shell",
-      "command": "docker",
-      "args": ["run", "--rm", "-v", "${workspaceFolder}:/w", "-w", "/w", "-v", "${userHome}/.m2:/root/.m2", "eclipse-temurin:25.0.4_7-jdk-alpine", "./mvnw", "-B", "-ntp", "checkstyle:check"],
+      "command": "sh",
+      "args": ["scripts/maven.sh", "checkstyle:check"],
+      "windows": {
+        "command": "docker",
+        "args": ["run", "--rm", "--network", "host", "-e", "HOME=/cache", "-v", "teaterihuskvarna-cache:/cache", "-v", "${workspaceFolder}:/w", "-w", "/w", "-v", "/var/run/docker.sock:/var/run/docker.sock", "eclipse-temurin:25.0.4_7-jdk-alpine", "./mvnw", "-B", "-ntp", "checkstyle:check"]
+      },
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
       "problemMatcher": [
         {
           "owner": "java",
@@ -146,7 +181,26 @@
       }
     },
     {
+      "label": "env: create .env when missing",
+      "detail": "Copies .env.example to .env if there is none. The compose tasks run this first.",
+      "type": "shell",
+      "command": "sh",
+      "args": ["-c", "[ -f .env ] || cp .env.example .env"],
+      "windows": {
+        "command": "if (-not (Test-Path .env)) { Copy-Item .env.example .env }",
+        "args": []
+      },
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "silent"
+      }
+    },
+    {
       "label": "compose: up",
+      "dependsOn": "env: create .env when missing",
       "type": "shell",
       "command": "docker",
       "args": ["compose", "-f", "compose.yaml", "-f", "compose.dev.yaml", "up", "-d", "--build"],
@@ -158,6 +212,7 @@
     },
     {
       "label": "compose: up with the debugger port open",
+      "dependsOn": "env: create .env when missing",
       "type": "shell",
       "command": "docker",
       "args": ["compose", "-f", "compose.yaml", "-f", "compose.dev.yaml", "-f", "compose.debug.yaml", "up", "-d", "--build"],
@@ -204,7 +259,7 @@
       "detail": "What CI builds. Runs Checkstyle and the unit tests, not the integration tests.",
       "type": "shell",
       "command": "docker",
-      "args": ["build", "-t", "teaterihuskvarna:dev", "."],
+      "args": ["build", "--build-context", "git=.git", "-t", "teaterihuskvarna:dev", "."],
       "options": {
         "cwd": "${workspaceFolder}"
       },
