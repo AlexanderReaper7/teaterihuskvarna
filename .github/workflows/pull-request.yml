@@ -1,0 +1,50 @@
+# Fails a pull request that closes no issue. Merging a pull request closes the
+# issues GitHub links to it, and that moves the card to Done on the board. The
+# label no-issue exempts one: docs/decisions/0020-pull-requests-and-merging.md.
+#
+# It asks GitHub which issues the pull request closes rather than searching the
+# description, so it agrees with what the merge will actually do. An issue
+# linked by hand under Development counts, but linking one does not rerun this;
+# edit the description or push to rerun it.
+name: pull request
+
+on:
+  pull_request:
+    types: [opened, edited, reopened, synchronize, labeled, unlabeled]
+
+permissions:
+  contents: read
+  pull-requests: read
+  issues: read
+
+jobs:
+  closes-an-issue:
+    runs-on: ubuntu-latest
+    steps:
+      - name: The pull request closes an issue, or carries no-issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          OWNER: ${{ github.repository_owner }}
+          REPO: ${{ github.event.repository.name }}
+          NUMBER: ${{ github.event.pull_request.number }}
+          NO_ISSUE: ${{ contains(github.event.pull_request.labels.*.name, 'no-issue') }}
+        run: |
+          if [ "$NO_ISSUE" = true ]; then
+            echo "Labelled no-issue."
+            exit 0
+          fi
+          # The $ names are GraphQL variables, not shell ones.
+          # shellcheck disable=SC2016
+          closes=$(gh api graphql -F owner="$OWNER" -F repo="$REPO" -F number="$NUMBER" -f query='
+            query($owner: String!, $repo: String!, $number: Int!) {
+              repository(owner: $owner, name: $repo) {
+                pullRequest(number: $number) {
+                  closingIssuesReferences(first: 10) { nodes { number } }
+                }
+              }
+            }' --jq '[.data.repository.pullRequest.closingIssuesReferences.nodes[].number | "#\(.)"] | join(" ")')
+          if [ -z "$closes" ]; then
+            echo "::error::This pull request closes no issue. Add 'Closes #<number>' with your issue's number to the description."
+            exit 1
+          fi
+          echo "Closes $closes."

@@ -43,12 +43,7 @@ The seeded people are invented, under `.test` addresses that cannot reach anyone
 
 ### How changes reach main
 
-Only Alexander Öberg merges into `main`. Everyone else works on a branch and opens a pull request:
-
-1. Start from the current main: `git switch main`, `git pull`, then `git switch -c <branch-name>`.
-2. Commit, then push the branch: `git push -u origin <branch-name>`.
-3. Open a pull request on GitHub and wait for CI and a review. Do not press the merge button, even though GitHub shows it to you.
-4. After the merge, delete the branch and start the next one from step 1. Do not keep committing on a merged branch.
+Only Alexander Öberg merges into `main`. Everyone else works on a branch made from an issue and opens a pull request, step by step in [the guide](docs/branches-and-pull-requests.md). The rules and their reasons are in [decisions/0020](docs/decisions/0020-pull-requests-and-merging.md).
 
 GitHub cannot enforce this on the repository's current plan ([0003](docs/decisions/0003-no-branch-protection-yet.md)), so the [`pre-push`](.githooks/pre-push) [git hook](#git-hooks) enforces part of it on your machine. It cannot see the merge button on GitHub, so the rule above still holds for everything the hook misses.
 
@@ -58,7 +53,7 @@ The hooks live in [`.githooks/`](.githooks/). Every Maven build (`verify`, `test
 
 | Hook | Runs | Does |
 | --- | --- | --- |
-| [`pre-push`](.githooks/pre-push) | Before `git push` sends anything | Refuses a push to `main`, a force-push to `main`, and any branch that contains a commit taken off `main`. `git push --no-verify` skips it. |
+| [`pre-push`](.githooks/pre-push) | Before `git push` sends anything | Refuses a push to `main`, a force-push to any branch, and any branch that contains a commit taken off `main`. `git push --no-verify` skips it. |
 | [`post-checkout`](.githooks/post-checkout) | After `git switch`, `git checkout` and `git worktree add`. Not after `git clone`, which runs before any hook is installed. | Copies [`.env.example`](.env.example) to `.env` when there is none. In a git worktree it also adds `BUILD_GIT_DIR` and `BUILD_GIT_WORKTREE` to `.env`, which the image build needs to find the repository's history. |
 
 The build overwrites a hook of your own with the same name, and warns when it replaces a different [`pre-push`](.githooks/pre-push). A git worktree uses the main checkout's `.git/hooks/`, so the build skips the copy there.

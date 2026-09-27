@@ -2,14 +2,9 @@
 
 <!-- Provenance: user. An agent wrote this guide from decisions/0018, and the user read all of it and approved it on 2026-09-25. -->
 
-This guide covers the team's week, with the purpose of each meeting, and the [Kanban board](https://github.com/users/AlexanderReaper7/projects/1) on GitHub: what is on it, how to take work from it, and the few rules that keep it useful. It does not cover branches, commits or pull requests.
+This guide covers the team's week, with the purpose of each meeting, and the [Kanban board](https://github.com/users/AlexanderReaper7/projects/1) on GitHub: what is on it, how to take work from it, and the few rules that keep it useful. Branches, commits and pull requests are in [branches-and-pull-requests.md](branches-and-pull-requests.md).
 
 The rules come from [decisions/0018](decisions/0018-kanban-with-weekly-syncs.md), which also says why.
-
-## Branches, commits and pull requests
-
-Not written yet. Alexander will write separate documents for them later.
-
 
 ## The idea
 

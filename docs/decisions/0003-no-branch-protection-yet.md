@@ -12,6 +12,12 @@ main carries no branch protection rules. The restriction that matters, that only
 
 [.github/CODEOWNERS](../../.github/CODEOWNERS) names him owner of every path. It is staged rather than active, because a CODEOWNERS entry does nothing until some rule requires code owner review.
 
+## Since 2026-09-27
+
+The reasons below no longer describe the repository. The four students and Klas have write access, the APL period began on 2026-09-14, and the protection endpoints still answer 403. Nothing stops any of them from pressing the merge button or pushing to main with `git push --no-verify`. The rules for the team are in [0020](0020-pull-requests-and-merging.md), and the [`pre-push`](../../.githooks/pre-push) hook enforces part of them on each clone.
+
+Whether to pay for protection or make the repository public is deferred. Decided by the user on 2026-09-27.
+
 ## Why not simply turn protection on
 
 It is not available on this account. Both `GET /repos/AlexanderReaper7/teaterihuskvarna/branches/main/protection` and the rulesets endpoint answer 403:
