@@ -18,6 +18,12 @@ import se.teaterihuskvarna.document.NoSuchDocument;
 import se.teaterihuskvarna.document.NotAPdf;
 import se.teaterihuskvarna.login.NoSuchDevice;
 import se.teaterihuskvarna.login.NoSuchPasskey;
+import se.teaterihuskvarna.mailing.BrevoUnavailable;
+import se.teaterihuskvarna.mailing.EmptyMailing;
+import se.teaterihuskvarna.mailing.NoRecipients;
+import se.teaterihuskvarna.mailing.NoSuchMailing;
+import se.teaterihuskvarna.mailing.UnknownAudience;
+import se.teaterihuskvarna.mailing.UnknownContent;
 import se.teaterihuskvarna.member.AccountNeedsEmail;
 import se.teaterihuskvarna.member.EmailTaken;
 import se.teaterihuskvarna.member.FeeAlreadyMarked;
@@ -28,6 +34,10 @@ import se.teaterihuskvarna.member.NoSuchMember;
 import se.teaterihuskvarna.offer.NoSuchOffer;
 import se.teaterihuskvarna.offer.OfferFull;
 import se.teaterihuskvarna.offer.RegistrationClosed;
+import se.teaterihuskvarna.volunteer.NoSuchEvent;
+import se.teaterihuskvarna.volunteer.NoSuchShift;
+import se.teaterihuskvarna.volunteer.ShiftFull;
+import se.teaterihuskvarna.volunteer.ShiftStarted;
 
 /// Turns what a service throws into an HTTP status and an RFC 9457 problem body.
 ///
@@ -188,6 +198,76 @@ public class ProblemResponses {
     @ExceptionHandler
     public ProblemDetail hasAccount(MemberHasAccount exception) {
         return problem(HttpStatus.CONFLICT, "Member has an account", exception);
+    }
+
+    /// @param exception the service finding no shift with that id
+    /// @return 404
+    @ExceptionHandler
+    public ProblemDetail noSuch(NoSuchShift exception) {
+        return problem(HttpStatus.NOT_FOUND, "No such shift", exception);
+    }
+
+    /// @param exception the service's refusal to book beyond the places
+    /// @return 409
+    @ExceptionHandler
+    public ProblemDetail full(ShiftFull exception) {
+        return problem(HttpStatus.CONFLICT, "Shift full", exception);
+    }
+
+    /// @param exception the service's refusal to book or cancel a shift that has started
+    /// @return 409
+    @ExceptionHandler
+    public ProblemDetail started(ShiftStarted exception) {
+        return problem(HttpStatus.CONFLICT, "Shift started", exception);
+    }
+
+    /// @param exception the service finding no upcoming published event with that id
+    /// @return 400
+    @ExceptionHandler
+    public ProblemDetail noSuch(NoSuchEvent exception) {
+        return problem(HttpStatus.BAD_REQUEST, "No such event", exception);
+    }
+
+    /// @param exception the service finding no mailing with that id
+    /// @return 404
+    @ExceptionHandler
+    public ProblemDetail noSuch(NoSuchMailing exception) {
+        return problem(HttpStatus.NOT_FOUND, "No such mailing", exception);
+    }
+
+    /// @param exception the audience having nobody with an account
+    /// @return 409
+    @ExceptionHandler
+    public ProblemDetail noRecipients(NoRecipients exception) {
+        return problem(HttpStatus.CONFLICT, "No recipients", exception);
+    }
+
+    /// @param exception a mailing with no words and no content
+    /// @return 400
+    @ExceptionHandler
+    public ProblemDetail empty(EmptyMailing exception) {
+        return problem(HttpStatus.BAD_REQUEST, "Empty mailing", exception);
+    }
+
+    /// @param exception an audience the service does not offer
+    /// @return 400
+    @ExceptionHandler
+    public ProblemDetail unknown(UnknownAudience exception) {
+        return problem(HttpStatus.BAD_REQUEST, "Unknown audience", exception);
+    }
+
+    /// @param exception an event or news item that is not published
+    /// @return 400
+    @ExceptionHandler
+    public ProblemDetail unknown(UnknownContent exception) {
+        return problem(HttpStatus.BAD_REQUEST, "Unknown content", exception);
+    }
+
+    /// @param exception Brevo refusing a call or not answering
+    /// @return 502
+    @ExceptionHandler
+    public ProblemDetail brevo(BrevoUnavailable exception) {
+        return problem(HttpStatus.BAD_GATEWAY, "Brevo unavailable", exception);
     }
 
     private static ProblemDetail problem(HttpStatus status, String title, RuntimeException exception) {

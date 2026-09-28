@@ -72,7 +72,7 @@ A grouping used to let one household fee cover several members. A household is n
 
 ### Household member addition | Tillägg i hushållet
 
-A member with an account, or an administrator, adding a person to that member's household. It creates a member without an account.
+An administrator adding a person to a household. It creates a member without an account. A member cannot add people, only invite those already in the household ([decisions/0025](docs/decisions/0025-member-register-in-the-application.md)).
 
 ### Invitation | Inbjudan
 
@@ -142,21 +142,29 @@ A PDF for members only, uploaded by an administrator on `/admin/handlingar` and 
 
 ### Volunteer shift | Volontärpass
 
-A dated task for volunteers at a performance, such as cloakroom or serving work.
+A dated task for volunteers at one Sanity event, cloakroom (garderob) or serving (servering), with a number of places ([decisions/0024](docs/decisions/0024-volunteer-shifts.md)).
 
 ### Volunteer booking | Volontärbokning
 
-A member's reservation of one volunteer shift.
+A member's reservation of one place on a volunteer shift, which the member can cancel until the shift starts.
+
+### Shift reminder | Påminnelse
+
+The email a member gets the day before a booked volunteer shift, once per booking. A booking made late in the evening before the shift gets it at once, and a booking made on the shift's own day gets none.
 
 ## Communication
 
 ### Mailing audience | Målgrupp
 
-The members selected for one mailing by an explicit rule, such as all paying members or all volunteers. Only the selected members with an account receive it.
+The members selected for one mailing by an explicit rule: every member, members who have paid this year, members who have not, volunteers with a shift in the last 12 months, or the members registered to one offer. Only the selected members with an account receive it ([decisions/0023](docs/decisions/0023-brevo-list-per-mailing.md)).
 
 ### Mailing | Utskick
 
-One bulk message sent to a mailing audience. A login email is not a mailing.
+One bulk message sent to a mailing audience. An administrator prepares it in the application, which creates a draft campaign in Brevo, and sends it from Brevo. A login email and a shift reminder are not mailings.
+
+### Brevo list | Brevo-lista
+
+The list of addresses the application creates in Brevo for one mailing, a copy of the audience at the moment the mailing was prepared ([decisions/0023](docs/decisions/0023-brevo-list-per-mailing.md)).
 
 ## System
 

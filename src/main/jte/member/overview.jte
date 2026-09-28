@@ -30,6 +30,7 @@
     <ul>
         <li><a href="/medlem/erbjudanden">${copy.text("offers.heading")}</a></li>
         <li><a href="/medlem/handlingar">${copy.text("documents.heading")}</a></li>
+        <li><a href="/medlem/volontar">${copy.text("shifts.heading")}</a></li>
     </ul>
     @if(offerPasskey)
         @template.tag.passkeyOffer(copy = copy, csrf = csrf, urls = passkeyUrls)

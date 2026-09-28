@@ -11,12 +11,12 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import se.teaterihuskvarna.export.CsvFile;
+import se.teaterihuskvarna.member.Recipient;
 import se.teaterihuskvarna.offer.OfferDetails;
 import se.teaterihuskvarna.offer.OfferForm;
 import se.teaterihuskvarna.offer.OfferService;
-import se.teaterihuskvarna.offer.Recipient;
 import se.teaterihuskvarna.offer.Registrant;
-import se.teaterihuskvarna.offer.RegistrationExport;
 
 /// Offer administration over HTTP (R014, R020): what `/admin/erbjudanden`
 /// offers. Times in a request body are Swedish wall-clock times such as
@@ -98,7 +98,7 @@ public class AdministratorOffersController {
     /// @return the registrations as CSV, as an attachment
     @GetMapping("/api/admin/offers/{id}/registrations.csv")
     public ResponseEntity<String> registrationsCsv(@PathVariable long id) {
-        RegistrationExport export = offers.registrationsCsv(id);
+        CsvFile export = offers.registrationsCsv(id);
         return ResponseEntity.ok().headers(export.headers()).body(export.text());
     }
 

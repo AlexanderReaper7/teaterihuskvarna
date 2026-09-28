@@ -1,14 +1,15 @@
-package se.teaterihuskvarna.offer;
+package se.teaterihuskvarna.export;
 
 import java.nio.charset.StandardCharsets;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 
-/// One offer's registrations as a CSV file (R020).
+/// A CSV file to download (R020): an offer's registrations, a shift's volunteers,
+/// the member register.
 ///
 /// @param filename an ASCII file name ending in `.csv`
-/// @param text     the file, starting with a byte order mark, as `se.teaterihuskvarna.export.Csv` writes it
-public record RegistrationExport(String filename, String text) {
+/// @param text     the file, starting with a byte order mark, as [Csv] writes it
+public record CsvFile(String filename, String text) {
 
     /// The headers both adapters send the file with, so they cannot drift apart.
     ///

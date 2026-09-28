@@ -14,6 +14,8 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.validation.annotation.Validated;
 import se.teaterihuskvarna.Swedish;
 import se.teaterihuskvarna.export.Csv;
+import se.teaterihuskvarna.export.CsvFile;
+import se.teaterihuskvarna.member.Recipient;
 
 /// Offers and registrations, R014 and R020.
 ///
@@ -193,7 +195,7 @@ public class OfferService {
     /// @param id the offer
     /// @return the file and a name for it
     /// @throws NoSuchOffer if no offer has the id
-    public RegistrationExport registrationsCsv(long id) {
+    public CsvFile registrationsCsv(long id) {
         List<List<String>> rows = registrations(id).stream()
                 .map(registrant -> List.of(
                         registrant.fullName(),
@@ -203,7 +205,7 @@ public class OfferService {
                 .toList();
         List<String> header = List.of(text("offer.csv.name"), text("offer.csv.email"), text("offer.csv.phone"),
                 text("offer.csv.registeredAt"));
-        return new RegistrationExport("anmalningar-erbjudande-" + id + ".csv", Csv.write(header, rows));
+        return new CsvFile("anmalningar-erbjudande-" + id + ".csv", Csv.write(header, rows));
     }
 
     /// Who a mailing to an offer's registrants reaches: the registered members

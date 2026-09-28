@@ -39,6 +39,7 @@ import org.springframework.test.web.servlet.request.RequestPostProcessor;
 import se.teaterihuskvarna.IntegrationTestSupport;
 import se.teaterihuskvarna.login.LoginKind;
 import se.teaterihuskvarna.login.SignedIn;
+import se.teaterihuskvarna.member.Recipient;
 import se.teaterihuskvarna.web.Copy;
 
 /// Proves the offer rules (R014) and the registration export (R020) through

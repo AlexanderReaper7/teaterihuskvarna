@@ -22,12 +22,7 @@ From the original plan. It blocks nothing in the repository.
 
 ## For the team
 
-- [ ] **T1. How does the application synchronise a selected mailing audience to Brevo?** Campaigns address Brevo lists or segments. The rule has to keep PostgreSQL authoritative for membership and fee status while preserving Brevo's unsubscribe and suppression state.
 - [ ] **T2. Which of the Sanity personal-data measures does the project adopt?** Proxying photographs through the application, reading from `api.sanity.io`, banning AI plugins in the Studio, `DO_NOT_TRACK=1`, stripping EXIF data, and watching the subprocessor list. None is decided. The list and the reasoning are in [research/sanity-personal-data.md](research/sanity-personal-data.md).
-- [ ] **T3. The page after a confirmed application asks for the name in the payment message twice**, "med namn i meddelandet" and then "Skriv {name} i meddelandet". The copy is in [`messages_sv.properties`](../src/main/resources/messages_sv.properties). Rewrite it together with the answer to T4.
-- [ ] **T4. Must a household have added all its members before it pays the family fee, or is the family fee bound to the account, so members can be added and changed after paying?** The produktägare's wording is "50 kr enskild, 100 kr familj". An application is for one person, and household members are added only after the member exists, by an administrator or by a member of the household. The answer decides what the page after a confirmed application says about the fee, and what "paid" means for a person added to a household later in the year. Was C11, and Klas left it to the team at [the first meeting](meetings/2026-09-24-meeting-1.md#what-the-site-does).
-- [ ] **T5. Is the orange `#ee6810` darkened to `#b64f0c`?** The current orange fails the WCAG 2.1 AA contrast that requirement R006 makes a MUST. The darker value passes on white and on mint and reads as the same colour. Orange on teal has no passing value, so footer icon hover would change to white or mint. Was C23, and Klas left it to the team at [the first meeting](meetings/2026-09-24-meeting-1.md#how-the-site-looks).
-- [ ] **T6. Where do member-only offer details live?** At [the first meeting](meetings/2026-09-24-meeting-1.md#what-the-site-does) Klas answered C16: offer descriptions and discount details are for members only. A Free Sanity dataset publishes everything, so they need the nonprofit plan's private dataset, which Klas is applying for (C8), or storage in the application.
 
 ## Found by the e2e suite
 

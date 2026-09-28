@@ -13,11 +13,11 @@ import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+import se.teaterihuskvarna.export.CsvFile;
 import se.teaterihuskvarna.offer.NoSuchOffer;
 import se.teaterihuskvarna.offer.OfferDetails;
 import se.teaterihuskvarna.offer.OfferForm;
 import se.teaterihuskvarna.offer.OfferService;
-import se.teaterihuskvarna.offer.RegistrationExport;
 
 /// Offer administration (R014, R020): the list of offers, a form to create
 /// one, each offer's page with its form, publish button and registrations,
@@ -144,7 +144,7 @@ public class AdministratorOfferPageController {
     /// @return the registrations as CSV, as an attachment
     @GetMapping(LIST + "/{id}/anmalningar.csv")
     public ResponseEntity<String> registrationsCsv(@PathVariable long id) {
-        RegistrationExport export = offers.registrationsCsv(id);
+        CsvFile export = offers.registrationsCsv(id);
         return ResponseEntity.ok().headers(export.headers()).body(export.text());
     }
 

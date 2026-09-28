@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import se.teaterihuskvarna.member.Recipient;
 
 /// Reads and writes registrations. Package private, like [OfferRepository].
 ///
@@ -61,7 +62,7 @@ interface OfferRegistrationRepository extends JpaRepository<OfferRegistration, L
     /// @param offerId the offer
     /// @return the registered members who have an account, by name
     @Query("""
-            select new se.teaterihuskvarna.offer.Recipient(m.id, m.fullName, a.email)
+            select new se.teaterihuskvarna.member.Recipient(m.id, m.fullName, a.email)
             from OfferRegistration r
             join Member m on m.id = r.memberId
             join Account a on a.member = m

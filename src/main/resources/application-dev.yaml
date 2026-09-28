@@ -36,6 +36,10 @@ teaterihuskvarna:
     source: ${CONTENT_SOURCE:fixture}
     project-id: ${SANITY_PROJECT_ID:fixture}
     dataset: ${SANITY_DATASET_NAME:fixture}
+  # Mailings stay in memory unless BREVO_API=http in .env, with the other
+  # BREVO_ values. The fake forgets everything on restart.
+  brevo:
+    api: ${BREVO_API:fake}
   development:
     # The development index links here. Traefik routes the path to Mailpit
     # (compose.dev.yaml), so the link works on whatever host the site answers.

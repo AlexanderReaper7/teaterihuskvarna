@@ -58,14 +58,25 @@ services:
       BANKGIRO: ${BANKGIRO:-}
       FIRST_ADMINISTRATOR_EMAIL: ${FIRST_ADMINISTRATOR_EMAIL:-}
       FIRST_ADMINISTRATOR_NAME: ${FIRST_ADMINISTRATOR_NAME:-}
-      # The public content: docs/decisions/0021. The dev profile reads a
-      # fixture instead unless CONTENT_SOURCE is sanity.
-      CONTENT_SOURCE: ${CONTENT_SOURCE:-}
+      # The public content: docs/decisions/0021. The default is written here
+      # and not left to application.yaml, because an empty value in .env
+      # reaches the container as an empty string, which Spring binds as no
+      # source at all and refuses to start on.
+      CONTENT_SOURCE: ${CONTENT_SOURCE:-sanity}
       SANITY_PROJECT_ID: ${SANITY_PROJECT_ID:-}
       SANITY_DATASET_NAME: ${SANITY_DATASET_NAME:-}
       SANITY_API_KEY: ${SANITY_API_KEY:-}
       SANITY_WEBHOOK_SECRET: ${SANITY_WEBHOOK_SECRET:-}
       SANITY_STUDIO_URL: ${SANITY_STUDIO_URL:-}
+      # Mailings: docs/decisions/0023. The application refuses to start
+      # while any of these is empty, unless BREVO_API is fake. The default is
+      # here for the same reason as CONTENT_SOURCE's.
+      BREVO_API: ${BREVO_API:-http}
+      BREVO_API_KEY: ${BREVO_API_KEY:-}
+      BREVO_FOLDER_ID: ${BREVO_FOLDER_ID:-}
+      BREVO_TEST_LIST_ID: ${BREVO_TEST_LIST_ID:-}
+      BREVO_SENDER_NAME: ${BREVO_SENDER_NAME:-}
+      BREVO_SENDER_EMAIL: ${BREVO_SENDER_EMAIL:-}
     labels:
       traefik.enable: "true"
       traefik.http.routers.app.rule: Host(`${SITE_HOST:-}`)
