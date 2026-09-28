@@ -28,6 +28,10 @@
     <h1>${copy.text("admin.heading")}</h1>
     <p>${copy.text("admin.signedInAs", signedIn.fullName())}</p>
     @template.tag.logout(copy = copy, csrf = csrf, action = "/admin/logga-ut")
+    <ul>
+        <li><a href="/admin/erbjudanden">${copy.text("adminOffers.heading")}</a></li>
+        <li><a href="/admin/handlingar">${copy.text("adminDocuments.heading")}</a></li>
+    </ul>
     @if(offerPasskey)
         @template.tag.passkeyOffer(copy = copy, csrf = csrf, urls = passkeyUrls)
     @endif

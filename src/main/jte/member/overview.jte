@@ -20,6 +20,10 @@
 @param String notice
 @template.layout(copy = copy, title = copy.text("member.heading"), content = @`
     <h1>${copy.text("member.heading")}</h1>
+    <ul>
+        <li><a href="/medlem/erbjudanden">${copy.text("offers.heading")}</a></li>
+        <li><a href="/medlem/handlingar">${copy.text("documents.heading")}</a></li>
+    </ul>
     @if(offerPasskey)
         @template.tag.passkeyOffer(copy = copy, csrf = csrf, urls = passkeyUrls)
     @endif

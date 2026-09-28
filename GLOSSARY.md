@@ -122,7 +122,11 @@ One of the pages R004 names, such as Styrelsen, written in Sanity as a `sida` do
 
 ### Offer | Erbjudande
 
-A member benefit or limited-capacity activity for which a member may register.
+A member benefit or limited-capacity activity for which a member may register. An administrator creates it on `/admin/erbjudanden`, and members see it on `/medlem/erbjudanden` once it is published. Offers live in PostgreSQL, not in Sanity: decided by the user on 2026-09-28.
+
+### Registration closing | Anmälan stänger
+
+The moment after which a member can neither register for an offer nor cancel a registration. It is the closing time the administrator set, or the offer's start when none is set, or never when the offer has neither. The fallback to the start is an agent's choice, made while building R014.
 
 ### Offer capacity | Antal platser
 
@@ -131,6 +135,10 @@ The number of places an offer has. Stored in PostgreSQL, not in Sanity, so that 
 ### Offer registration | Anmälan
 
 A member's reservation of a place in an offer.
+
+### Member document | Medlemshandling
+
+A PDF for members only, uploaded by an administrator on `/admin/handlingar` and listed for members on `/medlem/handlingar`. It is one of two kinds: an annual meeting document (årsmöteshandling) or a member letter (medlemsbrev). Member documents live in PostgreSQL, not in Sanity: decided by the user on 2026-09-28.
 
 ### Volunteer shift | Volontärpass
 

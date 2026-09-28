@@ -19,7 +19,10 @@ import org.springframework.web.bind.annotation.ModelAttribute;
     LoginPagesController.class,
     MemberPageController.class,
     AdministratorPageController.class,
-    MembershipApplicationPageController.class})
+    MembershipApplicationPageController.class,
+    MemberOfferPageController.class,
+    AdministratorOfferPageController.class,
+    AdministratorDocumentPageController.class})
 public class FormModel {
 
     /// @param token the request's token, which Spring Security resolves

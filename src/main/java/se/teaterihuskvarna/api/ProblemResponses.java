@@ -13,8 +13,14 @@ import se.teaterihuskvarna.administrator.AdministratorAlreadyExists;
 import se.teaterihuskvarna.administrator.CannotRemoveSelf;
 import se.teaterihuskvarna.administrator.NoSuchAdministrator;
 import se.teaterihuskvarna.administrator.TooFewAdministrators;
+import se.teaterihuskvarna.document.FileTooLarge;
+import se.teaterihuskvarna.document.NoSuchDocument;
+import se.teaterihuskvarna.document.NotAPdf;
 import se.teaterihuskvarna.login.NoSuchDevice;
 import se.teaterihuskvarna.login.NoSuchPasskey;
+import se.teaterihuskvarna.offer.NoSuchOffer;
+import se.teaterihuskvarna.offer.OfferFull;
+import se.teaterihuskvarna.offer.RegistrationClosed;
 
 /// Turns what a service throws into an HTTP status and an RFC 9457 problem body.
 ///
@@ -82,6 +88,50 @@ public class ProblemResponses {
     @ExceptionHandler
     public ProblemDetail noSuch(NoSuchDevice exception) {
         return problem(HttpStatus.NOT_FOUND, "No such device", exception);
+    }
+
+    /// Also what a member gets for an offer that exists but is not published.
+    ///
+    /// @param exception the service finding no offer with that id
+    /// @return 404
+    @ExceptionHandler
+    public ProblemDetail noSuch(NoSuchOffer exception) {
+        return problem(HttpStatus.NOT_FOUND, "No such offer", exception);
+    }
+
+    /// @param exception the service's refusal to register beyond the capacity
+    /// @return 409
+    @ExceptionHandler
+    public ProblemDetail full(OfferFull exception) {
+        return problem(HttpStatus.CONFLICT, "Offer full", exception);
+    }
+
+    /// @param exception the service's refusal to register or cancel after registration closed
+    /// @return 409
+    @ExceptionHandler
+    public ProblemDetail closed(RegistrationClosed exception) {
+        return problem(HttpStatus.CONFLICT, "Registration closed", exception);
+    }
+
+    /// @param exception the service finding no document with that id
+    /// @return 404
+    @ExceptionHandler
+    public ProblemDetail noSuch(NoSuchDocument exception) {
+        return problem(HttpStatus.NOT_FOUND, "No such document", exception);
+    }
+
+    /// @param exception the service's refusal of a file that does not start as a PDF does
+    /// @return 400
+    @ExceptionHandler
+    public ProblemDetail notAPdf(NotAPdf exception) {
+        return problem(HttpStatus.BAD_REQUEST, "Not a PDF", exception);
+    }
+
+    /// @param exception the service's refusal of a file over 10 MB
+    /// @return 413
+    @ExceptionHandler
+    public ProblemDetail tooLarge(FileTooLarge exception) {
+        return problem(HttpStatus.CONTENT_TOO_LARGE, "File too large", exception);
     }
 
     private static ProblemDetail problem(HttpStatus status, String title, RuntimeException exception) {
