@@ -29,6 +29,13 @@ spring:
       mail.smtp.starttls.required: false
 
 teaterihuskvarna:
+  start-page: /start
+  # The invented content in content/fixture.json unless CONTENT_SOURCE=sanity
+  # in .env, which reads the dataset SANITY_DATASET_NAME names.
+  content:
+    source: ${CONTENT_SOURCE:fixture}
+    project-id: ${SANITY_PROJECT_ID:fixture}
+    dataset: ${SANITY_DATASET_NAME:fixture}
   development:
     # The development index links here. Traefik routes the path to Mailpit
     # (compose.dev.yaml), so the link works on whatever host the site answers.

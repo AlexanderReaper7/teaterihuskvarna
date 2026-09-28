@@ -28,6 +28,13 @@ services:
       # a mail works inside the namespace and, under E2E_KEEP, on the host.
       # application-dev.yaml builds login links and the passkey relying party
       # from http://localhost:${PROXY_HTTP_PORT}.
+      # Keep all browser tests independent of Sanity and local credentials.
+      CONTENT_SOURCE: fixture
+      SANITY_PROJECT_ID: fixture
+      SANITY_DATASET_NAME: fixture
+      SANITY_API_KEY: ""
+      SANITY_WEBHOOK_SECRET: e2e-webhook-secret
+      SANITY_STUDIO_URL: ""
       SERVER_PORT: "55556"
       PROXY_HTTP_PORT: "55556"
       # Back to production's per-address limit, so the suite can see it refuse.

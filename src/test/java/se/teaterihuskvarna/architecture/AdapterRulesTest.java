@@ -12,6 +12,7 @@ import java.util.Set;
 import java.util.TreeSet;
 import org.junit.jupiter.api.Test;
 import org.springframework.data.repository.Repository;
+import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Service;
 
 /// The rules that hold `web` and `api` apart and keep them in step. Reasoning in
@@ -79,6 +80,18 @@ class AdapterRulesTest {
         return packageName + "..";
     }
 
+    /// A Spring bean outside the adapters: a `@Service`, or any other
+    /// `@Component` an adapter could call to reach a capability, so marking a
+    /// class `@Component` instead of `@Service` does not take it out of the
+    /// parity rule.
+    private static boolean isCapability(JavaClass owner) {
+        String name = owner.getPackageName();
+        if (name.startsWith(WEB) || name.startsWith(API) || !name.startsWith("se.teaterihuskvarna")) {
+            return false;
+        }
+        return owner.isAnnotatedWith(Service.class) || owner.isMetaAnnotatedWith(Component.class);
+    }
+
     private static Set<String> serviceMethodsCalledFrom(String adapterPackage) {
         Set<String> calls = new TreeSet<>();
         for (JavaClass adapter : PRODUCTION) {
@@ -86,7 +99,7 @@ class AdapterRulesTest {
                 continue;
             }
             adapter.getMethodCallsFromSelf().stream()
-                    .filter(call -> call.getTargetOwner().isAnnotatedWith(Service.class))
+                    .filter(call -> isCapability(call.getTargetOwner()))
                     .forEach(call -> calls.add(
                             call.getTargetOwner().getSimpleName() + "." + call.getName()));
         }

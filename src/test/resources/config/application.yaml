@@ -10,6 +10,12 @@ spring:
       mail.smtp.starttls.required: false
 
 teaterihuskvarna:
+  content:
+    source: fixture
+    project-id: test
+    dataset: test
+    webhook-secret: test-webhook-secret
+    studio-url: https://studio.example.test
   mail:
     site-url: http://localhost
     from: noreply@example.test
