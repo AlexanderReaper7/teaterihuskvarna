@@ -170,7 +170,8 @@ public class MembershipApplicationService {
         members.save(member);
         accounts.save(new Account(member, new Email(application.getEmail())));
 
-        return Optional.of(new Welcome(member.getFullName(), application.getEmail(), association.bankgiro()));
+        return Optional.of(new Welcome(member.getFullName(), application.getEmail(), association.bankgiro(),
+                association.feeIndividualOre(), association.feeHouseholdOre()));
     }
 
     private static @Nullable String blankToNull(@Nullable String value) {

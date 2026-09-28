@@ -10,7 +10,7 @@ import org.jspecify.annotations.Nullable;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.validation.annotation.Validated;
 
-/// Where the public content comes from: `docs/decisions/0006-sanity-headless-cms.md`.
+/// Where the public content comes from: `docs/decisions/0021-content-from-sanity.md`.
 ///
 /// No defaults for the project or dataset, so a production without them refuses
 /// to start rather than showing an empty site. `application-dev.yaml` reads

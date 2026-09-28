@@ -110,6 +110,8 @@ public abstract class IntegrationTestSupport {
         jdbc.sql("DELETE FROM offer_registration").update();
         jdbc.sql("DELETE FROM offer").update();
         jdbc.sql("DELETE FROM member_document").update();
+        jdbc.sql("DELETE FROM fee").update();
+        jdbc.sql("DELETE FROM invitation").update();
         jdbc.sql("DELETE FROM account").update();
         jdbc.sql("DELETE FROM member").update();
         jdbc.sql("DELETE FROM household").update();

@@ -38,7 +38,11 @@ import org.springframework.transaction.annotation.Transactional;
 /// - three offers: a published one with two places, one of them taken by Erik
 ///   Lindqvist; a published one without a limit; and an unpublished draft,
 ///   which members do not see;
-/// - one annual meeting document, a one-page PDF built here.
+/// - one annual meeting document, a one-page PDF built here;
+/// - this year's fees: Erik Lindqvist paid for his household, which covers
+///   Maria and Olle; Karin Holmberg paid for herself; the Bergströms, Anders
+///   and Ingrid have not paid. Johan Bergström paid last year, so his page
+///   has a year of history.
 ///
 /// Plain SQL through `JdbcClient` rather than the entities, because this package
 /// is not the member package and the repositories are package private there.
@@ -93,6 +97,10 @@ class DevSeed implements ApplicationRunner {
         administrator("karin.holmberg@example.test", "Karin Holmberg", first);
         administrator("gunnar.wik@example.test", "Gunnar Wik", first);
 
+        fee(erik, 0, "HOUSEHOLD", 10_000, first);
+        fee(karin, 0, "INDIVIDUAL", 5_000, first);
+        fee(johan, 1, "INDIVIDUAL", 5_000, first);
+
         long workshop = offer("Improvisationsverkstad", """
                 En kväll med övningar i improvisation för alla medlemmar.
                 Ta med bekväma kläder och vattenflaska.""", "30 days", "25 days", 2, true);
@@ -136,6 +144,25 @@ class DevSeed implements ApplicationRunner {
                 .param("published", published)
                 .query(Long.class)
                 .single();
+    }
+
+    /// The year is taken in Sweden, as the fee pages take it.
+    ///
+    /// @param yearsAgo 0 for this year, 1 for last year
+    private void fee(long member, int yearsAgo, String kind, int amountOre, @Nullable Long markedBy) {
+        jdbc.sql("""
+                INSERT INTO fee (member_id, year, kind, amount_ore, paid_at, marked_by, household_id)
+                SELECT id, EXTRACT(YEAR FROM now() AT TIME ZONE 'Europe/Stockholm')::int - :yearsAgo,
+                        :kind, :amount, now() - make_interval(years => :yearsAgo), :markedBy,
+                        CASE WHEN :kind = 'HOUSEHOLD' THEN household_id END
+                FROM member WHERE id = :member
+                """)
+                .param("member", member)
+                .param("yearsAgo", yearsAgo)
+                .param("kind", kind)
+                .param("amount", amountOre)
+                .param("markedBy", markedBy)
+                .update();
     }
 
     private long household(String name) {
