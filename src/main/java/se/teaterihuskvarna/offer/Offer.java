@@ -11,7 +11,7 @@ import org.jspecify.annotations.Nullable;
 
 /// Something members can register for, with a limited number of places or none.
 ///
-/// Column lengths mirror `V8__offers.sql` by hand, because `ddl-auto: validate`
+/// Column lengths mirror `V7__offers.sql` by hand, because `ddl-auto: validate`
 /// does not compare them: `docs/decisions/0012-jpa-over-a-schema-flyway-owns.md`.
 @Entity
 @Table(name = "offer")

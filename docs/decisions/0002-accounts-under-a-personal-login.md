@@ -8,7 +8,7 @@ description: Which accounts own the repository and the Sanity project.
 
 ## Decision
 
-The repository is `AlexanderReaper7/teaterihuskvarna`, private, on a personal GitHub account. The Sanity project id is left empty in `studio/` rather than bound to whoever runs the initialiser.
+The repository is `AlexanderReaper7/teaterihuskvarna`, private, on a personal GitHub account. The Sanity project id is left empty in [`studio/`](../../studio/) rather than bound to whoever runs the initialiser.
 
 ## Why, when the plan says otherwise
 

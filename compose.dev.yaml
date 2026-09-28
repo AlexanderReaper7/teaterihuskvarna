@@ -29,6 +29,10 @@ services:
       SPRING_PROFILES_ACTIVE: dev
       # application-dev.yaml builds login links from it.
       PROXY_HTTP_PORT: ${PROXY_HTTP_PORT:-8000}
+      # The invented content and mailings kept in memory, unless .env says
+      # sanity or http. Defaults here, as in compose.yaml.
+      CONTENT_SOURCE: ${CONTENT_SOURCE:-fixture}
+      BREVO_API: ${BREVO_API:-fake}
     labels:
       # Any host name, so the site answers on localhost, 127.0.0.1 and a
       # Tailscale name alike.

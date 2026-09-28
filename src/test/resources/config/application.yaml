@@ -16,6 +16,8 @@ teaterihuskvarna:
     dataset: test
     webhook-secret: test-webhook-secret
     studio-url: https://studio.example.test
+  brevo:
+    api: fake
   mail:
     site-url: http://localhost
     from: noreply@example.test

@@ -107,6 +107,9 @@ public abstract class IntegrationTestSupport {
         jdbc.sql("DELETE FROM one_time_token").update();
         jdbc.sql("DELETE FROM link_request").update();
         jdbc.sql("DELETE FROM membership_application").update();
+        jdbc.sql("DELETE FROM mailing").update();
+        jdbc.sql("DELETE FROM volunteer_booking").update();
+        jdbc.sql("DELETE FROM volunteer_shift").update();
         jdbc.sql("DELETE FROM offer_registration").update();
         jdbc.sql("DELETE FROM offer").update();
         jdbc.sql("DELETE FROM member_document").update();

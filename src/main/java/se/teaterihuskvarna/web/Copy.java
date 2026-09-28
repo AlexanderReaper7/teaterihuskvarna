@@ -29,6 +29,8 @@ public final class Copy {
     private static final DateTimeFormatter DATE_TIME = DateTimeFormatter
             .ofPattern("d MMMM yyyy 'kl.' HH:mm", Swedish.LOCALE)
             .withZone(SWEDEN);
+    private static final DateTimeFormatter TIME = DateTimeFormatter.ofPattern("HH:mm", Swedish.LOCALE)
+            .withZone(SWEDEN);
 
     private final MessageSource messages;
 
@@ -79,5 +81,11 @@ public final class Copy {
     /// @return its date and time in Sweden, such as "23 september 2026 kl. 14:05"
     public String dateTime(Instant instant) {
         return DATE_TIME.format(instant);
+    }
+
+    /// @param instant a moment
+    /// @return its time of day in Sweden, such as "14:05"
+    public String time(Instant instant) {
+        return TIME.format(instant);
     }
 }
