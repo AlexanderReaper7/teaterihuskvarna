@@ -8,6 +8,7 @@ import org.springframework.core.task.TaskExecutor;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
+import se.teaterihuskvarna.outbox.AfterCommit;
 
 /// Runs work that depends on whether an address is known, off the request
 /// thread, in a transaction of its own.

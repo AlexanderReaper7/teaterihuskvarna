@@ -1,4 +1,4 @@
-package se.teaterihuskvarna.login;
+package se.teaterihuskvarna.outbox;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -10,8 +10,8 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 import org.springframework.transaction.support.TransactionSynchronizationUtils;
 
 /// Drives the synchronization by hand, as a transaction manager would. The
-/// integration tests cannot see the order: the executor that [Mailer] and
-/// [Background] hand the work to nearly always starts after the commit anyway.
+/// integration tests cannot see the order: the executor that [Outbox] and
+/// `Background` hand the work to nearly always starts after the commit anyway.
 class AfterCommitTest {
 
     private final AtomicInteger runs = new AtomicInteger();
