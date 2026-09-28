@@ -37,6 +37,18 @@ spring:
       mail.smtp.timeout: 10000
       mail.smtp.writetimeout: 10000
 
+  # Member documents (R015) are PDFs of at most 10 MB, which
+  # MemberDocumentService checks to the byte for any caller. These limits only
+  # stop what is clearly larger before Tomcat reads it all: the request limit
+  # leaves room for the form's other fields and the multipart boundaries, and
+  # OversizeUploadFilter answers a request over it. The file limit is the same,
+  # so a file between the two limits reaches the service, which says it is too
+  # large, instead of failing Tomcat's parse, which answers a bare 413.
+  servlet:
+    multipart:
+      max-file-size: 11MB
+      max-request-size: 11MB
+
   session:
     jdbc:
       # Flyway owns these tables like every other, from V3: docs/decisions/0015.
@@ -62,6 +74,13 @@ server:
     # the port. Seen behind Caddy on 2026-09-23. Browsers resolve a relative
     # Location.
     use-relative-redirects: true
+    # How much of a body the application did not read Tomcat still reads, so
+    # the answer reaches the browser. OversizeUploadFilter answers an upload
+    # over 10 MB without reading it, and past this Tomcat resets the connection
+    # and the browser shows its own error. The default, 2 MB, did exactly that
+    # to an 11 MB upload in the e2e suite on 2026-09-29. Larger bodies still
+    # get the reset, which bounds what a sender can make the server read.
+    max-swallow-size: 50MB
 
 # Empty defaults on purpose. MailSettings and AssociationSettings are validated,
 # so a production without SITE_URL, MAIL_FROM or BANKGIRO refuses to start

@@ -2,6 +2,7 @@ package se.teaterihuskvarna.web;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import org.springframework.context.MessageSource;
@@ -24,6 +25,7 @@ public final class Copy {
     private static final ZoneId SWEDEN = ZoneId.of("Europe/Stockholm");
     private static final DateTimeFormatter DATE = DateTimeFormatter.ofPattern("d MMMM yyyy", Swedish.LOCALE)
             .withZone(SWEDEN);
+    private static final DateTimeFormatter DAY = DateTimeFormatter.ofPattern("d MMMM yyyy", Swedish.LOCALE);
     private static final DateTimeFormatter DATE_TIME = DateTimeFormatter
             .ofPattern("d MMMM yyyy 'kl.' HH:mm", Swedish.LOCALE)
             .withZone(SWEDEN);
@@ -55,6 +57,12 @@ public final class Copy {
     /// @return its date in Sweden, such as "23 september 2026"
     public String date(Instant instant) {
         return DATE.format(instant);
+    }
+
+    /// @param day a calendar date, which has no zone to convert
+    /// @return the date in Swedish, such as "14 mars 2026"
+    public String date(LocalDate day) {
+        return DAY.format(day);
     }
 
     /// @param instant a moment

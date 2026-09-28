@@ -3,6 +3,7 @@ package se.teaterihuskvarna.login;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.List;
+import org.springframework.boot.servlet.autoconfigure.MultipartProperties;
 import org.springframework.boot.session.autoconfigure.DefaultCookieSerializerCustomizer;
 import org.springframework.context.MessageSource;
 import org.springframework.context.annotation.Bean;
@@ -14,8 +15,8 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.security.authentication.ott.OneTimeTokenAuthenticationProvider;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-import org.springframework.security.config.annotation.web.configurers.SessionManagementConfigurer;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configurers.SessionManagementConfigurer;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.access.intercept.AuthorizationFilter;
@@ -27,10 +28,7 @@ import org.springframework.security.web.authentication.SimpleUrlAuthenticationFa
 import org.springframework.security.web.authentication.ott.GenerateOneTimeTokenFilter;
 import org.springframework.security.web.authentication.ott.GenerateOneTimeTokenRequestResolver;
 import org.springframework.security.web.authentication.ott.RedirectOneTimeTokenGenerationSuccessHandler;
-import org.springframework.security.web.webauthn.management.UserCredentialRepository;
-import org.springframework.security.web.webauthn.management.WebAuthnRelyingPartyOperations;
-import org.springframework.session.jdbc.PostgreSqlJdbcIndexedSessionRepositoryCustomizer;
-import org.springframework.session.security.web.authentication.SpringSessionRememberMeServices;
+import org.springframework.security.web.csrf.CsrfFilter;
 import org.springframework.security.web.header.writers.DelegatingRequestMatcherHeaderWriter;
 import org.springframework.security.web.header.writers.StaticHeadersWriter;
 import org.springframework.security.web.header.writers.frameoptions.XFrameOptionsHeaderWriter;
@@ -38,6 +36,10 @@ import org.springframework.security.web.servlet.util.matcher.PathPatternRequestM
 import org.springframework.security.web.util.matcher.NegatedRequestMatcher;
 import org.springframework.security.web.util.matcher.OrRequestMatcher;
 import org.springframework.security.web.util.matcher.RequestMatcher;
+import org.springframework.security.web.webauthn.management.UserCredentialRepository;
+import org.springframework.security.web.webauthn.management.WebAuthnRelyingPartyOperations;
+import org.springframework.session.jdbc.PostgreSqlJdbcIndexedSessionRepositoryCustomizer;
+import org.springframework.session.security.web.authentication.SpringSessionRememberMeServices;
 import org.springframework.util.StringUtils;
 import se.teaterihuskvarna.content.ContentSettings;
 
@@ -94,10 +96,15 @@ class SecurityConfiguration {
         "/forhandsgranska/**",
     };
 
+    /// The largest upload request, from `spring.servlet.multipart.max-request-size`.
+    private final long largestRequest;
+
     SecurityConfiguration(LoginLinks links, LinkRequestLimiter limiter, JdbcClient jdbc, LoginSettings settings,
             List<LoginDirectory> directories, WebAuthnRelyingPartyOperations relyingParty,
-            UserCredentialRepository passkeys, MessageSource messages, ContentSettings content) {
+            UserCredentialRepository passkeys, MessageSource messages, ContentSettings content,
+            MultipartProperties multipart) {
         this.content = content;
+        this.largestRequest = multipart.getMaxRequestSize().toBytes();
         this.links = links;
         this.limiter = limiter;
         this.jdbc = jdbc;
@@ -247,9 +254,11 @@ class SecurityConfiguration {
         http.logout(logout -> logout
                 .logoutUrl(urls.logout())
                 .logoutSuccessUrl(urls.loggedOut()));
+        RefusedRequests refused = new RefusedRequests(urls);
+        http.addFilterBefore(new OversizeUploadFilter(refused, largestRequest), CsrfFilter.class);
         http.exceptionHandling(exceptions -> exceptions
                 .authenticationEntryPoint(entryPoint(urls))
-                .accessDeniedHandler(new RefusedRequests(urls)));
+                .accessDeniedHandler(refused));
         // A new session at login, not the same row under a new id, which is
         // Spring's default. Spring Session JDBC saves a session by its row and
         // writes the id with it, so a request that loaded the session before the

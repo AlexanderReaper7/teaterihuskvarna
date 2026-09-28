@@ -515,6 +515,35 @@ td form {
   margin: 0;
 }
 
+/* Fields beyond a one-line input: the offer description and the document
+ * kind. Drawn the same as an input. */
+textarea,
+select {
+  width: 100%;
+  max-width: 28rem;
+  padding: 0.5rem 0.75rem;
+  border: 2px solid var(--color-muted);
+  border-radius: 0;
+  background: var(--color-white);
+  color: var(--color-text);
+  font: inherit;
+}
+
+textarea {
+  max-width: none;
+}
+
+textarea[aria-invalid="true"],
+select[aria-invalid="true"] {
+  border-color: var(--color-error);
+}
+
+/* A plain text an administrator typed, such as an offer's description, shown
+ * with its line breaks and nothing else. */
+.preserve-lines {
+  white-space: pre-line;
+}
+
 /* A text that wraps is how a long button fits a narrow screen, but a table
  * squeezes its columns first, and a row's short button would break in two. */
 td button {
