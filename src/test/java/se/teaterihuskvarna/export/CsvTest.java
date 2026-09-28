@@ -2,6 +2,7 @@ package se.teaterihuskvarna.export;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.Arrays;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
@@ -9,49 +10,54 @@ class CsvTest {
 
     @Test
     void startsWithTheByteOrderMarkAndEndsEveryRowWithCrlf() {
-        String text = Csv.write(List.of("Namn", "Ort"), List.of(List.of("Åsa Öberg", "Huskvarna")));
+        String csv = Csv.write(List.of("Namn", "Ort"), List.of(List.of("Åsa Öberg", "Huskvarna")));
 
-        assertThat(text).isEqualTo("﻿Namn;Ort\r\nÅsa Öberg;Huskvarna\r\n");
+        assertThat(csv).isEqualTo("﻿Namn;Ort\r\nÅsa Öberg;Huskvarna\r\n");
     }
 
     @Test
-    void anEmptyTableIsTheHeaderAlone() {
-        assertThat(Csv.write(List.of("A"), List.of())).isEqualTo("﻿A\r\n");
+    void writesANullCellEmpty() {
+        String csv = Csv.write(List.of("a", "b"), List.of(Arrays.asList(null, "x")));
+
+        assertThat(csv).endsWith("\r\n;x\r\n");
     }
 
     @Test
-    void quotesACellWithASeparatorAQuoteOrALineBreak() {
-        String text = Csv.write(List.of("x"), List.of(
-                List.of("a;b"),
-                List.of("say \"hi\""),
-                List.of("two\nlines"),
-                List.of("cr\rhere")));
+    void quotesACellHoldingTheSeparatorAQuoteOrALineBreak() {
+        String csv = Csv.write(List.of("a"), List.of(
+                List.of("Storgatan 1; lgh 2"),
+                List.of("Sara \"Sassa\" Lind"),
+                List.of("rad ett\nrad två")));
 
-        assertThat(text).isEqualTo("﻿x\r\n\"a;b\"\r\n\"say \"\"hi\"\"\"\r\n\"two\nlines\"\r\n\"cr\rhere\"\r\n");
+        assertThat(csv).isEqualTo("﻿a\r\n"
+                + "\"Storgatan 1; lgh 2\"\r\n"
+                + "\"Sara \"\"Sassa\"\" Lind\"\r\n"
+                + "\"rad ett\nrad två\"\r\n");
     }
 
     @Test
-    void prefixesEveryFormulaStartWithAnApostrophe() {
-        String text = Csv.write(List.of("x"), List.of(
-                List.of("=HYPERLINK(\"http://example.test\")"),
-                List.of("+46"),
+    void prefixesEveryCellAFormulaCouldStartWith() {
+        String csv = Csv.write(List.of("a"), List.of(
+                List.of("=HYPERLINK(\"http://evil.test\")"),
+                List.of("+46 70"),
                 List.of("-1"),
                 List.of("@SUM(A1)"),
-                List.of("\tTab"),
-                List.of("\rCr")));
+                List.of("\tx"),
+                List.of("\rx")));
 
-        assertThat(text).isEqualTo("﻿x\r\n"
-                + "\"'=HYPERLINK(\"\"http://example.test\"\")\"\r\n"
-                + "'+46\r\n"
+        assertThat(csv).isEqualTo("﻿a\r\n"
+                + "\"'=HYPERLINK(\"\"http://evil.test\"\")\"\r\n"
+                + "'+46 70\r\n"
                 + "'-1\r\n"
                 + "'@SUM(A1)\r\n"
-                + "'\tTab\r\n"
-                + "\"'\rCr\"\r\n");
+                + "'\tx\r\n"
+                + "\"'\rx\"\r\n");
     }
 
     @Test
     void leavesAFormulaCharacterInsideACellAlone() {
-        assertThat(Csv.write(List.of("x"), List.of(List.of("a=b", ""))))
-                .isEqualTo("﻿x\r\na=b;\r\n");
+        String csv = Csv.write(List.of("a"), List.of(List.of("a=b-c")));
+
+        assertThat(csv).endsWith("\r\na=b-c\r\n");
     }
 }

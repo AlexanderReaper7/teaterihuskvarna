@@ -93,7 +93,11 @@ class MembershipApplicationIT extends IntegrationTestSupport {
 
         mockMvc.perform(post(CONFIRMATION).param("token", token).with(csrf()))
                 .andExpect(status().isOk())
-                .andExpect(content().string(containsString(bankgiro)));
+                .andExpect(content().string(containsString(bankgiro)))
+                .andExpect(content().string(containsString("Årsavgiften är 50 kr för en person eller 100 kr för ett "
+                        + "hushåll. Betala till bankgiro " + bankgiro + " och skriv Karin Karlsson i meddelandet.")));
+        mockMvc.perform(get("/bli-medlem"))
+                .andExpect(content().string(containsString("kostar 50 kr per år för en person")));
 
         List<Map<String, Object>> members = jdbc.sql("""
                 SELECT m.full_name, m.phone, m.address, m.postal_code, m.city, a.email

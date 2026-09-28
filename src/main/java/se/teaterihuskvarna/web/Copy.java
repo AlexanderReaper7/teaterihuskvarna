@@ -53,6 +53,16 @@ public final class Copy {
         return Lifetimes.describe(messages, lifetime);
     }
 
+    /// @param ore an amount in öre
+    /// @return the amount in kronor, such as "50 kr" or "12,50 kr"
+    public String kronor(int ore) {
+        if (ore % 100 == 0) {
+            return messages.getMessage("money.kronor", new Object[] {String.valueOf(ore / 100)}, Swedish.LOCALE);
+        }
+        String amount = String.format(Swedish.LOCALE, "%d,%02d", ore / 100, ore % 100);
+        return messages.getMessage("money.kronor", new Object[] {amount}, Swedish.LOCALE);
+    }
+
     /// @param instant a moment
     /// @return its date in Sweden, such as "23 september 2026"
     public String date(Instant instant) {

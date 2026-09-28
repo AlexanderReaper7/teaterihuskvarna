@@ -126,8 +126,6 @@ class SecurityConfiguration {
                 .requestMatchers(urls.page(), urls.page() + "/**").permitAll()
                 .anyRequest().hasRole("ADMINISTRATOR"));
         login(http, LoginKind.ADMINISTRATOR, settings.administratorSession());
-        // Only this chain: a member cannot be removed, and an administrator
-        // can read the whole register.
         http.addFilterBefore(new ActiveLoginFilter(Directories.of(LoginKind.ADMINISTRATOR, directories)),
                 AuthorizationFilter.class);
         return http.build();
@@ -149,6 +147,8 @@ class SecurityConfiguration {
                         "/bli-medlem/**",
                         "/api/membership-applications",
                         "/api/membership-applications/**",
+                        "/inbjudan",
+                        "/api/invitations/**",
                         "/api/login-links",
                         "/api/csrf",
                         // Only the dev profile maps anything here; elsewhere
@@ -168,6 +168,10 @@ class SecurityConfiguration {
         http.csrf(csrf -> csrf.ignoringRequestMatchers(
                 PathPatternRequestMatcher.withDefaults().matcher(HttpMethod.POST, "/api/sanity/webhook")));
         frames(http);
+        // An administrator can delete a member, so a member's login needs the
+        // same check as an administrator's.
+        http.addFilterBefore(new ActiveLoginFilter(Directories.of(LoginKind.MEMBER, directories)),
+                AuthorizationFilter.class);
         return http.build();
     }
 

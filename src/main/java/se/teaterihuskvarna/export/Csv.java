@@ -1,56 +1,59 @@
 package se.teaterihuskvarna.export;
 
 import java.util.List;
+import org.jspecify.annotations.Nullable;
 
-/// CSV text that Excel opens as Swedish users expect: UTF-8 with a byte order
-/// mark, so å, ä and ö survive, `;` between cells, because Excel in a Swedish
-/// locale splits on `;` and not on `,`, and CRLF after every row.
+/// Writes CSV for Excel as it opens files in Sweden: a UTF-8 byte order mark so
+/// that å, ä and ö survive, `;` between cells because `,` is the decimal
+/// separator there, and CRLF after every row.
 ///
 /// A cell is quoted when it holds `;`, `"`, CR or LF, with `"` doubled inside.
-/// A cell that starts with `=`, `+`, `-`, `@`, a tab or CR gets a `'` in front,
-/// so a spreadsheet shows it as text rather than running it as a formula. A
-/// member's name or phone number is typed by someone else, and `=HYPERLINK(...)`
-/// in one would otherwise become a live link in the administrator's sheet
-/// (OWASP, "CSV Injection").
+/// A cell starting with `=`, `+`, `-`, `@`, tab or CR gets a `'` in front, so a
+/// spreadsheet shows it as text instead of running it as a formula (OWASP, "CSV
+/// Injection"). A name like `=HYPERLINK(...)` typed into a form would otherwise
+/// run on the administrator's machine.
 public final class Csv {
 
-    /// U+FEFF, which UTF-8 encodes as EF BB BF.
-    private static final char BOM = '﻿';
-    private static final String SEPARATOR = ";";
-    private static final String LINE_END = "\r\n";
+    private static final char BOM = '\uFEFF';
 
     private Csv() {
     }
 
-    /// @param header the column names, written as the first row
-    /// @param rows   one list of cells per row
-    /// @return the whole file as text, starting with the byte order mark
+    /// @param header the column names
+    /// @param rows   the rows, each as long as the header; a null cell is written empty
+    /// @return the file's text, starting with the byte order mark
     public static String write(List<String> header, List<List<String>> rows) {
-        StringBuilder text = new StringBuilder().append(BOM);
-        row(text, header);
+        StringBuilder out = new StringBuilder().append(BOM);
+        row(out, header);
         for (List<String> row : rows) {
-            row(text, row);
+            row(out, row);
         }
-        return text.toString();
+        return out.toString();
     }
 
-    private static void row(StringBuilder text, List<String> cells) {
+    private static void row(StringBuilder out, List<String> cells) {
         for (int i = 0; i < cells.size(); i++) {
             if (i > 0) {
-                text.append(SEPARATOR);
+                out.append(';');
             }
-            text.append(cell(cells.get(i)));
+            out.append(cell(cells.get(i)));
         }
-        text.append(LINE_END);
+        out.append("\r\n");
     }
 
-    private static String cell(String value) {
-        String guarded = value;
-        if (!value.isEmpty() && "=+-@\t\r".indexOf(value.charAt(0)) >= 0) {
-            guarded = "'" + value;
+    private static String cell(@Nullable String value) {
+        if (value == null || value.isEmpty()) {
+            return "";
         }
-        boolean quote = guarded.contains(SEPARATOR) || guarded.contains("\"") || guarded.contains("\r")
-                || guarded.contains("\n");
-        return quote ? "\"" + guarded.replace("\"", "\"\"") + "\"" : guarded;
+        String text = value;
+        char first = text.charAt(0);
+        if (first == '=' || first == '+' || first == '-' || first == '@' || first == '\t' || first == '\r') {
+            text = "'" + text;
+        }
+        if (text.indexOf(';') >= 0 || text.indexOf('"') >= 0 || text.indexOf('\r') >= 0
+                || text.indexOf('\n') >= 0) {
+            return '"' + text.replace("\"", "\"\"") + '"';
+        }
+        return text;
     }
 }

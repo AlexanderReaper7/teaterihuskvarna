@@ -18,6 +18,13 @@ import se.teaterihuskvarna.document.NoSuchDocument;
 import se.teaterihuskvarna.document.NotAPdf;
 import se.teaterihuskvarna.login.NoSuchDevice;
 import se.teaterihuskvarna.login.NoSuchPasskey;
+import se.teaterihuskvarna.member.AccountNeedsEmail;
+import se.teaterihuskvarna.member.EmailTaken;
+import se.teaterihuskvarna.member.FeeAlreadyMarked;
+import se.teaterihuskvarna.member.MemberHasAccount;
+import se.teaterihuskvarna.member.NoSuchFee;
+import se.teaterihuskvarna.member.NoSuchHousehold;
+import se.teaterihuskvarna.member.NoSuchMember;
 import se.teaterihuskvarna.offer.NoSuchOffer;
 import se.teaterihuskvarna.offer.OfferFull;
 import se.teaterihuskvarna.offer.RegistrationClosed;
@@ -132,6 +139,55 @@ public class ProblemResponses {
     @ExceptionHandler
     public ProblemDetail tooLarge(FileTooLarge exception) {
         return problem(HttpStatus.CONTENT_TOO_LARGE, "File too large", exception);
+    }
+
+    /// @param exception the service finding no member with that id, or none the caller may invite
+    /// @return 404
+    @ExceptionHandler
+    public ProblemDetail noSuch(NoSuchMember exception) {
+        return problem(HttpStatus.NOT_FOUND, "No such member", exception);
+    }
+
+    /// @param exception the service finding no household with that id
+    /// @return 404
+    @ExceptionHandler
+    public ProblemDetail noSuch(NoSuchHousehold exception) {
+        return problem(HttpStatus.NOT_FOUND, "No such household", exception);
+    }
+
+    /// @param exception the service finding no payment of the member's own this year
+    /// @return 404
+    @ExceptionHandler
+    public ProblemDetail noSuch(NoSuchFee exception) {
+        return problem(HttpStatus.NOT_FOUND, "No such fee", exception);
+    }
+
+    /// @param exception the service's refusal to give two accounts one address
+    /// @return 409
+    @ExceptionHandler
+    public ProblemDetail emailTaken(EmailTaken exception) {
+        return problem(HttpStatus.CONFLICT, "Email taken", exception);
+    }
+
+    /// @param exception the service's refusal to leave an account without an address
+    /// @return 409
+    @ExceptionHandler
+    public ProblemDetail accountNeedsEmail(AccountNeedsEmail exception) {
+        return problem(HttpStatus.CONFLICT, "Account needs an email", exception);
+    }
+
+    /// @param exception the service's refusal to mark this year's fee twice
+    /// @return 409
+    @ExceptionHandler
+    public ProblemDetail alreadyMarked(FeeAlreadyMarked exception) {
+        return problem(HttpStatus.CONFLICT, "Fee already marked", exception);
+    }
+
+    /// @param exception the service's refusal to invite a member who can already log in
+    /// @return 409
+    @ExceptionHandler
+    public ProblemDetail hasAccount(MemberHasAccount exception) {
+        return problem(HttpStatus.CONFLICT, "Member has an account", exception);
     }
 
     private static ProblemDetail problem(HttpStatus status, String title, RuntimeException exception) {

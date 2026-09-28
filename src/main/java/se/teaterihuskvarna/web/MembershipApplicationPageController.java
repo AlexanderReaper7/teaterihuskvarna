@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import se.teaterihuskvarna.member.ApplicationForm;
+import se.teaterihuskvarna.member.AssociationSettings;
 import se.teaterihuskvarna.member.MembershipApplicationService;
 import se.teaterihuskvarna.member.Welcome;
 
@@ -23,9 +24,17 @@ import se.teaterihuskvarna.member.Welcome;
 public class MembershipApplicationPageController {
 
     private final MembershipApplicationService applications;
+    private final AssociationSettings association;
 
-    MembershipApplicationPageController(MembershipApplicationService applications) {
+    MembershipApplicationPageController(MembershipApplicationService applications, AssociationSettings association) {
         this.applications = applications;
+        this.association = association;
+    }
+
+    /// @return the fee amounts, which the form states
+    @ModelAttribute("fees")
+    public AssociationSettings fees() {
+        return association;
     }
 
     /// @param model receives an empty form and no errors

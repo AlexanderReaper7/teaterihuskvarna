@@ -7,5 +7,7 @@ package se.teaterihuskvarna.member;
 /// @param fullName the new member's name
 /// @param email    the address of the new account
 /// @param bankgiro the association's bankgiro number, for the fee
-public record Welcome(String fullName, String email, String bankgiro) {
+/// @param feeIndividualOre the yearly fee for one member, in öre
+/// @param feeHouseholdOre  the yearly fee for a household, in öre
+public record Welcome(String fullName, String email, String bankgiro, int feeIndividualOre, int feeHouseholdOre) {
 }

@@ -92,7 +92,7 @@ A membership fee that covers only the member against whom the payment is recorde
 
 ### Household fee | Avgift för familj
 
-A membership fee that covers the payer and every member in the payer's household.
+A membership fee that covers the payer and whoever is in the household it was paid for now, so moving a member changes which household fee covers them. The fee stays with that household when the payer is deleted. Decided by the user on 2026-09-28 ([decisions/0025](docs/decisions/0025-member-register-in-the-application.md)).
 
 ### Fee status | Avgiftsstatus
 

@@ -29,6 +29,8 @@
     <p>${copy.text("admin.signedInAs", signedIn.fullName())}</p>
     @template.tag.logout(copy = copy, csrf = csrf, action = "/admin/logga-ut")
     <ul>
+        <li><a href="/admin/medlemmar">${copy.text("register.heading")}</a></li>
+        <li><a href="/admin/hushall">${copy.text("household.heading")}</a></li>
         <li><a href="/admin/erbjudanden">${copy.text("adminOffers.heading")}</a></li>
         <li><a href="/admin/handlingar">${copy.text("adminDocuments.heading")}</a></li>
     </ul>
