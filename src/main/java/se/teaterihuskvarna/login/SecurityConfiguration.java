@@ -1,6 +1,7 @@
 package se.teaterihuskvarna.login;
 
 import java.time.Duration;
+import java.util.Arrays;
 import java.util.List;
 import org.springframework.boot.session.autoconfigure.DefaultCookieSerializerCustomizer;
 import org.springframework.context.MessageSource;
@@ -30,7 +31,15 @@ import org.springframework.security.web.webauthn.management.UserCredentialReposi
 import org.springframework.security.web.webauthn.management.WebAuthnRelyingPartyOperations;
 import org.springframework.session.jdbc.PostgreSqlJdbcIndexedSessionRepositoryCustomizer;
 import org.springframework.session.security.web.authentication.SpringSessionRememberMeServices;
+import org.springframework.security.web.header.writers.DelegatingRequestMatcherHeaderWriter;
+import org.springframework.security.web.header.writers.StaticHeadersWriter;
+import org.springframework.security.web.header.writers.frameoptions.XFrameOptionsHeaderWriter;
+import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
+import org.springframework.security.web.util.matcher.NegatedRequestMatcher;
+import org.springframework.security.web.util.matcher.OrRequestMatcher;
+import org.springframework.security.web.util.matcher.RequestMatcher;
 import org.springframework.util.StringUtils;
+import se.teaterihuskvarna.content.ContentSettings;
 
 /// The access rules and the two kinds of login, one filter chain each. Each
 /// kind logs in by link or by passkey ([PasskeyLogin]).
@@ -63,10 +72,32 @@ class SecurityConfiguration {
     private final WebAuthnRelyingPartyOperations relyingParty;
     private final UserCredentialRepository passkeys;
     private final DeviceNames devices;
+    private final ContentSettings content;
+
+    /// The public pages with content from Sanity, which anyone may read and the
+    /// Studio may show in its Presentation preview (R009). `/forhandsgranska`
+    /// is where the preview starts and ends, and the webhook is Sanity's.
+    private static final String[] CONTENT_PAGES = {
+        "/",
+        // The start page under the dev profile; elsewhere nothing maps it.
+        "/start",
+        "/kalender",
+        "/evenemang/**",
+        "/nyheter",
+        "/nyheter/**",
+        "/om-foreningen",
+        "/styrelsen",
+        "/produktioner",
+        "/ludde-priser",
+        "/kontakt",
+        "/partners",
+        "/forhandsgranska/**",
+    };
 
     SecurityConfiguration(LoginLinks links, LinkRequestLimiter limiter, JdbcClient jdbc, LoginSettings settings,
             List<LoginDirectory> directories, WebAuthnRelyingPartyOperations relyingParty,
-            UserCredentialRepository passkeys, MessageSource messages) {
+            UserCredentialRepository passkeys, MessageSource messages, ContentSettings content) {
+        this.content = content;
         this.links = links;
         this.limiter = limiter;
         this.jdbc = jdbc;
@@ -101,14 +132,17 @@ class SecurityConfiguration {
     @Order
     SecurityFilterChain memberChain(HttpSecurity http) {
         http.authorizeHttpRequests(requests -> requests
+                .requestMatchers(CONTENT_PAGES).permitAll()
                 .requestMatchers(
-                        "/",
+                        "/api/content/**",
+                        "/api/sanity/webhook",
                         "/logga-in",
                         "/logga-in/**",
                         "/bli-medlem",
                         "/bli-medlem/**",
                         "/api/membership-applications",
                         "/api/membership-applications/**",
+                        "/api/login-links",
                         "/api/csrf",
                         // Only the dev profile maps anything here; elsewhere
                         // these paths answer 404.
@@ -123,7 +157,31 @@ class SecurityConfiguration {
                 .requestMatchers("/medlem", "/medlem/**", "/api/member", "/api/member/**").hasRole("MEMBER")
                 .anyRequest().access(UnknownPaths.denied()));
         login(http, LoginKind.MEMBER, settings.memberSession());
+        // Sanity signs the webhook instead, and cannot fetch a CSRF token first.
+        http.csrf(csrf -> csrf.ignoringRequestMatchers(
+                PathPatternRequestMatcher.withDefaults().matcher(HttpMethod.POST, "/api/sanity/webhook")));
+        frames(http);
         return http.build();
+    }
+
+    /// No page may be shown in a frame, except that the Studio may show a
+    /// content page in its Presentation preview. Spring's `X-Frame-Options:
+    /// DENY` cannot name another site, so a content page gets
+    /// `Content-Security-Policy: frame-ancestors` instead, which browsers obey
+    /// in its place. Without a configured Studio, the content pages allow only
+    /// this site itself.
+    private void frames(HttpSecurity http) {
+        RequestMatcher contentPage = new OrRequestMatcher(Arrays.stream(CONTENT_PAGES)
+                .map(path -> PathPatternRequestMatcher.withDefaults().matcher(HttpMethod.GET, path))
+                .map(RequestMatcher.class::cast)
+                .toList());
+        String ancestors = StringUtils.hasText(content.studioUrl()) ? "'self' " + content.studioUrl() : "'self'";
+        http.headers(headers -> headers
+                .frameOptions(options -> options.disable())
+                .addHeaderWriter(new DelegatingRequestMatcherHeaderWriter(contentPage,
+                        new StaticHeadersWriter("Content-Security-Policy", "frame-ancestors " + ancestors)))
+                .addHeaderWriter(new DelegatingRequestMatcherHeaderWriter(new NegatedRequestMatcher(contentPage),
+                        new XFrameOptionsHeaderWriter(XFrameOptionsHeaderWriter.XFrameOptionsMode.DENY))));
     }
 
     /// Sets the session cookie to outlive the browser once someone logs in; see

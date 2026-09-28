@@ -68,6 +68,21 @@ server:
 # rather than mailing a link to the wrong site or a wrong payment instruction.
 # application-dev.yaml sets invented values for local use.
 teaterihuskvarna:
+  # Where the public start page answers. The dev profile moves it to /start,
+  # because the development index has /.
+  start-page: /
+  # The public content: docs/decisions/0021. No defaults for the project and
+  # dataset, so a production without them refuses to start.
+  content:
+    source: ${CONTENT_SOURCE:sanity}
+    project-id: ${SANITY_PROJECT_ID:}
+    dataset: ${SANITY_DATASET_NAME:}
+    token: ${SANITY_API_KEY:}
+    webhook-secret: ${SANITY_WEBHOOK_SECRET:}
+    studio-url: ${SANITY_STUDIO_URL:}
+    # R008 allows a minute from publishing to the site. The webhook usually
+    # clears the copy at once, and this bounds the time when it does not.
+    max-age: 45s
   mail:
     site-url: ${SITE_URL:}
     from: ${MAIL_FROM:}

@@ -36,7 +36,7 @@ So the split is real but it is a split of responsibilities, not of processes. Po
 
 The natural phrasing, "every page has a matching endpoint", does not work. `GET /` renders the start page, and there is no sensible REST equivalent of rendering a start page. Pages and endpoints are not in one-to-one correspondence and never will be.
 
-Capabilities are. `MemberService.findByEmail` either has a caller in `api` or it does not. So the rule walks the method calls out of every class in each adapter package, keeps the ones whose target is annotated `@Service`, and asserts that the `api` set contains the `web` set.
+Capabilities are. `MemberService.findByEmail` either has a caller in `api` or it does not. So the rule walks the method calls out of every class in each adapter package, keeps the ones whose target is a Spring bean outside the adapters, `@Service` or any other `@Component`, and asserts that the `api` set contains the `web` set. It counted `@Service` alone until 2026-09-28, when the GPT-6 Sol review found that a `@Component` slipped past it; widening it found two capabilities with no endpoint, the Studio preview and the check a login link's page makes, and both got one.
 
 One direction only. `api` may expose capabilities that no page uses; that is a REST API being more complete than the site, which is the direction the invariant wants. The reverse, a page doing something no endpoint can, is what fails the build.
 

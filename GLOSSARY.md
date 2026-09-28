@@ -110,7 +110,15 @@ A scheduled public activity listed on the site.
 
 ### Event series | Serie
 
-A named grouping of related events, such as Kaffe med drömmar or Alf Henrikson-dagen.
+A named grouping of related events, such as Kaffe med drömmar or Alf Henrikson-dagen. A `serie` document in Sanity that an event refers to, and the calendar's filter ([0021](docs/decisions/0021-content-from-sanity.md)).
+
+### Preview | Förhandsgranskning
+
+The site as it looks with an editor's unpublished drafts, shown inside Sanity's Presentation tool and nowhere else (R009, [0021](docs/decisions/0021-content-from-sanity.md)).
+
+### Fixed page | Sida
+
+One of the pages R004 names, such as Styrelsen, written in Sanity as a `sida` document whose slug is the page's address.
 
 ### Offer | Erbjudande
 
