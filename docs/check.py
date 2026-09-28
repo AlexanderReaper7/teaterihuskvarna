@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Checks the docs tree for the eight things that rot silently.
+"""Checks the docs tree for the nine things that rot silently.
 
 1. requirements.md quotes the produktagare's Swedish word for word. A quotation
    that drifts from projektplan-original.md is no longer a quotation.
@@ -26,15 +26,28 @@
    every document, and no issue follows two ids. Whether that issue really is
    the requirement's on GitHub is not checked, because the check runs offline.
 
+9. Everything that can be a link is one, decided by the user on 2026-09-26:
+   a bare URL, and a file or directory tracked in this repository, whether
+   written as `code` or as plain text, in full or as the end of exactly one
+   file's path. A name that ends several paths fails until more of the path
+   is written. Requirement ids and issue numbers stay
+   plain text, which the user decided the same day: linked, they clutter. Code
+   blocks, front matter, a document naming itself, and the files in
+   LINK_EXEMPT are left alone. --fix-links rewrites what it finds. Decision
+   numbers and commit hashes are not checked: "its 0010"
+   can name another project's record, and a seven-letter hex word is not
+   always a commit.
+
 The mermaid check needs mmdc on PATH. Without it the check is skipped and says
 so loudly; --require-mermaid turns that skip into a failure, which is what CI
 passes. A check that silently passes when its tool is missing is worse than no
 check, because it reports success it did not earn.
 
-Run: python3 docs/check.py [--require-mermaid]
+Run: python3 docs/check.py [--require-mermaid] [--fix-links]
      (exit 0 clean, 1 with findings on stderr)
 """
 import datetime
+import os
 import re
 import shutil
 import subprocess
@@ -337,6 +350,138 @@ def check_links():
                 problems.append(f"{rel}: link [{label}]({target}) points at nothing")
 
 
+# The frozen customer documents must not change, and notes.md is the user's
+# own notes from the first meeting.
+LINK_EXEMPT = {
+    "docs/projektplan-original.md",
+    "docs/projektplan-original.en.md",
+    "docs/meetings/notes.md",
+}
+# Already a link, an autolink, or a code span, in the order Markdown reads them.
+LINK_TOKEN = re.compile(r"!?\[[^\]]*\]\([^)]*\)|<https?://[^>]+>|`[^`]+`")
+BARE_URL = re.compile(r"https?://[^\s<>()\[\]`]+[^\s<>()\[\]`.,;:!?'\"]")
+PLAIN_PATH = re.compile(r"(?<![\w/.\-\[])(?:\./)?([\w.\-]+(?:/[\w.\-]+)*/?)")
+
+
+def tracked_paths():
+    listed = subprocess.run(
+        ["git", "ls-files", "-z"], cwd=ROOT, capture_output=True, text=True, check=True,
+    ).stdout
+    files = set(filter(None, listed.split("\0")))
+    dirs = {str(Path(f).parents[i]) for f in files for i in range(len(Path(f).parents) - 1)}
+    return files, dirs
+
+
+def path_target(md, written, files, dirs):
+    """The relative link for a path written in md, None if it names nothing
+    tracked, or the list of candidates if it could name several. Tried from
+    md's directory, then the root, then as the end of exactly one tracked
+    file's path, so `passkey.js` finds src/main/resources/static/js/passkey.js.
+    Directories only match exactly: as a suffix, `test` or `web` would turn
+    ordinary words into links."""
+    name = written.removeprefix("./")
+    is_dir = name.endswith("/")
+    name = name.rstrip("/")
+    if not name or name in (".", ".."):
+        return None
+    here = md.parent.relative_to(ROOT)
+    for base in (here, Path(".")):
+        candidate = Path(*(base / name).parts)
+        try:
+            key = str(candidate.resolve().relative_to(ROOT)) if ".." in candidate.parts else str(candidate)
+        except ValueError:
+            continue
+        if key in files and not is_dir:
+            if ROOT / key == md:
+                return None
+            target = Path(key)
+        elif key in dirs:
+            target = Path(key)
+        else:
+            continue
+        rel = Path(os.path.relpath(ROOT / target, md.parent)).as_posix()
+        return rel + ("/" if key in dirs else "")
+    if is_dir or name.startswith(("/", "../")):
+        return None
+    matches = sorted(f for f in files if f == name or f.endswith("/" + name))
+    if len(matches) > 1:
+        return matches
+    if not matches or ROOT / matches[0] == md:
+        return None
+    return Path(os.path.relpath(ROOT / matches[0], md.parent)).as_posix()
+
+
+def unlinked(md, files, dirs):
+    """(line index, start, end, replacement) for everything in md that could
+    be a link and is not, and (line index, name, candidates) for each name
+    that could be more than one file."""
+    found = []
+    ambiguous = []
+    lines = md.read_text(encoding="utf-8").split("\n")
+    fenced = False
+    body_start = 0
+    if lines and lines[0] == "---":
+        body_start = lines.index("---", 1) + 1
+    for i, line in enumerate(lines):
+        if i < body_start:
+            continue
+        if line.lstrip().startswith(("```", "~~~")):
+            fenced = not fenced
+            continue
+        if fenced or line.startswith("    ") and not line.lstrip().startswith(("-", "|", "*")) and line.strip():
+            continue
+        pos = 0
+        for token in list(LINK_TOKEN.finditer(line)) + [None]:
+            end = token.start() if token else len(line)
+            text = line[pos:end]
+            for m in BARE_URL.finditer(text):
+                found.append((i, pos + m.start(), pos + m.end(), f"[{m.group(0)}]({m.group(0)})"))
+            for m in PLAIN_PATH.finditer(text):
+                word = m.group(0).rstrip(".")
+                if "/" not in word and not re.search(r"\.[A-Za-z]", word):
+                    continue
+                if any(u.start() <= m.start() < u.end() for u in BARE_URL.finditer(text)):
+                    continue
+                target = path_target(md, word, files, dirs)
+                if isinstance(target, list):
+                    ambiguous.append((i, word, target))
+                elif target:
+                    found.append((i, pos + m.start(), pos + m.start() + len(word), f"[{word}]({target})"))
+            if token and token.group(0).startswith("`"):
+                target = path_target(md, token.group(0)[1:-1].strip(), files, dirs)
+                if isinstance(target, list):
+                    ambiguous.append((i, token.group(0), target))
+                elif target:
+                    found.append((i, token.start(), token.end(), f"[{token.group(0)}]({target})"))
+            pos = token.end() if token else pos
+    return lines, found, ambiguous
+
+
+def check_everything_linked(fix):
+    files, dirs = tracked_paths()
+    fixed = 0
+    for md in markdown_files():
+        rel = md.relative_to(ROOT).as_posix()
+        if rel in LINK_EXEMPT:
+            continue
+        lines, found, ambiguous = unlinked(md, files, dirs)
+        for i, name, candidates in ambiguous:
+            problems.append(f"{rel}:{i + 1}: {name} could be any of {', '.join(candidates)}; write enough of the path to pick one")
+        if not found:
+            continue
+        if fix:
+            for i, start, end, new in sorted(found, reverse=True):
+                lines[i] = lines[i][:start] + new + lines[i][end:]
+            md.write_text("\n".join(lines), encoding="utf-8")
+            fixed += len(found)
+            continue
+        for i, start, end, new in found:
+            problems.append(f"{rel}:{i + 1}: {lines[i][start:end]} could be a link: {new}")
+    if fix:
+        print(f"linked {fixed} item(s)")
+
+
+check_everything_linked("--fix-links" in sys.argv[1:])
 check_requirements()
 check_links()
 check_footnotes()
@@ -353,7 +498,7 @@ if problems:
     sys.exit(1)
 print(
     f"docs ok: {sum(EXPECTED_TOTALS.values())} requirements quoted intact, "
-    f"all relative links resolve, footnotes match, glossary headings name both words, "
+    f"all relative links resolve, everything that can be a link is one, footnotes match, glossary headings name both words, "
     f"{diagrams} mermaid diagrams parse, every document states its provenance "
     f"({unreviewed} still unreviewed)"
 )

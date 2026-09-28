@@ -1,9 +1,11 @@
 // Where the e2e stack answers, and the seed data DevSeed puts in its empty
-// database. e2e/compose.e2e.yaml publishes the ports.
+// database. The suite runs in the application container's network namespace,
+// so the application is localhost and Mailpit is its service name:
+// e2e/compose.e2e.yaml.
 
 export const SITE = "http://localhost:55556";
 // compose.dev.yaml serves Mailpit under /mailpit/ (MP_WEBROOT).
-export const MAILPIT = "http://localhost:55025/mailpit";
+export const MAILPIT = "http://mail:8025/mailpit";
 
 export type Kind = "member" | "administrator";
 

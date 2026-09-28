@@ -9,7 +9,12 @@
 #    `git config hooks.allowMainPush true`.
 # 2. A force-push to main, which rewrites history under everyone else's clone.
 #    This applies to the owner too; a deliberate rewrite uses --no-verify.
-# 3. Any ref that contains a denied commit, one taken off main by rewriting
+# 3. A force-push to any other branch, which is how a rebase loses a
+#    teammate's commits. Branches catch up by merging main in
+#    (docs/decisions/0020-pull-requests-and-merging.md). A clone whose agents
+#    rebase their own branches opts out with
+#    `git config hooks.allowForcePush true`.
+# 4. Any ref that contains a denied commit, one taken off main by rewriting
 #    history. A clone made before the rewrite still has it, and pushing a branch
 #    built on it would bring it back.
 
@@ -43,6 +48,16 @@ while read -r local_ref local_sha remote_ref remote_sha; do
   fi
 
   [ "$local_sha" = "$zero" ] && continue
+
+  if [ "$remote_ref" != "refs/heads/main" ] && [ "$remote_sha" != "$zero" ] \
+    && [ "$(git config --bool hooks.allowForcePush)" != "true" ] \
+    && ! git merge-base --is-ancestor "$remote_sha" "$local_sha" 2>/dev/null; then
+    echo "pre-push: refusing to push $local_ref; it would drop commits already on GitHub." >&2
+    echo "  Bring them in first, then push again: git pull --no-rebase" >&2
+    status=1
+    continue
+  fi
+
   for denied in $denied_commits; do
     # A clone made after the rewrite never had the commit, so it cannot be in
     # anything pushed from there.

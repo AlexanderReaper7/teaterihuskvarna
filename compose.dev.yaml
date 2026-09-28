@@ -9,13 +9,21 @@
 services:
   proxy:
     # Plain HTTP on one port, with no certificates and no redirect to HTTPS.
+    # Traefik reads labels from every container on the docker host, so the
+    # constraint keeps it to this compose project. Without it, two checkouts
+    # running a dev stack each would share the router "app" and split requests
+    # between both applications.
     command: !override
       - --providers.docker.exposedbydefault=false
+      - --providers.docker.constraints=Label(`com.docker.compose.project`,`${COMPOSE_PROJECT_NAME}`)
       - --entrypoints.web.address=:80
     ports: !override
       - "${PROXY_HTTP_PORT:-8000}:80"
 
   app:
+    # No fixed tag, so compose names the image after the project, and a build
+    # in one checkout never replaces the image another checkout's stack runs.
+    image: !reset null
     environment:
       # Invented settings, DevSeed, and mail to Mailpit: application-dev.yaml.
       SPRING_PROFILES_ACTIVE: dev

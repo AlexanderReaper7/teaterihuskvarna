@@ -8,7 +8,7 @@ description: Which tool migrates the database schema.
 
 ## Decision
 
-Flyway 13.7.0, `flyway-core` with `flyway-database-postgresql`, migrations written as plain `.sql` files under `src/main/resources/db/migration`. Not Liquibase.
+Flyway 13.7.0, `flyway-core` with `flyway-database-postgresql`, migrations written as plain `.sql` files under [`src/main/resources/db/migration`](../../src/main/resources/db/migration/). Not Liquibase.
 
 ## Why this is decided before the first table exists
 

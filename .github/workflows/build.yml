@@ -10,8 +10,12 @@
 # docs/decisions/0013-three-static-analysis-gates.md.
 name: build
 
+# A commit on a pull request's branch would otherwise run twice, once for the
+# push and once for the pull request. A branch gets CI once it has a pull
+# request: docs/decisions/0020-pull-requests-and-merging.md.
 on:
   push:
+    branches: [main]
   pull_request:
 
 # Read the repository and nothing else. No job here writes to GitHub, so a
@@ -25,13 +29,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7.0.1
       - name: Tests and the three static analysis gates
-        run: |
-          docker run --rm --network host \
-            -v "$PWD":/w -w /w \
-            -v "$HOME/.m2":/root/.m2 \
-            -v /var/run/docker.sock:/var/run/docker.sock \
-            eclipse-temurin:25.0.4_7-jdk-alpine \
-            ./mvnw -B -ntp verify
+        run: sh scripts/maven.sh verify
 
   image:
     runs-on: ubuntu-latest
@@ -39,4 +37,4 @@ jobs:
     steps:
       - uses: actions/checkout@v7.0.1
       - name: Build the image
-        run: docker build -t teaterihuskvarna:${{ github.sha }} .
+        run: docker build --build-context git=.git -t teaterihuskvarna:${{ github.sha }} .

@@ -64,7 +64,7 @@ Reopening this means turning on `-Xdoclint:all -Werror` in `maven-compiler-plugi
 
 Returning a copy of an associated entity would hand back an object Hibernate does not manage: writes to it would never reach the database, and `==` against the same row loaded elsewhere in the persistence context would be false. The identity is the association.
 
-The detector cannot tell an entity reference from a mutable value, so the exclusion is scoped to the package. What makes that safe is a check that can be run: every field in that package is a `Long`, a `String`, an `Instant` or another entity, and no getter returns a collection. The justification lives in `spotbugs-exclude.xml` next to the exclusion, because an exclusion whose reasoning is in another file is one nobody checks.
+The detector cannot tell an entity reference from a mutable value, so the exclusion is scoped to the package. What makes that safe is a check that can be run: every field in that package is a `Long`, a `String`, an `Instant` or another entity, and no getter returns a collection. The justification lives in [`spotbugs-exclude.xml`](../../spotbugs-exclude.xml) next to the exclusion, because an exclusion whose reasoning is in another file is one nobody checks.
 
 Controllers and services stay under the detector. A second entity package gets its own entry only after that check has been run against it.
 
@@ -85,7 +85,7 @@ and never named the file or the line. Finding the violation meant opening `targe
         SingleSpaceSeparator: Use a single space to separate non-whitespace characters.
 ```
 
-The configuration is now `failOnViolation` with `logViolationsToConsole`, both of which are the plugin's defaults; `failsOnError` was the setting that turned them off. The VS Code task in `.vscode/tasks.json` parses those lines into the Problems panel, which only works because the location is printed.
+The configuration is now `failOnViolation` with `logViolationsToConsole`, both of which are the plugin's defaults; `failsOnError` was the setting that turned them off. The VS Code task in [`.vscode/tasks.json`](../../.vscode/tasks.json) parses those lines into the Problems panel, which only works because the location is printed.
 
 The worry with dropping `failsOnError` is Checkstyle's own errors, a file it cannot parse rather than a rule it violates. Probed on 2026-09-22 with a deliberately broken source file: the build still fails, and before any rule runs.
 

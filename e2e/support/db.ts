@@ -5,8 +5,9 @@ import pg from "pg";
 import { ADMINISTRATORS } from "./site";
 
 const pool = new pg.Pool({
-  host: "localhost",
-  port: 55433,
+  // The service name, from inside the application's network namespace.
+  host: "db",
+  port: 5432,
   database: "teaterihuskvarna",
   user: "teaterihuskvarna",
   password: "e2e",
