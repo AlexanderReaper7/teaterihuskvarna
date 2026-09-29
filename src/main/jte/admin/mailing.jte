@@ -21,8 +21,6 @@
     <dl>
         <dt>${copy.text("adminMailings.log.audience")}</dt>
         <dd>${mailing.audienceName()}</dd>
-        <dt>${copy.text("adminMailings.log.recipients")}</dt>
-        <dd>${mailing.recipients()}</dd>
         <dt>${copy.text("adminMailings.createdAt")}</dt>
         <dd>${copy.dateTime(mailing.createdAt())}</dd>
         <dt>${copy.text("adminMailings.campaign")}</dt>

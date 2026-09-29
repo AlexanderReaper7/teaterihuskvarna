@@ -109,9 +109,10 @@ The public pages read from Sanity in production. Under the `dev` profile they
 read invented content from [`fixture.json`](src/main/resources/content/fixture.json) instead, and the real
 start page is at `/start`, since `/` is the index. Set `CONTENT_SOURCE=sanity`
 and the `SANITY_` lines in `.env` to read a real dataset
-([0021](docs/decisions/0021-content-from-sanity.md)). Mailings under the `dev` profile go to an
-in-memory Brevo that sends nothing; `BREVO_API=http` and the `BREVO_` lines
-make them real drafts in a Brevo account ([0023](docs/decisions/0023-brevo-list-per-mailing.md)).
+([0021](docs/decisions/0021-content-from-sanity.md)). Brevo contacts and mailings under the `dev`
+profile go to an in-memory Brevo that sends nothing; `BREVO_API=http` and the
+`BREVO_` lines make them real contacts and drafts in a Brevo account
+([0026](docs/decisions/0026-outbox-and-brevo-contacts.md)).
 
 [`compose.dev.yaml`](compose.dev.yaml) also mounts [`src/main/resources/static`](src/main/resources/static/) into the container,
 so an edited stylesheet or image shows on reload. Templates and Java still

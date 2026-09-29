@@ -19,8 +19,8 @@ import se.teaterihuskvarna.document.NotAPdf;
 import se.teaterihuskvarna.login.NoSuchDevice;
 import se.teaterihuskvarna.login.NoSuchPasskey;
 import se.teaterihuskvarna.mailing.BrevoUnavailable;
+import se.teaterihuskvarna.mailing.AudienceHasNonMembers;
 import se.teaterihuskvarna.mailing.EmptyMailing;
-import se.teaterihuskvarna.mailing.NoRecipients;
 import se.teaterihuskvarna.mailing.NoSuchMailing;
 import se.teaterihuskvarna.mailing.UnknownAudience;
 import se.teaterihuskvarna.mailing.UnknownContent;
@@ -235,13 +235,6 @@ public class ProblemResponses {
         return problem(HttpStatus.NOT_FOUND, "No such mailing", exception);
     }
 
-    /// @param exception the audience having nobody with an account
-    /// @return 409
-    @ExceptionHandler
-    public ProblemDetail noRecipients(NoRecipients exception) {
-        return problem(HttpStatus.CONFLICT, "No recipients", exception);
-    }
-
     /// @param exception a mailing with no words and no content
     /// @return 400
     @ExceptionHandler
@@ -254,6 +247,13 @@ public class ProblemResponses {
     @ExceptionHandler
     public ProblemDetail unknown(UnknownAudience exception) {
         return problem(HttpStatus.BAD_REQUEST, "Unknown audience", exception);
+    }
+
+    /// @param exception a segment holding contacts that are not members
+    /// @return 409
+    @ExceptionHandler
+    public ProblemDetail nonMembers(AudienceHasNonMembers exception) {
+        return problem(HttpStatus.CONFLICT, "Audience has non-members", exception);
     }
 
     /// @param exception an event or news item that is not published

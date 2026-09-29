@@ -48,6 +48,9 @@ public class Shift {
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
+    @Column(name = "start_reported", nullable = false)
+    private boolean startReported;
+
     protected Shift() {
         // for JPA
     }
@@ -104,5 +107,11 @@ public class Shift {
     /// @return the places left, never below zero
     int placesLeft(long booked) {
         return (int) Math.max(0, places - booked);
+    }
+
+    /// Marks that the members booked on the shift have been told it started,
+    /// which changes their Brevo contact's LAST_SHIFT.
+    void startReported() {
+        this.startReported = true;
     }
 }

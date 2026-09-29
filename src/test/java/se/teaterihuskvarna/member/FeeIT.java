@@ -12,7 +12,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -23,7 +22,7 @@ import org.springframework.test.web.servlet.request.RequestPostProcessor;
 /// Proves the fee rules (R013, R019): what a member sees for this year, how an
 /// administrator marks and undoes a payment through both adapters, and the
 /// household rule, that a member is paid by a payment of their own or by a
-/// household payment from anyone in their household now.
+/// household payment for the household they are in now.
 ///
 /// Erik and Maria share a household, Johan is in none.
 class FeeIT extends MemberRegisterSupport {
@@ -33,7 +32,7 @@ class FeeIT extends MemberRegisterSupport {
     private static final String JOHAN_EMAIL = "johan@example.test";
 
     @Autowired
-    private MemberService members;
+    private FeeService fees;
 
     private long erikAccount;
     private long mariaAccount;
@@ -222,12 +221,12 @@ class FeeIT extends MemberRegisterSupport {
     }
 
     @Test
-    void theAudiencesSplitOnTheHouseholdRule() {
+    void theLatestPaidYearFollowsTheHouseholdRule() {
         insertFee(erik, "HOUSEHOLD");
 
-        assertThat(emails(Audience.ALL)).containsExactlyInAnyOrder(ERIK_EMAIL, MARIA_EMAIL, JOHAN_EMAIL);
-        assertThat(emails(Audience.PAID)).containsExactlyInAnyOrder(ERIK_EMAIL, MARIA_EMAIL);
-        assertThat(emails(Audience.UNPAID)).containsExactly(JOHAN_EMAIL);
+        assertThat(fees.latestPaidYear(erik)).isEqualTo(thisYear());
+        assertThat(fees.latestPaidYear(maria)).isEqualTo(thisYear());
+        assertThat(fees.latestPaidYear(johan)).isNull();
     }
 
     @Test
@@ -245,10 +244,6 @@ class FeeIT extends MemberRegisterSupport {
                         .with(csrf()))
                 .andReturn(), "/admin/logga-in");
         assertThat(rowsIn("fee")).isZero();
-    }
-
-    private List<String> emails(Audience audience) {
-        return members.recipients(audience).stream().map(Recipient::email).toList();
     }
 
     private Map<String, Object> feeOf(long member) {

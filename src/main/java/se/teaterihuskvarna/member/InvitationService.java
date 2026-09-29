@@ -4,6 +4,7 @@ import jakarta.validation.Valid;
 import java.time.Instant;
 import java.util.Optional;
 import org.jspecify.annotations.Nullable;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.MessageSource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -39,9 +40,11 @@ public class InvitationService {
     private final MessageSource messages;
     private final MailSettings mail;
     private final AssociationSettings association;
+    private final ApplicationEventPublisher events;
 
     InvitationService(InvitationRepository invitations, MemberRepository members, AccountRepository accounts,
-            Mailer mailer, MessageSource messages, MailSettings mail, AssociationSettings association) {
+            Mailer mailer, MessageSource messages, MailSettings mail, AssociationSettings association,
+            ApplicationEventPublisher events) {
         this.invitations = invitations;
         this.members = members;
         this.accounts = accounts;
@@ -49,6 +52,7 @@ public class InvitationService {
         this.messages = messages;
         this.mail = mail;
         this.association = association;
+        this.events = events;
     }
 
     /// An administrator invites a member. Sending again replaces the open
@@ -113,6 +117,7 @@ public class InvitationService {
             return InvitationOutcome.EMAIL_TAKEN;
         }
         accounts.save(new Account(member.get(), new Email(invitation.getEmail())));
+        events.publishEvent(new MemberChanged(invitation.getMemberId()));
         return InvitationOutcome.ACCEPTED;
     }
 

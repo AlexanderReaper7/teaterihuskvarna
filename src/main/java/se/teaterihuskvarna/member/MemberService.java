@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import org.jspecify.annotations.Nullable;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.MessageSource;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Limit;
@@ -55,6 +56,7 @@ public class MemberService {
     private final PasskeyService passkeys;
     private final Sessions sessions;
     private final MessageSource messages;
+    private final ApplicationEventPublisher events;
 
     MemberService(
             MemberRepository members,
@@ -64,7 +66,8 @@ public class MemberService {
             FeeLedger ledger,
             PasskeyService passkeys,
             Sessions sessions,
-            MessageSource messages) {
+            MessageSource messages,
+            ApplicationEventPublisher events) {
         this.members = members;
         this.accounts = accounts;
         this.households = households;
@@ -73,6 +76,7 @@ public class MemberService {
         this.passkeys = passkeys;
         this.sessions = sessions;
         this.messages = messages;
+        this.events = events;
     }
 
     /// Looks up the member a logged-in account belongs to. The id comes from
@@ -100,6 +104,7 @@ public class MemberService {
         Member member = account.getMember();
         member.setFullName(form.fullName().strip());
         member.setContact(form.contact());
+        events.publishEvent(new MemberChanged(member.getId()));
         return details(member, account);
     }
 
@@ -160,6 +165,7 @@ public class MemberService {
             account = accounts.save(new Account(member, new Email(email)));
         }
         flush();
+        events.publishEvent(new MemberChanged(member.getId()));
         return details(member, account);
     }
 
@@ -197,6 +203,7 @@ public class MemberService {
             }
         }
         flush();
+        events.publishEvent(new MemberChanged(memberId));
         return details(member, account);
     }
 
@@ -222,6 +229,7 @@ public class MemberService {
         }
         members.delete(member);
         members.flush();
+        events.publishEvent(new MemberChanged(memberId));
     }
 
     /// The whole register as a CSV file for a spreadsheet (R021), in the format
@@ -257,29 +265,14 @@ public class MemberService {
         return Csv.write(header, rows);
     }
 
-    /// The members a mailing to an audience goes to. Only members with an
-    /// account have an address. For the mailing feature, which no adapter
-    /// exposes yet.
+    /// The member as a mailing reaches them, for their Brevo contact. Only a
+    /// member with an account has an address.
     ///
-    /// @param audience who the mailing is for
-    /// @return the recipients by name
-    public List<Recipient> recipients(Audience audience) {
-        List<Recipient> recipients = new ArrayList<>();
-        for (MemberDetails member : detailsOf(members.findAllByName())) {
-            String email = member.email();
-            if (email == null) {
-                continue;
-            }
-            boolean wanted = switch (audience) {
-                case ALL -> true;
-                case PAID -> member.fee().paid();
-                case UNPAID -> !member.fee().paid();
-            };
-            if (wanted) {
-                recipients.add(new Recipient(member.id(), member.fullName(), email));
-            }
-        }
-        return recipients;
+    /// @param memberId a member, who may have been deleted
+    /// @return the member's name and address, or empty without a member or an account
+    public Optional<Recipient> recipient(long memberId) {
+        return members.findById(memberId).flatMap(member -> accounts.findByMember(memberId)
+                .map(account -> new Recipient(memberId, member.getFullName(), account.getEmail())));
     }
 
     private MemberDetails details(Member member, @Nullable Account account) {

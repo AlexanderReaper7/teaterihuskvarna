@@ -12,7 +12,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import se.teaterihuskvarna.export.CsvFile;
-import se.teaterihuskvarna.member.Recipient;
 import se.teaterihuskvarna.offer.OfferDetails;
 import se.teaterihuskvarna.offer.OfferForm;
 import se.teaterihuskvarna.offer.OfferService;
@@ -100,15 +99,5 @@ public class AdministratorOffersController {
     public ResponseEntity<String> registrationsCsv(@PathVariable long id) {
         CsvFile export = offers.registrationsCsv(id);
         return ResponseEntity.ok().headers(export.headers()).body(export.text());
-    }
-
-    /// Who a mailing to this offer's registrants would reach: the registered
-    /// members with an account.
-    ///
-    /// @param id the offer
-    /// @return the members, by name
-    @GetMapping("/api/admin/offers/{id}/recipients")
-    public List<Recipient> recipients(@PathVariable long id) {
-        return offers.recipients(id);
     }
 }

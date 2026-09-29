@@ -73,7 +73,7 @@ services:
       # here for the same reason as CONTENT_SOURCE's.
       BREVO_API: ${BREVO_API:-http}
       BREVO_API_KEY: ${BREVO_API_KEY:-}
-      BREVO_FOLDER_ID: ${BREVO_FOLDER_ID:-}
+      BREVO_LIST_ID: ${BREVO_LIST_ID:-}
       BREVO_TEST_LIST_ID: ${BREVO_TEST_LIST_ID:-}
       BREVO_SENDER_NAME: ${BREVO_SENDER_NAME:-}
       BREVO_SENDER_EMAIL: ${BREVO_SENDER_EMAIL:-}

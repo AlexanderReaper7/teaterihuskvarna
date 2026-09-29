@@ -16,6 +16,7 @@ import com.jayway.jsonpath.JsonPath;
 import java.sql.Timestamp;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -31,9 +32,10 @@ import se.teaterihuskvarna.login.SignedIn;
 /// - Only an administrator reaches them.
 /// - The preview is the mail with the chosen content and Brevo's unsubscribe
 ///   placeholder, and touches nothing in Brevo.
-/// - Preparing makes one list with each audience address once and a draft to
-///   that list, and logs it.
-/// - Each audience reaches the members it names, and only those with an account.
+/// - Preparing makes a draft to the members' list or to a Brevo segment, and
+///   logs it.
+/// - The audiences are the list and Brevo's segments, and a segment holding
+///   anyone not on the members' list is refused.
 /// - A test goes to the signed-in administrator.
 /// - The log shows what Brevo last reported.
 class MailingIT extends IntegrationTestSupport {
@@ -46,6 +48,7 @@ class MailingIT extends IntegrationTestSupport {
     @BeforeEach
     void fake() {
         fake = (FakeBrevo) brevo;
+        fake.segments(List.of());
     }
 
     @Test
@@ -58,7 +61,7 @@ class MailingIT extends IntegrationTestSupport {
         mockMvc.perform(get("/api/admin/mailings").with(member)).andExpect(status().isForbidden());
         mockMvc.perform(post("/api/admin/mailings").with(member).with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"subject\": \"Hej\", \"intro\": \"Hej\", \"audience\": \"ALL\"}"))
+                        .content("{\"subject\": \"Hej\", \"intro\": \"Hej\", \"audience\": \"LIST\"}"))
                 .andExpect(status().isForbidden());
 
         assertThat(rowsIn("mailing")).isZero();
@@ -67,7 +70,7 @@ class MailingIT extends IntegrationTestSupport {
     @Test
     void thePreviewShowsTheChosenContentAndTouchesNothing() throws Exception {
         mockMvc.perform(post("/admin/utskick/forhandsgranska").with(asAdministrator()).with(csrf())
-                        .param("audience", "ALL")
+                        .param("audience", "LIST")
                         .param("subject", "Höstens program")
                         .param("intro", "Hej alla!\n\nNu drar vi igång.")
                         .param("events", "kulturnatten")
@@ -81,7 +84,7 @@ class MailingIT extends IntegrationTestSupport {
 
         mockMvc.perform(post("/api/admin/mailings/preview").with(asAdministrator()).with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"subject\": \"Hej\", \"audience\": \"ALL\", \"events\": [\"kulturnatten\"]}"))
+                        .content("{\"subject\": \"Hej\", \"audience\": \"LIST\", \"events\": [\"kulturnatten\"]}"))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("http://localhost/evenemang/kulturnatten")));
 
@@ -94,18 +97,18 @@ class MailingIT extends IntegrationTestSupport {
 
         mockMvc.perform(post("/api/admin/mailings").with(asAdministrator()).with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"subject\": \"Hej\", \"audience\": \"ALL\"}"))
+                        .content("{\"subject\": \"Hej\", \"audience\": \"LIST\"}"))
                 .andExpect(status().isBadRequest());
         mockMvc.perform(post("/api/admin/mailings").with(asAdministrator()).with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"subject\": \"Hej\", \"audience\": \"ALL\", \"news\": [\"framtida\"]}"))
+                        .content("{\"subject\": \"Hej\", \"audience\": \"LIST\", \"news\": [\"framtida\"]}"))
                 .andExpect(status().isBadRequest());
         mockMvc.perform(post("/api/admin/mailings").with(asAdministrator()).with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"subject\": \"Hej\", \"intro\": \"Hej\", \"audience\": \"NOBODY\"}"))
                 .andExpect(status().isBadRequest());
         mockMvc.perform(post("/admin/utskick").with(asAdministrator()).with(csrf())
-                        .param("audience", "ALL")
+                        .param("audience", "LIST")
                         .param("subject", "Hej"))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString(
@@ -115,26 +118,20 @@ class MailingIT extends IntegrationTestSupport {
     }
 
     @Test
-    void preparingMakesAListAndADraftAndLogsIt() throws Exception {
-        insertAccount("Karin Holm", "karin@example.test");
-        insertAccount("Olle Berg", "OLLE@example.test");
-        insertMember("Utan Konto");
-
+    void preparingMakesADraftToTheListAndLogsIt() throws Exception {
         MvcResult result = mockMvc.perform(post("/admin/utskick").with(asAdministrator()).with(csrf())
-                        .param("audience", "ALL")
+                        .param("audience", "LIST")
                         .param("subject", "Höstens program")
                         .param("intro", "Hej alla!")
                         .param("events", "kulturnatten"))
-                .andExpect(flash().attribute("notice", "Utkastet finns i Brevo, med 2 mottagare."))
+                .andExpect(flash().attribute("notice", "Utkastet finns i Brevo."))
                 .andReturn();
         assertThat(locationOf(result)).startsWith("/admin/utskick/");
 
-        long listId = jdbc.sql("SELECT brevo_list_id FROM mailing").query(Long.class).single();
         long campaignId = jdbc.sql("SELECT brevo_campaign_id FROM mailing").query(Long.class).single();
-        assertThat(fake.contacts(listId)).containsExactlyInAnyOrder("karin@example.test", "OLLE@example.test");
         Brevo.Campaign campaign = fake.campaign(campaignId);
         assertThat(campaign).isNotNull();
-        assertThat(campaign.listId()).isEqualTo(listId);
+        assertThat(campaign.segmentId()).isNull();
         assertThat(campaign.subject()).isEqualTo("Höstens program");
         assertThat(campaign.html()).contains("Kulturnatten på torget").contains("{{ unsubscribe }}");
         assertThat(jdbc.sql("SELECT created_by FROM mailing").query(Long.class).single())
@@ -143,56 +140,68 @@ class MailingIT extends IntegrationTestSupport {
         mockMvc.perform(get(locationOf(result)).with(asAdministrator()))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("Utkast")))
-                .andExpect(content().string(containsString("Alla medlemmar")));
+                .andExpect(content().string(containsString("Alla medlemmar med konto")));
     }
 
     @Test
-    void anAudienceWithNobodyToReachIsRefused() throws Exception {
-        insertMember("Utan Konto");
+    void aSegmentMadeInBrevoIsAnAudience() throws Exception {
+        fake.segments(List.of(new Brevo.Segment(7, "Betalat 2026")));
+
+        mockMvc.perform(get("/api/admin/mailings/audiences").with(asAdministrator()))
+                .andExpect(jsonPath("$.segmentsUnavailable").value(false))
+                .andExpect(jsonPath("$.choices[0].value").value("LIST"))
+                .andExpect(jsonPath("$.choices[1].value").value("SEGMENT:7"))
+                .andExpect(jsonPath("$.choices[1].name").value("Betalat 2026"));
+        mockMvc.perform(get("/admin/utskick").with(asAdministrator()))
+                .andExpect(content().string(containsString("<option value=\"SEGMENT:7\"")));
+
+        long campaignId = prepare("SEGMENT:7");
+        Brevo.Campaign campaign = fake.campaign(campaignId);
+        assertThat(campaign).isNotNull();
+        assertThat(campaign.segmentId()).isEqualTo(7L);
+        assertThat(jdbc.sql("SELECT audience_name FROM mailing").query(String.class).single())
+                .isEqualTo("Betalat 2026");
 
         mockMvc.perform(post("/api/admin/mailings").with(asAdministrator()).with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"subject\": \"Hej\", \"intro\": \"Hej\", \"audience\": \"ALL\"}"))
-                .andExpect(status().isConflict());
+                        .content("{\"subject\": \"Hej\", \"intro\": \"Hej\", \"audience\": \"SEGMENT:8\"}"))
+                .andExpect(status().isBadRequest());
+    }
 
+    /// A segment with a contact outside the members' list is refused, and
+    /// the preview says so and how many it would reach before anything is made.
+    @Test
+    void aSegmentWithNonMembersIsRefused() throws Exception {
+        fake.segments(List.of(new Brevo.Segment(7, "Betalat 2026"), new Brevo.Segment(8, "Alla kontakter")));
+        fake.reach(7, new MailingReach(12, 0));
+        fake.reach(8, new MailingReach(12, 2));
+
+        mockMvc.perform(post("/admin/utskick/forhandsgranska").with(asAdministrator()).with(csrf())
+                        .param("audience", "SEGMENT:7").param("subject", "Hej").param("intro", "Hej"))
+                .andExpect(content().string(containsString("12 medlemmar")))
+                .andExpect(content().string(containsString("formaction=\"/admin/utskick\"")));
+        mockMvc.perform(post("/admin/utskick/forhandsgranska").with(asAdministrator()).with(csrf())
+                        .param("audience", "SEGMENT:8").param("subject", "Hej").param("intro", "Hej"))
+                .andExpect(content().string(containsString("Segmentet innehåller 2 kontakter")))
+                .andExpect(content().string(not(containsString("formaction=\"/admin/utskick\""))));
+        mockMvc.perform(get("/api/admin/mailings/reach").param("audience", "SEGMENT:8").with(asAdministrator()))
+                .andExpect(jsonPath("$.members").value(12))
+                .andExpect(jsonPath("$.nonMembers").value(2));
+
+        mockMvc.perform(post("/admin/utskick").with(asAdministrator()).with(csrf())
+                        .param("audience", "SEGMENT:8").param("subject", "Hej").param("intro", "Hej"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("Segmentet innehåller 2 kontakter")));
+        mockMvc.perform(post("/api/admin/mailings").with(asAdministrator()).with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"subject\": \"Hej\", \"intro\": \"Hej\", \"audience\": \"SEGMENT:8\"}"))
+                .andExpect(status().isConflict());
         assertThat(rowsIn("mailing")).isZero();
     }
 
     @Test
-    void volunteersAreMembersWithAShiftInTheLastYear() throws Exception {
-        long karin = memberOf(insertAccount("Karin Holm", "karin@example.test"));
-        long olle = memberOf(insertAccount("Olle Berg", "olle@example.test"));
-        insertAccount("Aldrig Volontär", "aldrig@example.test");
-        book(insertShift(Instant.now().minus(Duration.ofDays(100))), karin);
-        book(insertShift(Instant.now().minus(Duration.ofDays(400))), olle);
-
-        long listId = prepare("VOLUNTEERS");
-
-        assertThat(fake.contacts(listId)).containsExactly("karin@example.test");
-    }
-
-    @Test
-    void anOfferAudienceIsItsRegisteredMembers() throws Exception {
-        long karin = memberOf(insertAccount("Karin Holm", "karin@example.test"));
-        insertAccount("Olle Berg", "olle@example.test");
-        long offer = jdbc.sql("""
-                INSERT INTO offer (title, description, published, created_at, updated_at)
-                VALUES ('Verkstad', '', true, now(), now()) RETURNING id
-                """).query(Long.class).single();
-        jdbc.sql("INSERT INTO offer_registration (offer_id, member_id, created_at) VALUES (?, ?, now())")
-                .param(offer).param(karin).update();
-
-        mockMvc.perform(get("/api/admin/mailings/audiences").with(asAdministrator()))
-                .andExpect(jsonPath("$[?(@.value == 'OFFER:" + offer + "')].name").value("Anmälda till Verkstad"));
-        long listId = prepare("OFFER:" + offer);
-
-        assertThat(fake.contacts(listId)).containsExactly("karin@example.test");
-    }
-
-    @Test
     void aTestGoesToTheSignedInAdministrator() throws Exception {
-        insertAccount("Karin Holm", "karin@example.test");
-        prepare("ALL");
+        prepare("LIST");
         long id = jdbc.sql("SELECT id FROM mailing").query(Long.class).single();
         long campaignId = jdbc.sql("SELECT brevo_campaign_id FROM mailing").query(Long.class).single();
 
@@ -209,8 +218,7 @@ class MailingIT extends IntegrationTestSupport {
 
     @Test
     void theLogShowsWhatBrevoLastReported() throws Exception {
-        insertAccount("Karin Holm", "karin@example.test");
-        prepare("ALL");
+        prepare("LIST");
         long id = jdbc.sql("SELECT id FROM mailing").query(Long.class).single();
         long campaignId = jdbc.sql("SELECT brevo_campaign_id FROM mailing").query(Long.class).single();
         Instant sentAt = Instant.parse("2026-09-20T08:00:00Z");
@@ -231,6 +239,7 @@ class MailingIT extends IntegrationTestSupport {
                 .andExpect(content().string(containsString("20 september 2026 kl. 10:00")));
     }
 
+    /// @return the draft campaign's id in Brevo
     private long prepare(String audience) throws Exception {
         MvcResult result = mockMvc.perform(post("/api/admin/mailings").with(asAdministrator()).with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
@@ -238,29 +247,7 @@ class MailingIT extends IntegrationTestSupport {
                 .andExpect(status().isCreated())
                 .andReturn();
         long id = ((Number) JsonPath.read(result.getResponse().getContentAsString(), "$.id")).longValue();
-        return jdbc.sql("SELECT brevo_list_id FROM mailing WHERE id = ?").param(id).query(Long.class).single();
-    }
-
-    private long insertShift(Instant startsAt) {
-        return jdbc.sql("""
-                INSERT INTO volunteer_shift (event_id, event_title, event_slug, task, starts_at, ends_at, places,
-                    created_at)
-                VALUES ('evenemang-varshow', 'Vårshowen', 'varshowen', 'SERVERING', ?, ?, 5, now())
-                RETURNING id
-                """)
-                .param(Timestamp.from(startsAt))
-                .param(Timestamp.from(startsAt.plus(Duration.ofHours(3))))
-                .query(Long.class)
-                .single();
-    }
-
-    private void book(long shiftId, long memberId) {
-        jdbc.sql("INSERT INTO volunteer_booking (shift_id, member_id, created_at) VALUES (?, ?, now())")
-                .param(shiftId).param(memberId).update();
-    }
-
-    private long memberOf(long accountId) {
-        return jdbc.sql("SELECT member_id FROM account WHERE id = ?").param(accountId).query(Long.class).single();
+        return jdbc.sql("SELECT brevo_campaign_id FROM mailing WHERE id = ?").param(id).query(Long.class).single();
     }
 
     private RequestPostProcessor asMember(long accountId) {

@@ -12,6 +12,8 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
 
 import java.net.URI;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpMethod;
@@ -22,7 +24,9 @@ import org.springframework.web.client.RestClient;
 
 /// The requests [HttpBrevo] sends, checked against Brevo's API reference as
 /// read on 2026-09-28. Nothing here reaches a real Brevo account, so a field
-/// Brevo renames is caught only by the reference, not by this test.
+/// Brevo renames is caught only by the reference, not by this test. The
+/// expectations are matched in any order, since the attributes are created
+/// in the order of a map.
 class HttpBrevoTest {
 
     private static final String API = "https://api.brevo.test/v3";
@@ -33,48 +37,176 @@ class HttpBrevoTest {
     @BeforeEach
     void setUp() {
         RestClient.Builder builder = RestClient.builder();
-        server = MockRestServiceServer.bindTo(builder).build();
+        server = MockRestServiceServer.bindTo(builder).ignoreExpectOrder(true).build();
         brevo = new HttpBrevo(settings("key-1", 7L, 9L), builder);
     }
 
     @Test
-    void createsAListInTheFolderWithTheKey() {
-        server.expect(requestTo(API + "/contacts/lists"))
-                .andExpect(method(HttpMethod.POST))
-                .andExpect(header("api-key", "key-1"))
-                .andExpect(content().json("{\"name\":\"Utskick 2026-09-28 Höst\",\"folderId\":7}", true))
-                .andRespond(withSuccess("{\"id\":42}", MediaType.APPLICATION_JSON));
+    void theFirstContactCreatesTheAttributesThenUpdatesByMemberId() {
+        for (String attribute : new String[] {"NAMN", "PAID_YEAR", "LAST_SHIFT", "OFFERS"}) {
+            server.expect(requestTo(API + "/contacts/attributes/normal/" + attribute))
+                    .andExpect(method(HttpMethod.POST))
+                    .andExpect(header("api-key", "key-1"))
+                    .andExpect(content().json("LAST_SHIFT".equals(attribute)
+                            ? "{\"type\":\"date\"}" : "{\"type\":\"text\"}", true))
+                    .andRespond("PAID_YEAR".equals(attribute)
+                            ? withBadRequest().contentType(MediaType.APPLICATION_JSON)
+                                    .body("{\"code\":\"invalid_parameter\",\"message\":\"Attribute exists\"}")
+                            : withStatus(HttpStatus.CREATED));
+        }
+        expectExisting(false);
+        server.expect(requestTo(API + "/contacts/42?identifierType=ext_id"))
+                .andExpect(method(HttpMethod.PUT))
+                .andExpect(content().json("""
+                        {"attributes":{"NAMN":"Karin Holm","PAID_YEAR":"2026",
+                          "LAST_SHIFT":"2026-09-20","OFFERS":";3;5;"},
+                         "listIds":[7]}""", true))
+                .andRespond(withStatus(HttpStatus.NO_CONTENT));
+        expectExisting(false);
+        server.expect(requestTo(API + "/contacts/42?identifierType=ext_id"))
+                .andExpect(method(HttpMethod.PUT))
+                .andExpect(content().json("""
+                        {"attributes":{"NAMN":"Karin Holm","PAID_YEAR":"",
+                          "LAST_SHIFT":null,"OFFERS":""},
+                         "listIds":[7]}""", true))
+                .andRespond(withStatus(HttpStatus.NO_CONTENT));
 
-        assertThat(brevo.createList("Utskick 2026-09-28 Höst")).isEqualTo(42);
+        brevo.saveContact(new Brevo.Contact(42, "KARIN@example.test", "Karin Holm", 2026,
+                LocalDate.of(2026, 9, 20), List.of(3L, 5L)));
+        brevo.saveContact(new Brevo.Contact(42, "karin@example.test", "Karin Holm", null, null, List.of()));
+        server.verify();
+    }
+
+    /// Brevo resubscribes a blocklisted contact whose address changes, so the
+    /// address goes only with a change, and then with the blocklisting. The
+    /// unchanged address of a blocklisted contact is not sent at all.
+    @Test
+    void anUnsubscribedContactStaysUnsubscribedWhenItsAddressChanges() {
+        attributesExist();
+        expectExisting(true);
+        server.expect(requestTo(API + "/contacts/42?identifierType=ext_id"))
+                .andExpect(method(HttpMethod.PUT))
+                .andExpect(content().json("""
+                        {"attributes":{"EMAIL":"ny@example.test","NAMN":"Karin Holm","PAID_YEAR":"",
+                          "LAST_SHIFT":null,"OFFERS":""},
+                         "listIds":[7],"emailBlacklisted":true}""", true))
+                .andRespond(withStatus(HttpStatus.NO_CONTENT));
+
+        expectExisting(true);
+        server.expect(requestTo(API + "/contacts/42?identifierType=ext_id"))
+                .andExpect(method(HttpMethod.PUT))
+                .andExpect(content().json("""
+                        {"attributes":{"NAMN":"Karin Holm","PAID_YEAR":"","LAST_SHIFT":null,"OFFERS":""},
+                         "listIds":[7]}""", true))
+                .andRespond(withStatus(HttpStatus.NO_CONTENT));
+
+        brevo.saveContact(new Brevo.Contact(42, "ny@example.test", "Karin Holm", null, null, List.of()));
+        brevo.saveContact(new Brevo.Contact(42, "karin@example.test", "Karin Holm", null, null, List.of()));
         server.verify();
     }
 
     @Test
-    /// Brevo's reference says `listIds` here adds the contact to those lists.
-    /// Whether it also keeps the contact's other lists is Brevo's behaviour,
-    /// which a mock server cannot show; this checks only what is sent.
-    void addsAContactToTheListAndUpdatesAnExistingOne() {
+    void aContactBrevoDoesNotHaveIsCreatedWithTheMemberId() {
+        attributesExist();
+        server.expect(requestTo(API + "/contacts/42?identifierType=ext_id"))
+                .andExpect(method(HttpMethod.GET))
+                .andRespond(withStatus(HttpStatus.NOT_FOUND).contentType(MediaType.APPLICATION_JSON)
+                        .body("{\"code\":\"document_not_found\"}"));
         server.expect(requestTo(API + "/contacts"))
-                .andExpect(content().json(
-                        "{\"email\":\"karin@example.test\",\"listIds\":[42],\"updateEnabled\":true}", true))
-                .andRespond(withStatus(HttpStatus.CREATED)
-                        .contentType(MediaType.APPLICATION_JSON).body("{\"id\":5}"));
+                .andExpect(method(HttpMethod.POST))
+                .andExpect(content().json("""
+                        {"email":"karin@example.test","ext_id":"42","listIds":[7],"updateEnabled":true,
+                         "attributes":{"NAMN":"Karin Holm","PAID_YEAR":"","LAST_SHIFT":null,"OFFERS":""}}""", true))
+                .andRespond(withStatus(HttpStatus.CREATED).contentType(MediaType.APPLICATION_JSON)
+                        .body("{\"id\":5}"));
 
-        brevo.addContact("karin@example.test", 42);
+        brevo.saveContact(new Brevo.Contact(42, "karin@example.test", "Karin Holm", null, null, List.of()));
         server.verify();
     }
 
     @Test
-    void createsADraftToTheListFromTheSender() {
+    void deletingAContactThatIsGoneIsNoError() {
+        server.expect(requestTo(API + "/contacts/42?identifierType=ext_id"))
+                .andExpect(method(HttpMethod.DELETE))
+                .andRespond(withStatus(HttpStatus.NO_CONTENT));
+        server.expect(requestTo(API + "/contacts/43?identifierType=ext_id"))
+                .andExpect(method(HttpMethod.DELETE))
+                .andRespond(withStatus(HttpStatus.NOT_FOUND));
+
+        brevo.deleteContact(42);
+        brevo.deleteContact(43);
+        server.verify();
+    }
+
+    @Test
+    void listsTheSegmentsByName() {
+        server.expect(requestTo(API + "/contacts/segments?limit=50&offset=0&sort=asc"))
+                .andExpect(method(HttpMethod.GET))
+                .andRespond(withSuccess("""
+                        {"count":2,"segments":[{"id":12,"segmentName":"Volontärer","categoryName":"x"},
+                          {"id":11,"segmentName":"betalat 2026","categoryName":"x"}]}""",
+                        MediaType.APPLICATION_JSON));
+
+        assertThat(brevo.segments()).containsExactly(
+                new Brevo.Segment(11, "betalat 2026"), new Brevo.Segment(12, "Volontärer"));
+    }
+
+    /// Every page is read, a contact off the list counts as a non-member, and
+    /// an unsubscribed member is not counted as reached.
+    @Test
+    void theReachCountsEveryPageOfTheSegment() {
+        StringBuilder full = new StringBuilder("{\"contacts\":[");
+        for (int i = 0; i < 1000; i++) {
+            full.append(i == 0 ? "" : ",").append("{\"id\":").append(i).append(",\"listIds\":[7,9]}");
+        }
+        full.append("]}");
+        server.expect(requestTo(API + "/contacts?segmentId=12&limit=1000&offset=0"))
+                .andExpect(method(HttpMethod.GET))
+                .andRespond(withSuccess(full.toString(), MediaType.APPLICATION_JSON));
+        server.expect(requestTo(API + "/contacts?segmentId=12&limit=1000&offset=1000"))
+                .andRespond(withSuccess("""
+                        {"contacts":[{"id":2000,"listIds":[7],"emailBlacklisted":true},
+                          {"id":2001,"listIds":[9]},{"id":2002,"listIds":[]}]}""", MediaType.APPLICATION_JSON));
+
+        assertThat(brevo.reach(12L)).isEqualTo(new MailingReach(1000, 2));
+        server.verify();
+    }
+
+    @Test
+    void anAnswerWithoutContactsIsNoAnswer() {
+        server.expect(requestTo(API + "/contacts?segmentId=12&limit=1000&offset=0"))
+                .andRespond(withSuccess("{\"count\":3}", MediaType.APPLICATION_JSON));
+
+        assertThatThrownBy(() -> brevo.reach(12L)).isInstanceOf(BrevoUnavailable.class);
+    }
+
+    @Test
+    void theListsReachAsksForTheList() {
+        server.expect(requestTo(API + "/contacts?listIds=7&limit=1000&offset=0"))
+                .andRespond(withSuccess("{\"contacts\":[{\"id\":1,\"listIds\":[7]}]}", MediaType.APPLICATION_JSON));
+
+        assertThat(brevo.reach(null)).isEqualTo(new MailingReach(1, 0));
+    }
+
+    @Test
+    void aDraftGoesToTheListOrToASegmentFromTheSender() {
         server.expect(requestTo(API + "/emailCampaigns"))
                 .andExpect(content().json("""
                         {"name":"Utskick","subject":"Höst","htmlContent":"<p>Hej</p>",
                          "sender":{"name":"Teater i Huskvarna","email":"utskick@example.test"},
-                         "recipients":{"listIds":[42]}}""", true))
+                         "recipients":{"listIds":[7]}}""", true))
                 .andRespond(withStatus(HttpStatus.CREATED)
                         .contentType(MediaType.APPLICATION_JSON).body("{\"id\":300}"));
+        server.expect(requestTo(API + "/emailCampaigns"))
+                .andExpect(content().json("""
+                        {"name":"Utskick","subject":"Höst","htmlContent":"<p>Hej</p>",
+                         "sender":{"name":"Teater i Huskvarna","email":"utskick@example.test"},
+                         "recipients":{"segmentIds":[12]}}""", true))
+                .andRespond(withStatus(HttpStatus.CREATED)
+                        .contentType(MediaType.APPLICATION_JSON).body("{\"id\":301}"));
 
-        assertThat(brevo.createDraft(new Brevo.Campaign("Utskick", "Höst", "<p>Hej</p>", 42))).isEqualTo(300);
+        assertThat(brevo.createDraft(new Brevo.Campaign("Utskick", "Höst", "<p>Hej</p>", null))).isEqualTo(300);
+        assertThat(brevo.createDraft(new Brevo.Campaign("Utskick", "Höst", "<p>Hej</p>", 12L))).isEqualTo(301);
         server.verify();
     }
 
@@ -124,18 +256,37 @@ class HttpBrevoTest {
 
     @Test
     void aRefusalBecomesBrevoUnavailable() {
-        server.expect(requestTo(API + "/contacts/lists"))
+        attributesExist();
+        expectExisting(false);
+        server.expect(requestTo(API + "/contacts/42?identifierType=ext_id"))
+                .andExpect(method(HttpMethod.PUT))
                 .andRespond(withBadRequest().contentType(MediaType.APPLICATION_JSON)
-                        .body("{\"code\":\"invalid_parameter\"}"));
+                        .body("{\"code\":\"duplicate_parameter\"}"));
 
-        assertThatThrownBy(() -> brevo.createList("x")).isInstanceOf(BrevoUnavailable.class);
+        assertThatThrownBy(() -> brevo.saveContact(
+                new Brevo.Contact(42, "karin@example.test", "Karin Holm", null, null, List.of())))
+                .isInstanceOf(BrevoUnavailable.class);
     }
 
     @Test
     void refusesToStartWithoutItsSettings() {
         assertThatThrownBy(() -> new HttpBrevo(settings(" ", null, null), RestClient.builder()))
                 .isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("BREVO_API_KEY, BREVO_FOLDER_ID, BREVO_TEST_LIST_ID");
+                .hasMessageContaining("BREVO_API_KEY, BREVO_LIST_ID, BREVO_TEST_LIST_ID");
+    }
+
+    private void expectExisting(boolean blacklisted) {
+        server.expect(requestTo(API + "/contacts/42?identifierType=ext_id"))
+                .andExpect(method(HttpMethod.GET))
+                .andRespond(withSuccess("{\"id\":5,\"email\":\"karin@example.test\",\"emailBlacklisted\":"
+                        + blacklisted + "}", MediaType.APPLICATION_JSON));
+    }
+
+    private void attributesExist() {
+        for (String attribute : new String[] {"NAMN", "PAID_YEAR", "LAST_SHIFT", "OFFERS"}) {
+            server.expect(requestTo(API + "/contacts/attributes/normal/" + attribute))
+                    .andRespond(withBadRequest());
+        }
     }
 
     private static BrevoSettings settings(String key, Long folder, Long testList) {

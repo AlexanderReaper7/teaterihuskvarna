@@ -3,6 +3,9 @@ package se.teaterihuskvarna.member;
 import jakarta.validation.Valid;
 import java.time.Instant;
 import java.util.Objects;
+import java.util.Optional;
+import org.jspecify.annotations.Nullable;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,12 +23,33 @@ public class FeeService {
     private final MemberRepository members;
     private final FeeLedger ledger;
     private final AssociationSettings association;
+    private final ApplicationEventPublisher events;
 
-    FeeService(FeeRepository fees, MemberRepository members, FeeLedger ledger, AssociationSettings association) {
+    FeeService(FeeRepository fees, MemberRepository members, FeeLedger ledger, AssociationSettings association,
+            ApplicationEventPublisher events) {
         this.fees = fees;
         this.members = members;
         this.ledger = ledger;
         this.association = association;
+        this.events = events;
+    }
+
+    /// For the member's Brevo contact: the latest year their fee is paid,
+    /// by themselves or their household.
+    ///
+    /// @param memberId a member
+    /// @return the year, or null if no year is paid or there is no such member
+    public @Nullable Integer latestPaidYear(long memberId) {
+        Optional<Member> member = members.findById(memberId);
+        if (member.isEmpty()) {
+            return null;
+        }
+        for (FeeStatus status : ledger.history(member.get())) {
+            if (status.paidAt() != null) {
+                return status.year();
+            }
+        }
+        return null;
     }
 
     /// Records a payment for this year, the year taken in Sweden. A
@@ -52,6 +76,7 @@ public class FeeService {
             Household household = member.getHousehold();
             Long householdId = kind == FeeKind.HOUSEHOLD && household != null ? household.getId() : null;
             fees.saveAndFlush(new Fee(memberId, year, kind, amount, Instant.now(), administratorId, householdId));
+            covered(memberId, householdId);
         } catch (DataIntegrityViolationException e) {
             // Two marks at once: fee_member_id_year_key refused the second.
             throw new FeeAlreadyMarked();
@@ -67,5 +92,19 @@ public class FeeService {
     public void undo(long memberId) {
         Fee fee = fees.findByMemberIdAndYear(memberId, ledger.currentYear()).orElseThrow(NoSuchFee::new);
         fees.delete(fee);
+        covered(memberId, fee.getHouseholdId());
+    }
+
+    /// Tells the payer's contact, and each contact in the household a
+    /// household fee covers, that the paid year may have changed.
+    private void covered(long memberId, @Nullable Long householdId) {
+        events.publishEvent(new MemberChanged(memberId));
+        if (householdId != null) {
+            for (Member member : members.findByHousehold(householdId)) {
+                if (member.getId() != memberId) {
+                    events.publishEvent(new MemberChanged(member.getId()));
+                }
+            }
+        }
     }
 }
