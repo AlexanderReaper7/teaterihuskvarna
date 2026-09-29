@@ -156,7 +156,7 @@ The email a member gets the day before a booked volunteer shift, once per bookin
 
 ### Mailing audience | Målgrupp
 
-The members selected for one mailing by an explicit rule: every member, members who have paid this year, members who have not, volunteers with a shift in the last 12 months, or the members registered to one offer. Only the selected members with an account receive it ([decisions/0023](docs/decisions/0023-brevo-list-per-mailing.md)).
+Who one mailing goes to: the whole Brevo list, or a segment the association saved in Brevo, such as members who have paid this year, members who have not, volunteers with a shift in the last 12 months, or the members registered to one offer. Only members with an account are on the list ([decisions/0026](docs/decisions/0026-outbox-and-brevo-contacts.md)).
 
 ### Mailing | Utskick
 
@@ -164,7 +164,11 @@ One bulk message sent to a mailing audience. An administrator prepares it in the
 
 ### Brevo list | Brevo-lista
 
-The list of addresses the application creates in Brevo for one mailing, a copy of the audience at the moment the mailing was prepared ([decisions/0023](docs/decisions/0023-brevo-list-per-mailing.md)).
+The one list in Brevo that holds every member with an account as a contact, which the application keeps up to date on every change to the register ([decisions/0026](docs/decisions/0026-outbox-and-brevo-contacts.md)).
+
+### Segment | Segment
+
+A saved selection of the Brevo list, made in Brevo on the attributes each contact carries: PAID_YEAR, LAST_SHIFT and OFFERS. A mailing can go to one segment ([decisions/0026](docs/decisions/0026-outbox-and-brevo-contacts.md)).
 
 ## System
 

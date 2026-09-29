@@ -24,6 +24,7 @@ import java.util.List;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.MessageSource;
 import org.springframework.http.MediaType;
 import org.springframework.mail.SimpleMailMessage;
@@ -36,7 +37,6 @@ import se.teaterihuskvarna.content.ContentService;
 import se.teaterihuskvarna.login.LoginKind;
 import se.teaterihuskvarna.login.Mailer;
 import se.teaterihuskvarna.login.SignedIn;
-import se.teaterihuskvarna.member.Recipient;
 
 /// Proves volunteer shifts (R016, R017, R020) through both adapters.
 ///
@@ -49,7 +49,7 @@ import se.teaterihuskvarna.member.Recipient;
 ///   at once to a booking made after the day's last run for a shift tomorrow,
 ///   and on the day itself to a booking the runs missed.
 /// - A past shift leaves the list of upcoming ones for the list of past ones.
-/// - A mailing's volunteers are those whose shift has already started.
+/// - A member's last shift is the latest booked one that has started.
 /// - The CSV file lists who booked, with a byte order mark.
 class ShiftIT extends IntegrationTestSupport {
 
@@ -73,6 +73,9 @@ class ShiftIT extends IntegrationTestSupport {
 
     @Autowired
     private MessageSource messages;
+
+    @Autowired
+    private ApplicationEventPublisher events;
 
     @Autowired
     private PlatformTransactionManager transactions;
@@ -259,16 +262,20 @@ class ShiftIT extends IntegrationTestSupport {
     }
 
     @Test
-    void aMailingsVolunteersHaveHadTheirShift() {
-        long past = insertShift(Instant.now().minus(Duration.ofDays(20)), 3);
+    void theLastShiftIsTheLatestThatHasStarted() {
+        Instant past = Instant.now().minus(Duration.ofDays(20));
+        long earlier = insertShift(past.minus(Duration.ofDays(30)), 3);
+        long later = insertShift(past, 3);
         long future = insertShift(Instant.now().plus(Duration.ofDays(3)), 3);
         long karin = memberOf(insertAccount("Karin Holm", "karin@example.test"));
         long nils = memberOf(insertAccount("Nils Berg", "nils@example.test"));
-        insertBooking(past, karin, Instant.now().minus(Duration.ofDays(30)));
+        insertBooking(earlier, karin, past.minus(Duration.ofDays(40)));
+        insertBooking(later, karin, past.minus(Duration.ofDays(10)));
+        insertBooking(future, karin, Instant.now());
         insertBooking(future, nils, Instant.now());
 
-        assertThat(shifts.recentVolunteers(Instant.now().minus(Duration.ofDays(365))))
-                .extracting(Recipient::email).containsExactly("karin@example.test");
+        assertThat(shifts.lastShift(karin)).isEqualTo(LocalDate.ofInstant(past, SWEDEN));
+        assertThat(shifts.lastShift(nils)).isNull();
     }
 
     @Test
@@ -311,7 +318,7 @@ class ShiftIT extends IntegrationTestSupport {
     /// by hand, it has no transaction of its own, so the test gives it one.
     private void book(LocalDateTime time, long shiftId, long memberId) {
         ShiftService stopped = new ShiftService(shiftRepository, bookingRepository, content, mailer, messages,
-                Clock.fixed(time.atZone(SWEDEN).toInstant(), SWEDEN));
+                Clock.fixed(time.atZone(SWEDEN).toInstant(), SWEDEN), events);
         new TransactionTemplate(transactions).executeWithoutResult(status -> stopped.book(shiftId, memberId));
     }
 

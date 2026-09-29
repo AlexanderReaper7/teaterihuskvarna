@@ -90,9 +90,9 @@ An invitation is valid for 7 days by default, and the lifetime is configurable. 
 
 ## The application prepares mailings and Brevo sends them
 
-An administrator selects an audience from membership data and chooses published Sanity content. The application builds the HTML and creates a draft Brevo campaign. The administrator reviews, test-sends and sends the campaign in Brevo. Brevo owns unsubscribe handling and campaign history. The application does not contain a second mailing editor.
+An administrator selects an audience, the Brevo list or one of its segments, and chooses published Sanity content. The application builds the HTML and creates a draft Brevo campaign. The administrator reviews, test-sends and sends the campaign in Brevo. Brevo owns unsubscribe handling and campaign history. The application does not contain a second mailing editor.
 
-Each mailing gets a new Brevo list holding its audience's addresses at the moment it is prepared, and the draft goes to that list: [decisions/0023](decisions/0023-brevo-list-per-mailing.md). The member register in PostgreSQL remains authoritative for membership and fee status, and Brevo for unsubscribes.
+Every member with an account is a contact on one Brevo list, updated on every change to the register, with attributes for the paid year, the latest volunteer shift and the offers registered for. The association builds its audiences as segments in Brevo, and a mailing goes to the list or to a segment: [decisions/0026](decisions/0026-outbox-and-brevo-contacts.md). The member register in PostgreSQL remains authoritative for membership and fee status, and Brevo for unsubscribes.
 
 ## The member model records only data the confirmed workflows need
 

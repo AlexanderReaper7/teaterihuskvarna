@@ -2,6 +2,7 @@
 @import se.teaterihuskvarna.content.Event
 @import se.teaterihuskvarna.content.NewsItem
 @import se.teaterihuskvarna.mailing.AudienceChoice
+@import se.teaterihuskvarna.mailing.MailingAudiences
 @import se.teaterihuskvarna.mailing.MailingContent
 @import se.teaterihuskvarna.mailing.MailingDetails
 @import se.teaterihuskvarna.mailing.MailingForm
@@ -12,7 +13,7 @@
 @param CsrfField csrf
 @param MailingForm form
 @param FieldErrors errors
-@param List<AudienceChoice> audiences
+@param MailingAudiences audiences
 @param MailingContent content
 @param List<MailingDetails> log
 @param String error
@@ -37,9 +38,9 @@
         <p>
             <label for="audience">${copy.text("adminMailings.form.audience")}</label>
             <select id="audience" name="audience" required aria-invalid="${audienceError == null ? null : "true"}"
-                    aria-describedby="${audienceError == null ? null : "audience-error"}">
+                    aria-describedby="${audienceError == null ? "audience-hint" : "audience-hint audience-error"}">
                 <option value="">${copy.text("adminMailings.form.chooseAudience")}</option>
-                @for(AudienceChoice choice : audiences)
+                @for(AudienceChoice choice : audiences.choices())
                     <option value="${choice.value()}" selected="${choice.value().equals(form.audience())}">${choice.name()}</option>
                 @endfor
             </select>
@@ -47,6 +48,10 @@
                 <span id="audience-error" class="field-error">${audienceError}</span>
             @endif
         </p>
+        <p id="audience-hint">${copy.text("adminMailings.segments")}</p>
+        @if(audiences.segmentsUnavailable())
+            <p role="alert">${copy.text("adminMailings.segmentsUnavailable")}</p>
+        @endif
         @template.tag.field(name = "subject", label = copy.text("adminMailings.form.subject"), type = "text",
                 autocomplete = "off", value = form.subject(), error = errors.message("subject"), required = true)
         <p>
@@ -93,7 +98,7 @@
                     <th scope="col">${copy.text("adminMailings.log.audience")}</th>
                     <th scope="col">${copy.text("adminMailings.log.status")}</th>
                     <th scope="col">${copy.text("adminMailings.log.sentAt")}</th>
-                    <th scope="col">${copy.text("adminMailings.log.recipients")}</th>
+                    <th scope="col">${copy.text("adminMailings.stats.sent")}</th>
                     <th scope="col">${copy.text("adminMailings.log.opened")}</th>
                     <th scope="col">${copy.text("adminMailings.log.unsubscribed")}</th>
                 </tr>
@@ -106,7 +111,7 @@
                         <td>${mailing.audienceName()}</td>
                         <td>${copy.text("adminMailings.status." + mailing.status())}</td>
                         <td>@if(sentAt != null)${copy.dateTime(sentAt)}@else${copy.text("adminMailings.notSent")}@endif</td>
-                        <td>${mailing.recipients()}</td>
+                        <td>${mailing.sent()}</td>
                         <td>${mailing.uniqueViews()}</td>
                         <td>${mailing.unsubscriptions()}</td>
                     </tr>

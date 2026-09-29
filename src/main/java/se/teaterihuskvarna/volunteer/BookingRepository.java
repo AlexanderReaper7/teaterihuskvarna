@@ -3,11 +3,11 @@ package se.teaterihuskvarna.volunteer;
 import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
+import org.jspecify.annotations.Nullable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
-import se.teaterihuskvarna.member.Recipient;
 
 /// Reads and writes bookings. Package private, like [ShiftRepository].
 ///
@@ -59,19 +59,15 @@ interface BookingRepository extends JpaRepository<Booking, Long> {
             """)
     List<Volunteer> findVolunteers(@Param("shiftId") long shiftId);
 
-    /// @param since the earliest shift start that counts
-    /// @param until the end of the range, not included, so a booking for a shift still to come does not count
-    /// @return the members with an account who booked a shift starting in the range, by name
+    /// @param memberId a member
+    /// @param now      shifts starting after it do not count
+    /// @return when the latest shift the member was booked on started, or null
     @Query("""
-            select distinct new se.teaterihuskvarna.member.Recipient(m.id, m.fullName, a.email)
-            from Booking b
+            select max(s.startsAt) from Booking b
             join Shift s on s.id = b.shiftId
-            join Member m on m.id = b.memberId
-            join Account a on a.member = m
-            where s.startsAt >= :since and s.startsAt < :until
-            order by m.fullName, m.id
+            where b.memberId = :memberId and s.startsAt <= :now
             """)
-    List<Recipient> findRecipientsBetween(@Param("since") Instant since, @Param("until") Instant until);
+    @Nullable Instant findLastShiftStart(@Param("memberId") long memberId, @Param("now") Instant now);
 
     /// The bookings that are owed a reminder: for a shift tomorrow, or for a
     /// shift later today booked before today began.

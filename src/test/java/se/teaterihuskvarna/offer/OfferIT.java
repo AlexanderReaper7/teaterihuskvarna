@@ -39,7 +39,6 @@ import org.springframework.test.web.servlet.request.RequestPostProcessor;
 import se.teaterihuskvarna.IntegrationTestSupport;
 import se.teaterihuskvarna.login.LoginKind;
 import se.teaterihuskvarna.login.SignedIn;
-import se.teaterihuskvarna.member.Recipient;
 import se.teaterihuskvarna.web.Copy;
 
 /// Proves the offer rules (R014) and the registration export (R020) through
@@ -480,16 +479,15 @@ class OfferIT extends IntegrationTestSupport {
     }
 
     @Test
-    void recipientsAreTheRegisteredMembersWithAnAccount() {
-        long id = insertOffer("Verkstad", true, null, IN_A_MONTH, null);
+    void theOffersOfAMemberAreTheOnesTheyRegisteredFor() {
+        long first = insertOffer("Verkstad", true, null, IN_A_MONTH, null);
+        long second = insertOffer("Läsning", true, null, IN_A_MONTH, null);
+        insertOffer("Utflykt", true, null, IN_A_MONTH, null);
         long anna = insertAccount("Anna Först", "anna@example.test");
-        register(id, anna);
-        long child = insertMember("Olle Barn");
-        offers.register(id, child);
+        register(second, anna);
+        register(first, anna);
 
-        assertThat(offers.recipients(id))
-                .containsExactly(new Recipient(memberOf(anna), "Anna Först", "anna@example.test"));
-        assertThat(offers.registrations(id)).hasSize(2);
+        assertThat(offers.offerIdsOf(memberOf(anna))).containsExactly(first, second);
     }
 
     // Helpers

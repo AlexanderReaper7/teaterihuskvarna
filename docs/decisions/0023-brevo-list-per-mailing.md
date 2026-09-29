@@ -2,11 +2,14 @@
 created: 2026-09-28
 provenance: user
 description: How a mailing's audience reaches Brevo, and which audiences there are.
+superseded_by: 0026-outbox-and-brevo-contacts.md
 ---
 
 # 0023: Each mailing gets its own Brevo list
 
 The Decision section is the user's. Everything under Agent notes is an agent's.
+
+Superseded on 2026-09-28 by [0026](0026-outbox-and-brevo-contacts.md): members are now contacts on one list, kept up to date, and a mailing goes to the list or to a segment. The audiences below are still the ones the attributes in 0026 make possible.
 
 ## Decision
 

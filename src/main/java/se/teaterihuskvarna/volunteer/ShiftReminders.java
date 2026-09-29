@@ -11,6 +11,9 @@ import org.springframework.stereotype.Component;
 /// after the last run, for a shift tomorrow, is reminded when it is made
 /// ([ShiftService#book]), since the next run may come after the shift starts.
 /// The cron's last hour is [ShiftService#LAST_RUN].
+///
+/// Also reports each shift once it has started, every five minutes, so the
+/// Brevo contacts' LAST_SHIFT follows ([ShiftService#reportStartedShifts]).
 @Component
 class ShiftReminders {
 
@@ -28,5 +31,10 @@ class ShiftReminders {
         if (sent > 0) {
             LOG.info("Queued {} volunteer shift reminders", sent);
         }
+    }
+
+    @Scheduled(fixedDelayString = "PT5M")
+    void reportStarts() {
+        shifts.reportStartedShifts();
     }
 }

@@ -27,6 +27,11 @@ interface ShiftRepository extends JpaRepository<Shift, Long> {
     @Query("select s from Shift s where s.startsAt >= :from order by s.startsAt, s.task, s.id")
     List<Shift> findStartingFrom(@Param("from") Instant from);
 
+    /// @param now the moment
+    /// @return the shifts that have started and whose start is not yet reported
+    @Query("select s from Shift s where s.startsAt <= :now and s.startReported = false order by s.id")
+    List<Shift> findStartedUnreported(@Param("now") Instant now);
+
     /// @param before the end of the range, not included
     /// @return the shifts starting before it, latest first
     @Query("select s from Shift s where s.startsAt < :before order by s.startsAt desc, s.task, s.id")

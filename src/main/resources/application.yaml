@@ -102,13 +102,13 @@ teaterihuskvarna:
     # R008 allows a minute from publishing to the site. The webhook usually
     # clears the copy at once, and this bounds the time when it does not.
     max-age: 45s
-  # Mailings: docs/decisions/0005 and 0023. With the http api, the
+  # Contacts and mailings: docs/decisions/0005 and 0026. With the http api, the
   # application refuses to start until every BREVO_ value below is set.
   brevo:
     api: ${BREVO_API:http}
     api-key: ${BREVO_API_KEY:}
     api-url: https://api.brevo.com/v3
-    folder-id: ${BREVO_FOLDER_ID:}
+    list-id: ${BREVO_LIST_ID:}
     test-list-id: ${BREVO_TEST_LIST_ID:}
     sender-name: ${BREVO_SENDER_NAME:}
     sender-email: ${BREVO_SENDER_EMAIL:}

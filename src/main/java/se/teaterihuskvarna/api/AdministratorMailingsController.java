@@ -8,13 +8,15 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import se.teaterihuskvarna.login.SignedIn;
-import se.teaterihuskvarna.mailing.AudienceChoice;
+import se.teaterihuskvarna.mailing.MailingAudiences;
 import se.teaterihuskvarna.mailing.MailingContent;
 import se.teaterihuskvarna.mailing.MailingDetails;
 import se.teaterihuskvarna.mailing.MailingForm;
+import se.teaterihuskvarna.mailing.MailingReach;
 import se.teaterihuskvarna.mailing.MailingService;
 
 /// Mailings (R022 to R025), as `/admin/utskick` does them.
@@ -27,10 +29,17 @@ public class AdministratorMailingsController {
         this.mailings = mailings;
     }
 
-    /// @return the audiences a mailing can go to
+    /// @return the audiences a mailing can go to: the members' list and Brevo's segments
     @GetMapping("/api/admin/mailings/audiences")
-    public List<AudienceChoice> audiences() {
+    public MailingAudiences audiences() {
         return mailings.audiences();
+    }
+
+    /// @param audience the audience's value from [#audiences]
+    /// @return who a mailing to it would reach, counted in Brevo
+    @GetMapping("/api/admin/mailings/reach")
+    public MailingReach reach(@RequestParam String audience) {
+        return mailings.reach(audience);
     }
 
     /// @return the published events and news a mailing can include
@@ -48,7 +57,7 @@ public class AdministratorMailingsController {
         return mailings.preview(form);
     }
 
-    /// R022: creates the list and the draft in Brevo.
+    /// R022: creates the draft in Brevo.
     ///
     /// @param signedIn the administrator, recorded as the one who prepared it
     /// @param form     the subject, words, audience and content

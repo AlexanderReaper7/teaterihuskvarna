@@ -4,6 +4,7 @@ import jakarta.validation.Valid;
 import java.time.Instant;
 import java.util.Optional;
 import org.jspecify.annotations.Nullable;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.MessageSource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -44,6 +45,7 @@ public class MembershipApplicationService {
     private final LoginSettings login;
     private final MailSettings mail;
     private final AssociationSettings association;
+    private final ApplicationEventPublisher events;
 
     MembershipApplicationService(
             MembershipApplicationRepository applications,
@@ -55,7 +57,8 @@ public class MembershipApplicationService {
             MessageSource messages,
             LoginSettings login,
             MailSettings mail,
-            AssociationSettings association) {
+            AssociationSettings association,
+            ApplicationEventPublisher events) {
         this.applications = applications;
         this.accounts = accounts;
         this.members = members;
@@ -66,6 +69,7 @@ public class MembershipApplicationService {
         this.login = login;
         this.mail = mail;
         this.association = association;
+        this.events = events;
     }
 
     /// Receives a Bli medlem form. Returns nothing, and returns the same way in
@@ -169,6 +173,7 @@ public class MembershipApplicationService {
         member.setContact(application.getContact());
         members.save(member);
         accounts.save(new Account(member, new Email(application.getEmail())));
+        events.publishEvent(new MemberChanged(member.getId()));
 
         return Optional.of(new Welcome(member.getFullName(), application.getEmail(), association.bankgiro(),
                 association.feeIndividualOre(), association.feeHouseholdOre()));

@@ -12,7 +12,7 @@ import org.jspecify.annotations.Nullable;
 
 /// A mailing prepared in Brevo, and what Brevo last said about it.
 ///
-/// Column lengths mirror `V10__mailings.sql` by hand, because `ddl-auto: validate`
+/// Column lengths mirror `V10__mailings.sql` and `V13__brevo_contacts.sql` by hand, because `ddl-auto: validate`
 /// does not compare them: `docs/decisions/0012-jpa-over-a-schema-flyway-owns.md`.
 @Entity
 @Table(name = "mailing")
@@ -30,12 +30,6 @@ public class Mailing {
 
     @Column(name = "audience_name", nullable = false, length = 300)
     private String audienceName;
-
-    @Column(name = "recipients", nullable = false)
-    private int recipients;
-
-    @Column(name = "brevo_list_id", nullable = false)
-    private long brevoListId;
 
     @Column(name = "brevo_campaign_id", nullable = false)
     private long brevoCampaignId;
@@ -75,20 +69,15 @@ public class Mailing {
     }
 
     /// @param subject      the subject line
-    /// @param audience     the audience rule, such as `PAID`
-    /// @param audienceName the audience in Swedish
-    /// @param recipients   how many addresses the list got
-    /// @param listId       Brevo's list
+    /// @param audience     the audience, `LIST` or `SEGMENT:<id>`
+    /// @param audienceName the audience as the form showed it
     /// @param campaignId   Brevo's draft campaign
     /// @param createdBy    the administrator who prepared it
     /// @param now          the moment it was prepared
-    Mailing(String subject, String audience, String audienceName, int recipients, long listId, long campaignId,
-            long createdBy, Instant now) {
+    Mailing(String subject, String audience, String audienceName, long campaignId, long createdBy, Instant now) {
         this.subject = subject;
         this.audience = audience;
         this.audienceName = audienceName;
-        this.recipients = recipients;
-        this.brevoListId = listId;
         this.brevoCampaignId = campaignId;
         this.createdBy = createdBy;
         this.createdAt = now;
@@ -110,14 +99,6 @@ public class Mailing {
 
     public String getAudienceName() {
         return audienceName;
-    }
-
-    public int getRecipients() {
-        return recipients;
-    }
-
-    public long getBrevoListId() {
-        return brevoListId;
     }
 
     public long getBrevoCampaignId() {
