@@ -20,7 +20,7 @@ All decided by the user on 2026-09-27.
 - The owner's own work, agents included, goes through pull requests too. The owner's agents may rebase their branches, since the owner's clones opt out of the force-push block.
 - CI's [`build.yml`](../../.github/workflows/build.yml) and [`docs.yml`](../../.github/workflows/docs.yml) run on every pull request, and on push only to main.
 - Automatic review: a reviewing agent runs on the owner's machine, and its findings stay private to the owner. Before anything is built, a time-boxed spike checks whether a T3 Code thread can host the review, so the owner can follow it as it runs. `t3` 0.0.42 has no command that starts a thread.
-- Whether GitHub enforces any of this, through a paid plan or a public repository, is deferred. It would not change the team's guide either way. [0003](0003-no-branch-protection-yet.md) records the current state.
+- GitHub enforcement was deferred on 2026-09-27. On 2026-09-30 the user confirmed customer permission to publish and requested protection, with an explicit owner bypass for review requirements. [0003](0003-no-branch-protection-yet.md) records the active rules and verification.
 
 ## Agent notes
 
