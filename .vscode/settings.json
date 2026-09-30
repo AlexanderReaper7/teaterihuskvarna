@@ -37,5 +37,8 @@
   "[yaml]": { "editor.tabSize": 2 },
 
   // Checkstyle's LineLength is 120.
-  "editor.rulers": [120]
+  "editor.rulers": [
+    120
+  ],
+  "java.compile.nullAnalysis.mode": "automatic"
 }
