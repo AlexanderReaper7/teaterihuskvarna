@@ -2,6 +2,7 @@ package se.teaterihuskvarna.web;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import org.springframework.context.MessageSource;
@@ -24,8 +25,11 @@ public final class Copy {
     private static final ZoneId SWEDEN = ZoneId.of("Europe/Stockholm");
     private static final DateTimeFormatter DATE = DateTimeFormatter.ofPattern("d MMMM yyyy", Swedish.LOCALE)
             .withZone(SWEDEN);
+    private static final DateTimeFormatter DAY = DateTimeFormatter.ofPattern("d MMMM yyyy", Swedish.LOCALE);
     private static final DateTimeFormatter DATE_TIME = DateTimeFormatter
             .ofPattern("d MMMM yyyy 'kl.' HH:mm", Swedish.LOCALE)
+            .withZone(SWEDEN);
+    private static final DateTimeFormatter TIME = DateTimeFormatter.ofPattern("HH:mm", Swedish.LOCALE)
             .withZone(SWEDEN);
 
     private final MessageSource messages;
@@ -51,15 +55,37 @@ public final class Copy {
         return Lifetimes.describe(messages, lifetime);
     }
 
+    /// @param ore an amount in öre
+    /// @return the amount in kronor, such as "50 kr" or "12,50 kr"
+    public String kronor(int ore) {
+        if (ore % 100 == 0) {
+            return messages.getMessage("money.kronor", new Object[] {String.valueOf(ore / 100)}, Swedish.LOCALE);
+        }
+        String amount = String.format(Swedish.LOCALE, "%d,%02d", ore / 100, ore % 100);
+        return messages.getMessage("money.kronor", new Object[] {amount}, Swedish.LOCALE);
+    }
+
     /// @param instant a moment
     /// @return its date in Sweden, such as "23 september 2026"
     public String date(Instant instant) {
         return DATE.format(instant);
     }
 
+    /// @param day a calendar date, which has no zone to convert
+    /// @return the date in Swedish, such as "14 mars 2026"
+    public String date(LocalDate day) {
+        return DAY.format(day);
+    }
+
     /// @param instant a moment
     /// @return its date and time in Sweden, such as "23 september 2026 kl. 14:05"
     public String dateTime(Instant instant) {
         return DATE_TIME.format(instant);
+    }
+
+    /// @param instant a moment
+    /// @return its time of day in Sweden, such as "14:05"
+    public String time(Instant instant) {
+        return TIME.format(instant);
     }
 }

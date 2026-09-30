@@ -188,6 +188,27 @@ class LoginIT extends IntegrationTestSupport {
         assertThat(rowsIn("one_time_token")).isEqualTo(1);
     }
 
+    /// The API answers what the link page decides, and uses nothing up.
+    @Test
+    void theApiSaysWhereALinkWorks() throws Exception {
+        insertAccount("Karin Karlsson", KARIN);
+        requestLink(LoginKind.MEMBER, KARIN);
+        String token = tokenIn(awaitMail(), linkPath(LoginKind.MEMBER));
+        Cookie here = browserCookie(LoginKind.MEMBER);
+        assertThat(here).isNotNull();
+
+        mockMvc.perform(get("/api/login-links").param("kind", "MEMBER").param("token", token).cookie(here))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.opening").value("HERE"));
+        mockMvc.perform(get("/api/login-links").param("kind", "MEMBER").param("token", token))
+                .andExpect(jsonPath("$.opening").value("ELSEWHERE"));
+        mockMvc.perform(get("/api/login-links").param("kind", "ADMINISTRATOR").param("token", token).cookie(here))
+                .andExpect(jsonPath("$.opening").value("UNUSABLE"));
+        mockMvc.perform(get("/api/login-links").param("kind", "MEMBER").param("token", "not-a-token"))
+                .andExpect(jsonPath("$.opening").value("UNUSABLE"));
+        assertThat(rowsIn("one_time_token")).isEqualTo(1);
+    }
+
     @Test
     void theMailCarriesACodeThatLogsIn() throws Exception {
         long account = insertAccount("Karin Karlsson", KARIN);
@@ -577,17 +598,18 @@ class LoginIT extends IntegrationTestSupport {
         mockMvc.perform(get("/bli-medlem/skickat")).andExpect(status().isOk());
     }
 
-    /// Security permits `/api/development/**` in every profile, so this is what
+    /// Security permits `/dev` and `/api/development/**` in every profile, so this is what
     /// keeps the route list and the login addresses out of production: without
     /// the dev profile nothing is mapped there, and `/` is the start page.
     @Test
     void theDevelopmentIndexExistsOnlyUnderTheDevProfile() throws Exception {
+        mockMvc.perform(get("/dev")).andExpect(status().isNotFound());
         mockMvc.perform(get("/api/development/routes")).andExpect(status().isNotFound());
         mockMvc.perform(get("/api/development/login-accounts")).andExpect(status().isNotFound());
         mockMvc.perform(get("/api/development/environment")).andExpect(status().isNotFound());
         mockMvc.perform(get("/"))
                 .andExpect(status().isOk())
-                .andExpect(content().string(containsString("Webbplatsen byggs om")));
+                .andExpect(content().string(containsString("Nästa evenemang")));
     }
 
     /// The files every page links to load without a session, and only those: the

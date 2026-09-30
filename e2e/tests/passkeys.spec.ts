@@ -59,7 +59,7 @@ test.describe("what works", () => {
 
     await buttonLogin(page, "member");
     await expect(page).toHaveURL(PATHS.member.home);
-    await expect(page.getByText("Erik Lindqvist")).toBeVisible();
+    await expect(page.getByText("Erik Lindqvist", { exact: true })).toBeVisible();
     await expect(offer(page)).toHaveCount(0);
   });
 
@@ -71,7 +71,7 @@ test.describe("what works", () => {
 
     await page.goto(PATHS.member.login);
     await expect(page).toHaveURL(PATHS.member.home);
-    await expect(page.getByText("Maria Lindqvist")).toBeVisible();
+    await expect(page.getByText("Maria Lindqvist", { exact: true })).toBeVisible();
   });
 
   test("an administrator adds a passkey and logs in with it", async ({ page, context }) => {

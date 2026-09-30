@@ -9,7 +9,7 @@ import se.teaterihuskvarna.development.LoginAccount;
 import se.teaterihuskvarna.development.Route;
 import se.teaterihuskvarna.development.RunningEnvironment;
 
-/// What the development index on `/` shows, under the `dev` profile only.
+/// What the development index on `/dev` shows, under the `dev` profile only.
 @RestController
 @Profile("dev")
 public class DevelopmentController {

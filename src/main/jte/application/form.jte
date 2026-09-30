@@ -1,4 +1,5 @@
 @import se.teaterihuskvarna.member.ApplicationForm
+@import se.teaterihuskvarna.member.AssociationSettings
 @import se.teaterihuskvarna.web.Copy
 @import se.teaterihuskvarna.web.CsrfField
 @import se.teaterihuskvarna.web.FieldErrors
@@ -7,6 +8,7 @@
 @param boolean stale
 @param ApplicationForm form
 @param FieldErrors errors
+@param AssociationSettings fees
 @template.layout(copy = copy, title = copy.text("application.heading"), content = @`
     <h1>${copy.text("application.heading")}</h1>
     <p>${copy.text("application.pitch")}</p>
@@ -17,7 +19,8 @@
         <li>${copy.text("application.benefit.offers")}</li>
     </ul>
     <h2>${copy.text("application.fee.heading")}</h2>
-    <p>${copy.text("application.fee.body")}</p>
+    <p>${copy.text("application.fee.body", copy.kronor(fees.feeIndividualOre()),
+        copy.kronor(fees.feeHouseholdOre()))}</p>
     <p>${copy.text("application.household")}</p>
     <p>${copy.text("application.intro")}</p>
     @if(stale)

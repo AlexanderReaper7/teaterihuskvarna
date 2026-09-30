@@ -27,7 +27,7 @@ test.describe("what works", () => {
     await page.goto(mail.link);
     await expect(page).toHaveURL(PATHS.member.home);
     await expect(page.getByRole("heading", { name: text("member.heading") })).toBeVisible();
-    await expect(page.getByText("Erik Lindqvist")).toBeVisible();
+    await expect(page.getByText("Erik Lindqvist", { exact: true })).toBeVisible();
     await expect(page.getByText(MEMBERS.erik)).toBeVisible();
   });
 
@@ -82,7 +82,7 @@ test.describe("what works", () => {
     await page.getByLabel(text("login.code.label")).fill(mail.code!);
     await page.getByRole("button", { name: text("login.code.submit") }).click();
     await expect(page).toHaveURL(PATHS.member.home);
-    await expect(page.getByText("Sara Bergström")).toBeVisible();
+    await expect(page.getByText("Sara Bergström", { exact: true })).toBeVisible();
   });
 
   test("a wrong code says so on the page it was typed on", async ({ page }) => {
@@ -265,10 +265,10 @@ test.describe("what a person might get wrong", () => {
 
   test("the back button after logging out does not show the member's details", async ({ page }) => {
     await linkLogin(page, "member", MEMBERS.erik);
-    await expect(page.getByText("Erik Lindqvist")).toBeVisible();
+    await expect(page.getByText("Erik Lindqvist", { exact: true })).toBeVisible();
     await logOut(page, "member");
     await page.goBack();
-    await expect(page.getByText("Erik Lindqvist")).toHaveCount(0);
+    await expect(page.getByText("Erik Lindqvist", { exact: true })).toHaveCount(0);
   });
 
   test("a member who opens the administrator page lands on a login that says it is not theirs", async ({ page }) => {
@@ -284,8 +284,8 @@ test.describe("what a person might get wrong", () => {
     await linkLogin(page, "member", MEMBERS.erik);
     await page.goto(await mailedLink(page, "member", MEMBERS.maria));
     await expect(page).toHaveURL(PATHS.member.home);
-    await expect(page.getByText("Maria Lindqvist")).toBeVisible();
-    await expect(page.getByText("Erik Lindqvist")).toHaveCount(0);
+    await expect(page.getByText("Maria Lindqvist", { exact: true })).toBeVisible();
+    await expect(page.getByText("Erik Lindqvist", { exact: true })).toHaveCount(0);
   });
 
   test("logging in as the other kind replaces the first login", async ({ page }) => {

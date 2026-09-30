@@ -68,6 +68,8 @@ flowchart LR
     host --- db
 ```
 
+The development Compose stack also runs Sanity Studio; association editors use Sanity hosting, per [0021](decisions/0021-content-from-sanity.md). Both editors connect to Sanity's hosted content database. The development application reads the same `dev` dataset as Studio; automated tests use fixture content.
+
 The application renders usable HTML on the server. Sanity content is cached, a publish webhook clears the cache, and the cache expires within one minute if the webhook fails.
 
 The accepted component choices and their costs are recorded in [0004](decisions/0004-jte-for-templates.md), [0005](decisions/0005-brevo-campaign-drafts.md), [0006](decisions/0006-sanity-for-now.md), [0007](decisions/0007-postgres-in-a-container.md), [0008](decisions/0008-everything-in-containers.md) and [0009](decisions/0009-java-25-lts.md).
@@ -90,9 +92,9 @@ An invitation is valid for 7 days by default, and the lifetime is configurable. 
 
 ## The application prepares mailings and Brevo sends them
 
-An administrator selects an audience from membership data and chooses published Sanity content. The application builds the HTML and creates a draft Brevo campaign. The administrator reviews, test-sends and sends the campaign in Brevo. Brevo owns unsubscribe handling and campaign history. The application does not contain a second mailing editor.
+An administrator selects an audience, the Brevo list or one of its segments, and chooses published Sanity content. The application builds the HTML and creates a draft Brevo campaign. The administrator reviews, test-sends and sends the campaign in Brevo. Brevo owns unsubscribe handling and campaign history. The application does not contain a second mailing editor.
 
-Brevo campaigns address lists or segments, not arbitrary application queries. Before implementing this flow, record how the selected recipients are synchronised to Brevo and how later synchronisation preserves Brevo's suppression and unsubscribe state. The member register in PostgreSQL remains authoritative for membership and fee status.
+Every member with an account is a contact on one Brevo list, updated on every change to the register, with attributes for the paid year, the latest volunteer shift and the offers registered for. The association builds its audiences as segments in Brevo, and a mailing goes to the list or to a segment: [decisions/0026](decisions/0026-outbox-and-brevo-contacts.md). The member register in PostgreSQL remains authoritative for membership and fee status, and Brevo for unsubscribes.
 
 ## The member model records only data the confirmed workflows need
 
@@ -112,7 +114,7 @@ Before building reconciliation, compare this rule with real anonymised bankgiro 
 
 Offer registrations, volunteer bookings and mailing records refer to members by identifier. No member-register field may appear in a Sanity content type.
 
-An offer is therefore split across both systems, deliberately. Sanity holds what an editor writes: title, description, images, dates. PostgreSQL holds the seat capacity and the registrations against it. Requirement R014 promises a member the number of places left, and a count is only correct if the same transaction that takes a place checks the limit. Capacity stored in Sanity could be lowered by an editor while a member is registering, with the application unable to refuse the extra booking. The cost of the split is an administration screen for setting capacity, and an offer that no single editor owns end to end.
+Offers and member documents live entirely in the application, because offer details are for members only and a Free Sanity dataset publishes everything: [decisions/0022](decisions/0022-offers-and-documents-in-the-application.md). Volunteer shifts live in PostgreSQL too and name the Sanity event they belong to: [decisions/0024](decisions/0024-volunteer-shifts.md).
 
 ## Accessibility needs automated and manual checks
 
@@ -188,11 +190,9 @@ The release is complete when:
 
 SHOULD and COULD requirements are cut before any MUST requirement. No technical convenience may silently reduce a MUST requirement.
 
-## Four unresolved items can still change implementation
+## Two unresolved items can still change implementation
 
 - The board must set the retention period for former-member data and backups.
-- Member-only offer details need a private Sanity dataset or storage in the application, T6 in [open-questions.md](open-questions.md).
-- The Brevo integration needs a recorded recipient synchronisation and suppression rule.
 - A maintainer and the association-owned service accounts must exist before launch.
 
 The remaining questions are in the next meeting's document under [meetings/](meetings/) and in [open-questions.md](open-questions.md).

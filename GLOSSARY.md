@@ -72,7 +72,7 @@ A grouping used to let one household fee cover several members. A household is n
 
 ### Household member addition | Tillägg i hushållet
 
-A member with an account, or an administrator, adding a person to that member's household. It creates a member without an account.
+An administrator adding a person to a household. It creates a member without an account. A member cannot add people, only invite those already in the household ([decisions/0025](docs/decisions/0025-member-register-in-the-application.md)).
 
 ### Invitation | Inbjudan
 
@@ -80,7 +80,7 @@ An offer of an account to a member who has none, sent to an email address by an 
 
 ### Membership application | Ansökan om medlemskap
 
-A visitor's request to enter the member register, for themselves alone. It becomes a member with an account, without a paid fee, when the applicant confirms their email address, and it is deleted if they have not confirmed within 24 hours. Household members are added afterwards, not through the application. Provisional until the customer decides, see [open-questions.md](docs/open-questions.md).
+A visitor's request to enter the member register, for themselves alone. It becomes a member with an account, without a paid fee, when the applicant confirms their email address, and it is deleted if they have not confirmed within 24 hours. Household members are added afterwards, not through the application. Provisional until the customer decides, see C9 in [open-questions.md](docs/open-questions.md#for-the-customer-deferred).
 
 ### Membership fee | Medlemsavgift
 
@@ -92,7 +92,7 @@ A membership fee that covers only the member against whom the payment is recorde
 
 ### Household fee | Avgift för familj
 
-A membership fee that covers the payer and every member in the payer's household.
+A membership fee that covers the payer and whoever is in the household it was paid for now, so moving a member changes which household fee covers them. The fee stays with that household when the payer is deleted. Decided by the user on 2026-09-28 ([decisions/0025](docs/decisions/0025-member-register-in-the-application.md)).
 
 ### Fee status | Avgiftsstatus
 
@@ -110,11 +110,23 @@ A scheduled public activity listed on the site.
 
 ### Event series | Serie
 
-A named grouping of related events, such as Kaffe med drömmar or Alf Henrikson-dagen.
+A named grouping of related events, such as Kaffe med drömmar or Alf Henrikson-dagen. A `serie` document in Sanity that an event refers to, and the calendar's filter ([0021](docs/decisions/0021-content-from-sanity.md)).
+
+### Preview | Förhandsgranskning
+
+The site as it looks with an editor's unpublished drafts, shown inside Sanity's Presentation tool and nowhere else (R009, [0021](docs/decisions/0021-content-from-sanity.md)).
+
+### Fixed page | Sida
+
+One of the pages R004 names, such as Styrelsen, written in Sanity as a `sida` document whose slug is the page's address.
 
 ### Offer | Erbjudande
 
-A member benefit or limited-capacity activity for which a member may register.
+A member benefit or limited-capacity activity for which a member may register. An administrator creates it on `/admin/erbjudanden`, and members see it on `/medlem/erbjudanden` once it is published. Offers live in PostgreSQL, not in Sanity: decided by the user on 2026-09-28.
+
+### Registration closing | Anmälan stänger
+
+The moment after which a member can neither register for an offer nor cancel a registration. It is the closing time the administrator set, or the offer's start when none is set, or never when the offer has neither. The fallback to the start is an agent's choice, made while building R014.
 
 ### Offer capacity | Antal platser
 
@@ -124,23 +136,39 @@ The number of places an offer has. Stored in PostgreSQL, not in Sanity, so that 
 
 A member's reservation of a place in an offer.
 
+### Member document | Medlemshandling
+
+A PDF for members only, uploaded by an administrator on `/admin/handlingar` and listed for members on `/medlem/handlingar`. It is one of two kinds: an annual meeting document (årsmöteshandling) or a member letter (medlemsbrev). Member documents live in PostgreSQL, not in Sanity: decided by the user on 2026-09-28.
+
 ### Volunteer shift | Volontärpass
 
-A dated task for volunteers at a performance, such as cloakroom or serving work.
+A dated task for volunteers at one Sanity event, cloakroom (garderob) or serving (servering), with a number of places ([decisions/0024](docs/decisions/0024-volunteer-shifts.md)).
 
 ### Volunteer booking | Volontärbokning
 
-A member's reservation of one volunteer shift.
+A member's reservation of one place on a volunteer shift, which the member can cancel until the shift starts.
+
+### Shift reminder | Påminnelse
+
+The email a member gets the day before a booked volunteer shift, once per booking. A booking made late in the evening before the shift gets it at once, and a booking made on the shift's own day gets none.
 
 ## Communication
 
 ### Mailing audience | Målgrupp
 
-The members selected for one mailing by an explicit rule, such as all paying members or all volunteers. Only the selected members with an account receive it.
+Who one mailing goes to: the whole Brevo list, or a segment the association saved in Brevo, such as members who have paid this year, members who have not, volunteers with a shift in the last 12 months, or the members registered to one offer. Only members with an account are on the list ([decisions/0026](docs/decisions/0026-outbox-and-brevo-contacts.md)).
 
 ### Mailing | Utskick
 
-One bulk message sent to a mailing audience. A login email is not a mailing.
+One bulk message sent to a mailing audience. An administrator prepares it in the application, which creates a draft campaign in Brevo, and sends it from Brevo. A login email and a shift reminder are not mailings.
+
+### Brevo list | Brevo-lista
+
+The one list in Brevo that holds every member with an account as a contact, which the application keeps up to date on every change to the register ([decisions/0026](docs/decisions/0026-outbox-and-brevo-contacts.md)).
+
+### Segment | Segment
+
+A saved selection of the Brevo list, made in Brevo on the attributes each contact carries: PAID_YEAR, LAST_SHIFT and OFFERS. A mailing can go to one segment ([decisions/0026](docs/decisions/0026-outbox-and-brevo-contacts.md)).
 
 ## System
 

@@ -56,11 +56,12 @@ test.describe("what works", () => {
     await confirm(page, link);
     await expect(page.getByRole("heading", { name: text("application.welcome.heading", "Åsa Öberg") }))
       .toBeVisible();
-    await expect(page.getByText(text("application.welcome.payment", "123-4567"))).toBeVisible();
+    await expect(page.getByText(text("application.welcome.payment", "50 kr", "100 kr", "123-4567", "Åsa Öberg")))
+      .toBeVisible();
     await expect(page.getByText(text("application.welcome.login", email))).toBeVisible();
 
     await linkLogin(page, "member", email);
-    await expect(page.getByText("Åsa Öberg")).toBeVisible();
+    await expect(page.getByText("Åsa Öberg", { exact: true })).toBeVisible();
   });
 
   test("opening the confirmation link does not confirm by itself", async ({ page }) => {

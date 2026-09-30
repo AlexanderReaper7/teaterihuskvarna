@@ -8,7 +8,24 @@ Each question has an id, and ids are not reused. A resolved question is deleted.
 
 ## For the customer, deferred
 
+C1-C4 were deferred from [meeting 2](meetings/2026-09-30-meeting-2.md) by the user on 2026-09-30 to focus on the current build. They remain required follow-ups before launch.
+
+- [ ] **C1. Vem ersätter produktägaren vid frånvaro?** From the original plan.
+- [ ] **C2. Who maintains the system after the APL period ends, under what agreement, and who holds the credentials?** The answer is a person or a company. This is the plan's largest stated risk, because the association budgets a few hours a year and the students leave at week 12. The original asked "nästa Lexicon-omgång, konsultbolaget eller båda?", and all three of those answers are guesses about who might volunteer.
+- [ ] **C3. Which two board members get administrator access to the production accounts?** The plan requires at least two, and a release check has the second one sign in to every production account.
+- [ ] **C4. Which editors and administrators test the system before launch?** A release check times an editor who has never used the system publishing an event, and another has real administrators mark a fee paid, export the register and send a mailing.
+
+C9, C10 and C17 were also deferred from that meeting by the user on 2026-09-30.
+
 - [ ] **C9. Does a Bli medlem application become a member when the applicant confirms their email address, or when an administrator approves it?** Requirement R005 says the form creates a member, but a form that writes straight into the register lets bots fill it and puts them in every mailing, so one of the two is needed. Built for now as "a member with an account once the email address is confirmed". At [the first meeting](meetings/2026-09-24-meeting-1.md#what-the-site-does) the answer was to decide later.
+- [ ] **C10. Is 817-5531 still the association's bankgiro number?** The old site's footer gives it next to organisation number 826001-8224 ([join.png](../design/old-site/screenshots/join.png)). A new member is told to pay the fee to it.
+- [ ] **C17. Which private email addresses and phone numbers must never appear on the public site?** A release check crawls the site for the board's private contact details, and it needs the list. The old site published several.
+
+### Agent notes
+
+C12 is deferred until bank reconciliation is considered. The [system plan](projektplan.md#must-requirements-determine-whether-version-1-can-launch) excludes automatic bank reconciliation from version 1; fee marking remains manual.
+
+- [ ] **C12. Can the association provide real bankgiro payments, anonymised, before reconciliation is built?** The plan's rule for matching a payment to a member has to be checked against them. A payer's name may differ from the member's.
 
 ## For Lexicon
 
@@ -22,12 +39,7 @@ From the original plan. It blocks nothing in the repository.
 
 ## For the team
 
-- [ ] **T1. How does the application synchronise a selected mailing audience to Brevo?** Campaigns address Brevo lists or segments. The rule has to keep PostgreSQL authoritative for membership and fee status while preserving Brevo's unsubscribe and suppression state.
 - [ ] **T2. Which of the Sanity personal-data measures does the project adopt?** Proxying photographs through the application, reading from `api.sanity.io`, banning AI plugins in the Studio, `DO_NOT_TRACK=1`, stripping EXIF data, and watching the subprocessor list. None is decided. The list and the reasoning are in [research/sanity-personal-data.md](research/sanity-personal-data.md).
-- [ ] **T3. The page after a confirmed application asks for the name in the payment message twice**, "med namn i meddelandet" and then "Skriv {name} i meddelandet". The copy is in [`messages_sv.properties`](../src/main/resources/messages_sv.properties). Rewrite it together with the answer to T4.
-- [ ] **T4. Must a household have added all its members before it pays the family fee, or is the family fee bound to the account, so members can be added and changed after paying?** The produktägare's wording is "50 kr enskild, 100 kr familj". An application is for one person, and household members are added only after the member exists, by an administrator or by a member of the household. The answer decides what the page after a confirmed application says about the fee, and what "paid" means for a person added to a household later in the year. Was C11, and Klas left it to the team at [the first meeting](meetings/2026-09-24-meeting-1.md#what-the-site-does).
-- [ ] **T5. Is the orange `#ee6810` darkened to `#b64f0c`?** The current orange fails the WCAG 2.1 AA contrast that requirement R006 makes a MUST. The darker value passes on white and on mint and reads as the same colour. Orange on teal has no passing value, so footer icon hover would change to white or mint. Was C23, and Klas left it to the team at [the first meeting](meetings/2026-09-24-meeting-1.md#how-the-site-looks).
-- [ ] **T6. Where do member-only offer details live?** At [the first meeting](meetings/2026-09-24-meeting-1.md#what-the-site-does) Klas answered C16: offer descriptions and discount details are for members only. A Free Sanity dataset publishes everything, so they need the nonprofit plan's private dataset, which Klas is applying for (C8), or storage in the application.
 
 ## Found by the e2e suite
 
@@ -35,4 +47,4 @@ The Playwright suite in [`e2e/`](../e2e/) ([decisions/0017](decisions/0017-playw
 
 - [ ] **E1.** Headless Chromium says passkey autofill is available and then refuses it. Whether a desktop Chrome does the same is not checked. Either way the page now shows nothing until the person presses the passkey button.
 - [ ] **E2.** In about one Firefox run in 60, a click on the link request button was delivered and no POST was sent. Not found yet.
-- [ ] **E3.** With two suites running at once on 2026-09-26, each failed one different Firefox test in [`login.spec.ts`](../e2e/tests/login.spec.ts), and neither failed alone. Both times the list of logged-in devices had rows with an empty device name, which `DeviceNames` never returns, so under load a session reaches the list without the device attribute its login set. The row's button is then named plain "Logga ut", and `logOut` in [`e2e/support/auth.ts`](../e2e/support/auth.ts) matches two buttons. Not found yet. Not marked `test.fail()`, since the test passes when run alone.
+- [ ] **E3.** With two suites running at once on 2026-09-26, each failed one different Firefox test in [`login.spec.ts`](../e2e/tests/login.spec.ts), and neither failed alone. Both times the list of logged-in devices had rows with an empty device name, which `DeviceNames` never returns, so under load a session reaches the list without the device attribute its login set. The row's button is then named plain "Logga ut", and `logOut` in [`e2e/support/auth.ts`](../e2e/support/auth.ts) matches two buttons. Not found yet. Not marked `test.fail()`, since the test passes when run alone. On 2026-09-28 it recurred in one suite running [`application.spec.ts`](../e2e/tests/application.spec.ts), [`login.spec.ts`](../e2e/tests/login.spec.ts) and [`passkeys.spec.ts`](../e2e/tests/passkeys.spec.ts) in sequence, in "an older link still works after asking for a newer one" under Firefox, and this time the row without a name was the current device, whose session row had `endsAt` but no `device`. The same test passed 15 times in a row alone. On 2026-09-29 the full suite failed once in Firefox in [`devices.spec.ts`](../e2e/tests/devices.spec.ts), "a device logged out from another shows it is logged out": the list showed one device where two had logged in, which fits a session that lost `endsAt`, since `DeviceService` skips a session without it. It passed five times in a row alone.

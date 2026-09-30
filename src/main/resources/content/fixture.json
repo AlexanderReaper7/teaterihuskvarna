@@ -1,0 +1,454 @@
+{
+  "serie": [
+    {
+      "_id": "serie-kulturnatt",
+      "_type": "serie",
+      "title": "Kulturnatt",
+      "slug": {
+        "current": "kulturnatt"
+      }
+    },
+    {
+      "_id": "serie-teatercafe",
+      "_type": "serie",
+      "title": "Teatercafé",
+      "slug": {
+        "current": "teatercafe"
+      }
+    }
+  ],
+  "evenemang": [
+    {
+      "_id": "evenemang-mitt-i-veckan",
+      "_type": "evenemang",
+      "title": "Mitt i veckan",
+      "slug": {
+        "current": "mitt-i-veckan"
+      },
+      "datumTid": "@+3d 19:00",
+      "plats": "Folkets hus, Huskvarna",
+      "ingress": "En komedi om en vanlig onsdag som går helt fel.",
+      "serie": {
+        "title": "Teatercafé",
+        "slug": {
+          "current": "teatercafe"
+        }
+      },
+      "beskrivning": [
+        {
+          "_type": "block",
+          "_key": "h",
+          "style": "h2",
+          "markDefs": [],
+          "children": [
+            {
+              "_type": "span",
+              "_key": "hs",
+              "text": "Om föreställningen",
+              "marks": []
+            }
+          ]
+        },
+        {
+          "_type": "block",
+          "_key": "p",
+          "style": "normal",
+          "markDefs": [
+            {
+              "_type": "link",
+              "_key": "l",
+              "href": "https://example.test/biljetter"
+            }
+          ],
+          "children": [
+            {
+              "_type": "span",
+              "_key": "p1",
+              "text": "Föreställningen är ",
+              "marks": []
+            },
+            {
+              "_type": "span",
+              "_key": "p2",
+              "text": "90 minuter",
+              "marks": [
+                "strong"
+              ]
+            },
+            {
+              "_type": "span",
+              "_key": "p3",
+              "text": " lång. Läs mer ",
+              "marks": []
+            },
+            {
+              "_type": "span",
+              "_key": "p4",
+              "text": "hos arrangören",
+              "marks": [
+                "l"
+              ]
+            },
+            {
+              "_type": "span",
+              "_key": "p5",
+              "text": ".",
+              "marks": []
+            }
+          ]
+        },
+        {
+          "_type": "block",
+          "_key": "li1",
+          "style": "normal",
+          "listItem": "bullet",
+          "level": 1,
+          "markDefs": [],
+          "children": [
+            {
+              "_type": "span",
+              "_key": "x",
+              "text": "Fika i pausen",
+              "marks": []
+            }
+          ]
+        },
+        {
+          "_type": "block",
+          "_key": "li2",
+          "style": "normal",
+          "listItem": "bullet",
+          "level": 1,
+          "markDefs": [],
+          "children": [
+            {
+              "_type": "span",
+              "_key": "y",
+              "text": "Passar från tolv år",
+              "marks": []
+            }
+          ]
+        }
+      ],
+      "biljettlank": "https://example.test/biljetter"
+    },
+    {
+      "_id": "evenemang-kulturnatten",
+      "_type": "evenemang",
+      "title": "Kulturnatten på torget",
+      "slug": {
+        "current": "kulturnatten"
+      },
+      "datumTid": "@+10d 18:00",
+      "plats": "Stora torget",
+      "ingress": "Scener, sång och korta pjäser hela kvällen.",
+      "serie": {
+        "title": "Kulturnatt",
+        "slug": {
+          "current": "kulturnatt"
+        }
+      },
+      "beskrivning": [
+        {
+          "_type": "block",
+          "_key": "b0",
+          "style": "normal",
+          "markDefs": [],
+          "children": [
+            {
+              "_type": "span",
+              "_key": "b0s",
+              "text": "Fri entré. Kom och gå som du vill.",
+              "marks": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "_id": "evenemang-lasning",
+      "_type": "evenemang",
+      "title": "Läsning: Nya pjäser",
+      "slug": {
+        "current": "lasning-nya-pjaser"
+      },
+      "datumTid": "@+24d 14:00",
+      "plats": "Biblioteket",
+      "ingress": "Medlemmar läser nyskrivna pjäser högt.",
+      "beskrivning": [
+        {
+          "_type": "block",
+          "_key": "b0",
+          "style": "normal",
+          "markDefs": [],
+          "children": [
+            {
+              "_type": "span",
+              "_key": "b0s",
+              "text": "Ingen anmälan behövs.",
+              "marks": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "_id": "evenemang-varshow",
+      "_type": "evenemang",
+      "title": "Vårshowen",
+      "slug": {
+        "current": "varshowen"
+      },
+      "datumTid": "@-20d 19:00",
+      "plats": "Folkets hus, Huskvarna",
+      "ingress": "Förra säsongens show.",
+      "beskrivning": [
+        {
+          "_type": "block",
+          "_key": "b0",
+          "style": "normal",
+          "markDefs": [],
+          "children": [
+            {
+              "_type": "span",
+              "_key": "b0s",
+              "text": "Tack till alla som kom!",
+              "marks": []
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "nyhet": [
+    {
+      "_id": "nyhet-ny-webbplats",
+      "_type": "nyhet",
+      "title": "Ny webbplats",
+      "slug": {
+        "current": "ny-webbplats"
+      },
+      "publiceringsdatum": "@-2d 09:00",
+      "ingress": "Föreningen har fått en ny webbplats.",
+      "brodtext": [
+        {
+          "_type": "block",
+          "_key": "b0",
+          "style": "normal",
+          "markDefs": [],
+          "children": [
+            {
+              "_type": "span",
+              "_key": "b0s",
+              "text": "Här hittar du kalendern, nyheter och allt om föreningen.",
+              "marks": []
+            }
+          ]
+        },
+        {
+          "_type": "block",
+          "_key": "b1",
+          "style": "normal",
+          "markDefs": [],
+          "children": [
+            {
+              "_type": "span",
+              "_key": "b1s",
+              "text": "Medlemmar loggar in under Mina sidor.",
+              "marks": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "_id": "nyhet-audition",
+      "_type": "nyhet",
+      "title": "Audition till höstens uppsättning",
+      "slug": {
+        "current": "audition-hosten"
+      },
+      "publiceringsdatum": "@-9d 12:00",
+      "ingress": "Vi söker skådespelare i alla åldrar.",
+      "brodtext": [
+        {
+          "_type": "block",
+          "_key": "b0",
+          "style": "normal",
+          "markDefs": [],
+          "children": [
+            {
+              "_type": "span",
+              "_key": "b0s",
+              "text": "Anmäl dig till styrelsen senast om två veckor.",
+              "marks": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "_id": "nyhet-framtida",
+      "_type": "nyhet",
+      "title": "Nyhet som inte är publicerad än",
+      "slug": {
+        "current": "framtida"
+      },
+      "publiceringsdatum": "@+5d 09:00",
+      "ingress": "Syns först om fem dagar.",
+      "brodtext": [
+        {
+          "_type": "block",
+          "_key": "b0",
+          "style": "normal",
+          "markDefs": [],
+          "children": [
+            {
+              "_type": "span",
+              "_key": "b0s",
+              "text": "Hemlig text.",
+              "marks": []
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "sida": [
+    {
+      "_id": "sida-om",
+      "_type": "sida",
+      "title": "Om föreningen",
+      "slug": {
+        "current": "om-foreningen"
+      },
+      "innehall": [
+        {
+          "_type": "block",
+          "_key": "b0",
+          "style": "normal",
+          "markDefs": [],
+          "children": [
+            {
+              "_type": "span",
+              "_key": "b0s",
+              "text": "Teater i Huskvarna är en ideell förening som spelar teater för alla åldrar.",
+              "marks": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "_id": "sida-styrelsen",
+      "_type": "sida",
+      "title": "Styrelsen",
+      "slug": {
+        "current": "styrelsen"
+      },
+      "innehall": [
+        {
+          "_type": "block",
+          "_key": "b0",
+          "style": "normal",
+          "markDefs": [],
+          "children": [
+            {
+              "_type": "span",
+              "_key": "b0s",
+              "text": "Styrelsen väljs på årsmötet varje vår.",
+              "marks": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "_id": "sida-produktioner",
+      "_type": "sida",
+      "title": "Produktioner",
+      "slug": {
+        "current": "produktioner"
+      },
+      "innehall": [
+        {
+          "_type": "block",
+          "_key": "b0",
+          "style": "normal",
+          "markDefs": [],
+          "children": [
+            {
+              "_type": "span",
+              "_key": "b0s",
+              "text": "Föreningen sätter upp två föreställningar om året.",
+              "marks": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "_id": "sida-ludde",
+      "_type": "sida",
+      "title": "Ludde-priser",
+      "slug": {
+        "current": "ludde-priser"
+      },
+      "innehall": [
+        {
+          "_type": "block",
+          "_key": "b0",
+          "style": "normal",
+          "markDefs": [],
+          "children": [
+            {
+              "_type": "span",
+              "_key": "b0s",
+              "text": "Ludde-priset delas ut till årets insats i föreningen.",
+              "marks": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "_id": "sida-kontakt",
+      "_type": "sida",
+      "title": "Kontakt",
+      "slug": {
+        "current": "kontakt"
+      },
+      "innehall": [
+        {
+          "_type": "block",
+          "_key": "b0",
+          "style": "normal",
+          "markDefs": [],
+          "children": [
+            {
+              "_type": "span",
+              "_key": "b0s",
+              "text": "Skriv till styrelsen på info@example.test.",
+              "marks": []
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "partner": [
+    {
+      "_id": "partner-studieforbund",
+      "_type": "partner",
+      "namn": "Studieförbundet",
+      "webbplats": "https://example.test/studieforbund",
+      "beskrivning": "Hjälper föreningen med lokaler och kurser."
+    },
+    {
+      "_id": "partner-kommun",
+      "_type": "partner",
+      "namn": "Jönköpings kommun",
+      "beskrivning": "Stöder föreningens verksamhet."
+    }
+  ]
+}

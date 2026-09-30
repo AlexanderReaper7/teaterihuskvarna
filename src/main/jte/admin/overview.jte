@@ -10,6 +10,7 @@
 @import se.teaterihuskvarna.web.CsrfField
 @import se.teaterihuskvarna.web.DeviceUrls
 @import se.teaterihuskvarna.web.FieldErrors
+@param String studioUrl = null
 @param Copy copy
 @param CsrfField csrf
 @param SignedIn signedIn
@@ -24,10 +25,24 @@
 @param List<DeviceDetails> devices
 @param LoginStatus loginStatus
 @param DeviceUrls deviceUrls
-@template.layout(copy = copy, title = copy.text("admin.heading"), content = @`
+@template.admin.layout(copy = copy, title = copy.text("admin.heading"), content = @`
     <h1>${copy.text("admin.heading")}</h1>
     <p>${copy.text("admin.signedInAs", signedIn.fullName())}</p>
     @template.tag.logout(copy = copy, csrf = csrf, action = "/admin/logga-ut")
+    <section aria-labelledby="webbplatsens-innehall">
+        <h2 id="webbplatsens-innehall">${copy.text("admin.content.heading")}</h2>
+        <p>${copy.text("admin.content.explain")}</p>
+        @if(studioUrl != null)
+            <p><a href="${studioUrl}">${copy.text("admin.content.open")}</a></p>
+        @else
+            <p>${copy.text("admin.content.unavailable")} <a href="https://www.sanity.io/manage">${copy.text("admin.content.manage")}</a></p>
+        @endif
+    </section>
+    <section aria-labelledby="brevo">
+        <h2 id="brevo">${copy.text("admin.brevo.heading")}</h2>
+        <p><a href="https://app.brevo.com/contact/segment">${copy.text("adminMailings.segments.open")}</a></p>
+        <p><a href="https://app.brevo.com/campaigns/listing/email">${copy.text("adminMailings.campaigns.open")}</a></p>
+    </section>
     @if(offerPasskey)
         @template.tag.passkeyOffer(copy = copy, csrf = csrf, urls = passkeyUrls)
     @endif

@@ -60,6 +60,14 @@ public class Account {
         return email;
     }
 
+    /// Only an administrator changes the address (R018). A member cannot change
+    /// their own, since it is what they log in with.
+    ///
+    /// @param email the new address, unique case insensitively across accounts
+    public void setEmail(Email email) {
+        this.email = email.value();
+    }
+
     public Instant getCreatedAt() {
         return createdAt;
     }

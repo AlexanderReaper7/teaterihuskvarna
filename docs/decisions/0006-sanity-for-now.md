@@ -60,3 +60,7 @@ One content export, one API client, and deleting the commonmark-java rendering p
 This record originally leaned on the claim, inherited from the produktägare's document, that Sanity receives no personal data at all. That is wrong: requirement R004 asks for pages about the board and about productions, so names and photographs of identifiable people are published to Sanity by design. The claim has been narrowed here and in [projektplan.md](../projektplan.md) to the member register, which is the part that actually holds. The decision itself does not change, but the public-dataset argument above is slightly weaker than it first read, and Sanity now needs a data processing agreement it was previously exempted from.
 
 The same review found two newer facts. Sanity now documents a nonprofit plan that mirrors Growth within quota at no charge, and its public-dataset documentation says unauthenticated requests cannot read drafts. Both change the cost comparison but not the CMS choice. The project now applies for the nonprofit plan and uses Free as the fallback.
+
+## Amendment, 2026-09-28
+
+Rich text is Portable Text with a renderer written in Java, and editors preview drafts in Sanity's Presentation tool, both decided by the user: [0021](0021-content-from-sanity.md). The Markdown field and commonmark-java above are not used. Click-the-page editing is still out of reach for the reason given above.

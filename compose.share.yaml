@@ -13,6 +13,7 @@ services:
       # Login links and the passkey relying party use this address instead of
       # localhost. An environment variable beats application-dev.yaml.
       TEATERIHUSKVARNA_MAIL_SITE_URL: ${SHARE_URL:?set SHARE_URL in .env}
+      SANITY_STUDIO_URL: ${SHARE_URL:?set SHARE_URL in .env}/studio/
     labels:
       traefik.http.routers.app.middlewares: share-auth
       # htpasswd lines. Compose does not interpolate a value it substituted, so
@@ -22,3 +23,14 @@ services:
   mail:
     labels:
       traefik.http.routers.mail.middlewares: share-auth
+
+  studio:
+    environment:
+      SANITY_STUDIO_BASEPATH: /studio
+      SANITY_STUDIO_PREVIEW_ORIGIN: ${SHARE_URL:?set SHARE_URL in .env}
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.studio.rule: PathPrefix(`/studio`)
+      traefik.http.routers.studio.entrypoints: web
+      traefik.http.routers.studio.middlewares: share-auth
+      traefik.http.services.studio.loadbalancer.server.port: "3333"

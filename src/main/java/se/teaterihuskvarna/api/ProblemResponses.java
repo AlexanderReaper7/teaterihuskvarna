@@ -13,8 +13,31 @@ import se.teaterihuskvarna.administrator.AdministratorAlreadyExists;
 import se.teaterihuskvarna.administrator.CannotRemoveSelf;
 import se.teaterihuskvarna.administrator.NoSuchAdministrator;
 import se.teaterihuskvarna.administrator.TooFewAdministrators;
+import se.teaterihuskvarna.document.FileTooLarge;
+import se.teaterihuskvarna.document.NoSuchDocument;
+import se.teaterihuskvarna.document.NotAPdf;
 import se.teaterihuskvarna.login.NoSuchDevice;
 import se.teaterihuskvarna.login.NoSuchPasskey;
+import se.teaterihuskvarna.mailing.BrevoUnavailable;
+import se.teaterihuskvarna.mailing.AudienceHasNonMembers;
+import se.teaterihuskvarna.mailing.EmptyMailing;
+import se.teaterihuskvarna.mailing.NoSuchMailing;
+import se.teaterihuskvarna.mailing.UnknownAudience;
+import se.teaterihuskvarna.mailing.UnknownContent;
+import se.teaterihuskvarna.member.AccountNeedsEmail;
+import se.teaterihuskvarna.member.EmailTaken;
+import se.teaterihuskvarna.member.FeeAlreadyMarked;
+import se.teaterihuskvarna.member.MemberHasAccount;
+import se.teaterihuskvarna.member.NoSuchFee;
+import se.teaterihuskvarna.member.NoSuchHousehold;
+import se.teaterihuskvarna.member.NoSuchMember;
+import se.teaterihuskvarna.offer.NoSuchOffer;
+import se.teaterihuskvarna.offer.OfferFull;
+import se.teaterihuskvarna.offer.RegistrationClosed;
+import se.teaterihuskvarna.volunteer.NoSuchEvent;
+import se.teaterihuskvarna.volunteer.NoSuchShift;
+import se.teaterihuskvarna.volunteer.ShiftFull;
+import se.teaterihuskvarna.volunteer.ShiftStarted;
 
 /// Turns what a service throws into an HTTP status and an RFC 9457 problem body.
 ///
@@ -82,6 +105,169 @@ public class ProblemResponses {
     @ExceptionHandler
     public ProblemDetail noSuch(NoSuchDevice exception) {
         return problem(HttpStatus.NOT_FOUND, "No such device", exception);
+    }
+
+    /// Also what a member gets for an offer that exists but is not published.
+    ///
+    /// @param exception the service finding no offer with that id
+    /// @return 404
+    @ExceptionHandler
+    public ProblemDetail noSuch(NoSuchOffer exception) {
+        return problem(HttpStatus.NOT_FOUND, "No such offer", exception);
+    }
+
+    /// @param exception the service's refusal to register beyond the capacity
+    /// @return 409
+    @ExceptionHandler
+    public ProblemDetail full(OfferFull exception) {
+        return problem(HttpStatus.CONFLICT, "Offer full", exception);
+    }
+
+    /// @param exception the service's refusal to register or cancel after registration closed
+    /// @return 409
+    @ExceptionHandler
+    public ProblemDetail closed(RegistrationClosed exception) {
+        return problem(HttpStatus.CONFLICT, "Registration closed", exception);
+    }
+
+    /// @param exception the service finding no document with that id
+    /// @return 404
+    @ExceptionHandler
+    public ProblemDetail noSuch(NoSuchDocument exception) {
+        return problem(HttpStatus.NOT_FOUND, "No such document", exception);
+    }
+
+    /// @param exception the service's refusal of a file that does not start as a PDF does
+    /// @return 400
+    @ExceptionHandler
+    public ProblemDetail notAPdf(NotAPdf exception) {
+        return problem(HttpStatus.BAD_REQUEST, "Not a PDF", exception);
+    }
+
+    /// @param exception the service's refusal of a file over 10 MB
+    /// @return 413
+    @ExceptionHandler
+    public ProblemDetail tooLarge(FileTooLarge exception) {
+        return problem(HttpStatus.CONTENT_TOO_LARGE, "File too large", exception);
+    }
+
+    /// @param exception the service finding no member with that id, or none the caller may invite
+    /// @return 404
+    @ExceptionHandler
+    public ProblemDetail noSuch(NoSuchMember exception) {
+        return problem(HttpStatus.NOT_FOUND, "No such member", exception);
+    }
+
+    /// @param exception the service finding no household with that id
+    /// @return 404
+    @ExceptionHandler
+    public ProblemDetail noSuch(NoSuchHousehold exception) {
+        return problem(HttpStatus.NOT_FOUND, "No such household", exception);
+    }
+
+    /// @param exception the service finding no payment of the member's own this year
+    /// @return 404
+    @ExceptionHandler
+    public ProblemDetail noSuch(NoSuchFee exception) {
+        return problem(HttpStatus.NOT_FOUND, "No such fee", exception);
+    }
+
+    /// @param exception the service's refusal to give two accounts one address
+    /// @return 409
+    @ExceptionHandler
+    public ProblemDetail emailTaken(EmailTaken exception) {
+        return problem(HttpStatus.CONFLICT, "Email taken", exception);
+    }
+
+    /// @param exception the service's refusal to leave an account without an address
+    /// @return 409
+    @ExceptionHandler
+    public ProblemDetail accountNeedsEmail(AccountNeedsEmail exception) {
+        return problem(HttpStatus.CONFLICT, "Account needs an email", exception);
+    }
+
+    /// @param exception the service's refusal to mark this year's fee twice
+    /// @return 409
+    @ExceptionHandler
+    public ProblemDetail alreadyMarked(FeeAlreadyMarked exception) {
+        return problem(HttpStatus.CONFLICT, "Fee already marked", exception);
+    }
+
+    /// @param exception the service's refusal to invite a member who can already log in
+    /// @return 409
+    @ExceptionHandler
+    public ProblemDetail hasAccount(MemberHasAccount exception) {
+        return problem(HttpStatus.CONFLICT, "Member has an account", exception);
+    }
+
+    /// @param exception the service finding no shift with that id
+    /// @return 404
+    @ExceptionHandler
+    public ProblemDetail noSuch(NoSuchShift exception) {
+        return problem(HttpStatus.NOT_FOUND, "No such shift", exception);
+    }
+
+    /// @param exception the service's refusal to book beyond the places
+    /// @return 409
+    @ExceptionHandler
+    public ProblemDetail full(ShiftFull exception) {
+        return problem(HttpStatus.CONFLICT, "Shift full", exception);
+    }
+
+    /// @param exception the service's refusal to book or cancel a shift that has started
+    /// @return 409
+    @ExceptionHandler
+    public ProblemDetail started(ShiftStarted exception) {
+        return problem(HttpStatus.CONFLICT, "Shift started", exception);
+    }
+
+    /// @param exception the service finding no upcoming published event with that id
+    /// @return 400
+    @ExceptionHandler
+    public ProblemDetail noSuch(NoSuchEvent exception) {
+        return problem(HttpStatus.BAD_REQUEST, "No such event", exception);
+    }
+
+    /// @param exception the service finding no mailing with that id
+    /// @return 404
+    @ExceptionHandler
+    public ProblemDetail noSuch(NoSuchMailing exception) {
+        return problem(HttpStatus.NOT_FOUND, "No such mailing", exception);
+    }
+
+    /// @param exception a mailing with no words and no content
+    /// @return 400
+    @ExceptionHandler
+    public ProblemDetail empty(EmptyMailing exception) {
+        return problem(HttpStatus.BAD_REQUEST, "Empty mailing", exception);
+    }
+
+    /// @param exception an audience the service does not offer
+    /// @return 400
+    @ExceptionHandler
+    public ProblemDetail unknown(UnknownAudience exception) {
+        return problem(HttpStatus.BAD_REQUEST, "Unknown audience", exception);
+    }
+
+    /// @param exception a segment holding contacts that are not members
+    /// @return 409
+    @ExceptionHandler
+    public ProblemDetail nonMembers(AudienceHasNonMembers exception) {
+        return problem(HttpStatus.CONFLICT, "Audience has non-members", exception);
+    }
+
+    /// @param exception an event or news item that is not published
+    /// @return 400
+    @ExceptionHandler
+    public ProblemDetail unknown(UnknownContent exception) {
+        return problem(HttpStatus.BAD_REQUEST, "Unknown content", exception);
+    }
+
+    /// @param exception Brevo refusing a call or not answering
+    /// @return 502
+    @ExceptionHandler
+    public ProblemDetail brevo(BrevoUnavailable exception) {
+        return problem(HttpStatus.BAD_GATEWAY, "Brevo unavailable", exception);
     }
 
     private static ProblemDetail problem(HttpStatus status, String title, RuntimeException exception) {

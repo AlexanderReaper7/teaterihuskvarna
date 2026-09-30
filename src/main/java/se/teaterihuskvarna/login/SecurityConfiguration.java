@@ -1,7 +1,9 @@
 package se.teaterihuskvarna.login;
 
 import java.time.Duration;
+import java.util.Arrays;
 import java.util.List;
+import org.springframework.boot.servlet.autoconfigure.MultipartProperties;
 import org.springframework.boot.session.autoconfigure.DefaultCookieSerializerCustomizer;
 import org.springframework.context.MessageSource;
 import org.springframework.context.annotation.Bean;
@@ -13,8 +15,8 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.security.authentication.ott.OneTimeTokenAuthenticationProvider;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-import org.springframework.security.config.annotation.web.configurers.SessionManagementConfigurer;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configurers.SessionManagementConfigurer;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.access.intercept.AuthorizationFilter;
@@ -26,11 +28,20 @@ import org.springframework.security.web.authentication.SimpleUrlAuthenticationFa
 import org.springframework.security.web.authentication.ott.GenerateOneTimeTokenFilter;
 import org.springframework.security.web.authentication.ott.GenerateOneTimeTokenRequestResolver;
 import org.springframework.security.web.authentication.ott.RedirectOneTimeTokenGenerationSuccessHandler;
+import org.springframework.security.web.csrf.CsrfFilter;
+import org.springframework.security.web.header.writers.DelegatingRequestMatcherHeaderWriter;
+import org.springframework.security.web.header.writers.StaticHeadersWriter;
+import org.springframework.security.web.header.writers.frameoptions.XFrameOptionsHeaderWriter;
+import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
+import org.springframework.security.web.util.matcher.NegatedRequestMatcher;
+import org.springframework.security.web.util.matcher.OrRequestMatcher;
+import org.springframework.security.web.util.matcher.RequestMatcher;
 import org.springframework.security.web.webauthn.management.UserCredentialRepository;
 import org.springframework.security.web.webauthn.management.WebAuthnRelyingPartyOperations;
 import org.springframework.session.jdbc.PostgreSqlJdbcIndexedSessionRepositoryCustomizer;
 import org.springframework.session.security.web.authentication.SpringSessionRememberMeServices;
 import org.springframework.util.StringUtils;
+import se.teaterihuskvarna.content.ContentSettings;
 
 /// The access rules and the two kinds of login, one filter chain each. Each
 /// kind logs in by link or by passkey ([PasskeyLogin]).
@@ -63,10 +74,35 @@ class SecurityConfiguration {
     private final WebAuthnRelyingPartyOperations relyingParty;
     private final UserCredentialRepository passkeys;
     private final DeviceNames devices;
+    private final ContentSettings content;
+
+    /// The public pages with content from Sanity, which anyone may read and the
+    /// Studio may show in its Presentation preview (R009). `/forhandsgranska`
+    /// is where the preview starts and ends, and the webhook is Sanity's.
+    private static final String[] CONTENT_PAGES = {
+        "/",
+        "/kalender",
+        "/evenemang/**",
+        "/nyheter",
+        "/nyheter/**",
+        "/om-foreningen",
+        "/styrelsen",
+        "/produktioner",
+        "/ludde-priser",
+        "/kontakt",
+        "/partners",
+        "/forhandsgranska/**",
+    };
+
+    /// The largest upload request, from `spring.servlet.multipart.max-request-size`.
+    private final long largestRequest;
 
     SecurityConfiguration(LoginLinks links, LinkRequestLimiter limiter, JdbcClient jdbc, LoginSettings settings,
             List<LoginDirectory> directories, WebAuthnRelyingPartyOperations relyingParty,
-            UserCredentialRepository passkeys, MessageSource messages) {
+            UserCredentialRepository passkeys, MessageSource messages, ContentSettings content,
+            MultipartProperties multipart) {
+        this.content = content;
+        this.largestRequest = multipart.getMaxRequestSize().toBytes();
         this.links = links;
         this.limiter = limiter;
         this.jdbc = jdbc;
@@ -88,8 +124,6 @@ class SecurityConfiguration {
                 .requestMatchers(urls.page(), urls.page() + "/**").permitAll()
                 .anyRequest().hasRole("ADMINISTRATOR"));
         login(http, LoginKind.ADMINISTRATOR, settings.administratorSession());
-        // Only this chain: a member cannot be removed, and an administrator
-        // can read the whole register.
         http.addFilterBefore(new ActiveLoginFilter(Directories.of(LoginKind.ADMINISTRATOR, directories)),
                 AuthorizationFilter.class);
         return http.build();
@@ -101,17 +135,23 @@ class SecurityConfiguration {
     @Order
     SecurityFilterChain memberChain(HttpSecurity http) {
         http.authorizeHttpRequests(requests -> requests
+                .requestMatchers(CONTENT_PAGES).permitAll()
                 .requestMatchers(
-                        "/",
+                        "/api/content/**",
+                        "/api/sanity/webhook",
                         "/logga-in",
                         "/logga-in/**",
                         "/bli-medlem",
                         "/bli-medlem/**",
                         "/api/membership-applications",
                         "/api/membership-applications/**",
+                        "/inbjudan",
+                        "/api/invitations/**",
+                        "/api/login-links",
                         "/api/csrf",
                         // Only the dev profile maps anything here; elsewhere
                         // these paths answer 404.
+                        "/dev",
                         "/api/development/**",
                         "/error").permitAll()
                 // The stylesheet, fonts, logo, favicon and scripts under
@@ -123,7 +163,35 @@ class SecurityConfiguration {
                 .requestMatchers("/medlem", "/medlem/**", "/api/member", "/api/member/**").hasRole("MEMBER")
                 .anyRequest().access(UnknownPaths.denied()));
         login(http, LoginKind.MEMBER, settings.memberSession());
+        // Sanity signs the webhook instead, and cannot fetch a CSRF token first.
+        http.csrf(csrf -> csrf.ignoringRequestMatchers(
+                PathPatternRequestMatcher.withDefaults().matcher(HttpMethod.POST, "/api/sanity/webhook")));
+        frames(http);
+        // An administrator can delete a member, so a member's login needs the
+        // same check as an administrator's.
+        http.addFilterBefore(new ActiveLoginFilter(Directories.of(LoginKind.MEMBER, directories)),
+                AuthorizationFilter.class);
         return http.build();
+    }
+
+    /// No page may be shown in a frame, except that the Studio may show a
+    /// content page in its Presentation preview. Spring's `X-Frame-Options:
+    /// DENY` cannot name another site, so a content page gets
+    /// `Content-Security-Policy: frame-ancestors` instead, which browsers obey
+    /// in its place. Without a configured Studio, the content pages allow only
+    /// this site itself.
+    private void frames(HttpSecurity http) {
+        RequestMatcher contentPage = new OrRequestMatcher(Arrays.stream(CONTENT_PAGES)
+                .map(path -> PathPatternRequestMatcher.withDefaults().matcher(HttpMethod.GET, path))
+                .map(RequestMatcher.class::cast)
+                .toList());
+        String ancestors = StringUtils.hasText(content.studioOrigin()) ? "'self' " + content.studioOrigin() : "'self'";
+        http.headers(headers -> headers
+                .frameOptions(options -> options.disable())
+                .addHeaderWriter(new DelegatingRequestMatcherHeaderWriter(contentPage,
+                        new StaticHeadersWriter("Content-Security-Policy", "frame-ancestors " + ancestors)))
+                .addHeaderWriter(new DelegatingRequestMatcherHeaderWriter(new NegatedRequestMatcher(contentPage),
+                        new XFrameOptionsHeaderWriter(XFrameOptionsHeaderWriter.XFrameOptionsMode.DENY))));
     }
 
     /// Sets the session cookie to outlive the browser once someone logs in; see
@@ -189,9 +257,11 @@ class SecurityConfiguration {
         http.logout(logout -> logout
                 .logoutUrl(urls.logout())
                 .logoutSuccessUrl(urls.loggedOut()));
+        RefusedRequests refused = new RefusedRequests(urls);
+        http.addFilterBefore(new OversizeUploadFilter(refused, largestRequest), CsrfFilter.class);
         http.exceptionHandling(exceptions -> exceptions
                 .authenticationEntryPoint(entryPoint(urls))
-                .accessDeniedHandler(new RefusedRequests(urls)));
+                .accessDeniedHandler(refused));
         // A new session at login, not the same row under a new id, which is
         // Spring's default. Spring Session JDBC saves a session by its row and
         // writes the id with it, so a request that loaded the session before the

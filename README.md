@@ -15,19 +15,30 @@ Nothing else. Java and Maven are not installed on your machine: the build runs i
 ### First run
 
 1. Clone the repository and go into it: `git clone https://github.com/AlexanderReaper7/teaterihuskvarna.git` then `cd teaterihuskvarna`.
-2. Run every test and check once: `Ctrl+Shift+B` in VS Code, or the command under [Tests](#tests). The first build downloads Maven and every dependency and takes a few minutes; later builds reuse them. Besides the tests, it creates `.env` from [`.env.example`](.env.example) and installs the [git hooks](#git-hooks). Git ignores `.env`, so what you put in it stays on your machine. The template works locally as it is.
+2. Run every test and check once: `Ctrl+Shift+B` in VS Code, or the command under [Tests](#tests). The first build downloads Maven and every dependency and takes a few minutes; later builds reuse them. Besides the tests, it creates `.env` from [`.env.example`](.env.example) and installs the [git hooks](#git-hooks). Git ignores `.env`, so what goes in it stays on the machine. Set `SANITY_API_KEY` to a token with read access to the development dataset before presenting its content. Automated tests need no Sanity token.
 3. Build and start the stack: `docker compose up -d --build`.
-4. Check that four containers are running: `docker compose ps` lists `proxy`, `app`, `db` and `mail`.
+4. Check that five containers are running: `docker compose ps` lists `proxy`, `app`, `db`, `mail` and [`studio`](studio/).
 5. Open [http://localhost:8000/](http://localhost:8000/). If the page does not load yet, the application is still starting. `docker compose logs -f app` shows it, and it is ready at the line `Started Application in ... seconds`. Ctrl+C stops following the log, not the application.
 
 ### Logging in
 
 Nobody has a password. Logging in works by a link sent by mail, and locally every mail goes to Mailpit instead of a real inbox.
 
-1. On [http://localhost:8000/](http://localhost:8000/), which is the development index, pick a seeded member or administrator and press its button. The application mails that address a login link.
+1. On [http://localhost:8000/dev](http://localhost:8000/dev), which is the development index, pick a seeded member or administrator and press its button. The application mails that address a login link.
 2. Open [http://localhost:8000/mailpit/](http://localhost:8000/mailpit/), open the newest mail and follow the link.
 
 The seeded people are invented, under `.test` addresses that cannot reach anyone. Karin Holmberg has both a member account and an administrator account on the same address, which is the case the two login pages (`/logga-in` and `/admin/logga-in`) exist for.
+
+### Presenting the completed flows
+
+Start at [the public home](http://localhost:8000/). Its menu connects the calendar, news, association pages, membership application and member login. The home page links to event and news details. The footer links to administration. Member and administrator pages each keep their section menu available throughout the section. The development index is separate at [developer tools](http://localhost:8000/dev).
+
+Use the development index and [Mailpit](http://localhost:8000/mailpit/) to sign in with an invented account in the same browser that requested the link.
+
+- [Member overview](http://localhost:8000/medlem) connects contact details, fee status and payment instructions, household invitations, offers and registrations, documents and volunteer bookings.
+- [Administrator overview](http://localhost:8000/admin) connects the member register, household management, fee marking, CSV exports, offers and registrations, documents, volunteer shifts and mailings. It also manages administrator accounts and links to Sanity for editing public content and Brevo for recipient groups and campaigns. Sanity links use `SANITY_STUDIO_URL`; without a configured address the pages explain that the editor is not connected and link to [Sanity's project dashboard](https://www.sanity.io/manage).
+
+Public content comes from the development Sanity dataset. Login and invitation mail goes to Mailpit. Brevo contact updates and campaign drafts use an in-memory fake by default, so the development stack can demonstrate preparing a mailing but does not send a real campaign. The [local stack](#the-local-stack) section describes the Sanity connection and switching to a real Brevo account.
 
 ### Everyday commands
 
@@ -95,23 +106,32 @@ startup.
 [`compose.dev.yaml`](compose.dev.yaml), which must never be loaded in production. It serves plain
 HTTP on `PROXY_HTTP_PORT` (8000 unless set), turns on the `dev` profile with
 invented settings ([`application-dev.yaml`](src/main/resources/application-dev.yaml)) and invented members, and starts
-Mailpit, which catches every mail the application sends.
+Mailpit, which catches every mail the application sends, and Sanity Studio at [http://localhost:3333/](http://localhost:3333/). Studio uses the `dev` dataset unless `SANITY_DATASET_NAME` selects another one, and previews the application on `PROXY_HTTP_PORT`. Set `STUDIO_HTTP_PORT` to change its host port. Studio code changes need `docker compose up -d --build studio`.
 
-Under the `dev` profile, [http://localhost:8000/](http://localhost:8000/) is a development index in place
-of the start page. It lists every route, has a button per seeded member and
+Under the `dev` profile, [http://localhost:8000/dev](http://localhost:8000/dev) is the development index. It lists every route, has a button per seeded member and
 administrator that mails that address a login link, and shows the schema
 version, the commit the jar was built from, whether it was built with
 uncommitted changes, and who is logged in. Open the link in Mailpit's UI at
 [http://localhost:8000/mailpit/](http://localhost:8000/mailpit/), which Traefik routes to Mailpit. The same data is JSON under `/api/development/`, which
 answers 404 without the profile.
 
+The public pages read from Sanity in development and production. Development defaults to the Studio's project `gk5ur3tb` and dataset `dev`; `SANITY_PROJECT_ID` and `SANITY_DATASET_NAME` override them. Production requires both settings explicitly. The public start page is at `/` in every profile. `SANITY_API_KEY` supplies read access for private content and draft preview
+([0021](docs/decisions/0021-content-from-sanity.md)). Brevo contacts and mailings under the `dev`
+profile go to an in-memory Brevo that sends nothing; `BREVO_API=http` and the
+`BREVO_` lines make them real contacts and drafts in a Brevo account
+([0026](docs/decisions/0026-outbox-and-brevo-contacts.md)).
+
 [`compose.dev.yaml`](compose.dev.yaml) also mounts [`src/main/resources/static`](src/main/resources/static/) into the container,
 so an edited stylesheet or image shows on reload. Templates and Java still
 need `docker compose up -d --build`.
 
+The association's editors use Sanity hosting, separate from this development stack, as decided in [0021](docs/decisions/0021-content-from-sanity.md). [Studio instructions](studio/README.md) cover deployment. The local Studio requires a Sanity login and internet access. Published edits appear on the application within 45 seconds, or on the next request after the publish webhook clears its cache. Automated tests alone use [`fixture.json`](src/main/resources/content/fixture.json), with their own source settings and no Sanity credentials.
+
+The `dev` dataset contains 16 invented demo documents imported on 2026-09-30. Event and news dates are now fixed Sanity values, editable in Studio. Tests still resolve fixture dates relative to the test day. The configured API key can read the imported content; anonymous queries returned no documents during verification.
+
 ### Sharing the dev stack
 
-A Tailscale Funnel shows the dev stack to people off the tailnet. [`compose.share.yaml`](compose.share.yaml) puts the site and Mailpit behind a password and points login links at the public address. Add it to `COMPOSE_FILE`, set `SHARE_URL` and `SHARE_BASIC_AUTH` as [`.env.example`](.env.example) describes, then:
+A Tailscale Funnel shows the dev stack to people off the tailnet. [`compose.share.yaml`](compose.share.yaml) puts the site, Mailpit and Studio behind a password and points login links at the public address. The administration link opens Studio at `/studio/` on that address, and Studio previews the shared site. Add the shared origin to the Sanity project's CORS origins with credentials. Add the share file to `COMPOSE_FILE`, set `SHARE_URL` and `SHARE_BASIC_AUTH` as [`.env.example`](.env.example) describes, then:
 
 ```sh
 docker compose up -d --build

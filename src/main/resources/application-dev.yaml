@@ -1,6 +1,6 @@
 # Local development only. This profile also runs DevSeed, which fills the
 # register with invented members, so it must never be active in production.
-# Every value here is invented.
+# Member and mail settings are invented; public content comes from Sanity.
 #
 # Mail always goes to Mailpit under this profile, whatever .env says. The same
 # .env can hold the production relay's SMTP_* values, and on 2026-09-23 a local
@@ -29,6 +29,15 @@ spring:
       mail.smtp.starttls.required: false
 
 teaterihuskvarna:
+  # The same Sanity project and development dataset as the local Studio.
+  content:
+    source: ${CONTENT_SOURCE:sanity}
+    project-id: ${SANITY_PROJECT_ID:gk5ur3tb}
+    dataset: ${SANITY_DATASET_NAME:dev}
+  # Mailings stay in memory unless BREVO_API=http in .env, with the other
+  # BREVO_ values. The fake forgets everything on restart.
+  brevo:
+    api: ${BREVO_API:fake}
   development:
     # The development index links here. Traefik routes the path to Mailpit
     # (compose.dev.yaml), so the link works on whatever host the site answers.
