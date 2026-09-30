@@ -8,7 +8,11 @@ import java.security.SecureRandom;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayDeque;
 import java.util.Base64;
+import java.util.Deque;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Optional;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
@@ -39,10 +43,13 @@ public class Previews {
     public static final Duration LIFETIME = Duration.ofHours(1);
 
     private static final SecureRandom RANDOM = new SecureRandom();
+    private static final int EXCHANGES_PER_MINUTE = 20;
+    private static final Duration EXCHANGE_WINDOW = Duration.ofMinutes(1);
 
     private final ContentSource source;
     private final Clock clock;
     private final byte[] key = new byte[32];
+    private final Map<String, Deque<Instant>> exchanges = new HashMap<>();
 
     Previews(ContentSource source, Clock clock) {
         this.source = source;
@@ -51,16 +58,41 @@ public class Previews {
     }
 
     /// @param secret the `sanity-preview-secret` from the Studio
+    /// @param clientAddress the client IP supplied by the application's proxy configuration
     /// @return a pass, or empty if Sanity does not know the secret
     /// @throws ContentUnavailable if Sanity cannot be asked
-    public Optional<PreviewPass> start(String secret) {
-        if (secret.isBlank() || !source.previewSecretValid(secret)) {
+    /// @throws TooManyPreviews if this IP has already made 20 exchanges in the last minute
+    public Optional<PreviewPass> start(String secret, String clientAddress) {
+        if (secret.isBlank()) {
+            return Optional.empty();
+        }
+        acquireExchange(clientAddress);
+        if (!source.previewSecretValid(secret)) {
             return Optional.empty();
         }
         Instant expiresAt = Instant.ofEpochSecond(clock.instant().plus(LIFETIME).getEpochSecond());
         String expires = Long.toString(expiresAt.getEpochSecond());
         return Optional.of(new PreviewPass(
                 expires + "." + Base64.getUrlEncoder().withoutPadding().encodeToString(sign(expires)), expiresAt));
+    }
+
+    /// Counts attempted Sanity queries, including invalid secrets and failed queries.
+    /// Both adapters share this allowance. Idle addresses expire; no secrets are stored here.
+    private synchronized void acquireExchange(String clientAddress) {
+        Instant now = clock.instant();
+        Instant since = now.minus(EXCHANGE_WINDOW);
+        exchanges.entrySet().removeIf(entry -> {
+            Deque<Instant> history = entry.getValue();
+            while (!history.isEmpty() && !history.getFirst().isAfter(since)) {
+                history.removeFirst();
+            }
+            return history.isEmpty();
+        });
+        Deque<Instant> history = exchanges.computeIfAbsent(clientAddress, address -> new ArrayDeque<>());
+        if (history.size() >= EXCHANGES_PER_MINUTE) {
+            throw new TooManyPreviews();
+        }
+        history.addLast(now);
     }
 
     /// @param pass the cookie's value, or null when there is none
