@@ -23,6 +23,8 @@ The Decision section is the user's. Everything under Agent notes is an agent's.
 
 - The shared development stack exposes Studio through its proxy at `/studio/`, protected by the existing share password. Administration links open that shared editor. Decided by the user on 2026-09-30.
 
+- Preview-secret exchange allows 20 requests per minute per client IP across the Studio and REST entry points. Exhausting that allowance returns HTTP 429. Decided by the user on 2026-09-30.
+
 ## Agent notes
 
 Written by an agent on 2026-09-28. Everything below is a default the user has not reviewed.
@@ -34,6 +36,9 @@ Written by an agent on 2026-09-28. Everything below is a default the user has no
 - The application queries `api.sanity.io`, not the CDN, because the CDN's own delay would add to R008's minute.
 - [`PortableText`](../../src/main/java/se/teaterihuskvarna/content/PortableText.java) renders only the styles and marks [`blockContent.ts`](../../studio/schemaTypes/blockContent.ts) offers, escapes all text, and drops a link that is not http, https, mailto, tel or a path on the site.
 - Preview: the Presentation tool writes a secret to the dataset and opens `/forhandsgranska/start` in a frame. The application checks the secret with Sanity, the same query `@sanity/preview-url-secret` makes, and sets a cookie holding an expiry time signed with a key made at startup. The cookie is `SameSite=None; Secure; Partitioned`, so it reaches the site only inside the Studio's frame. A page with that cookie reads the drafts perspective, which needs `SANITY_API_KEY`, and shows a banner. A REST client gets the same pass from `POST /api/content/preview` and sends it in the `Preview-Pass` header, since every capability has an endpoint ([0014](0014-one-service-layer-two-adapters.md)).
+- Each preview pass expires one hour after exchange. Restarting the application invalidates every pass because the signing key exists only in memory. The one-hour lifetime is existing behavior, documented by the agent on 2026-09-30.
+- On 2026-09-30, the agent implemented the preview allowance in [`Previews`](../../src/main/java/se/teaterihuskvarna/content/Previews.java). A rolling minute counts attempts before querying Sanity, including invalid secrets and query failures. Blank secrets trigger no query and consume no allowance. The service keeps at most 20 timestamps per active IP in memory, expires old timestamps and removes idle IPs on the next exchange. Restarting the application resets the counts. Both adapters supply the client address through `getRemoteAddr()`, using the existing proxy configuration. Issued passes remain usable when an IP exhausts its allowance.
+- Centralized staff accounts and provider-access management are deferred to [issue #63](https://github.com/AlexanderReaper7/teaterihuskvarna/issues/63), which the user requested at COULD priority on 2026-09-30. Preview keeps the per-IP rate limit while that work remains deferred.
 - Content pages send `Content-Security-Policy: frame-ancestors 'self' <SANITY_STUDIO_URL>`, every other page `X-Frame-Options: DENY`.
 - The preview shows drafts, not click-to-edit overlays. Overlays need stega encoding, which has no Java library, as [0006](0006-sanity-for-now.md) found. The Presentation tool's locations still link each document to the pages that show it.
 - Development reads the same Sanity `dev` dataset as Studio. Integration and browser tests explicitly read [`fixture.json`](../../src/main/resources/content/fixture.json), with dates relative to today, so tests remain independent of Sanity and get the same content every run.

@@ -1,5 +1,6 @@
 package se.teaterihuskvarna.api;
 
+import jakarta.servlet.http.HttpServletRequest;
 import java.util.List;
 import org.jspecify.annotations.Nullable;
 import org.springframework.http.HttpStatus;
@@ -43,11 +44,12 @@ public class ContentController {
     /// R009: swaps the Studio's secret for a pass that shows drafts for an hour.
     ///
     /// @param request the `sanity-preview-secret` the Studio wrote to the dataset
-    /// @return 200 with the pass, or 403 if Sanity does not know the secret
+    /// @param servletRequest supplies the client IP under the application's proxy configuration
+    /// @return 200 with the pass, 403 for an unknown secret, or 429 after 20 exchanges per IP per minute
     @PostMapping("/api/content/preview")
-    public ResponseEntity<PreviewPass> preview(@RequestBody PreviewRequest request) {
+    public ResponseEntity<PreviewPass> preview(@RequestBody PreviewRequest request, HttpServletRequest servletRequest) {
         String secret = request.secret();
-        return previews.start(secret == null ? "" : secret)
+        return previews.start(secret == null ? "" : secret, servletRequest.getRemoteAddr())
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.status(HttpStatus.FORBIDDEN).build());
     }

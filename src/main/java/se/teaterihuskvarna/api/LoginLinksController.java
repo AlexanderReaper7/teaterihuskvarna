@@ -14,6 +14,9 @@ import se.teaterihuskvarna.login.LoginLinks;
 /// works in this browser, only in the one that asked for it, or not at all.
 /// Logging in itself is Spring Security's POST, the same for a page and a
 /// client (`docs/decisions/0015-login-links-on-spring-security.md`).
+///
+/// `/api/login-links` permits anonymous requests so a link can be checked before login.
+/// Never log the raw token or browser-binding cookie, including in proxy or request logs.
 @RestController
 public class LoginLinksController {
 

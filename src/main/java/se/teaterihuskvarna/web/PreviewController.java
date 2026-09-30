@@ -1,5 +1,6 @@
 package se.teaterihuskvarna.web;
 
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.util.regex.Pattern;
 import org.jspecify.annotations.Nullable;
@@ -33,13 +34,15 @@ public class PreviewController {
 
     /// @param secret   the secret the Studio wrote to the dataset
     /// @param pathname the page the Studio wants to show
+    /// @param request  supplies the client IP under the application's proxy configuration
     /// @param response receives the cookie
     /// @return a redirect to the page, or to the start page if the secret is wrong
+    /// @throws se.teaterihuskvarna.content.TooManyPreviews after 20 exchanges per IP per minute
     @GetMapping("/forhandsgranska/start")
     public String start(@RequestParam(name = "sanity-preview-secret", required = false) @Nullable String secret,
             @RequestParam(name = "sanity-preview-pathname", required = false) @Nullable String pathname,
-            HttpServletResponse response) {
-        PreviewPass pass = secret == null ? null : previews.start(secret).orElse(null);
+            HttpServletRequest request, HttpServletResponse response) {
+        PreviewPass pass = secret == null ? null : previews.start(secret, request.getRemoteAddr()).orElse(null);
         if (pass == null) {
             return "redirect:/";
         }
