@@ -1,6 +1,6 @@
 # Local development only. This profile also runs DevSeed, which fills the
 # register with invented members, so it must never be active in production.
-# Every value here is invented.
+# Member and mail settings are invented; public content comes from Sanity.
 #
 # Mail always goes to Mailpit under this profile, whatever .env says. The same
 # .env can hold the production relay's SMTP_* values, and on 2026-09-23 a local
@@ -29,13 +29,11 @@ spring:
       mail.smtp.starttls.required: false
 
 teaterihuskvarna:
-  start-page: /start
-  # The invented content in content/fixture.json unless CONTENT_SOURCE=sanity
-  # in .env, which reads the dataset SANITY_DATASET_NAME names.
+  # The same Sanity project and development dataset as the local Studio.
   content:
-    source: ${CONTENT_SOURCE:fixture}
-    project-id: ${SANITY_PROJECT_ID:fixture}
-    dataset: ${SANITY_DATASET_NAME:fixture}
+    source: ${CONTENT_SOURCE:sanity}
+    project-id: ${SANITY_PROJECT_ID:gk5ur3tb}
+    dataset: ${SANITY_DATASET_NAME:dev}
   # Mailings stay in memory unless BREVO_API=http in .env, with the other
   # BREVO_ values. The fake forgets everything on restart.
   brevo:

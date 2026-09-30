@@ -21,9 +21,8 @@ import se.teaterihuskvarna.content.Previews;
 /// Every page shows drafts instead of published documents to an editor the
 /// Studio's Presentation tool sent here ([Previews]), and says so in a banner.
 ///
-/// The start page's address is a setting, `teaterihuskvarna.start-page`: `/`
-/// everywhere except under the `dev` profile, where [DevelopmentIndexController]
-/// has `/` and the start page is `/start`.
+/// The start page answers `/` in every profile. Developer tools have their own
+/// address, `/dev`, under the `dev` profile.
 @Controller
 public class ContentPageController {
 
@@ -45,7 +44,7 @@ public class ContentPageController {
     /// @param perspective published or drafts
     /// @param model       receives the next event, the rest of the upcoming events and the latest news
     /// @return the start page
-    @GetMapping("${teaterihuskvarna.start-page:/}")
+    @GetMapping("/")
     public String home(@ModelAttribute("perspective") Perspective perspective, Model model) {
         Event next = content.nextEvent(perspective).orElse(null);
         model.addAttribute("next", next);

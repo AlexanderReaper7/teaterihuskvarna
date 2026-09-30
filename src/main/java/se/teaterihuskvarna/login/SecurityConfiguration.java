@@ -81,8 +81,6 @@ class SecurityConfiguration {
     /// is where the preview starts and ends, and the webhook is Sanity's.
     private static final String[] CONTENT_PAGES = {
         "/",
-        // The start page under the dev profile; elsewhere nothing maps it.
-        "/start",
         "/kalender",
         "/evenemang/**",
         "/nyheter",
@@ -153,6 +151,7 @@ class SecurityConfiguration {
                         "/api/csrf",
                         // Only the dev profile maps anything here; elsewhere
                         // these paths answer 404.
+                        "/dev",
                         "/api/development/**",
                         "/error").permitAll()
                 // The stylesheet, fonts, logo, favicon and scripts under
@@ -186,7 +185,7 @@ class SecurityConfiguration {
                 .map(path -> PathPatternRequestMatcher.withDefaults().matcher(HttpMethod.GET, path))
                 .map(RequestMatcher.class::cast)
                 .toList());
-        String ancestors = StringUtils.hasText(content.studioUrl()) ? "'self' " + content.studioUrl() : "'self'";
+        String ancestors = StringUtils.hasText(content.studioOrigin()) ? "'self' " + content.studioOrigin() : "'self'";
         http.headers(headers -> headers
                 .frameOptions(options -> options.disable())
                 .addHeaderWriter(new DelegatingRequestMatcherHeaderWriter(contentPage,

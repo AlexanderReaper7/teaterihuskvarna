@@ -6,7 +6,7 @@
 @param MemberOffer offer
 @param String error
 @param String notice
-@template.layout(copy = copy, title = offer.title(), content = @`
+@template.member.layout(copy = copy, title = offer.title(), content = @`
     <h1>${offer.title()}</h1>
     <p><a href="/medlem/erbjudanden">${copy.text("offers.back")}</a></p>
     @if(error != null)

@@ -9,6 +9,7 @@
 @import se.teaterihuskvarna.web.Copy
 @import se.teaterihuskvarna.web.CsrfField
 @import se.teaterihuskvarna.web.FieldErrors
+@param String studioUrl = null
 @param Copy copy
 @param CsrfField csrf
 @param MailingForm form
@@ -20,7 +21,7 @@
 @param String notice
 !{String audienceError = errors.message("audience");}
 !{String introError = errors.message("intro");}
-@template.layout(copy = copy, title = copy.text("adminMailings.heading"), content = @`
+@template.admin.layout(copy = copy, title = copy.text("adminMailings.heading"), content = @`
     <h1>${copy.text("adminMailings.heading")}</h1>
     <p><a href="/admin">${copy.text("admin.toOverview")}</a></p>
     @if(error != null)
@@ -32,6 +33,11 @@
 
     <h2>${copy.text("adminMailings.new")}</h2>
     <p>${copy.text("adminMailings.how")}</p>
+    @if(studioUrl != null)
+        <p><a href="${studioUrl}">${copy.text("adminMailings.content.open")}</a></p>
+    @else
+        <p>${copy.text("admin.content.unavailable")} <a href="https://www.sanity.io/manage">${copy.text("admin.content.manage")}</a></p>
+    @endif
     @template.tag.errors(copy = copy, errors = errors)
     <form method="post" action="/admin/utskick/forhandsgranska">
         @template.tag.csrf(csrf = csrf)
@@ -48,7 +54,7 @@
                 <span id="audience-error" class="field-error">${audienceError}</span>
             @endif
         </p>
-        <p id="audience-hint">${copy.text("adminMailings.segments")}</p>
+        <p id="audience-hint">${copy.text("adminMailings.segments")} <a href="https://app.brevo.com/contact/segment">${copy.text("adminMailings.segments.open")}</a></p>
         @if(audiences.segmentsUnavailable())
             <p role="alert">${copy.text("adminMailings.segmentsUnavailable")}</p>
         @endif

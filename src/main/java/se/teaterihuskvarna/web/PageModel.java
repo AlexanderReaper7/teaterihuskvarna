@@ -4,6 +4,7 @@ import org.jspecify.annotations.Nullable;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.RequestParam;
+import se.teaterihuskvarna.content.ContentSettings;
 
 /// Puts [Copy] in the model of every page in this package, as `copy`, and
 /// whether the page was sent back because its form had gone stale, as `stale`.
@@ -18,9 +19,18 @@ import org.springframework.web.bind.annotation.RequestParam;
 public class PageModel {
 
     private final Copy copy;
+    private final ContentSettings content;
 
-    PageModel(Copy copy) {
+    PageModel(Copy copy, ContentSettings content) {
         this.copy = copy;
+        this.content = content;
+    }
+
+    /// @return the configured content editor, or null when none is connected
+    @ModelAttribute("studioUrl")
+    public @Nullable String studioUrl() {
+        String url = content.studioUrl();
+        return url == null || url.isBlank() ? null : url;
     }
 
     /// @return the Swedish copy, for the template to read by key

@@ -1,0 +1,7 @@
+# The dev-profile integration tests must never fetch content from Sanity.
+teaterihuskvarna:
+  content:
+    source: fixture
+    project-id: test
+    dataset: test
+    token: ""

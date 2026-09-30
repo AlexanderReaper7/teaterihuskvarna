@@ -7,7 +7,7 @@
 @param List<MemberShift> shifts
 @param String error
 @param String notice
-@template.layout(copy = copy, title = copy.text("shifts.heading"), content = @`
+@template.member.layout(copy = copy, title = copy.text("shifts.heading"), content = @`
     <h1>${copy.text("shifts.heading")}</h1>
     <p><a href="/medlem">${copy.text("member.toOverview")}</a></p>
     <p>${copy.text("shifts.intro")}</p>

@@ -7,7 +7,7 @@
 @param ContactForm form
 @param FieldErrors errors
 @param boolean stale
-@template.layout(copy = copy, title = copy.text("member.contact.heading"), content = @`
+@template.member.layout(copy = copy, title = copy.text("member.contact.heading"), content = @`
     <h1>${copy.text("member.contact.heading")}</h1>
     <p>${copy.text("member.contact.emailNote")}</p>
     @if(stale)

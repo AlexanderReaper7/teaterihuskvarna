@@ -9,7 +9,7 @@
 @param String error
 @param String notice
 !{Instant sentAt = mailing.sentAt();}
-@template.layout(copy = copy, title = mailing.subject(), content = @`
+@template.admin.layout(copy = copy, title = mailing.subject(), content = @`
     <h1>${mailing.subject()}</h1>
     <p><a href="/admin/utskick">${copy.text("adminMailings.back")}</a></p>
     @if(error != null)
@@ -24,7 +24,7 @@
         <dt>${copy.text("adminMailings.createdAt")}</dt>
         <dd>${copy.dateTime(mailing.createdAt())}</dd>
         <dt>${copy.text("adminMailings.campaign")}</dt>
-        <dd>${mailing.brevoCampaignId()}</dd>
+        <dd>${mailing.brevoCampaignId()} <a href="https://app.brevo.com/campaigns/listing/email">${copy.text("adminMailings.campaigns.open")}</a></dd>
         <dt>${copy.text("adminMailings.log.status")}</dt>
         <dd>${copy.text("adminMailings.status." + mailing.status())}</dd>
         <dt>${copy.text("adminMailings.log.sentAt")}</dt>

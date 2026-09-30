@@ -10,7 +10,7 @@
 @param String error
 @param String notice
 !{String title = copy.text("adminShifts.shiftTitle", copy.text("shift.task." + shift.task().name()), shift.eventTitle());}
-@template.layout(copy = copy, title = title, content = @`
+@template.admin.layout(copy = copy, title = title, content = @`
     <h1>${title}</h1>
     <p><a href="/admin/volontarpass">${copy.text("adminShifts.back")}</a></p>
     @if(error != null)

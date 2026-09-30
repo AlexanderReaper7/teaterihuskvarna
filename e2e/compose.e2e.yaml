@@ -22,6 +22,11 @@ services:
     # Never started: no profile of this name is ever activated.
     profiles: [disabled]
 
+  studio:
+    # Browser tests use fixture content and do not start an external editor.
+    profiles: [disabled]
+    ports: !reset []
+
   app:
     environment:
       # The application listens on the port it builds links with, so a link in

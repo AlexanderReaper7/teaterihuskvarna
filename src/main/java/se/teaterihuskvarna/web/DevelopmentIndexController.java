@@ -9,9 +9,8 @@ import org.springframework.web.bind.annotation.GetMapping;
 import se.teaterihuskvarna.development.DevelopmentService;
 import se.teaterihuskvarna.login.SignedIn;
 
-/// The start page under the `dev` profile: every route, every address that can
-/// log in with a button that mails it a link, and what build is running. In
-/// every other profile [HomeController] answers `/` instead.
+/// Developer tools at `/dev` under the `dev` profile: every route, every address
+/// that can log in with a button that mails it a link, and what build is running.
 ///
 /// The page is English and written in its template, not Swedish copy from
 /// `messages_sv.properties`. `docs/decisions/0001-language-policy.md` makes
@@ -32,7 +31,7 @@ public class DevelopmentIndexController {
     /// @param signedIn who is logged in, or null
     /// @param model    receives the routes, the accounts, the environment and the login
     /// @return the development index
-    @GetMapping("/")
+    @GetMapping("/dev")
     public String index(@AuthenticationPrincipal @Nullable SignedIn signedIn, Model model) {
         model.addAttribute("routes", development.routes());
         model.addAttribute("accounts", development.loginAccounts());

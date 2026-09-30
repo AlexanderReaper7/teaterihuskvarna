@@ -4,7 +4,7 @@
 @param Copy copy
 @param CsrfField csrf
 @param OfferDetails offer
-@template.layout(copy = copy, title = copy.text("adminOffers.delete.heading"), content = @`
+@template.admin.layout(copy = copy, title = copy.text("adminOffers.delete.heading"), content = @`
     <h1>${copy.text("adminOffers.delete.heading")}</h1>
     <p>${copy.text("adminOffers.delete.question", offer.title())}</p>
     @if(offer.registered() > 0)

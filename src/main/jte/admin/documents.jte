@@ -19,7 +19,7 @@
 !{String kindDescribedBy = kindError == null ? null : "kind-error";}
 !{String fileInvalid = fileError == null ? null : "true";}
 !{String fileDescribedBy = fileError == null ? null : "file-error";}
-@template.layout(copy = copy, title = copy.text("adminDocuments.heading"), content = @`
+@template.admin.layout(copy = copy, title = copy.text("adminDocuments.heading"), content = @`
     <h1>${copy.text("adminDocuments.heading")}</h1>
     <p><a href="/admin">${copy.text("admin.toOverview")}</a></p>
     @if(error != null)

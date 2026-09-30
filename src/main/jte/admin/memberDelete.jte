@@ -5,7 +5,7 @@
 @param CsrfField csrf
 @param MemberFile file
 @param boolean stale
-@template.layout(copy = copy, title = copy.text("register.delete.heading", file.member().fullName()), content = @`
+@template.admin.layout(copy = copy, title = copy.text("register.delete.heading", file.member().fullName()), content = @`
     <h1>${copy.text("register.delete.heading", file.member().fullName())}</h1>
     @if(stale)
         <p role="alert">${copy.text("form.stale")}</p>

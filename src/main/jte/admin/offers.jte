@@ -5,7 +5,7 @@
 @param List<OfferDetails> offers
 @param String error
 @param String notice
-@template.layout(copy = copy, title = copy.text("adminOffers.heading"), content = @`
+@template.admin.layout(copy = copy, title = copy.text("adminOffers.heading"), content = @`
     <h1>${copy.text("adminOffers.heading")}</h1>
     <p><a href="/admin">${copy.text("admin.toOverview")}</a></p>
     @if(error != null)
