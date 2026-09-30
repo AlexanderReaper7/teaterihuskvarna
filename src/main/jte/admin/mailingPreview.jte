@@ -8,7 +8,7 @@
 @param String html
 @param String audienceName
 @param MailingReach reach
-@template.layout(copy = copy, title = copy.text("adminMailings.preview.heading"), content = @`
+@template.admin.layout(copy = copy, title = copy.text("adminMailings.preview.heading"), content = @`
     <h1>${copy.text("adminMailings.preview.heading")}</h1>
     <p><a href="/admin/utskick">${copy.text("adminMailings.back")}</a></p>
     <dl>

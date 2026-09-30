@@ -598,11 +598,12 @@ class LoginIT extends IntegrationTestSupport {
         mockMvc.perform(get("/bli-medlem/skickat")).andExpect(status().isOk());
     }
 
-    /// Security permits `/api/development/**` in every profile, so this is what
+    /// Security permits `/dev` and `/api/development/**` in every profile, so this is what
     /// keeps the route list and the login addresses out of production: without
     /// the dev profile nothing is mapped there, and `/` is the start page.
     @Test
     void theDevelopmentIndexExistsOnlyUnderTheDevProfile() throws Exception {
+        mockMvc.perform(get("/dev")).andExpect(status().isNotFound());
         mockMvc.perform(get("/api/development/routes")).andExpect(status().isNotFound());
         mockMvc.perform(get("/api/development/login-accounts")).andExpect(status().isNotFound());
         mockMvc.perform(get("/api/development/environment")).andExpect(status().isNotFound());

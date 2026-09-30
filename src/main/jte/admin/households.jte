@@ -12,7 +12,7 @@
 @param FieldErrors errors
 @param String notice
 @param boolean stale
-@template.layout(copy = copy, title = copy.text("household.heading"), content = @`
+@template.admin.layout(copy = copy, title = copy.text("household.heading"), content = @`
     <h1>${copy.text("household.heading")}</h1>
     <p><a href="/admin/medlemmar">${copy.text("register.toList")}</a></p>
     @if(stale)

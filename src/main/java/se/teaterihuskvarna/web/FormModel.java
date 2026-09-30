@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.ModelAttribute;
 /// session, and so creates one: a row in `spring_session`. Doing that for the start
 /// page would write a row for every visitor who never fills in a form, which is
 /// what Spring Security's deferred token exists to avoid. The development index
-/// on `/` is the exception, under the `dev` profile only, because its buttons
+/// on `/dev` is the exception, under the `dev` profile only, because its buttons
 /// post to the login pages.
 @ControllerAdvice(assignableTypes = {
     DevelopmentIndexController.class,

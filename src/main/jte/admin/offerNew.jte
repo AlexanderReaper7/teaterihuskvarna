@@ -6,7 +6,7 @@
 @param CsrfField csrf
 @param OfferForm form
 @param FieldErrors errors
-@template.layout(copy = copy, title = copy.text("adminOffers.new.heading"), content = @`
+@template.admin.layout(copy = copy, title = copy.text("adminOffers.new.heading"), content = @`
     <h1>${copy.text("adminOffers.new.heading")}</h1>
     <p><a href="/admin/erbjudanden">${copy.text("adminOffers.back")}</a></p>
     <p>${copy.text("adminOffers.new.draft")}</p>

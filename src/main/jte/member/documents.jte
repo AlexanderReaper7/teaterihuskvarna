@@ -4,7 +4,7 @@
 @import se.teaterihuskvarna.web.Copy
 @param Copy copy
 @param List<DocumentSummary> documents
-@template.layout(copy = copy, title = copy.text("documents.heading"), content = @`
+@template.member.layout(copy = copy, title = copy.text("documents.heading"), content = @`
     <h1>${copy.text("documents.heading")}</h1>
     <p><a href="/medlem">${copy.text("member.toOverview")}</a></p>
     @for(DocumentKind kind : DocumentKind.values())

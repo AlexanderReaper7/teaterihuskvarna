@@ -11,7 +11,7 @@
 @param List<HouseholdDetails> households
 @param String error
 @param boolean stale
-@template.layout(copy = copy, title = copy.text("register.add"), content = @`
+@template.admin.layout(copy = copy, title = copy.text("register.add"), content = @`
     <h1>${copy.text("register.add")}</h1>
     <p><a href="/admin/medlemmar">${copy.text("register.toList")}</a></p>
     @if(stale)

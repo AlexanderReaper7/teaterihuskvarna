@@ -45,7 +45,7 @@
 ${content}
 </main>
 <footer class="site-footer">
-    <p>${copy.text("site.association")}</p>
+    <p>${copy.text("site.association")} <a href="/admin">${copy.text("nav.admin")}</a></p>
 </footer>
 </body>
 </html>

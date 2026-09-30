@@ -18,7 +18,7 @@
 !{java.time.Instant builtAt = environment.builtAt();}
 @template.layout(copy = copy, title = "Development", content = @`
     <h1>Development index</h1>
-    <p>The dev profile shows this page on <code>/</code> in place of the start page.</p>
+    <p>The dev profile shows developer tools at <code>/dev</code>. <a href="/">Open the public start page</a>.</p>
 
     <h2>Environment</h2>
     <dl>

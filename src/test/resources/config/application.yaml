@@ -14,8 +14,9 @@ teaterihuskvarna:
     source: fixture
     project-id: test
     dataset: test
+    token: ""
     webhook-secret: test-webhook-secret
-    studio-url: https://studio.example.test
+    studio-url: https://studio.example.test/studio/
   brevo:
     api: fake
   mail:

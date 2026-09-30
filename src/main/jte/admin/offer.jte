@@ -13,7 +13,7 @@
 @param List<Registrant> registrations
 @param String error
 @param String notice
-@template.layout(copy = copy, title = offer.title(), content = @`
+@template.admin.layout(copy = copy, title = offer.title(), content = @`
     <h1>${offer.title()}</h1>
     <p><a href="/admin/erbjudanden">${copy.text("adminOffers.back")}</a></p>
     @if(error != null)

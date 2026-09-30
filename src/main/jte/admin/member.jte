@@ -22,7 +22,7 @@
 !{Instant paidAt = thisYear.paidAt();}
 !{HouseholdDetails household = file.household();}
 !{Instant invitationExpires = file.invitationExpires();}
-@template.layout(copy = copy, title = file.member().fullName(), content = @`
+@template.admin.layout(copy = copy, title = file.member().fullName(), content = @`
     <h1>${file.member().fullName()}</h1>
     <p><a href="/admin/medlemmar">${copy.text("register.toList")}</a></p>
     @if(stale)

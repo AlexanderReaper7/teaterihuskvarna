@@ -7,7 +7,7 @@
 @param MemberList list
 @param String error
 @param String notice
-@template.layout(copy = copy, title = copy.text("register.heading"), content = @`
+@template.admin.layout(copy = copy, title = copy.text("register.heading"), content = @`
     <h1>${copy.text("register.heading")}</h1>
     <p><a href="/admin">${copy.text("register.back")}</a></p>
     @if(error != null)

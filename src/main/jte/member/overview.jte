@@ -25,13 +25,8 @@
 @param String notice
 !{Instant paidAt = member.fee().paidAt();}
 !{PaymentInstruction payment = member.fee().payment();}
-@template.layout(copy = copy, title = copy.text("member.heading"), content = @`
+@template.member.layout(copy = copy, title = copy.text("member.heading"), content = @`
     <h1>${copy.text("member.heading")}</h1>
-    <ul>
-        <li><a href="/medlem/erbjudanden">${copy.text("offers.heading")}</a></li>
-        <li><a href="/medlem/handlingar">${copy.text("documents.heading")}</a></li>
-        <li><a href="/medlem/volontar">${copy.text("shifts.heading")}</a></li>
-    </ul>
     @if(offerPasskey)
         @template.tag.passkeyOffer(copy = copy, csrf = csrf, urls = passkeyUrls)
     @endif

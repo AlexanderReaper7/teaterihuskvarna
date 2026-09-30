@@ -48,7 +48,8 @@ test("the scan reports an image without a text alternative", async ({ page }) =>
 });
 
 const PUBLIC = [
-  "/start",
+  "/",
+  "/dev",
   "/kalender",
   "/evenemang/kulturnatten",
   "/nyheter",

@@ -68,6 +68,8 @@ flowchart LR
     host --- db
 ```
 
+The development Compose stack also runs Sanity Studio; association editors use Sanity hosting, per [0021](decisions/0021-content-from-sanity.md). Both editors connect to Sanity's hosted content database. The development application reads the same `dev` dataset as Studio; automated tests use fixture content.
+
 The application renders usable HTML on the server. Sanity content is cached, a publish webhook clears the cache, and the cache expires within one minute if the webhook fails.
 
 The accepted component choices and their costs are recorded in [0004](decisions/0004-jte-for-templates.md), [0005](decisions/0005-brevo-campaign-drafts.md), [0006](decisions/0006-sanity-for-now.md), [0007](decisions/0007-postgres-in-a-container.md), [0008](decisions/0008-everything-in-containers.md) and [0009](decisions/0009-java-25-lts.md).

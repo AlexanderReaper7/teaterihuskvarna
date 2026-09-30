@@ -68,6 +68,19 @@ class MailingIT extends IntegrationTestSupport {
     }
 
     @Test
+    void thePagesLinkToTheEditorsForActionsCompletedElsewhere() throws Exception {
+        mockMvc.perform(get("/admin").with(asAdministrator()))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("href=\"https://studio.example.test/studio/\"")))
+                .andExpect(content().string(containsString("href=\"https://app.brevo.com/contact/segment\"")))
+                .andExpect(content().string(containsString("href=\"https://app.brevo.com/campaigns/listing/email\"")));
+        mockMvc.perform(get("/admin/utskick").with(asAdministrator()))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("href=\"https://studio.example.test/studio/\"")))
+                .andExpect(content().string(containsString("href=\"https://app.brevo.com/contact/segment\"")));
+    }
+
+    @Test
     void thePreviewShowsTheChosenContentAndTouchesNothing() throws Exception {
         mockMvc.perform(post("/admin/utskick/forhandsgranska").with(asAdministrator()).with(csrf())
                         .param("audience", "LIST")

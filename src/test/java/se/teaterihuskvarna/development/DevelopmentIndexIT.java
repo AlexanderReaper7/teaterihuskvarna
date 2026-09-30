@@ -2,6 +2,7 @@ package se.teaterihuskvarna.development;
 
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.hasItem;
+import static org.hamcrest.Matchers.not;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -30,7 +31,7 @@ class DevelopmentIndexIT extends IntegrationTestSupport {
     void theIndexLinksThePagesAndOffersALinkForEveryAccount() throws Exception {
         insertAccount("Tove Testsson", "tove@example.test");
 
-        mockMvc.perform(get("/"))
+        mockMvc.perform(get("/dev"))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("<a href=\"/bli-medlem\">")))
                 .andExpect(content().string(containsString("tove@example.test")))
@@ -41,6 +42,14 @@ class DevelopmentIndexIT extends IntegrationTestSupport {
     }
 
     @Test
+    void thePublicStartPageDoesNotShowDeveloperTools() throws Exception {
+        mockMvc.perform(get("/"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("Nästa evenemang")))
+                .andExpect(content().string(not(containsString("Development index"))));
+    }
+
+    @Test
     void theRoutesIncludeTheLoginFiltersNoControllerShows() throws Exception {
         mockMvc.perform(get("/api/development/routes"))
                 .andExpect(status().isOk())
@@ -48,6 +57,7 @@ class DevelopmentIndexIT extends IntegrationTestSupport {
                 .andExpect(jsonPath("$[?(@.kind == 'LOGIN_FILTER')].path", hasItem("/admin/logga-ut")))
                 .andExpect(jsonPath("$[?(@.kind == 'LOGIN_FILTER')].path", hasItem("/medlem/passkeys")))
                 .andExpect(jsonPath("$[?(@.kind == 'PAGE')].path", hasItem("/")))
+                .andExpect(jsonPath("$[?(@.kind == 'PAGE')].path", hasItem("/dev")))
                 .andExpect(jsonPath("$[?(@.kind == 'ENDPOINT')].path", hasItem("/api/development/routes")));
     }
 
