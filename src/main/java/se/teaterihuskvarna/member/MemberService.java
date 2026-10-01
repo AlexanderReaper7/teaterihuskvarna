@@ -191,7 +191,13 @@ public class MemberService {
         }
         member.setFullName(form.fullName().strip());
         member.setContact(form.contact());
-        member.setHousehold(household(form.householdId()));
+        Household previous = member.getHousehold();
+        Household next = household(form.householdId());
+        if (previous != null && member.getId().equals(previous.getOwnerMemberId())
+                && (next == null || !previous.getId().equals(next.getId()))) {
+            previous.setOwnerMemberId(null);
+        }
+        member.setHousehold(next);
         if (email != null) {
             Email address = new Email(email);
             refuseTaken(address, account);
