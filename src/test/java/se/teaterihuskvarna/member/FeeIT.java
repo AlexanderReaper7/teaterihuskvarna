@@ -13,6 +13,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.util.Map;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -246,7 +247,7 @@ class FeeIT extends MemberRegisterSupport {
         assertThat(rowsIn("fee")).isZero();
     }
 
-    private Map<String, Object> feeOf(long member) {
+    private Map<String, @Nullable Object> feeOf(long member) {
         return jdbc.sql("SELECT kind, amount_ore, year, marked_by FROM fee WHERE member_id = ?")
                 .param(member)
                 .query()

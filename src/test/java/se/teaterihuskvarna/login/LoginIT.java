@@ -1,5 +1,6 @@
 package se.teaterihuskvarna.login;
 
+import static java.util.Objects.requireNonNull;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.not;
@@ -22,6 +23,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
@@ -114,9 +116,9 @@ class LoginIT extends IntegrationTestSupport {
         requestLink(LoginKind.MEMBER, KARIN);
         SimpleMailMessage mail = awaitMail();
         String token = tokenIn(mail, linkPath(LoginKind.MEMBER));
-        String browser = browserCookie(LoginKind.MEMBER).getValue();
+        String browser = requireNonNull(browserCookie(LoginKind.MEMBER)).getValue();
 
-        List<Map<String, Object>> rows = jdbc.sql("SELECT * FROM one_time_token").query().listOfRows();
+        List<Map<String, @Nullable Object>> rows = jdbc.sql("SELECT * FROM one_time_token").query().listOfRows();
 
         assertThat(rows).hasSize(1);
         assertThat(rows.getFirst().get("token_hash")).isEqualTo(sha256Hex(token));
@@ -143,8 +145,8 @@ class LoginIT extends IntegrationTestSupport {
                 .contains("Max-Age=" + settings.linkLifetime().toSeconds())
                 .contains("HttpOnly")
                 .contains("SameSite=Lax");
-        assertThat(again.getResponse().getCookie(LoginBrowser.COOKIE).getValue())
-                .isEqualTo(first.getResponse().getCookie(LoginBrowser.COOKIE).getValue());
+        assertThat(requireNonNull(again.getResponse().getCookie(LoginBrowser.COOKIE)).getValue())
+                .isEqualTo(requireNonNull(first.getResponse().getCookie(LoginBrowser.COOKIE)).getValue());
         assertThat(requestLink(LoginKind.ADMINISTRATOR, NOBODY).getResponse().getHeader("Set-Cookie"))
                 .contains("Path=/admin/logga-in");
     }
@@ -194,7 +196,7 @@ class LoginIT extends IntegrationTestSupport {
         insertAccount("Karin Karlsson", KARIN);
         requestLink(LoginKind.MEMBER, KARIN);
         String token = tokenIn(awaitMail(), linkPath(LoginKind.MEMBER));
-        Cookie here = browserCookie(LoginKind.MEMBER);
+        Cookie here = requireNonNull(browserCookie(LoginKind.MEMBER));
         assertThat(here).isNotNull();
 
         mockMvc.perform(get("/api/login-links").param("kind", "MEMBER").param("token", token).cookie(here))
@@ -313,7 +315,7 @@ class LoginIT extends IntegrationTestSupport {
         String token = tokenIn(awaitMail(), linkPath(LoginKind.MEMBER));
 
         MvcResult page = mockMvc.perform(get("/logga-in/lank").param("token", token)
-                        .cookie(browserCookie(LoginKind.MEMBER)))
+                        .cookie(requireNonNull(browserCookie(LoginKind.MEMBER))))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString(token)))
                 .andExpect(content().string(containsString("data-auto-submit")))
@@ -573,11 +575,12 @@ class LoginIT extends IntegrationTestSupport {
         String token = tokenIn(awaitMail(), linkPath(LoginKind.MEMBER));
         jdbc.sql("DELETE FROM spring_session").update();
         MvcResult page = mockMvc.perform(get("/logga-in/lank").param("token", token)
-                .cookie(browserCookie(LoginKind.MEMBER))).andReturn();
-        List<String> before = jdbc.sql("SELECT primary_id FROM spring_session").query(String.class).list();
+                .cookie(requireNonNull(browserCookie(LoginKind.MEMBER)))).andReturn();
+        List<@Nullable String> before = jdbc.sql("SELECT primary_id FROM spring_session").query(String.class).list();
 
         MvcResult login = mockMvc.perform(post("/logga-in/lank").param("token", token)
-                .cookie(browserCookie(LoginKind.MEMBER)).with(sessionOf(page)).with(csrf())).andReturn();
+                .cookie(requireNonNull(browserCookie(LoginKind.MEMBER)))
+                .with(sessionOf(page)).with(csrf())).andReturn();
 
         assertRedirect(login, "/medlem");
         assertThat(before).hasSize(1);
@@ -675,7 +678,7 @@ class LoginIT extends IntegrationTestSupport {
 
     /// A failed login stores its error in a new, anonymous session, so only
     /// sessions with a principal count.
-    private List<String> signedInSessions() {
+    private List<@Nullable String> signedInSessions() {
         return jdbc.sql("SELECT principal_name FROM spring_session WHERE principal_name IS NOT NULL")
                 .query(String.class)
                 .list();

@@ -3,4 +3,7 @@
 ///
 /// Everything goes through [OfferService]. Both tables live in PostgreSQL, so
 /// that taking a place and checking the capacity happen in one transaction.
+@NullMarked
 package se.teaterihuskvarna.offer;
+
+import org.jspecify.annotations.NullMarked;

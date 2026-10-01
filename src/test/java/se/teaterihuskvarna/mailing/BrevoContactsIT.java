@@ -1,5 +1,6 @@
 package se.teaterihuskvarna.mailing;
 
+import static java.util.Objects.requireNonNull;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.sql.Timestamp;
@@ -175,7 +176,7 @@ class BrevoContactsIT extends IntegrationTestSupport {
 
         members.update(karin, form("Karin Berg", "karin@example.test", null));
         Thread.sleep(1000);
-        assertThat(fake.contacts().get(karin).name()).isEqualTo("Karin Holm");
+        assertThat(requireNonNull(fake.contacts().get(karin)).name()).isEqualTo("Karin Holm");
 
         // Mail has a thread of its own, so a stuck contact does not hold it back,
         // and neither do more stuck contacts than the retry job's batch, when

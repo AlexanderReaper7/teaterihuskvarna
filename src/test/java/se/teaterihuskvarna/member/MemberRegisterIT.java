@@ -16,6 +16,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MvcResult;
@@ -166,7 +167,7 @@ class MemberRegisterIT extends MemberRegisterSupport {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.household").value("Familjen Lindqvist"));
 
-        Map<String, Object> row = jdbc.sql("""
+        Map<String, @Nullable Object> row = jdbc.sql("""
                 SELECT m.full_name, m.phone, m.address, m.postal_code, m.city, m.household_id, a.email
                 FROM member m JOIN account a ON a.member_id = m.id WHERE m.id = ?
                 """).param(maria).query().singleRow();

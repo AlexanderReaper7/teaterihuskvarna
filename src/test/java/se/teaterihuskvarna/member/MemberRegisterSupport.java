@@ -31,7 +31,7 @@ abstract class MemberRegisterSupport extends IntegrationTestSupport {
     /// @param memberId    the member to move
     /// @param householdId the household, or null for none
     protected void moveTo(long memberId, @Nullable Long householdId) {
-        jdbc.sql("UPDATE member SET household_id = ? WHERE id = ?").params(householdId, memberId).update();
+        jdbc.sql("UPDATE member SET household_id = ? WHERE id = ?").param(householdId).param(memberId).update();
     }
 
     /// @param accountId an account
