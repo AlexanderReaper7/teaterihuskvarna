@@ -74,6 +74,27 @@ Quickpay documents Swish Handel integration through its supplier agreement or th
 
 Stripe documents immediate payment confirmation, hosted Checkout and payment APIs, but currently presents Swish access through an access request. Stripe appears as the payment recipient in Swish; the association's name appears in the message. Stripe's Swish integration does not support recurring payments. It therefore needs a separate eligibility and member-facing naming assessment. [Stripe Swish documentation](https://docs.stripe.com/payments/swish).
 
+### Association offers do not all cover Swish Handel
+
+The bank pages checked on 2026-10-01 show association offers, but no published general Swish Handel discount for an ordinary cultural nonprofit association. The product and eligibility conditions matter:
+
+| Offer | Verified terms | What it establishes for this project |
+| --- | --- | --- |
+| Swedbank's general nonprofit package | 1,200 SEK/year for the bank package; 5,500 SEK to become a new bank customer. Swish Företag is discounted to 1.50 SEK per receipt or refund | A general association offer exists, but the published discount names Företag, not the Handel API needed here. [Swedbank nonprofit offer](https://www.swedbank.se/foretag/bli-kund/bli-foreningskund.html) |
+| Sparbanken Spira's nonprofit package | 700 SEK/year with free Swish; the general association page's footnote identifies a focus on Västervik and Åtvidaberg municipalities | A published free nonprofit Swish offer exists. The nonprofit page links Swish Företag, so free Handel/API access and eligibility for this association remain unverified. [Spira association offer](https://www.sparbankenspira.se/foretag/foreningar), [Spira nonprofit package](https://www.sparbankenspira.se/foretag/foreningar/ideell-forening.html) |
+| Swedbank's sports offer in cooperation with Riksidrottsförbundet | Swish Företag 1.10 SEK per receipt or refund and no annual Swish Företag fee; the bank package remains 1,200 SEK/year. New-bank-customer setup is waived for RF-affiliated sports associations | A restricted sports offer, not evidence of eligibility for this theatre association or a Handel discount. [Swedbank sports offer](https://www.swedbank.se/foretag/bli-kund/foretagspaket/erbjudande-till-idrottsforeningar.html) |
+| Nordea's 90-konto fundraising rate | Handel receipts to a 90-konto are listed at 0 SEK per transaction. The page still lists the 720 SEK annual Handel charge | A fundraising-account rate, not a waiver for every nonprofit. The page does not establish coverage for this association's membership fees. [Nordea Handel rates](https://www.nordea.se/foretag/produkter/betala/swish-handel.html) |
+| SEB | The Företag page explicitly says associations pay the same as businesses, 40 SEK/month and 2.50 SEK/transaction. The price list publishes Handel at 60 SEK/month and 2.50 SEK/receipt | No general nonprofit Handel concession appears in these published rates. [SEB association pricing](https://seb.se/foretag/digitala-tjanster/swish-foretag/swish-for-foretag), [SEB price list](https://seb.se/foretag/tjanster/aktuella-priser) |
+| Handelsbanken | Företag 49 SEK/month and 1.95 SEK/transaction; Handel 85 SEK/month and 1.95 SEK/transaction | The checked product page publishes no separate nonprofit rate. A local quote could differ. [Handelsbanken Swish products](https://www.handelsbanken.se/sv/foretag/konton-betalningar/ta-betalt/swish-for-foretag) |
+
+A 90-konto requires approval from Svensk Insamlingskontroll and its independent scrutiny of fundraising. Being an ideell förening does not itself supply that approval. No evidence here establishes that the association holds a 90-konto or belongs to RF. [Nordea 90-konto explanation and application](https://www.nordea.se/foretag/produkter/betala/90konton.html).
+
+The bank-customer setup fees above are separate from Swish setup. Nordea also publishes 5,000 SEK for a new association to become a bank customer, and SEB publishes 5,000 SEK. The earlier annual payment examples exclude these bank charges. [Nordea bank onboarding](https://www.nordea.se/foretag/produkter/betala/foretagskonto.html), [SEB bank onboarding](https://seb.se/foretag/tjanster/aktuella-priser).
+
+Stripe's nonprofit discount includes Sweden, but requires at least 80% of payment volume to be tax-deductible donations. It explicitly excludes membership fees, tickets and registration fees from eligible donations. Membership-fee collection alone therefore does not qualify, and the source establishes no discounted Swish rate. [Stripe nonprofit discount conditions](https://support.stripe.com/questions/fee-discount-for-nonprofit-organizations).
+
+A theatre-specific example exists. Hallarnas Skådespelarlag states that SEB sponsors its Swish membership payments at no charge. The page does not identify the Swish product or promise the same terms to another association. It documents sponsorship, not a public Handel pricing policy. [Hallarnas membership payments](https://hallarnasteater.se/bli-medlem/).
+
 ### Annual examples depend on payments, not member count
 
 The [first meeting](../meetings/2026-09-24-meeting-1.md#the-association-today) records 115 members and room to grow to 200. Household fees mean those numbers cannot be assumed to equal payment counts.
@@ -99,6 +120,8 @@ Swedbank publishes 50 SEK/month per number, 3.50 SEK/payment and 1,000 SEK setup
 The recommendation is an application-created Swish Handel payment request for the chosen membership fee, followed by automatic recording only after a verified `PAID` result. The member approves each payment. Recurring billing is unnecessary for the clarified request.
 
 Direct integration is a reasonable candidate if an association maintainer can own certificate renewal and callback operations. A technical supplier is a reasonable candidate if outsourcing that work matters more than the added provider charge. Obtain both quotes from the association's existing bank before choosing; changing banks only to reduce a small fee may cost more administrative work than it saves.
+
+For nonprofit pricing, ask the existing bank for a Swish Handel quote specifically for automated membership-fee confirmation, and ask whether a local sponsorship agreement can cover the fixed charge, setup and transaction fees. A free Företag offer does not settle the API requirement. Neither RF membership nor 90-konto fundraising status should be assumed.
 
 An implementation proposal needs to preserve these properties before any schema or interface is chosen:
 
