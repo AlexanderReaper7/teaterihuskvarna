@@ -1,7 +1,7 @@
 ---
 created: 2026-10-01
 provenance: agent
-description: How Swish can confirm membership payments automatically, with integration choices, prerequisites and published costs.
+description: How Swish can confirm membership payments automatically, with nonprofit offers, published costs and secondary Stripe and Klarna options.
 ---
 
 # Swish can confirm membership payments automatically
@@ -106,6 +106,32 @@ For comparison only, assuming 115 successful payments in a year:
 - Stripe's displayed transaction price gives `402.50 SEK` for 115 payments of 50 SEK or `460 SEK` for 115 payments of 100 SEK. This is a transaction-fee illustration, not confirmation of merchant access or an all-in contract price.
 
 At 200 payments, the corresponding amounts are 1,200 SEK for Swedbank, 1,050 to 1,080 SEK for Nordea and 700 to 800 SEK at Stripe's displayed transaction rate. These calculations use the prices above; they are not estimates of actual payment volume.
+
+## Stripe cards and Klarna are secondary options
+
+The user requested this comparison on 2026-10-01 with Stripe and Klarna secondary to Swish. This preference does not accept either provider into version 1. Stripe is a payment processor; Klarna can be a payment method through Stripe or a separate merchant integration.
+
+| Secondary option | Published transaction charge | Charge on 50 SEK | Charge on 100 SEK |
+| --- | --- | --- | --- |
+| Stripe, standard EEA card | 1.5% + 1.80 SEK | 2.55 SEK | 3.30 SEK |
+| Klarna through Stripe, Sweden | 2.99% + 4.00 SEK | About 5.50 SEK | 6.99 SEK |
+| Direct Klarna | Association-specific quote not verified | Unknown | Unknown |
+
+Sources checked on 2026-10-01: [Stripe Swedish card pricing](https://stripe.com/se/pricing), [Stripe's country-specific Klarna pricing](https://stripe.com/se/pricing/local-payment-methods). The card example applies only to standard EEA cards; premium and international cards cost more. Stripe's standard plan has no setup or monthly fee. Examples exclude disputes, currency conversion and additional services, and use decimal arithmetic rounded to the nearest öre. They are normal transaction prices, not a nonprofit concession. The [nonprofit discount conditions](https://support.stripe.com/questions/fee-discount-for-nonprofit-organizations) discussed above exclude membership fees as eligible donations.
+
+Stripe supplies a hosted Checkout and signed webhooks. A possible integration creates a separate Checkout Session for a known membership fee and records payment after server verification. Check the raw request body against the `Stripe-Signature` header and webhook secret, then verify the associated payment, amount and currency. A Checkout Session being `complete` is not enough; payment can still be processing. This proposal requires a paid result and duplicate-event handling before recording the fee. [Stripe webhooks](https://docs.stripe.com/webhooks), [Checkout Session payment status](https://docs.stripe.com/api/checkout/sessions/object).
+
+Klarna through Stripe supports Checkout, full or partial refunds, and settlement through the Stripe balance and payout schedule. Swedish Pay in Full and Pay Later in 30 days list a 1 SEK minimum. Financing starts at 250 SEK, above both membership fees. Availability still depends on merchant eligibility and Klarna's approval of the payer. [Stripe Klarna documentation](https://docs.stripe.com/payments/klarna).
+
+Eligibility needs particular care. Stripe's Klarna rules prohibit charities and fundraising organisations. An ideell förening is not automatically a charity, but this research does not establish how the providers would classify this theatre association. Klarna's network documents list civic/social associations and membership organisations among supported merchant categories for acquiring partners. Its direct merchant policy treats charities as restricted and subject to review. Those documents do not override Stripe's stricter Klarna conditions or approve a direct contract for this association. [Stripe Klarna restrictions](https://docs.stripe.com/payments/klarna/compliance), [Klarna merchant categories](https://docs.klarna.com/klarna-network-distribution/onboard-and-manage-your-partners/accounts-resources/merchant-category-codes/), [Klarna direct merchant restrictions](https://docs.klarna.com/acquirer/klarna/resources/legal-and-compliance/policies-and-term-of-service/prohibited-and-restricted-businesses/).
+
+Direct Klarna also offers a Hosted Payment Page, but checkout completion can return an authorisation token rather than a captured payment. Order creation does not charge the payer by default; capture starts the charge and settlement. A direct integration would need to distinguish those states before marking a fee paid. [Klarna hosted checkout](https://docs.klarna.com/acquirer/klarna/web-payments/integrate-with-klarna-payments/integrate-via-hpp/api-documentation/), [Klarna capture rules](https://docs.klarna.com/acquirer/klarna/web-payments/additional-resources/use-cases/automatic-capture/).
+
+### Agent notes on the secondary options
+
+Stripe cards are the stronger fallback candidate for members who cannot use Swish. Hosted Checkout and server confirmation fit the requested automation, subject to account approval. Klarna has a higher charge at these fee amounts and unresolved association eligibility. If Klarna becomes useful and receives approval, using it through the same Stripe integration is worth evaluating before building a separate integration. A direct Klarna contract has no verified price or nonprofit concession in this research.
+
+Secondary placement must not weaken payment verification or change household coverage. Both options would need the same matching, duplicate-payment and refund decisions described below. No Stripe or Klarna account onboarding, test payment or real payment was performed.
 
 ## Refunds and recurring charges need separate treatment
 
