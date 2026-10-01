@@ -81,6 +81,22 @@ final class LoginSuccessHandler implements AuthenticationSuccessHandler {
         });
     }
 
+    /// Development login keeps the regular lifetime and device tracking, and
+    /// skips the passkey offer because the developer selected an account.
+    ///
+    /// @param lifetime how long the selected kind of login lasts
+    /// @param devices names the device from the request
+    /// @param targetUrl the selected account kind's home page
+    /// @param api whether to return JSON instead of redirecting
+    /// @return the handler for immediate development login
+    static LoginSuccessHandler inDevelopment(Duration lifetime, DeviceNames devices, String targetUrl, boolean api) {
+        if (api) {
+            return byPasskey(lifetime, devices, targetUrl);
+        }
+        return new LoginSuccessHandler(lifetime, devices, false,
+                new SimpleUrlAuthenticationSuccessHandler(targetUrl));
+    }
+
     @Override
     public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response,
             Authentication authentication) throws IOException, ServletException {
