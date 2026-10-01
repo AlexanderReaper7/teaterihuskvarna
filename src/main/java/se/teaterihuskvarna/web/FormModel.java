@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.ModelAttribute;
     DevelopmentIndexController.class,
     LoginPagesController.class,
     MemberPageController.class,
+    MemberHouseholdPageController.class,
     AdministratorPageController.class,
     MembershipApplicationPageController.class,
     MemberOfferPageController.class,

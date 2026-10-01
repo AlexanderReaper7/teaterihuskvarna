@@ -68,11 +68,11 @@ The association's authoritative collection of members, contact details, househol
 
 ### Household | Hushåll
 
-A grouping used to let one household fee cover several members. A household is not itself a member.
+A grouping used to let one household fee cover several members. A household is not itself a member. Members with accounts can manage their own household and leave it. Removal from a household preserves the person's membership and account ([decisions/0025](docs/decisions/0025-member-register-in-the-application.md)).
 
 ### Household member addition | Tillägg i hushållet
 
-An administrator adding a person to a household. It creates a member without an account. A member cannot add people, only invite those already in the household ([decisions/0025](docs/decisions/0025-member-register-in-the-application.md)).
+An administrator or a member with an account in the household adding a person to it. It creates a member without an account, who can receive an invitation afterwards ([decisions/0025](docs/decisions/0025-member-register-in-the-application.md)).
 
 ### Invitation | Inbjudan
 
@@ -251,4 +251,3 @@ A member who has not renewed, with the exact transition and retention period sti
 ### Member-only offer detail | Erbjudandeinformation för medlemmar
 
 Offer information that a visitor must not read, if the board decides that offers contain such information.
-

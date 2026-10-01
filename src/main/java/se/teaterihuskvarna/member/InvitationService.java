@@ -20,8 +20,7 @@ import se.teaterihuskvarna.login.Tokens;
 ///
 /// An administrator can invite any member without an account. A member with an
 /// account can invite the members of their own household who have none.
-/// Adding a person to a household stays with administrators: `docs/projektplan.md`
-/// gives members invitations only.
+/// Members can also add people through [HouseholdService#addForAccount].
 ///
 /// The link opens a page with a button, and only the button's POST creates
 /// the account, so a mail scanner that follows the link uses nothing up. Nobody

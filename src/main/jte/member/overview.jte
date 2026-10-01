@@ -71,8 +71,10 @@
     <h2>${copy.text("member.household")}</h2>
     @if(household == null)
         <p>${copy.text("member.noHousehold")}</p>
+        <p><a href="/medlem/hushall">${copy.text("household.create")}</a></p>
     @else
         <p>${household.name()}</p>
+        <p><a href="/medlem/hushall">${copy.text("member.household.manage")}</a></p>
         <ul>
             @for(HouseholdMember other : household.members())
                 <li>
