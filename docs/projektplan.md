@@ -47,6 +47,8 @@ Version 1 must satisfy all 21 MUST requirements in [requirements.md](requirement
 | Mailings to selected member groups | SMS |
 | Migration of relevant content from WordPress | More than one visitor language |
 
+The [Swish research](research/swish-payments.md) examines automatic confirmation of membership fees as a possible scope change. It is research, not an accepted version 1 requirement.
+
 Volunteer booking is a MUST requirement even though its row in the original, V1, says B, because the original's scope table lists it inside version 1. Where the customer's document contradicts itself, the scope table wins. [requirements.md](requirements.md) records the exception.
 
 ## Public content and member data stay in separate systems
