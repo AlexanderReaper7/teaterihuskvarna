@@ -107,9 +107,9 @@ For comparison only, assuming 115 successful payments in a year:
 
 At 200 payments, the corresponding amounts are 1,200 SEK for Swedbank, 1,050 to 1,080 SEK for Nordea and 700 to 800 SEK at Stripe's displayed transaction rate. These calculations use the prices above; they are not estimates of actual payment volume.
 
-## Stripe cards and Klarna are secondary options
+## Direct Klarna and Stripe are secondary options
 
-The user requested this comparison on 2026-10-01 with Stripe and Klarna secondary to Swish. This preference does not accept either provider into version 1. Stripe is a payment processor; Klarna can be a payment method through Stripe or a separate merchant integration.
+The user requested this comparison on 2026-10-01 with Stripe and Klarna secondary to Swish, then clarified a preference to avoid Visa and Mastercard because of their fees. This preference does not accept either provider into version 1. Stripe is a payment processor. Klarna has its own payment system and supports a direct agreement and integration without Stripe. The Klarna-through-Stripe prices below describe that optional route, not Klarna's direct merchant price. [Klarna integration choices](https://docs.klarna.com/), [Klarna Direct agreement and credentials](https://docs.klarna.com/acquirer/klarna-direct/api/klarna-management-api/).
 
 | Secondary option | Published transaction charge | Charge on 50 SEK | Charge on 100 SEK |
 | --- | --- | --- | --- |
@@ -127,9 +127,17 @@ Eligibility needs particular care. Stripe's Klarna rules prohibit charities and 
 
 Direct Klarna also offers a Hosted Payment Page, but checkout completion can return an authorisation token rather than a captured payment. Order creation does not charge the payer by default; capture starts the charge and settlement. A direct integration would need to distinguish those states before marking a fee paid. [Klarna hosted checkout](https://docs.klarna.com/acquirer/klarna/web-payments/integrate-with-klarna-payments/integrate-via-hpp/api-documentation/), [Klarna capture rules](https://docs.klarna.com/acquirer/klarna/web-payments/additional-resources/use-cases/automatic-capture/).
 
+### A provider's name does not establish which payment network is used
+
+Klarna's Pay Now group includes `DIRECT_BANK_TRANSFER`, `DIRECT_DEBIT` and `PAY_BY_CARD`. Bank-based methods are the candidates for avoiding card networks; choosing Klarna or Pay Now alone does not establish that condition. Klarna's terms also allow shoppers to use a card to repay a deferred purchase. This research does not verify that a new Swedish association contract can exclude card use throughout the payment. [Klarna payment methods](https://docs.klarna.com/acquirer/klarna/web-payments/additional-resources/payment-method-grouping/), [Klarna card and repayment terms](https://docs.klarna.com/acquirer/klarna-direct/resources/legal-and-compliance/payment-solutions-guidelines/technical-requirements-for-card-transactions/).
+
+The older Hosted Payment Page flow documents restricting payment methods, but the same guide tells integrators using the new purchase flow to skip that section. This research therefore does not establish bank-only configuration for the new flow. Bank-only availability needs confirmation for the integration actually offered to this association. [Klarna HPP method controls](https://docs.klarna.com/acquirer/klarna/web-payments/integrate-with-klarna-payments/integrate-via-hpp/before-you-start/accept-klarna-payments-using-hosted-payment-page/).
+
+Ordinary bank-funded Swish payments settle between banks through the Riksbank's RIX-INST system, rather than the Visa or Mastercard card networks. Direct Swish Handel still has its bank's merchant charges. Avoiding a card network does not itself establish a lower all-in fee for Klarna or another provider. [Riksbank explanation of Swish settlement](https://www.riksbank.se/en-gb/press-and-published/notices-and-press-releases/notices/2024/swish-payments-moved-from-bankgirots-payment-system-to-the-riksbanks/).
+
 ### Agent notes on the secondary options
 
-Stripe cards are the stronger fallback candidate for members who cannot use Swish. Hosted Checkout and server confirmation fit the requested automation, subject to account approval. Klarna has a higher charge at these fee amounts and unresolved association eligibility. If Klarna becomes useful and receives approval, using it through the same Stripe integration is worth evaluating before building a separate integration. A direct Klarna contract has no verified price or nonprofit concession in this research.
+The clarified preference removes Stripe cards from the recommended fallback. Direct Swish Handel remains the primary candidate. Direct Klarna's bank-based options merit checking as a secondary candidate, specifically association eligibility, bank-only availability and a complete merchant quote. Stripe's published Klarna price cannot establish what direct Klarna would cost. A direct Klarna contract has no verified price or nonprofit concession in this research. The card and Stripe comparisons remain background information, not proposed implementation choices.
 
 Secondary placement must not weaken payment verification or change household coverage. Both options would need the same matching, duplicate-payment and refund decisions described below. No Stripe or Klarna account onboarding, test payment or real payment was performed.
 
