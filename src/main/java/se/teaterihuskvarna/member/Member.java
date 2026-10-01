@@ -11,6 +11,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import java.time.Instant;
+import org.jspecify.annotations.Nullable;
 
 /// A member of the association. The email address is on the [Account], because
 /// a member added to a household may have none.
@@ -31,13 +32,13 @@ public class Member {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "household_id")
-    private Household household;
+    private @Nullable Household household;
 
     @Column(name = "full_name", nullable = false, length = 100)
     private String fullName;
 
     @Embedded
-    private ContactDetails contact;
+    private @Nullable ContactDetails contact;
 
     @Column(name = "created_at", nullable = false)
     private Instant createdAt = Instant.now();
@@ -64,12 +65,12 @@ public class Member {
         this.fullName = fullName;
     }
 
-    public Household getHousehold() {
+    public @Nullable Household getHousehold() {
         return household;
     }
 
     /// @param household the household whose fee covers this member, or null for none
-    public void setHousehold(Household household) {
+    public void setHousehold(@Nullable Household household) {
         this.household = household;
     }
 

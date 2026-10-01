@@ -28,13 +28,13 @@ public class Offer {
     private String description;
 
     @Column(name = "starts_at")
-    private Instant startsAt;
+    private @Nullable Instant startsAt;
 
     @Column(name = "registration_closes_at")
-    private Instant registrationClosesAt;
+    private @Nullable Instant registrationClosesAt;
 
     @Column(name = "capacity")
-    private Integer capacity;
+    private @Nullable Integer capacity;
 
     @Column(name = "published", nullable = false)
     private boolean published;

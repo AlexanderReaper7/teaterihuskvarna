@@ -39,13 +39,13 @@ public class Administrator {
     private Instant createdAt = Instant.now();
 
     @Column(name = "created_by")
-    private Long createdBy;
+    private @Nullable Long createdBy;
 
     @Column(name = "removed_at")
-    private Instant removedAt;
+    private @Nullable Instant removedAt;
 
     @Column(name = "removed_by")
-    private Long removedBy;
+    private @Nullable Long removedBy;
 
     protected Administrator() {
         // for JPA

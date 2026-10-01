@@ -8,6 +8,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.Instant;
+import org.jspecify.annotations.Nullable;
 
 /// A Bli medlem submission nobody has confirmed yet. It becomes a [Member] with
 /// an [Account] when the applicant follows the link in the confirmation mail,
@@ -37,7 +38,7 @@ public class MembershipApplication {
     private String email;
 
     @Embedded
-    private ContactDetails contact;
+    private @Nullable ContactDetails contact;
 
     @Column(name = "token_hash", nullable = false, length = 64)
     private String tokenHash;

@@ -29,7 +29,7 @@ public class Booking {
     private Instant createdAt;
 
     @Column(name = "reminded_at")
-    private Instant remindedAt;
+    private @Nullable Instant remindedAt;
 
     protected Booking() {
         // for JPA

@@ -49,7 +49,7 @@ public class MemberDocument {
     private Instant uploadedAt = Instant.now();
 
     @Column(name = "uploaded_by")
-    private Long uploadedBy;
+    private @Nullable Long uploadedBy;
 
     @Column(name = "published_on", nullable = false)
     private LocalDate publishedOn;

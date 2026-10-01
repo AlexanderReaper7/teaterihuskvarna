@@ -35,7 +35,7 @@ public class Mailing {
     private long brevoCampaignId;
 
     @Column(name = "created_by")
-    private Long createdBy;
+    private @Nullable Long createdBy;
 
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
@@ -44,7 +44,7 @@ public class Mailing {
     private String status;
 
     @Column(name = "sent_at")
-    private Instant sentAt;
+    private @Nullable Instant sentAt;
 
     @Column(name = "sent", nullable = false)
     private int sent;
