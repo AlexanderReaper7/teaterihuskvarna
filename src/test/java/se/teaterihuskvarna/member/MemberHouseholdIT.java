@@ -65,6 +65,7 @@ class MemberHouseholdIT extends MemberRegisterSupport {
                         .content("{\"name\":\" Familjen L \"}").with(erik).with(csrf()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(household))
+                .andExpect(jsonPath("$.ownerMemberId").value(ownMember))
                 .andExpect(jsonPath("$.name").value("Familjen L"));
         assertRedirect(mockMvc.perform(post(PAGE + "/namn").param("name", "Familjen igen")
                 .with(erik).with(csrf())).andReturn(), PAGE);
@@ -125,7 +126,7 @@ class MemberHouseholdIT extends MemberRegisterSupport {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.errors.name").exists());
         assertThat(rowsIn("household")).isZero();
-        moveTo(ownMember, insertHousehold("Familjen"));
+        moveTo(ownMember, ownedHousehold("Familjen"));
         mockMvc.perform(post(PAGE + "/namn").param("name", " ").with(erik).with(csrf()))
                 .andExpect(content().string(containsString("Ange ett namn på hushållet.")));
         mockMvc.perform(post(PAGE + "/medlemmar").param("fullName", "").param("city", "Huskvarna")
@@ -141,7 +142,7 @@ class MemberHouseholdIT extends MemberRegisterSupport {
 
     @Test
     void newPeopleHaveNoAccountAndCanBeEditedAndInvited() throws Exception {
-        long household = insertHousehold("Familjen");
+        long household = ownedHousehold("Familjen");
         moveTo(ownMember, household);
         mockMvc.perform(get(PAGE + "/ny").with(erik)).andExpect(status().isOk());
         assertRedirect(mockMvc.perform(post(PAGE + "/medlemmar").param("fullName", "Olle Lindqvist")
@@ -177,7 +178,7 @@ class MemberHouseholdIT extends MemberRegisterSupport {
 
     @Test
     void editingAnAccountHolderPreservesTheirEmailAndLogin() throws Exception {
-        long household = insertHousehold("Familjen");
+        long household = ownedHousehold("Familjen");
         moveTo(ownMember, household);
         long mariaAccount = insertAccount("Maria Lindqvist", MARIA);
         long maria = memberOf(mariaAccount);
@@ -205,7 +206,7 @@ class MemberHouseholdIT extends MemberRegisterSupport {
 
     @Test
     void removalKeepsMembershipLoginAndPaymentsAndChangesCoverage() throws Exception {
-        long household = insertHousehold("Familjen");
+        long household = ownedHousehold("Familjen");
         moveTo(ownMember, household);
         insertFee(ownMember, "HOUSEHOLD");
         long mariaAccount = insertAccount("Maria Lindqvist", MARIA);
@@ -273,7 +274,7 @@ class MemberHouseholdIT extends MemberRegisterSupport {
 
     @Test
     void anotherHouseholdsMembersAreInaccessibleThroughBothAdapters() throws Exception {
-        moveTo(ownMember, insertHousehold("Familjen"));
+        moveTo(ownMember, ownedHousehold("Familjen"));
         long stranger = insertMember("Annan medlem");
         long otherHousehold = insertHousehold("Annat hushåll");
         moveTo(stranger, otherHousehold);
@@ -318,6 +319,12 @@ class MemberHouseholdIT extends MemberRegisterSupport {
                         .content("{\"fullName\":\"Ändrat\"}").with(erik)).andExpect(status().isForbidden());
         mockMvc.perform(delete(API + "/members/" + ownMember).with(erik)).andExpect(status().isForbidden());
         assertThat(rowsIn("household")).isZero();
+    }
+
+    private long ownedHousehold(String name) {
+        long household = insertHousehold(name);
+        jdbc.sql("UPDATE household SET owner_member_id = ? WHERE id = ?").params(ownMember, household).update();
+        return household;
     }
 
     private long householdOf(long memberId) {

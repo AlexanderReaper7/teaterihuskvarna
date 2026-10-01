@@ -3,6 +3,8 @@ package se.teaterihuskvarna.web;
 import jakarta.validation.ConstraintViolationException;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.util.List;
+import org.jspecify.annotations.Nullable;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
@@ -12,6 +14,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import se.teaterihuskvarna.login.SignedIn;
@@ -19,6 +22,8 @@ import se.teaterihuskvarna.member.AlreadyInHousehold;
 import se.teaterihuskvarna.member.ContactForm;
 import se.teaterihuskvarna.member.HouseholdDetails;
 import se.teaterihuskvarna.member.HouseholdService;
+import se.teaterihuskvarna.member.HouseholdOwnerRequired;
+import se.teaterihuskvarna.member.HouseholdSuccessorRequired;
 import se.teaterihuskvarna.member.NewHousehold;
 import se.teaterihuskvarna.member.MemberService;
 import se.teaterihuskvarna.member.NoSuchHousehold;
@@ -96,7 +101,13 @@ public class MemberHouseholdPageController {
     /// @return the form for adding a person
     @GetMapping("/medlem/hushall/ny")
     public String newMember(@AuthenticationPrincipal SignedIn signedIn, Model model) {
-        households.forAccount(signedIn.id()).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        HouseholdDetails household = households.forAccount(signedIn.id())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        long memberId = members.findByAccount(signedIn.id())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND)).id();
+        if (!household.ownedBy(memberId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+        }
         model.addAttribute("form", new ContactForm("", "", "", "", ""));
         model.addAttribute("errors", FieldErrors.none());
         model.addAttribute("action", "/medlem/hushall/medlemmar");
@@ -162,17 +173,29 @@ public class MemberHouseholdPageController {
     public String removeForm(@AuthenticationPrincipal SignedIn signedIn, @PathVariable long memberId, Model model) {
         model.addAttribute("fullName", households.memberForAccount(signedIn.id(), memberId).fullName());
         model.addAttribute("memberId", memberId);
+        HouseholdDetails household = households.forAccount(signedIn.id())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        model.addAttribute("successors", household.ownedBy(memberId) ? household.members().stream()
+                .filter(member -> member.hasAccount() && member.id() != memberId).toList() : List.of());
         return "member/householdRemove";
     }
 
     /// @param signedIn the logged-in account
     /// @param memberId the person to remove, possibly the caller
+    /// @param successorMemberId the next owner if the caller leaves, or null
+    /// @param model receives successor choices when the selection is missing
     /// @param redirected receives confirmation
     /// @return the member overview, including when the caller has just left
     @PostMapping("/medlem/hushall/medlemmar/{memberId}/ta-bort")
     public String remove(@AuthenticationPrincipal SignedIn signedIn, @PathVariable long memberId,
+            @RequestParam(required = false) @Nullable Long successorMemberId, Model model,
             RedirectAttributes redirected) {
-        households.removeForAccount(signedIn.id(), memberId);
+        try {
+            households.removeForAccount(signedIn.id(), memberId, successorMemberId);
+        } catch (HouseholdSuccessorRequired e) {
+            model.addAttribute("error", copy.text("household.successor.required"));
+            return removeForm(signedIn, memberId, model);
+        }
         redirected.addFlashAttribute("notice", copy.text("member.household.memberRemoved"));
         return "redirect:/medlem";
     }
@@ -182,6 +205,13 @@ public class MemberHouseholdPageController {
     @ExceptionHandler({NoSuchMember.class, NoSuchHousehold.class})
     public void missing(HttpServletResponse response) throws IOException {
         response.sendError(HttpStatus.NOT_FOUND.value());
+    }
+
+    /// @param response receives 403 for household edits by another member
+    /// @throws IOException if the response cannot be written
+    @ExceptionHandler(HouseholdOwnerRequired.class)
+    public void forbidden(HttpServletResponse response) throws IOException {
+        response.sendError(HttpStatus.FORBIDDEN.value());
     }
 
     private String householdPage(SignedIn signedIn, Model model) {

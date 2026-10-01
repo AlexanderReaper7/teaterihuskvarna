@@ -31,6 +31,8 @@ import se.teaterihuskvarna.member.FeeAlreadyMarked;
 import se.teaterihuskvarna.member.MemberHasAccount;
 import se.teaterihuskvarna.member.NoSuchFee;
 import se.teaterihuskvarna.member.NoSuchHousehold;
+import se.teaterihuskvarna.member.HouseholdOwnerRequired;
+import se.teaterihuskvarna.member.HouseholdSuccessorRequired;
 import se.teaterihuskvarna.member.NoSuchMember;
 import se.teaterihuskvarna.offer.NoSuchOffer;
 import se.teaterihuskvarna.offer.OfferFull;
@@ -276,6 +278,20 @@ public class ProblemResponses {
     @ExceptionHandler
     public ProblemDetail brevo(BrevoUnavailable exception) {
         return problem(HttpStatus.BAD_GATEWAY, "Brevo unavailable", exception);
+    }
+
+    /// @param exception a household edit by a member who does not own it
+    /// @return 403
+    @ExceptionHandler
+    public ProblemDetail ownerRequired(HouseholdOwnerRequired exception) {
+        return problem(HttpStatus.FORBIDDEN, "Household owner required", exception);
+    }
+
+    /// @param exception an owner leaving without choosing another account holder
+    /// @return 409
+    @ExceptionHandler
+    public ProblemDetail successorRequired(HouseholdSuccessorRequired exception) {
+        return problem(HttpStatus.CONFLICT, "Household successor required", exception);
     }
 
     private static ProblemDetail problem(HttpStatus status, String title, RuntimeException exception) {

@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import se.teaterihuskvarna.login.SignedIn;
@@ -113,10 +114,12 @@ public class MemberController {
     ///
     /// @param signedIn the logged-in account
     /// @param memberId a person in the caller's household
+    /// @param successorMemberId the next owner if the caller leaves, or null
     @DeleteMapping("/api/member/household/members/{memberId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void removeHouseholdMember(@AuthenticationPrincipal SignedIn signedIn, @PathVariable long memberId) {
-        households.removeForAccount(signedIn.id(), memberId);
+    public void removeHouseholdMember(@AuthenticationPrincipal SignedIn signedIn, @PathVariable long memberId,
+            @RequestParam(required = false) @Nullable Long successorMemberId) {
+        households.removeForAccount(signedIn.id(), memberId, successorMemberId);
     }
 
     /// Invites someone in the caller's household who has no account (R019).

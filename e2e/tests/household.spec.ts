@@ -2,7 +2,7 @@ import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
 import { linkLogin } from "../support/auth";
 import { sql } from "../support/db";
-import { freshAddress } from "../support/site";
+import { ADMINISTRATORS, freshAddress } from "../support/site";
 
 async function member(name: string, email: string, household: string | null = null): Promise<string> {
   const [person] = await sql<{ id: string }>(
@@ -72,6 +72,69 @@ for (const width of [320, 2560]) {
       await linkLogin(page, "member", otherEmail);
       await expect(page.locator("main")).toContainText("Maria Nytt namn");
       await expect(page.getByRole("link", { name: "Skapa ett hushåll", exact: true })).toBeVisible();
+    });
+
+    test("only the owner edits and an owner leaving chooses a successor", async ({ page }) => {
+      const ownerEmail = freshAddress("household-owner");
+      const otherEmail = freshAddress("household-other");
+      const ownerId = await member("Erik Ägare", ownerEmail);
+      const [household] = await sql<{ id: string }>(
+        "INSERT INTO household (name, owner_member_id, created_at) VALUES ('Ägt hushåll', $1, now()) RETURNING id",
+        [ownerId]);
+      await sql("UPDATE member SET household_id = $1 WHERE id = $2", [household.id, ownerId]);
+      const otherId = await member("Maria Efterträdare", otherEmail, household.id);
+      await linkLogin(page, "member", otherEmail);
+      await page.getByRole("link", { name: "Hantera hushållet" }).click();
+      await expect(page.getByRole("button", { name: "Spara hushållets namn" })).toHaveCount(0);
+      await expect(page.getByRole("link", { name: "Lägg till en person" })).toHaveCount(0);
+      await expect(page.getByRole("link", { name: "Ändra uppgifter för Erik Ägare" })).toHaveCount(0);
+      await expect(page.getByRole("link", { name: "Lämna hushållet", exact: true })).toBeVisible();
+      await accessible(page);
+      await page.getByRole("link", { name: "Lämna hushållet", exact: true }).click();
+      const csrf = await page.locator('input[name="_csrf"]').first().inputValue();
+      const denied = await page.request.put("/api/member/household", {
+        data: { name: "Otillåtet namn" }, headers: { "X-CSRF-TOKEN": csrf },
+      });
+      expect(denied.status()).toBe(403);
+      await linkLogin(page, "member", ownerEmail);
+      await page.getByRole("link", { name: "Hantera hushållet" }).click();
+      await page.getByRole("link", { name: "Lämna hushållet", exact: true }).click();
+      await accessible(page);
+      await page.getByLabel("Ny ägare till hushållet").selectOption(otherId);
+      await page.getByRole("button", { name: "Ta bort ur hushållet", exact: true }).click();
+      await expect(page).toHaveURL("/medlem");
+      const [stored] = await sql<{ owner_member_id: string }>(
+        "SELECT owner_member_id FROM household WHERE id = $1", [household.id]);
+      expect(stored.owner_member_id).toBe(otherId);
+      await linkLogin(page, "member", otherEmail);
+      await page.getByRole("link", { name: "Hantera hushållet" }).click();
+      await expect(page.getByRole("button", { name: "Spara hushållets namn" })).toBeVisible();
+    });
+
+    test("an administrator changes the household owner", async ({ page }) => {
+      const ownerEmail = freshAddress("admin-owner");
+      const otherEmail = freshAddress("admin-successor");
+      const ownerId = await member("Erik Första ägare", ownerEmail);
+      const [household] = await sql<{ id: string }>(
+        "INSERT INTO household (name, owner_member_id, created_at) VALUES ('Byte av ägare', $1, now()) RETURNING id",
+        [ownerId]);
+      await sql("UPDATE member SET household_id = $1 WHERE id = $2", [household.id, ownerId]);
+      const otherId = await member("Maria Ny ägare", otherEmail, household.id);
+      await linkLogin(page, "administrator", ADMINISTRATORS.ada);
+      await page.goto("/admin/hushall");
+      const form = page.locator(`form[action="/admin/hushall/${household.id}/agare"]`);
+      await expect(form.getByLabel("Hushållets ägare")).toHaveValue(ownerId);
+      await form.getByLabel("Hushållets ägare").selectOption(otherId);
+      await form.getByRole("button", { name: "Spara ägare", exact: true }).click();
+      await expect(page.getByRole("status")).toContainText("Hushållets ägare är ändrad.");
+      await expect(form.getByLabel("Hushållets ägare")).toHaveValue(otherId);
+      await accessible(page);
+      await linkLogin(page, "member", ownerEmail);
+      await page.getByRole("link", { name: "Hantera hushållet" }).click();
+      await expect(page.getByRole("button", { name: "Spara hushållets namn" })).toHaveCount(0);
+      await linkLogin(page, "member", otherEmail);
+      await page.getByRole("link", { name: "Hantera hushållet" }).click();
+      await expect(page.getByRole("button", { name: "Spara hushållets namn" })).toBeVisible();
     });
 
     test("a member leaves an existing household and creates a new one", async ({ page }) => {

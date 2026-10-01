@@ -25,12 +25,16 @@
         <p role="status">${notice}</p>
     @endif
     @template.tag.errors(copy = copy, errors = errors)
+    @if(household == null || household.ownedBy(ownMemberId))
     <form method="post" action="${household == null ? "/medlem/hushall" : "/medlem/hushall/namn"}">
         @template.tag.csrf(csrf = csrf)
         @template.tag.field(name = "name", label = copy.text("household.name"), type = "text",
                 autocomplete = "off", value = form.name(), error = errors.message("name"), required = true)
         <button type="submit">${copy.text(household == null ? "household.create.submit" : "member.household.rename")}</button>
     </form>
+    @else
+        <p>${household.name()}</p>
+    @endif
     @if(household != null)
         <h2>${copy.text("member.household.members")}</h2>
         <p>${copy.text("member.household.permissions")}</p>
@@ -41,13 +45,19 @@
                     @if(member.hasAccount())
                         ${copy.text("household.hasAccount")}
                     @endif
-                    <a href="/medlem/hushall/medlemmar/${member.id()}">${copy.text("member.household.edit", member.fullName())}</a>
+                    @if(household.ownedBy(ownMemberId))
+                        <a href="/medlem/hushall/medlemmar/${member.id()}">${copy.text("member.household.edit", member.fullName())}</a>
+                    @endif
+                    @if(household.ownedBy(ownMemberId) || member.id().equals(ownMemberId))
                     <a href="/medlem/hushall/medlemmar/${member.id()}/ta-bort">${copy.text(member.id().equals(ownMemberId)
                             ? "member.household.leave" : "member.household.remove", member.fullName())}</a>
+                    @endif
                 </li>
             @endfor
         </ul>
-        <p><a href="/medlem/hushall/ny">${copy.text("member.household.add")}</a></p>
+        @if(household.ownedBy(ownMemberId))
+            <p><a href="/medlem/hushall/ny">${copy.text("member.household.add")}</a></p>
+        @endif
         <p>${copy.text("member.household.invitationNote")}</p>
     @else
         <p>${copy.text("member.household.createNote")}</p>

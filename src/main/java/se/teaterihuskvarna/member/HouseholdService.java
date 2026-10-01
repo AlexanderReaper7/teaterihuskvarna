@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import org.jspecify.annotations.Nullable;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -52,7 +53,7 @@ public class HouseholdService {
     @Transactional
     public HouseholdDetails create(@Valid NewHousehold form) {
         Household household = households.save(new Household(form.name().strip()));
-        return new HouseholdDetails(household.getId(), household.getName(), List.of());
+        return new HouseholdDetails(household.getId(), household.getName(), household.getOwnerMemberId(), List.of());
     }
 
     /// The household of the logged-in member, for `/medlem`.
@@ -81,6 +82,7 @@ public class HouseholdService {
             throw new AlreadyInHousehold();
         }
         Household household = households.save(new Household(form.name().strip()));
+        household.setOwnerMemberId(member.getId());
         member.setHousehold(household);
         events.publishEvent(new MemberChanged(member.getId()));
         return ownDetails(household);
@@ -91,7 +93,7 @@ public class HouseholdService {
     /// @return the renamed household
     @Transactional
     public HouseholdDetails renameForAccount(long accountId, @Valid NewHousehold form) {
-        Household household = ownHousehold(accountId);
+        Household household = ownedHousehold(accountId);
         household.setName(form.name().strip());
         return ownDetails(household);
     }
@@ -103,7 +105,7 @@ public class HouseholdService {
     /// @return the new member's id
     @Transactional
     public long addForAccount(long accountId, @Valid ContactForm form) {
-        Household household = ownHousehold(accountId);
+        Household household = ownedHousehold(accountId);
         Member member = new Member(form.fullName().strip());
         member.setContact(form.contact());
         member.setHousehold(household);
@@ -116,7 +118,9 @@ public class HouseholdService {
     /// @param memberId a member of the caller's household
     /// @return the member's editable contact details, without login email
     public ContactForm memberForAccount(long accountId, long memberId) {
-        return contact(householdMember(accountId, memberId));
+        Member member = householdMember(accountId, memberId);
+        requireOwnerOrSelf(accountId, member);
+        return contact(member);
     }
 
     /// Edits a household member even when they have an account. Login email
@@ -128,6 +132,7 @@ public class HouseholdService {
     /// @return the saved contact details
     @Transactional
     public ContactForm updateForAccount(long accountId, long memberId, @Valid ContactForm form) {
+        ownedHousehold(accountId);
         Member member = householdMember(accountId, memberId);
         member.setFullName(form.fullName().strip());
         member.setContact(form.contact());
@@ -140,11 +145,70 @@ public class HouseholdService {
     ///
     /// @param accountId the signed-in account
     /// @param memberId a member of the caller's household
+    /// @param successorMemberId the next owner when the caller leaves, or null
     @Transactional
-    public void removeForAccount(long accountId, long memberId) {
+    public void removeForAccount(long accountId, long memberId, @Nullable Long successorMemberId) {
         Member member = householdMember(accountId, memberId);
+        requireOwnerOrSelf(accountId, member);
+        Household household = ownHousehold(accountId);
+        if (Long.valueOf(memberId).equals(household.getOwnerMemberId())) {
+            boolean remainingAccounts = !accounts.findByMembers(members.findByHousehold(household.getId()).stream()
+                    .map(Member::getId).filter(id -> id != memberId).toList()).isEmpty();
+            if (remainingAccounts && successorMemberId == null) {
+                throw new HouseholdSuccessorRequired();
+            }
+            if (successorMemberId != null) {
+                requireSuccessor(household, successorMemberId);
+                if (successorMemberId == memberId) {
+                    throw new NoSuchMember();
+                }
+            }
+            household.setOwnerMemberId(successorMemberId);
+        } else if (successorMemberId != null) {
+            throw new HouseholdOwnerRequired();
+        }
         member.setHousehold(null);
         events.publishEvent(new MemberChanged(memberId));
+    }
+
+    /// Administrators assign a member owner or take over management.
+    ///
+    /// @param householdId the household to change
+    /// @param form the next owner, who must belong to it and have an account, or null for administrators
+    /// @return the household with its new owner
+    @Transactional
+    public HouseholdDetails changeOwner(long householdId, @Valid HouseholdOwnerForm form) {
+        Household household = households.findById(householdId).orElseThrow(NoSuchHousehold::new);
+        Long nextOwner = form.memberId();
+        if (nextOwner != null) {
+            requireSuccessor(household, nextOwner);
+        }
+        household.setOwnerMemberId(nextOwner);
+        return ownDetails(household);
+    }
+
+    private void requireSuccessor(Household household, long memberId) {
+        Member member = members.findById(memberId).orElseThrow(NoSuchMember::new);
+        if (member.getHousehold() == null || !household.getId().equals(member.getHousehold().getId())
+                || accounts.findByMember(memberId).isEmpty()) {
+            throw new NoSuchMember();
+        }
+    }
+
+    private Household ownedHousehold(long accountId) {
+        Household household = ownHousehold(accountId);
+        long memberId = accounts.findById(accountId).orElseThrow(NoSuchMember::new).getMember().getId();
+        if (!Long.valueOf(memberId).equals(household.getOwnerMemberId())) {
+            throw new HouseholdOwnerRequired();
+        }
+        return household;
+    }
+
+    private void requireOwnerOrSelf(long accountId, Member target) {
+        long memberId = accounts.findById(accountId).orElseThrow(NoSuchMember::new).getMember().getId();
+        if (memberId != target.getId()) {
+            ownedHousehold(accountId);
+        }
     }
 
     private Household ownHousehold(long accountId) {
@@ -193,6 +257,6 @@ public class HouseholdService {
             list.add(new HouseholdMember(member.getId(), member.getFullName(), withAccount.contains(member.getId()),
                     invited.get(member.getId())));
         }
-        return new HouseholdDetails(household.getId(), household.getName(), list);
+        return new HouseholdDetails(household.getId(), household.getName(), household.getOwnerMemberId(), list);
     }
 }

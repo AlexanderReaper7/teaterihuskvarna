@@ -100,7 +100,7 @@ Every member with an account is a contact on one Brevo list, updated on every ch
 
 The register stores name, phone, address and household for every member, and an email address for each account. A member added to a household has no account, and so no email address, until they accept an invitation sent by an administrator or by a member with an account in that household. Mailings therefore reach only members with an account. The register does not store a personal identity number. Development and test environments use invented data.
 
-A member without a household can create one. Members with accounts can rename their own household, add people, edit its members' contact details and remove people, even when those people have accounts. A member can also leave. Removal preserves membership and login access; the existing fee rules determine coverage afterwards. Login email changes remain administrator-only. The user's 2026-09-30 decision is in [0025](decisions/0025-member-register-in-the-application.md).
+A member without a household can create one. The creator becomes its first owner. Only the current owner can rename it, add people, edit its members' contact details and remove other people, even when those people have accounts. Administrators can change ownership. Any member can leave; an owner first chooses a successor with an account, or administrators take over when no account holder remains. Removal preserves membership and login access; the existing fee rules determine coverage afterwards. Login email changes remain administrator-only. The user's 2026-09-30 and 2026-10-01 decisions are in [0025](decisions/0025-member-register-in-the-application.md).
 
 The current fee rule is:
 
