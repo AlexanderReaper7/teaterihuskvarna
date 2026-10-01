@@ -19,6 +19,11 @@
 
   <properties>
     <java.version>25</java.version>
+    <java.sourceDirectory>${project.basedir}/src/main/java</java.sourceDirectory>
+    <!-- Latest stable releases checked against Maven Central on 2026-10-01. -->
+    <jspecify.version>1.0.1</jspecify.version>
+    <error-prone.version>2.50.0</error-prone.version>
+    <nullaway.version>0.14.2</nullaway.version>
     <!-- Versions newer than the ones Spring Boot 4.1.1 manages. Checked against
          Maven Central on 2026-09-22; see docs/decisions/0010 and 0011. -->
     <jte.version>3.2.4</jte.version>
@@ -45,6 +50,11 @@
   </properties>
 
   <dependencies>
+    <dependency>
+      <groupId>org.jspecify</groupId>
+      <artifactId>jspecify</artifactId>
+      <version>${jspecify.version}</version>
+    </dependency>
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-web</artifactId>
@@ -163,7 +173,46 @@
   </dependencies>
 
   <build>
+    <sourceDirectory>${java.sourceDirectory}</sourceDirectory>
     <plugins>
+      <!-- Nullability is checked by javac, including test compilation. -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>3.16.0</version>
+        <configuration>
+          <fork>true</fork>
+          <compilerArgs>
+            <arg>-XDcompilePolicy=simple</arg>
+            <arg>--should-stop=ifError=FLOW</arg>
+            <arg>-J--add-exports=jdk.compiler/com.sun.tools.javac.api=ALL-UNNAMED</arg>
+            <arg>-J--add-exports=jdk.compiler/com.sun.tools.javac.file=ALL-UNNAMED</arg>
+            <arg>-J--add-exports=jdk.compiler/com.sun.tools.javac.main=ALL-UNNAMED</arg>
+            <arg>-J--add-exports=jdk.compiler/com.sun.tools.javac.model=ALL-UNNAMED</arg>
+            <arg>-J--add-exports=jdk.compiler/com.sun.tools.javac.parser=ALL-UNNAMED</arg>
+            <arg>-J--add-exports=jdk.compiler/com.sun.tools.javac.processing=ALL-UNNAMED</arg>
+            <arg>-J--add-exports=jdk.compiler/com.sun.tools.javac.tree=ALL-UNNAMED</arg>
+            <arg>-J--add-exports=jdk.compiler/com.sun.tools.javac.util=ALL-UNNAMED</arg>
+            <arg>-J--add-opens=jdk.compiler/com.sun.tools.javac.code=ALL-UNNAMED</arg>
+            <arg>-J--add-opens=jdk.compiler/com.sun.tools.javac.comp=ALL-UNNAMED</arg>
+            <!-- Keep plugin options in one argument without embedded newlines. -->
+            <arg>-Xplugin:ErrorProne -XepDisableAllChecks -Xep:NullAway:ERROR -Xep:RequireExplicitNullMarking:ERROR -Xep:JSpecifyUnrecognizedAnnotationLocation:ERROR -XepOpt:NullAway:OnlyNullMarked=true -XepOpt:NullAway:JSpecifyMode=true -XepOpt:NullAway:ExternalInitAnnotations=jakarta.persistence.Entity -XepOpt:NullAway:HandleTestAssertionLibraries=true</arg>
+          </compilerArgs>
+          <annotationProcessorPaths>
+            <path>
+              <groupId>com.google.errorprone</groupId>
+              <artifactId>error_prone_core</artifactId>
+              <version>${error-prone.version}</version>
+            </path>
+            <path>
+              <groupId>com.uber.nullaway</groupId>
+              <artifactId>nullaway</artifactId>
+              <version>${nullaway.version}</version>
+            </path>
+          </annotationProcessorPaths>
+        </configuration>
+      </plugin>
+
       <!-- build-info writes META-INF/build-info.properties, and the git plugin
            writes git.properties, so the development index can show which build
            and which commit is running. Boot's parent configures the git plugin;
@@ -406,4 +455,16 @@
       </plugin>
     </plugins>
   </build>
+  <profiles>
+    <!-- The probes use the normal compiler settings, with isolated sources and output. -->
+    <profile>
+      <id>nullability-probe</id>
+      <properties>
+        <java.sourceDirectory>${project.build.directory}/src</java.sourceDirectory>
+      </properties>
+      <build>
+        <directory>${project.basedir}/target/nullability-probe</directory>
+      </build>
+    </profile>
+  </profiles>
 </project>

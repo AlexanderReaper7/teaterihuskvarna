@@ -27,7 +27,7 @@ public class MemberDocument {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private @Nullable Long id;
 
     @Column(name = "title", nullable = false, length = 200)
     private String title;
@@ -75,7 +75,12 @@ public class MemberDocument {
         this.uploadedBy = uploadedBy;
     }
 
+    /// @return the ID assigned by Hibernate
+    /// @throws IllegalStateException if this entity has not been persisted
     public Long getId() {
+        if (id == null) {
+            throw new IllegalStateException("Entity has not been persisted");
+        }
         return id;
     }
 

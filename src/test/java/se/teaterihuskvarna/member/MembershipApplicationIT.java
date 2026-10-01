@@ -1,5 +1,6 @@
 package se.teaterihuskvarna.member;
 
+import static java.util.Objects.requireNonNull;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.not;
@@ -13,6 +14,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -65,7 +67,8 @@ class MembershipApplicationIT extends IntegrationTestSupport {
         assertThat(rowsIn("member")).isZero();
         assertThat(rowsIn("account")).isZero();
 
-        List<Map<String, Object>> rows = jdbc.sql("SELECT * FROM membership_application").query().listOfRows();
+        List<Map<String, @Nullable Object>> rows = jdbc.sql("SELECT * FROM membership_application")
+                .query().listOfRows();
         assertThat(rows).hasSize(1);
         assertThat(rows.getFirst().get("token_hash")).isEqualTo(sha256Hex(token));
         assertThat(rows.getFirst().values())
@@ -99,7 +102,7 @@ class MembershipApplicationIT extends IntegrationTestSupport {
         mockMvc.perform(get("/bli-medlem"))
                 .andExpect(content().string(containsString("kostar 50 kr per år för en person")));
 
-        List<Map<String, Object>> members = jdbc.sql("""
+        List<Map<String, @Nullable Object>> members = jdbc.sql("""
                 SELECT m.full_name, m.phone, m.address, m.postal_code, m.city, a.email
                 FROM member m JOIN account a ON a.member_id = m.id
                 """).query().listOfRows();
@@ -126,11 +129,11 @@ class MembershipApplicationIT extends IntegrationTestSupport {
         String token = tokenIn(awaitMail(), CONFIRMATION);
         mockMvc.perform(post(CONFIRMATION).param("token", token).with(csrf())).andExpect(status().isOk());
 
-        Map<String, Object> row = jdbc.sql("SELECT id, phone, address, postal_code, city FROM member")
+        Map<String, @Nullable Object> row = jdbc.sql("SELECT id, phone, address, postal_code, city FROM member")
                 .query().singleRow();
         assertThat(row).containsEntry("phone", null).containsEntry("address", null)
                 .containsEntry("postal_code", null).containsEntry("city", null);
-        long id = ((Number) row.get("id")).longValue();
+        long id = ((Number) requireNonNull(row.get("id"))).longValue();
         assertThat(members.findById(id).orElseThrow().getContact()).isEqualTo(ContactDetails.NONE);
     }
 

@@ -4,6 +4,7 @@ import jakarta.validation.Valid;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 import org.jspecify.annotations.Nullable;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.stereotype.Service;
@@ -61,8 +62,9 @@ public class MemberDocumentService {
         if (content.length > MAX_BYTES) {
             throw new FileTooLarge();
         }
-        MemberDocument document = documents.save(new MemberDocument(form.title().strip(), form.kind(),
-                form.publishedOn(), DocumentFilenames.sanitize(filename), content, uploadedBy));
+        MemberDocument document = documents.save(new MemberDocument(form.title().strip(),
+                Objects.requireNonNull(form.kind()),
+                Objects.requireNonNull(form.publishedOn()), DocumentFilenames.sanitize(filename), content, uploadedBy));
         return new DocumentSummary(document.getId(), document.getTitle(), document.getKind(),
                 document.getFilename(), document.getSizeBytes(), document.getPublishedOn(),
                 document.getUploadedAt());

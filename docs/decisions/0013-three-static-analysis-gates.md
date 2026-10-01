@@ -10,6 +10,8 @@ description: Which static analysis fails the build, and how Java doc comments ar
 
 Checkstyle, SpotBugs and PMD run on every build and all three fail it. Checkstyle runs at `validate`, before anything compiles, so `docker build` runs it too. SpotBugs and PMD need bytecode and run at `verify`, after the tests, which puts them outside the image build. `./mvnw verify` is the command that runs all three; that is what CI runs.
 
+Nullability additionally fails compilation under [0027](0027-compile-time-nullability.md), decided by the user on 2026-10-01.
+
 Doc comments are `///` Markdown (JEP 467), never `/** */`. Checkstyle enforces the style. Nothing enforces the contents, and the reason is below.
 
 ## Where this came from

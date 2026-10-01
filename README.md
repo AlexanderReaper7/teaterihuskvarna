@@ -174,11 +174,13 @@ CI runs the suite only when started by hand: `gh workflow run e2e.yml`, or "Run 
 
 ## Static analysis
 
+NullAway checks nullability during production and test compilation. Every Java package declares `@NullMarked`, so references are non-null unless annotated `@Nullable`. Unsafe null use fails the build, and new packages must declare a default. Run `sh scripts/check-nullability.sh` to prove the compiler rejects unsafe fixtures using the actual build configuration ([0027](docs/decisions/0027-compile-time-nullability.md)).
+
 Checkstyle, SpotBugs and PMD all fail the build ([0013](docs/decisions/0013-three-static-analysis-gates.md)).
 Checkstyle is bound to `validate`, so a style violation stops the build before
 anything compiles and `docker build` runs it too. SpotBugs and PMD need bytecode
 and run at `verify`. The `verify` command above is the one that runs all three;
-`./mvnw test` runs only Checkstyle.
+`./mvnw test` runs Checkstyle and the nullability compiler checks.
 
 Doc comments are `///` Markdown (JEP 467). Checkstyle rejects `/** */`, but it
 cannot read what is inside a `///` comment, so `@param` and `@return` are a

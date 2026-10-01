@@ -7,6 +7,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import org.jspecify.annotations.Nullable;
 import org.springframework.web.util.HtmlUtils;
@@ -220,7 +221,8 @@ final class PortableText {
         if (decorator != null) {
             return new String[] {"<" + decorator + ">", "</" + decorator + ">"};
         }
-        return new String[] {"<a href=\"" + escape(href(definitions.get(mark))) + "\">", "</a>"};
+        String address = Objects.requireNonNull(href(definitions.get(mark)));
+        return new String[] {"<a href=\"" + escape(address) + "\">", "</a>"};
     }
 
     /// @return the link's address if it is one this class writes, otherwise null

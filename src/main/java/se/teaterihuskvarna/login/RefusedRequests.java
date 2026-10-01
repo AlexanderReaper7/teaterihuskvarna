@@ -4,6 +4,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.util.Objects;
 import org.jspecify.annotations.Nullable;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -89,7 +90,8 @@ final class RefusedRequests implements AccessDeniedHandler {
         UriComponents page = sameHostPage(request);
         UriComponentsBuilder target = page == null
                 ? UriComponentsBuilder.fromPath(urls.page())
-                : UriComponentsBuilder.fromPath(page.getPath()).query(page.getQuery());
+                : UriComponentsBuilder.fromPath(Objects.requireNonNull(page.getPath()))
+                        .query(Objects.requireNonNullElse(page.getQuery(), ""));
         return target.replaceQueryParam(STALE).replaceQueryParam(TOO_LARGE).queryParam(flag).build().toUriString();
     }
 

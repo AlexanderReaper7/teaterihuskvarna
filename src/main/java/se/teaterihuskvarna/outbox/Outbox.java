@@ -5,6 +5,7 @@ import java.time.Duration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -109,7 +110,7 @@ public final class Outbox {
                 ORDER BY next_attempt_at, id""")
                 .param(BATCH)
                 .query(Due.class)
-                .list();
+                .list().stream().map(Objects::requireNonNull).toList();
         for (Due row : due) {
             dispatch(row.kind(), row.id());
         }
