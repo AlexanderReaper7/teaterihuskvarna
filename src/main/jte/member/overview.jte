@@ -65,35 +65,17 @@
         <p>${copy.text("fee.unpaid")}</p>
         <p>${copy.text("fee.howToPay", copy.kronor(payment.individualOre()),
                 copy.kronor(payment.householdOre()), payment.bankgiro())}</p>
-        <p>${copy.text("fee.message", payment.message())}</p>
-    @endif
-
-    <h2>${copy.text("member.household")}</h2>
-    @if(household == null)
-        <p>${copy.text("member.noHousehold")}</p>
-    @else
-        <p>${household.name()}</p>
-        <ul>
-            @for(HouseholdMember other : household.members())
-                <li>
-                    ${other.fullName()}
-                    @if(other.hasAccount())
-                        ${copy.text("household.hasAccount")}
-                    @elseif(!other.id().equals(member.id()))
-                        @if(other.invitationExpires() != null)
-                            ${copy.text("household.invited", copy.dateTime(other.invitationExpires()))}
-                        @endif
-                        <form method="post" action="/medlem/hushall/${other.id()}/inbjudan">
-                            @template.tag.csrf(csrf = csrf)
-                            !{String fieldId = "invite-" + other.id();}
-                            <label for="${fieldId}">${copy.text("invitation.email", other.fullName())}</label>
-                            <input id="${fieldId}" name="email" type="email" autocomplete="off" required>
-                            <button type="submit">${copy.text("invitation.send")}</button>
-                        </form>
-                    @endif
-                </li>
-            @endfor
-        </ul>
+        @if(member.email() != null)
+            <h3>${copy.text("fee.guide.heading")}</h3>
+            <ol>
+                <li>${copy.text("fee.guide.step1", member.email())}</li>
+                <li>${copy.text("fee.guide.step2", payment.bankgiro(), member.email())}</li>
+                <li>${copy.text("fee.guide.step3")}</li>
+                <li>${copy.text("fee.guide.step4")}</li>
+            </ol>
+        @else
+            <p>${copy.text("fee.message", payment.message())}</p>
+        @endif
     @endif
 
     @template.tag.passkeys(copy = copy, csrf = csrf, passkeys = passkeys, urls = passkeyUrls)
