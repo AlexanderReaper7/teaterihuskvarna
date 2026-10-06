@@ -252,25 +252,13 @@
                 <condition property="git.hooks.install">
                   <available file="${project.basedir}/.git" type="dir"/>
                 </condition>
-                <condition property="git.hooks.replaced">
-                  <and>
-                    <isset property="git.hooks.install"/>
-                    <available file="${project.basedir}/.git/hooks/pre-push"/>
-                    <not>
-                      <filesmatch file1="${project.basedir}/.githooks/pre-push"
-                                  file2="${project.basedir}/.git/hooks/pre-push"/>
-                    </not>
-                  </and>
-                </condition>
-                <echo if:set="git.hooks.replaced" level="warning"
-                      message="Replacing .git/hooks/pre-push with .githooks/pre-push"/>
                 <copy if:set="git.hooks.install" overwrite="true"
                       todir="${project.basedir}/.git/hooks">
                   <fileset dir="${project.basedir}/.githooks"/>
                 </copy>
                 <chmod if:set="git.hooks.install" perm="755">
                   <fileset dir="${project.basedir}/.git/hooks"
-                           includes="pre-push post-checkout"/>
+                           includes="post-checkout"/>
                 </chmod>
               </target>
             </configuration>
