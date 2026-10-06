@@ -7,6 +7,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.Instant;
+import org.jspecify.annotations.Nullable;
 
 /// An open invitation for a member without an account to create one. The
 /// member is a plain id: the database deletes the row with the member (`ON
@@ -18,7 +19,7 @@ public class Invitation {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private @Nullable Long id;
 
     @Column(name = "member_id", nullable = false)
     private long memberId;
@@ -52,7 +53,12 @@ public class Invitation {
         this.expiresAt = expiresAt;
     }
 
+    /// @return the ID assigned by Hibernate
+    /// @throws IllegalStateException if this entity has not been persisted
     public Long getId() {
+        if (id == null) {
+            throw new IllegalStateException("Entity has not been persisted");
+        }
         return id;
     }
 

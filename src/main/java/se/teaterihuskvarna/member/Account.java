@@ -10,6 +10,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import java.time.Instant;
+import org.jspecify.annotations.Nullable;
 import se.teaterihuskvarna.login.Email;
 
 /// A member's login, and the address login links and mailings go to. A member
@@ -25,7 +26,7 @@ public class Account {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private @Nullable Long id;
 
     @OneToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "member_id")
@@ -48,7 +49,12 @@ public class Account {
         this.email = email.value();
     }
 
+    /// @return the ID assigned by Hibernate
+    /// @throws IllegalStateException if this entity has not been persisted
     public Long getId() {
+        if (id == null) {
+            throw new IllegalStateException("Entity has not been persisted");
+        }
         return id;
     }
 

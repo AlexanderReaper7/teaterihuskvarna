@@ -7,4 +7,7 @@
 ///
 /// Templates read their Swedish through [Copy], which [PageModel] puts in every
 /// page's model, and forms get their CSRF field from [FormModel].
+@NullMarked
 package se.teaterihuskvarna.web;
+
+import org.jspecify.annotations.NullMarked;

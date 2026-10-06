@@ -63,7 +63,7 @@ public class ContentService {
     /// @return the event [#nextEvent] leads with
     static Optional<Event> lead(List<Event> upcoming, Instant now) {
         LocalDate today = LocalDate.ofInstant(now, SWEDEN);
-        @Nullable Event startedToday = null;
+        Event startedToday = null;
         for (Event event : upcoming) {
             if (event.startsAt().isAfter(now)) {
                 boolean laterToday = LocalDate.ofInstant(event.startsAt(), SWEDEN).equals(today);

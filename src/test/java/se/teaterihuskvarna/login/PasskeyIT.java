@@ -1,5 +1,6 @@
 package se.teaterihuskvarna.login;
 
+import static java.util.Objects.requireNonNull;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
@@ -320,7 +321,7 @@ class PasskeyIT extends IntegrationTestSupport {
                                 UserVerificationRequirement.PREFERRED),
                         null,
                         null));
-        AuthenticatorAttestationResponse response = credential.getResponse();
+        AuthenticatorAttestationResponse response = requireNonNull(credential.getResponse());
         Map<String, Object> body = Map.of("publicKey", Map.of(
                 "label", label,
                 "credential", Map.of(
@@ -357,7 +358,7 @@ class PasskeyIT extends IntegrationTestSupport {
                         List.of(),
                         UserVerificationRequirement.PREFERRED,
                         null));
-        AuthenticatorAssertionResponse response = credential.getResponse();
+        AuthenticatorAssertionResponse response = requireNonNull(credential.getResponse());
         Map<String, Object> signed = new LinkedHashMap<>();
         signed.put("authenticatorData", ENCODE.encodeToString(response.getAuthenticatorData()));
         signed.put("clientDataJSON", ENCODE.encodeToString(response.getClientDataJSON()));

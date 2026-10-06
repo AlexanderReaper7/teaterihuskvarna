@@ -1,5 +1,6 @@
 package se.teaterihuskvarna.login;
 
+import static java.util.Objects.requireNonNull;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.jupiter.api.Test;
@@ -29,14 +30,14 @@ class SessionStoreIT extends IntegrationTestSupport {
     private static <S extends Session> String saveTwoCopies(SessionRepository<S> repository) {
         S created = repository.createSession();
         repository.save(created);
-        S first = repository.findById(created.getId());
-        S second = repository.findById(created.getId());
+        S first = requireNonNull(repository.findById(created.getId()));
+        S second = requireNonNull(repository.findById(created.getId()));
 
         first.setAttribute("flash", "first");
         second.setAttribute("flash", "second");
         repository.save(first);
         repository.save(second);
 
-        return repository.findById(created.getId()).getAttribute("flash");
+        return requireNonNull(requireNonNull(repository.findById(created.getId())).getAttribute("flash"));
     }
 }
