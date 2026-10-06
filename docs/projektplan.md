@@ -153,7 +153,7 @@ Sanity's Free plan exposes published documents, not drafts, through unauthentica
 
 ## Ownership and maintenance are release work
 
-Production accounts belong to the association and use an association-controlled function address. At least two board members have administrator access. The temporary personal GitHub ownership and current lack of branch protection are recorded in [0002](decisions/0002-accounts-under-a-personal-login.md) and [0003](decisions/0003-no-branch-protection-yet.md); both must be revisited before more developers receive write access.
+Production accounts belong to the association and use an association-controlled function address. At least two board members have administrator access. The temporary personal GitHub ownership is recorded in [0002](decisions/0002-accounts-under-a-personal-login.md) and must be revisited before more developers receive write access. The rules protecting main are in [0003](decisions/0003-no-branch-protection-yet.md).
 
 The delivery includes:
 
