@@ -1,8 +1,8 @@
 # Review ownership for this repository.
 #
-# Staged, not active. A CODEOWNERS entry does nothing until a branch protection
-# rule requires code owner review, and main deliberately carries no rules:
-# see docs/decisions/0003-no-branch-protection-yet.md.
+# Staged, not active. A CODEOWNERS entry does nothing until a ruleset requires
+# code owner review, and none does, because the sole code owner cannot approve
+# a pull request they authored: see docs/decisions/0003-no-branch-protection-yet.md.
 
 *       @AlexanderReaper7
 
