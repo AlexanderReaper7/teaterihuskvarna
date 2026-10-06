@@ -56,7 +56,7 @@ Public content comes from the development Sanity dataset. Login and invitation m
 
 Only Alexander Öberg merges into `main`. Everyone else works on a branch made from an issue and opens a pull request, step by step in [the guide](docs/branches-and-pull-requests.md). The rules and their reasons are in [decisions/0020](docs/decisions/0020-pull-requests-and-merging.md).
 
-GitHub cannot enforce this on the repository's current plan ([0003](docs/decisions/0003-no-branch-protection-yet.md)), so the [`pre-push`](.githooks/pre-push) [git hook](#git-hooks) enforces part of it on your machine. It cannot see the merge button on GitHub, so the rule above still holds for everything the hook misses.
+GitHub enforces this with rulesets on `main`, listed in [0003](docs/decisions/0003-no-branch-protection-yet.md). They cover only `main`, so the rule against force-pushing your own branch is on you.
 
 ### Git hooks
 
@@ -64,10 +64,9 @@ The hooks live in [`.githooks/`](.githooks/). Every Maven build (`verify`, `test
 
 | Hook | Runs | Does |
 | --- | --- | --- |
-| [`pre-push`](.githooks/pre-push) | Before `git push` sends anything | Refuses a push to `main`, a force-push to any branch, and any branch that contains a commit taken off `main`. `git push --no-verify` skips it. |
 | [`post-checkout`](.githooks/post-checkout) | After `git switch`, `git checkout` and `git worktree add`. Not after `git clone`, which runs before any hook is installed. | Copies [`.env.example`](.env.example) to `.env` when there is none. In a git worktree it also adds `BUILD_GIT_DIR` and `BUILD_GIT_WORKTREE` to `.env`, which the image build needs to find the repository's history. |
 
-The build overwrites a hook of your own with the same name, and warns when it replaces a different [`pre-push`](.githooks/pre-push). A git worktree uses the main checkout's `.git/hooks/`, so the build skips the copy there.
+The build overwrites a hook of your own with the same name. A git worktree uses the main checkout's `.git/hooks/`, so the build skips the copy there.
 
 `.env` is created in more places than the hook: the Maven build and the VS Code compose tasks also copy [`.env.example`](.env.example) when `.env` is missing. None of them ever changes an existing `.env`.
 
@@ -91,8 +90,6 @@ A clone made before [`f9df7d5`](https://github.com/AlexanderReaper7/teaterihuskv
 - **The app container stops, and its log says `Migration checksum mismatch`.** The database volume was created by an older version of a migration. `docker compose down -v` deletes it, and the next start builds it again.
 - **`address already in use` or `port is already allocated` on 8000.** Another program has the port. Set `PROXY_HTTP_PORT=8001` in `.env`, run `docker compose up -d` again and use [http://localhost:8001/](http://localhost:8001/).
 - **`Cannot connect to the Docker daemon`, or on Windows `error during connect`.** Docker is not running. Start Docker Desktop and wait until it says it is running.
-- **`pre-push: refusing to push to main`.** Your commits are on `main` instead of a branch. `git switch -c <branch-name>` moves them onto a new branch, then push that. Your local `main` still points at them, so reset it afterwards: `git switch main` then `git reset --hard origin/main`.
-- **`pre-push: ... contains 5f57ec0...`.** The branch was started before `main` was rewritten on 2026-09-25. The message prints the `git rebase` command that moves your own commits onto the current `main`.
 - **The build fails at `checkstyle`, `spotbugs` or `pmd`.** The code breaks one of the static analysis rules, and the message names the file and line. See [Static analysis](#static-analysis).
 - **Anything else.** Read the end of `docker compose logs app`. The first `ERROR` line usually names the problem.
 

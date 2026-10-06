@@ -12,7 +12,7 @@ Each step shows the terminal command and the same thing in VS Code. The terminal
 
 ## Once per clone
 
-1. Run every test and check once, as in [First run](../README.md#first-run). Besides testing, it installs the [git hooks](../README.md#git-hooks), which stop a push that would break the rules below. A clone that has never built has no hooks.
+1. Run every test and check once, as in [First run](../README.md#first-run). Besides testing, it installs the [git hooks](../README.md#git-hooks) and creates `.env`.
 2. Tell git to merge when a pull finds that your branch and GitHub's have both moved. Without this, `git pull` stops with "Need to specify how to reconcile divergent branches":
 
    ```sh
@@ -89,7 +89,7 @@ If git reports a conflict, it lists the files where both sides changed the same 
 
 Then run the tests again before you push. A merge without conflicts can still break the build. Ask in a [sync](onboarding.md#sync) if you are unsure which side is right.
 
-Never rebase a branch you have pushed, and never force-push. The [`pre-push`](../.githooks/pre-push) hook refuses a force-push. If a push is refused because GitHub has commits you do not, pull (`git pull`, or **Sync Changes**) and push again.
+Never rebase a branch you have pushed, and never force-push. If a push is refused because GitHub has commits you do not, pull (`git pull`, or **Sync Changes**) and push again.
 
 ## 5. Ask for review
 
