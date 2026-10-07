@@ -78,6 +78,34 @@
         @endif
     @endif
 
+    <h2>${copy.text("member.household")}</h2>
+    @if(household == null)
+        <p>${copy.text("member.noHousehold")}</p>
+    @else
+        <p>${household.name()}</p>
+        <ul>
+            @for(HouseholdMember other : household.members())
+                <li>
+                    ${other.fullName()}
+                    @if(other.hasAccount())
+                        ${copy.text("household.hasAccount")}
+                    @elseif(!other.id().equals(member.id()))
+                        @if(other.invitationExpires() != null)
+                            ${copy.text("household.invited", copy.dateTime(other.invitationExpires()))}
+                        @endif
+                        <form method="post" action="/medlem/hushall/${other.id()}/inbjudan">
+                            @template.tag.csrf(csrf = csrf)
+                            !{String fieldId = "invite-" + other.id();}
+                            <label for="${fieldId}">${copy.text("invitation.email", other.fullName())}</label>
+                            <input id="${fieldId}" name="email" type="email" autocomplete="off" required>
+                            <button type="submit">${copy.text("invitation.send")}</button>
+                        </form>
+                    @endif
+                </li>
+            @endfor
+        </ul>
+    @endif
+
     @template.tag.passkeys(copy = copy, csrf = csrf, passkeys = passkeys, urls = passkeyUrls)
     @template.tag.devices(copy = copy, csrf = csrf, devices = devices, urls = deviceUrls)
     @template.tag.logout(copy = copy, csrf = csrf, action = "/logga-ut")

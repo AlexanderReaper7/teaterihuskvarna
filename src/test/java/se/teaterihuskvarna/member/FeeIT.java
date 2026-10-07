@@ -64,7 +64,8 @@ class FeeIT extends MemberRegisterSupport {
                 .andExpect(content().string(containsString("123-4567")))
                 .andExpect(content().string(containsString("50 kr")))
                 .andExpect(content().string(containsString("100 kr")))
-                .andExpect(content().string(containsString("Skriv Johan Bergström i meddelandet.")));
+                .andExpect(content().string(containsString(
+                        "Skriv exakt " + JOHAN_EMAIL + " i meddelandet och inget annat.")));
 
         mockMvc.perform(get("/api/member").with(asMember(johanAccount, JOHAN_EMAIL)))
                 .andExpect(jsonPath("$.fee.year").value(thisYear()))
