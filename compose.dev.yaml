@@ -46,6 +46,11 @@ services:
       # an edited stylesheet shows on reload: application-dev.yaml.
       - ./src/main/resources/static:/app/static:ro
 
+  db:
+    # Host-only access for local database clients; the app still uses db:5432.
+    ports:
+      - "127.0.0.1:15432:5432"
+
   mail:
     # Mailpit catches every mail the application sends and shows it in a web UI.
     image: axllent/mailpit:v1.31.2
