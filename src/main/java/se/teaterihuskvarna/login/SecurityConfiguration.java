@@ -6,6 +6,7 @@ import java.util.List;
 import org.springframework.boot.servlet.autoconfigure.MultipartProperties;
 import org.springframework.boot.session.autoconfigure.DefaultCookieSerializerCustomizer;
 import org.springframework.context.MessageSource;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
@@ -77,6 +78,7 @@ class SecurityConfiguration {
     private final UserCredentialRepository passkeys;
     private final DeviceNames devices;
     private final ContentSettings content;
+    private final ObjectProvider<DevelopmentLogin> development;
 
     /// The public pages with content from Sanity, which anyone may read and the
     /// Studio may show in its Presentation preview (R009). `/forhandsgranska`
@@ -102,8 +104,9 @@ class SecurityConfiguration {
     SecurityConfiguration(LoginLinks links, LinkRequestLimiter limiter, JdbcClient jdbc, LoginSettings settings,
             List<LoginDirectory> directories, WebAuthnRelyingPartyOperations relyingParty,
             UserCredentialRepository passkeys, MessageSource messages, ContentSettings content,
-            MultipartProperties multipart) {
+            MultipartProperties multipart, ObjectProvider<DevelopmentLogin> development) {
         this.content = content;
+        this.development = development;
         this.largestRequest = multipart.getMaxRequestSize().toBytes();
         this.links = links;
         this.limiter = limiter;
@@ -154,6 +157,7 @@ class SecurityConfiguration {
                         // Only the dev profile maps anything here; elsewhere
                         // these paths answer 404.
                         "/dev",
+                        "/dev/login",
                         "/api/development/**",
                         "/error").permitAll()
                 // The stylesheet, fonts, logo, favicon and scripts under
@@ -165,6 +169,7 @@ class SecurityConfiguration {
                 .requestMatchers("/medlem", "/medlem/**", "/api/member", "/api/member/**").hasRole("MEMBER")
                 .anyRequest().access(UnknownPaths.denied()));
         login(http, LoginKind.MEMBER, settings.memberSession());
+        development.ifAvailable(configurer -> http.with(configurer, Customizer.withDefaults()));
         // Sanity signs the webhook instead, and cannot fetch a CSRF token first.
         http.csrf(csrf -> csrf.ignoringRequestMatchers(
                 PathPatternRequestMatcher.withDefaults().matcher(HttpMethod.POST, "/api/sanity/webhook")));
