@@ -3,9 +3,8 @@ package se.teaterihuskvarna.member;
 import java.time.Instant;
 import org.jspecify.annotations.Nullable;
 
-/// One member as their household lists them. No address or phone: another
-/// household member reads this list on `/medlem`, and R012 shows a member only
-/// their own contact details.
+/// One member in the household overview. Contact details are read separately
+/// through [HouseholdService#memberForAccount] when editing a household member.
 ///
 /// @param id                the member's identifier, which an invitation names
 /// @param fullName          the member's name

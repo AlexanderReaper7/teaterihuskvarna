@@ -7,9 +7,12 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import se.teaterihuskvarna.login.SignedIn;
@@ -20,6 +23,7 @@ import se.teaterihuskvarna.member.InvitationRequest;
 import se.teaterihuskvarna.member.InvitationService;
 import se.teaterihuskvarna.member.MemberDetails;
 import se.teaterihuskvarna.member.MemberService;
+import se.teaterihuskvarna.member.NewHousehold;
 
 /// The logged-in member's own details, household and invitations, as `/medlem`
 /// shows them.
@@ -58,6 +62,64 @@ public class MemberController {
     @GetMapping("/api/member/household")
     public ResponseEntity<HouseholdDetails> household(@AuthenticationPrincipal SignedIn signedIn) {
         return ResponseEntity.of(households.forAccount(signedIn.id()));
+    }
+
+    /// @param signedIn the logged-in account
+    /// @param form the household name
+    /// @return the new household containing the caller
+    @PostMapping("/api/member/household")
+    @ResponseStatus(HttpStatus.CREATED)
+    public HouseholdDetails createHousehold(@AuthenticationPrincipal SignedIn signedIn,
+            @RequestBody NewHousehold form) {
+        return households.createForAccount(signedIn.id(), form);
+    }
+
+    /// @param signedIn the logged-in account
+    /// @param form the household's new name
+    /// @return the renamed household
+    @PutMapping("/api/member/household")
+    public HouseholdDetails renameHousehold(@AuthenticationPrincipal SignedIn signedIn,
+            @RequestBody NewHousehold form) {
+        return households.renameForAccount(signedIn.id(), form);
+    }
+
+    /// @param signedIn the logged-in account
+    /// @param form the new person's name and contact details
+    /// @return the new member's id, without creating an account
+    @PostMapping("/api/member/household/members")
+    @ResponseStatus(HttpStatus.CREATED)
+    public long addHouseholdMember(@AuthenticationPrincipal SignedIn signedIn, @RequestBody ContactForm form) {
+        return households.addForAccount(signedIn.id(), form);
+    }
+
+    /// @param signedIn the logged-in account
+    /// @param memberId a person in the caller's household
+    /// @return the person's editable contact details
+    @GetMapping("/api/member/household/members/{memberId}")
+    public ContactForm householdMember(@AuthenticationPrincipal SignedIn signedIn, @PathVariable long memberId) {
+        return households.memberForAccount(signedIn.id(), memberId);
+    }
+
+    /// @param signedIn the logged-in account
+    /// @param memberId a person in the caller's household
+    /// @param form the new name and contact details
+    /// @return the saved contact details
+    @PutMapping("/api/member/household/members/{memberId}")
+    public ContactForm updateHouseholdMember(@AuthenticationPrincipal SignedIn signedIn, @PathVariable long memberId,
+            @RequestBody ContactForm form) {
+        return households.updateForAccount(signedIn.id(), memberId, form);
+    }
+
+    /// The caller can remove themselves to leave the household.
+    ///
+    /// @param signedIn the logged-in account
+    /// @param memberId a person in the caller's household
+    /// @param successorMemberId the next owner if the caller leaves, or null
+    @DeleteMapping("/api/member/household/members/{memberId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void removeHouseholdMember(@AuthenticationPrincipal SignedIn signedIn, @PathVariable long memberId,
+            @RequestParam(required = false) @Nullable Long successorMemberId) {
+        households.removeForAccount(signedIn.id(), memberId, successorMemberId);
     }
 
     /// Invites someone in the caller's household who has no account (R019).
