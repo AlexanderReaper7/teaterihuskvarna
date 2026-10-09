@@ -47,9 +47,11 @@ services:
       - ./src/main/resources/static:/app/static:ro
 
   db:
-    # Host-only access for local database clients; the app still uses db:5432.
+    # For a database client on the host, such as VS Code. The application still
+    # connects to db:5432 inside the stack. A host that already runs PostgreSQL
+    # on 5432 sets POSTGRES_HOST_PORT.
     ports:
-      - "127.0.0.1:15432:5432"
+      - "127.0.0.1:${POSTGRES_HOST_PORT:-5432}:5432"
 
   mail:
     # Mailpit catches every mail the application sends and shows it in a web UI.

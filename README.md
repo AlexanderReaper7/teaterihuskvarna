@@ -105,6 +105,8 @@ HTTP on `PROXY_HTTP_PORT` (8000 unless set), turns on the `dev` profile with
 invented settings ([`application-dev.yaml`](src/main/resources/application-dev.yaml)) and invented members, and starts
 Mailpit, which catches every mail the application sends, and Sanity Studio at [http://localhost:3333/](http://localhost:3333/). Studio uses the `dev` dataset unless `SANITY_DATASET_NAME` selects another one, and previews the application on `PROXY_HTTP_PORT`. Set `STUDIO_HTTP_PORT` to change its host port. Studio code changes need `docker compose up -d --build studio`.
 
+A database client on the host, such as VS Code, connects to PostgreSQL at `127.0.0.1`, port 5432 unless `POSTGRES_HOST_PORT` sets another, with the database, user and password from `POSTGRES_DB`, `POSTGRES_USER` and `POSTGRES_PASSWORD` in `.env`. The port is bound to loopback only, so nothing else on the network reaches it. The application itself still connects to `db:5432` inside the stack.
+
 Under the `dev` profile, [http://localhost:8000/dev](http://localhost:8000/dev) is the development index. It lists every route, has a button per seeded member and
 administrator that mails that address a login link, and shows the schema
 version, the commit the jar was built from, whether it was built with
