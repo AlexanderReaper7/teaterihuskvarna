@@ -128,7 +128,7 @@ public class MemberService {
     public MemberFile find(long memberId) {
         Member member = members.findById(memberId).orElseThrow(NoSuchMember::new);
         Account account = accounts.findByMember(memberId).orElse(null);
-        List<FeeStatus> fees = ledger.history(member);
+        List<FeeStatus> fees = ledger.history(member, account == null ? null : account.getEmail());
         HouseholdDetails household = null;
         Household current = member.getHousehold();
         if (current != null) {
@@ -276,7 +276,7 @@ public class MemberService {
     }
 
     private MemberDetails details(Member member, @Nullable Account account) {
-        return MemberDetails.of(member, account, ledger.year(ledger.currentYear()).status(member));
+        return MemberDetails.of(member, account, ledger.year(ledger.currentYear()).status(member, null));
     }
 
     private List<MemberDetails> detailsOf(List<Member> found) {
@@ -290,7 +290,7 @@ public class MemberService {
         FeeLedger.Payments year = ledger.year(ledger.currentYear());
         List<MemberDetails> details = new ArrayList<>();
         for (Member member : found) {
-            details.add(MemberDetails.of(member, byMember.get(member.getId()), year.status(member)));
+            details.add(MemberDetails.of(member, byMember.get(member.getId()), year.status(member, null)));
         }
         return details;
     }
