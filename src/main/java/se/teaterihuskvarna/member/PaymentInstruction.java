@@ -6,6 +6,6 @@ package se.teaterihuskvarna.member;
 /// @param bankgiro      the association's bankgiro number
 /// @param individualOre the fee for one member, in öre
 /// @param householdOre  the fee for a household, in öre
-/// @param message       what to write in the message, the member's name
+/// @param message       what to write in the message, the account's email address
 public record PaymentInstruction(String bankgiro, int individualOre, int householdOre, String message) {
 }

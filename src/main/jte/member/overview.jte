@@ -65,7 +65,17 @@
         <p>${copy.text("fee.unpaid")}</p>
         <p>${copy.text("fee.howToPay", copy.kronor(payment.individualOre()),
                 copy.kronor(payment.householdOre()), payment.bankgiro())}</p>
-        <p>${copy.text("fee.message", payment.message())}</p>
+        @if(member.email() != null)
+            <h3>${copy.text("fee.guide.heading")}</h3>
+            <ol>
+                <li>${copy.text("fee.guide.step1", member.email())}</li>
+                <li>${copy.text("fee.guide.step2", payment.bankgiro(), member.email())}</li>
+                <li>${copy.text("fee.guide.step3")}</li>
+                <li>${copy.text("fee.guide.step4")}</li>
+            </ol>
+        @else
+            <p>${copy.text("fee.message", payment.message())}</p>
+        @endif
     @endif
 
     <h2>${copy.text("member.household")}</h2>
