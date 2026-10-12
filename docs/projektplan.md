@@ -47,6 +47,8 @@ Version 1 must satisfy all 21 MUST requirements in [requirements.md](requirement
 | Mailings to selected member groups | SMS |
 | Migration of relevant content from WordPress | More than one visitor language |
 
+The [Swish research](research/swish-payments.md) examines automatic confirmation of membership fees as a possible scope change. It is research, not an accepted version 1 requirement.
+
 Volunteer booking is a MUST requirement even though its row in the original, V1, says B, because the original's scope table lists it inside version 1. Where the customer's document contradicts itself, the scope table wins. [requirements.md](requirements.md) records the exception.
 
 ## Public content and member data stay in separate systems
@@ -153,7 +155,7 @@ Sanity's Free plan exposes published documents, not drafts, through unauthentica
 
 ## Ownership and maintenance are release work
 
-Production accounts belong to the association and use an association-controlled function address. At least two board members have administrator access. The temporary personal GitHub ownership and current lack of branch protection are recorded in [0002](decisions/0002-accounts-under-a-personal-login.md) and [0003](decisions/0003-no-branch-protection-yet.md); both must be revisited before more developers receive write access.
+Production accounts belong to the association and use an association-controlled function address. At least two board members have administrator access. The temporary personal GitHub ownership is recorded in [0002](decisions/0002-accounts-under-a-personal-login.md) and must be revisited before more developers receive write access. The rules protecting main are in [0003](decisions/0003-no-branch-protection-yet.md).
 
 The delivery includes:
 

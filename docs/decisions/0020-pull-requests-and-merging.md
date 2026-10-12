@@ -14,10 +14,10 @@ All decided by the user on 2026-09-27.
 
 - Only Alexander Öberg merges pull requests.
 - A pull request is squash merged or rebase merged, chosen per pull request by whoever merges. Merge commits are off. A squash commit takes the pull request's title and description.
-- A branch is brought up to date by merging main into it. A pushed branch is never rebased or force-pushed. The [`pre-push`](../../.githooks/pre-push) hook refuses a force-push to any branch, and a clone opts out with `git config hooks.allowForcePush true`.
+- A branch is brought up to date by merging main into it. A pushed branch is never rebased or force-pushed.
 - A branch is created from its issue, with the issue's "Create a branch" button or `gh issue develop`, which names it `<issue>-<slug>` and links it to the issue.
 - One pull request per work item, opened as a draft early. Its description names its issue with a closing keyword, `Closes #N`, and a check fails a pull request that closes no issue. The label `no-issue` exempts a pull request from the check, and stays visible on it.
-- The owner's own work, agents included, goes through pull requests too. The owner's agents may rebase their branches, since the owner's clones opt out of the force-push block.
+- The owner's own work, agents included, goes through pull requests too. The owner's agents may rebase their branches.
 - CI's [`build.yml`](../../.github/workflows/build.yml) and [`docs.yml`](../../.github/workflows/docs.yml) run on every pull request, and on push only to main.
 - Automatic review: a reviewing agent runs on the owner's machine, and its findings stay private to the owner. Before anything is built, a time-boxed spike checks whether a T3 Code thread can host the review, so the owner can follow it as it runs. `t3` 0.0.42 has no command that starts a thread.
 - GitHub enforcement was deferred on 2026-09-27. On 2026-09-30 the user confirmed customer permission to publish and requested protection, with an explicit owner bypass for review requirements. [0003](0003-no-branch-protection-yet.md) records the active rules and verification.

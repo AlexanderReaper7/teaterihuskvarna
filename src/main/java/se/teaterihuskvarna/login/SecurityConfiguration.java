@@ -38,6 +38,8 @@ import org.springframework.security.web.util.matcher.OrRequestMatcher;
 import org.springframework.security.web.util.matcher.RequestMatcher;
 import org.springframework.security.web.webauthn.management.UserCredentialRepository;
 import org.springframework.security.web.webauthn.management.WebAuthnRelyingPartyOperations;
+import org.springframework.session.config.SessionRepositoryCustomizer;
+import org.springframework.session.jdbc.JdbcIndexedSessionRepository;
 import org.springframework.session.jdbc.PostgreSqlJdbcIndexedSessionRepositoryCustomizer;
 import org.springframework.session.security.web.authentication.SpringSessionRememberMeServices;
 import org.springframework.util.StringUtils;
@@ -225,6 +227,29 @@ class SecurityConfiguration {
     @Bean
     PostgreSqlJdbcIndexedSessionRepositoryCustomizer sessionAttributeUpsert() {
         return new PostgreSqlJdbcIndexedSessionRepositoryCustomizer();
+    }
+
+    /// Lists a person's sessions sorted by session, for [DeviceService]. Spring
+    /// Session's own query is this one without the `ORDER BY`, and its reader
+    /// starts a new session whenever a row belongs to another session than the
+    /// row before. Once the tables grow, PostgreSQL joins them by hash and
+    /// returns the rows in the order they lie in the attribute table, where an
+    /// attribute added after the login lies apart from the rest. The session
+    /// then came back as several partial copies, and the last one won: a device
+    /// listed without its name, or left out because its end was missing.
+    /// `SessionStoreIT` reproduces it.
+    ///
+    /// @return the customizer Boot applies to the session repository
+    @Bean
+    SessionRepositoryCustomizer<JdbcIndexedSessionRepository> sessionsListedInOrder() {
+        return repository -> repository.setListSessionsByPrincipalNameQuery("""
+                SELECT S.PRIMARY_ID, S.SESSION_ID, S.CREATION_TIME, S.LAST_ACCESS_TIME, S.MAX_INACTIVE_INTERVAL,
+                    SA.ATTRIBUTE_NAME, SA.ATTRIBUTE_BYTES
+                FROM %TABLE_NAME% S
+                LEFT JOIN %TABLE_NAME%_ATTRIBUTES SA ON S.PRIMARY_ID = SA.SESSION_PRIMARY_ID
+                WHERE S.PRINCIPAL_NAME = ?
+                ORDER BY S.PRIMARY_ID
+                """);
     }
 
     /// The one-time-token login, passkeys, the rate limit, the end of a login,
