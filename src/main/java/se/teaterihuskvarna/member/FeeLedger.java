@@ -76,7 +76,7 @@ class FeeLedger {
         years.addAll(household.keySet());
         List<FeeStatus> statuses = new ArrayList<>();
         for (int year : years) {
-            statuses.add(status(year, own.get(year), household.get(year), member.getFullName()));
+            statuses.add(status(year, own.get(year), household.get(year), email));
         }
         return statuses;
     }
@@ -88,11 +88,10 @@ class FeeLedger {
         if (household != null) {
             return new FeeStatus(year, household, FeeKind.HOUSEHOLD, true, null);
         }
-        PaymentInstruction paymentInstruction = email == null ? null
+        PaymentInstruction payment = email == null ? null
                 : new PaymentInstruction(association.bankgiro(), association.feeIndividualOre(),
                 association.feeHouseholdOre(), email);
-        return new FeeStatus(year, null, null, false, new PaymentInstruction(association.bankgiro(),
-                association.feeIndividualOre(), association.feeHouseholdOre(), email));
+        return new FeeStatus(year, null, null, false, payment);
     }
 
     private static Instant earlier(Instant first, Instant second) {

@@ -276,7 +276,8 @@ public class MemberService {
     }
 
     private MemberDetails details(Member member, @Nullable Account account) {
-        return MemberDetails.of(member, account, ledger.year(ledger.currentYear()).status(member, null));
+        String email = account == null ? null : account.getEmail();
+        return MemberDetails.of(member, account, ledger.year(ledger.currentYear()).status(member, email));
     }
 
     private List<MemberDetails> detailsOf(List<Member> found) {
@@ -290,7 +291,9 @@ public class MemberService {
         FeeLedger.Payments year = ledger.year(ledger.currentYear());
         List<MemberDetails> details = new ArrayList<>();
         for (Member member : found) {
-            details.add(MemberDetails.of(member, byMember.get(member.getId()), year.status(member, null)));
+            Account account = byMember.get(member.getId());
+            String email = account == null ? null : account.getEmail();
+            details.add(MemberDetails.of(member, account, year.status(member, email)));
         }
         return details;
     }
