@@ -6,7 +6,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-
 /// Reads and writes fee payments. Package private for the same reason as
 /// [MemberRepository]: `docs/decisions/0014-one-service-layer-two-adapters.md`.
 interface FeeRepository extends JpaRepository<Fee, Long> {
