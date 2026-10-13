@@ -98,6 +98,10 @@ A membership fee that covers the payer and whoever is in the household it was pa
 
 Whether a member is covered by a paid membership fee for a stated year.
 
+### Payment message | Meddelande
+
+What a member writes in the message of a bankgiro payment so that an administrator can match the payment to them. It is the email address of the paying member's account. Decided by the user on 2026-10-09 ([system plan](docs/projektplan.md#the-member-model-records-only-data-the-confirmed-workflows-need)).
+
 ## Content and participation
 
 ### Public content | Publikt innehåll

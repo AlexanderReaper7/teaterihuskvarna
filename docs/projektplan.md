@@ -112,6 +112,8 @@ The current fee rule is:
 - amounts use integer öre rather than a fixed 50 or 100 kr value;
 - the record identifies the administrator who marked it paid.
 
+A member pays the fee by bankgiro with their account's email address as the payment message, because the email address is unique and a name is not. Only members with an account pay. A member without an account is covered through the household fee and is shown no payment instruction. Decided by the user on 2026-10-09. Whether banks let a payer type an email address in the message is not established, see [research/bankgiro-payment-message.md](research/bankgiro-payment-message.md).
+
 Before building reconciliation, compare this rule with real anonymised bankgiro examples. A payer's name may differ from the covered member's name. If the examples break the rule, update the model and record the reason before implementation.
 
 Offer registrations, volunteer bookings and mailing records refer to members by identifier. No member-register field may appear in a Sanity content type.
