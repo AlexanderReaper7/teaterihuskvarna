@@ -10,4 +10,16 @@ class EmailTest {
     void removesSpacesAtTheEnds() {
         assertThat(new Email(" anna@example.se ").value()).isEqualTo("anna@example.se");
     }
+
+
+    @Test
+    void turnsLettersIntoLowerCase() {
+        assertThat(new Email("Anna@Example.SE").value()).isEqualTo("anna@example.se");
+    }
+
+    @Test
+    void lowerCasesLettersOutsideAToZ() {
+        assertThat(new Email("Åsa@Example.se").value()).isEqualTo("åsa@example.se");
+    }
+
 }
