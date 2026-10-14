@@ -11,4 +11,7 @@ test("the skip link jumps past the menu into the main content", async ({ page })
 
     await page.keyboard.press("Enter");
     await expect(page).toHaveURL(/#innehall$/);
+
+    await page.keyboard.press("Tab");
+    await expect(page.locator("main *:focus")).toBeVisible();
 });
