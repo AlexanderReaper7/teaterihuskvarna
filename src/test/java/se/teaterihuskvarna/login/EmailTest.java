@@ -22,4 +22,9 @@ class EmailTest {
         assertThat(new Email("Åsa@Example.se").value()).isEqualTo("åsa@example.se");
     }
 
+    @Test
+    void treatsAddressesThatDifferOnlyInCaseAndSpacesAsEqual() {
+        assertThat(new Email("Anna@Example.se")).isEqualTo(new Email(" anna@example.se"));
+    }
+
 }
