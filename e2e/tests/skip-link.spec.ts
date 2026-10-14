@@ -8,4 +8,7 @@ test("the skip link jumps past the menu into the main content", async ({ page })
     const skipLink = page.getByRole("link", { name: text("site.skip") });
     await expect(skipLink).toBeFocused();
     await expect(skipLink).toBeVisible();
+
+    await page.keyboard.press("Enter");
+    await expect(page).toHaveURL(/#innehall$/);
 });
