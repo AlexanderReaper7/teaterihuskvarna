@@ -1,7 +1,7 @@
 ---
 created: 2026-10-15
 provenance: agent
-description: What the site looks like: colours, typography, shapes and components.
+description: What the site looks like? colours, typography, shapes and components.
 ---
 
 # Style guide
