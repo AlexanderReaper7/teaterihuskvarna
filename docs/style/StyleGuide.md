@@ -6,9 +6,9 @@ description: What the site looks like? colours, typography, shapes and component
 
 # Style guide
 
-Provenance: agent. Henry Andersson asked for a one-page style guide (colours, typography, shapes, components) in his feedback on the mobile header. The user asked an agent to write the first version. Nothing here is a decision by the user or the product owner. The values were read from one screenshot of the mobile header, not from the CSS, so check each against [`src/main/resources/static`](../src/main/resources/static/) before relying on it. Rows marked **TBD** are not known yet.
+Agent provenance note: Provenance: agent. Henry Andersson asked for a one-page style guide (colours, typography, shapes, components) in his feedback on the mobile header. The user asked an agent to write the first version. Nothing here is a decision by the user or the product owner. The values were read from one screenshot of the mobile header, not from the CSS, so check each against [`src/main/resources/static`](../../src/main/resources/static/) before relying on it. Rows marked **TBD** are not known yet.
 
-No requirement in [requirements.md](requirements.md) asks for this page. R006 #9 in that file ("Fungerar på mobil, tillgänglighet enligt WCAG 2.1 AA", MUST) is the nearest one, and it sets the contrast rules below. The same rule is in [projektplan.md](projektplan.md), section "Accessibility needs automated and manual checks". See [Sources](#sources) for where every other claim comes from.
+No requirement in [requirements.md](../requirements.md) asks for this page. R006 #9 in that file ("Fungerar på mobil, tillgänglighet enligt WCAG 2.1 AA", MUST) is the nearest one, and it sets the contrast rules below. The same rule is in [projektplan.md](../projektplan.md), section "Accessibility needs automated and manual checks". See [Sources](#sources) for where every other claim comes from.
 
 ## Colours
 
@@ -72,7 +72,7 @@ Rule from Henry's feedback: the underlines (Swedish "understreck") on the deskto
 
 ## Logo and icons
 
-Where these are loaded from is **not known**. The repository's static files were not available when this was written, so every path below is TBD and has to be filled in from [`src/main/resources/static`](../src/main/resources/static/) and the templates in [`src/main/jte`](../src/main/jte/).
+Where these are loaded from is **not known**. The repository's static files were not available when this was written, so every path below is TBD and has to be filled in from [`src/main/resources/static`](../../src/main/resources/static/) and the templates in [`src/main/jte`](../../src/main/jte/).
 
 | Item | What the screenshot shows | Colour | File and how it is loaded |
 | --- | --- | --- | --- |
@@ -109,7 +109,7 @@ Rules for the SVG files, so the colour is found in one place:
 
 ## Preview
 
-Mockups of what this guide describes, drawn by an agent with the guide's colours, light icons and underlined menu items. They are not screenshots of the running site. The desktop menu items are examples, since the real desktop menu was not seen, and the font is a stand-in.
+Mockups of what this guide describes, drawn by an agent with the guide's colours, light icons and underlined menu items. They are not screenshots of the running site. The desktop menu items are e[...]
 
 ![Mobile header, closed and open](img/style-guide-mobile.png)
 
@@ -123,8 +123,8 @@ Mockups of what this guide describes, drawn by an agent with the guide's colours
 | Keep underlines in the hamburger menu, keep the footer, bold is good, a one-page style guide would help | Email from Henry Andersson, 2026-10-15. It is not stored in the repository. |
 | Contrast 4.5:1 for text | [WCAG 2.1, success criterion 1.4.3, Contrast (Minimum)](https://www.w3.org/TR/WCAG21/#contrast-minimum) |
 | Contrast 3:1 for icons | [WCAG 2.1, success criterion 1.4.11, Non-text Contrast](https://www.w3.org/TR/WCAG21/#non-text-contrast) |
-| Accessibility is required at level AA | R006 #9 in [requirements.md](requirements.md), and [projektplan.md](projektplan.md) |
+| Accessibility is required at level AA | R006 #9 in [requirements.md](../requirements.md), and [projektplan.md](../projektplan.md) |
 | Logo and icon colours, and the observation that no image logo is visible | The same screenshot, sampled by an agent |
 | The old site's logo image, its size and link | Page source of [Föreningen byter hemsida – Teater i Huskvarna](https://teaterihuskvarna.se/news/foreningen-byter-hemsida/), fetched 2026-10-15 |
 | Contrast figures (about 2.6:1, 3.2:1, 5.8:1) | An agent's calculation from the sampled colours, not measured with a tool |
-| Terms such as member page and login | [GLOSSARY.md](../GLOSSARY.md) |
+| Terms such as member page and login | [GLOSSARY.md](../../GLOSSARY.md) |
