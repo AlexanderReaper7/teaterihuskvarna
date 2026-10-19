@@ -1,5 +1,7 @@
 package se.teaterihuskvarna.member;
 
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.LockModeType;
 import jakarta.validation.Valid;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -28,14 +30,16 @@ public class HouseholdService {
     private final AccountRepository accounts;
     private final InvitationRepository invitations;
     private final ApplicationEventPublisher events;
+    private final EntityManager entityManager;
 
     HouseholdService(HouseholdRepository households, MemberRepository members, AccountRepository accounts,
-            InvitationRepository invitations, ApplicationEventPublisher events) {
+            InvitationRepository invitations, ApplicationEventPublisher events, EntityManager entityManager) {
         this.households = households;
         this.members = members;
         this.accounts = accounts;
         this.invitations = invitations;
         this.events = events;
+        this.entityManager = entityManager;
     }
 
     /// @return every household by name, each with its members
@@ -93,6 +97,7 @@ public class HouseholdService {
     /// @return the renamed household
     @Transactional
     public HouseholdDetails renameForAccount(long accountId, @Valid NewHousehold form) {
+        lockOwnHousehold(accountId);
         Household household = ownedHousehold(accountId);
         household.setName(form.name().strip());
         return ownDetails(household);
@@ -105,6 +110,7 @@ public class HouseholdService {
     /// @return the new member's id
     @Transactional
     public long addForAccount(long accountId, @Valid ContactForm form) {
+        lockOwnHousehold(accountId);
         Household household = ownedHousehold(accountId);
         Member member = new Member(form.fullName().strip());
         member.setContact(form.contact());
@@ -132,6 +138,7 @@ public class HouseholdService {
     /// @return the saved contact details
     @Transactional
     public ContactForm updateForAccount(long accountId, long memberId, @Valid ContactForm form) {
+        lockOwnHousehold(accountId);
         ownedHousehold(accountId);
         Member member = householdMember(accountId, memberId);
         member.setFullName(form.fullName().strip());
@@ -148,6 +155,7 @@ public class HouseholdService {
     /// @param successorMemberId the next owner when the caller leaves, or null
     @Transactional
     public void removeForAccount(long accountId, long memberId, @Nullable Long successorMemberId) {
+        lockOwnHousehold(accountId);
         Member member = householdMember(accountId, memberId);
         requireOwnerOrSelf(accountId, member);
         Household household = ownHousehold(accountId);
@@ -179,6 +187,7 @@ public class HouseholdService {
     @Transactional
     public HouseholdDetails changeOwner(long householdId, @Valid HouseholdOwnerForm form) {
         Household household = households.findById(householdId).orElseThrow(NoSuchHousehold::new);
+        entityManager.refresh(household, LockModeType.PESSIMISTIC_WRITE);
         Long nextOwner = form.memberId();
         if (nextOwner != null) {
             requireSuccessor(household, nextOwner);
@@ -209,6 +218,15 @@ public class HouseholdService {
         if (memberId != target.getId()) {
             ownedHousehold(accountId);
         }
+    }
+
+    /// Serialises ownership and membership changes per household. Without it,
+    /// an owner naming a successor and that successor leaving at the same time
+    /// both commit, and the household ends up owned by someone outside it.
+    /// `refresh` rather than a locking query, because the household may already
+    /// be loaded in this transaction, and a query would return that stale copy.
+    private void lockOwnHousehold(long accountId) {
+        entityManager.refresh(ownHousehold(accountId), LockModeType.PESSIMISTIC_WRITE);
     }
 
     private Household ownHousehold(long accountId) {

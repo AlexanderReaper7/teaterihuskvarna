@@ -22,7 +22,7 @@ public class Household {
     private String name;
 
     @Column(name = "owner_member_id")
-    private Long ownerMemberId;
+    private @Nullable Long ownerMemberId;
 
     @Column(name = "created_at", nullable = false)
     private Instant createdAt = Instant.now();

@@ -12,9 +12,18 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
 
 /// Owner checks use valid requests with CSRF, so a forbidden result tests
@@ -24,18 +33,26 @@ class HouseholdOwnershipIT extends MemberRegisterSupport {
     private static final String API = "/api/member/household";
     private static final String PAGE = "/medlem/hushall";
 
+    @Autowired
+    private HouseholdService service;
+
+    @Autowired
+    private PlatformTransactionManager transactionManager;
+
     private long household;
     private long owner;
+    private long ownerAccount;
     private long other;
+    private long otherAccount;
     private RequestPostProcessor ownerLogin;
     private RequestPostProcessor otherLogin;
 
     @BeforeEach
     void household() {
-        long account = insertAccount("Erik Exempel", "erik@example.test");
-        owner = memberOf(account);
-        ownerLogin = asMember(account, "erik@example.test");
-        long otherAccount = insertAccount("Maria Exempel", "maria@example.test");
+        ownerAccount = insertAccount("Erik Exempel", "erik@example.test");
+        owner = memberOf(ownerAccount);
+        ownerLogin = asMember(ownerAccount, "erik@example.test");
+        otherAccount = insertAccount("Maria Exempel", "maria@example.test");
         other = memberOf(otherAccount);
         otherLogin = asMember(otherAccount, "maria@example.test");
         household = insertHousehold("Familjen Exempel");
@@ -167,6 +184,53 @@ class HouseholdOwnershipIT extends MemberRegisterSupport {
         assertThat(jdbc.sql("SELECT owner_member_id FROM household WHERE id = ?").param(household)
                 .query().singleRow()).containsEntry("owner_member_id", null);
         assertThat(rowsIn("household")).isEqualTo(1);
+    }
+
+    /// The owner leaves and names the other account holder, who leaves at the
+    /// same time. The owner's transaction stays open until the other removal
+    /// has had a second to commit, so without the household lock it would
+    /// commit first, and the owner's commit would then hand the household to
+    /// someone outside it. With the lock, the second removal waits, sees that
+    /// it now owns the household, and hands it to administrators.
+    @Test
+    void anOwnerHandingOverWhileTheSuccessorLeavesLeavesNoAbsentOwner() throws Exception {
+        long child = insertMember("Olle");
+        moveTo(child, household);
+        CountDownLatch handedOver = new CountDownLatch(1);
+        CountDownLatch commit = new CountDownLatch(1);
+        TransactionTemplate transaction = new TransactionTemplate(transactionManager);
+        try (ExecutorService pool = Executors.newFixedThreadPool(2)) {
+            Future<?> ownerLeaves = pool.submit(() -> transaction.executeWithoutResult(status -> {
+                service.removeForAccount(ownerAccount, owner, other);
+                handedOver.countDown();
+                await(commit);
+            }));
+            await(handedOver);
+            Future<?> otherLeaves = pool.submit(() -> service.removeForAccount(otherAccount, other, null));
+            try {
+                otherLeaves.get(1, TimeUnit.SECONDS);
+            } catch (TimeoutException waitingForTheLock) {
+                // expected with the lock: the removal waits for the owner's commit
+            }
+            commit.countDown();
+            ownerLeaves.get(10, TimeUnit.SECONDS);
+            otherLeaves.get(10, TimeUnit.SECONDS);
+        }
+        assertThat(jdbc.sql("SELECT owner_member_id FROM household WHERE id = ?").param(household)
+                .query().singleRow()).containsEntry("owner_member_id", null);
+        assertThat(jdbc.sql("SELECT id FROM member WHERE household_id = ?").param(household)
+                .query(Long.class).list()).containsExactly(child);
+    }
+
+    private static void await(CountDownLatch latch) {
+        try {
+            if (!latch.await(10, TimeUnit.SECONDS)) {
+                throw new IllegalStateException("the other thread never signalled");
+            }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException(e);
+        }
     }
 
     private long owner() {
