@@ -198,7 +198,8 @@ public class HouseholdService {
 
     private void requireSuccessor(Household household, long memberId) {
         Member member = members.findById(memberId).orElseThrow(NoSuchMember::new);
-        if (member.getHousehold() == null || !household.getId().equals(member.getHousehold().getId())
+        Household current = member.getHousehold();
+        if (current == null || !household.getId().equals(current.getId())
                 || accounts.findByMember(memberId).isEmpty()) {
             throw new NoSuchMember();
         }
@@ -241,7 +242,8 @@ public class HouseholdService {
     private Member householdMember(long accountId, long memberId) {
         Household household = ownHousehold(accountId);
         Member member = members.findById(memberId).orElseThrow(NoSuchMember::new);
-        if (member.getHousehold() == null || !household.getId().equals(member.getHousehold().getId())) {
+        Household current = member.getHousehold();
+        if (current == null || !household.getId().equals(current.getId())) {
             throw new NoSuchMember();
         }
         return member;
