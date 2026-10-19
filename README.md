@@ -249,4 +249,6 @@ checks. CI runs it; see [.github/workflows/docs.yml](.github/workflows/docs.yml)
 | [`docs/requirements.md`](docs/requirements.md) | What the system has to do, by requirement id |
 | [`docs/meetings/`](docs/meetings/) | One document per meeting, with its questions and answers |
 | [`docs/onboarding.md`](docs/onboarding.md) | How the team works, its meetings and the Kanban board, for someone who has never used one |
+| [`docs/runbook.md`](docs/runbook.md) | How to back up the database, check that a backup restores and restore after data loss ([0007](docs/decisions/0007-postgres-in-a-container.md)) |
+| [`scripts/backup.sh`](scripts/backup.sh), [`scripts/restore-check.sh`](scripts/restore-check.sh) | Dump the database and prove the dump restores |
 | [`e2e/`](e2e/) | The Playwright suite, its compose file and [`run.sh`](e2e/run.sh) ([0017](docs/decisions/0017-playwright-e2e-in-docker.md)) |
