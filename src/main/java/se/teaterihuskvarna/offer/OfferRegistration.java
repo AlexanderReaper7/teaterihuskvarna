@@ -7,6 +7,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.Instant;
+import org.jspecify.annotations.Nullable;
 
 /// One member's place in one offer. The offer and the member are plain ids
 /// rather than associations, as on `Administrator`: nothing here loads either
@@ -17,7 +18,7 @@ public class OfferRegistration {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private @Nullable Long id;
 
     @Column(name = "offer_id", nullable = false)
     private long offerId;
@@ -39,7 +40,12 @@ public class OfferRegistration {
         this.memberId = memberId;
     }
 
+    /// @return the ID assigned by Hibernate
+    /// @throws IllegalStateException if this entity has not been persisted
     public Long getId() {
+        if (id == null) {
+            throw new IllegalStateException("Entity has not been persisted");
+        }
         return id;
     }
 

@@ -16,7 +16,7 @@ public class Household {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private @Nullable Long id;
 
     @Column(name = "name", nullable = false, length = 100)
     private String name;
@@ -36,7 +36,12 @@ public class Household {
         this.name = name;
     }
 
+    /// @return the ID assigned by Hibernate
+    /// @throws IllegalStateException if this entity has not been persisted
     public Long getId() {
+        if (id == null) {
+            throw new IllegalStateException("Entity has not been persisted");
+        }
         return id;
     }
 

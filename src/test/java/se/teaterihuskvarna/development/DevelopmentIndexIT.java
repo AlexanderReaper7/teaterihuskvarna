@@ -1,5 +1,6 @@
 package se.teaterihuskvarna.development;
 
+import static java.util.Objects.requireNonNull;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.not;
@@ -65,10 +66,10 @@ class DevelopmentIndexIT extends IntegrationTestSupport {
                 .andReturn();
         assertRedirect(login, landing(kind));
         assertThat(login.getResponse().getCookie("SESSION")).isNotNull();
-        assertThat(login.getResponse().getCookie("SESSION").getValue())
-                .isNotEqualTo(index.getResponse().getCookie("SESSION").getValue());
+        assertThat(requireNonNull(login.getResponse().getCookie("SESSION")).getValue())
+                .isNotEqualTo(requireNonNull(index.getResponse().getCookie("SESSION")).getValue());
         Duration lifetime = kind == LoginKind.MEMBER ? Duration.ofDays(30) : Duration.ofHours(8);
-        assertThat(login.getResponse().getCookie("SESSION").getMaxAge()).isPositive();
+        assertThat(requireNonNull(login.getResponse().getCookie("SESSION")).getMaxAge()).isPositive();
         long id = kind == LoginKind.MEMBER ? accountId : firstAdministratorId();
         assertThat(jdbc.sql("SELECT max_inactive_interval FROM spring_session WHERE principal_name = ?")
                 .param(kind.principalName(id)).query(Integer.class).single()).isEqualTo((int) lifetime.toSeconds());
