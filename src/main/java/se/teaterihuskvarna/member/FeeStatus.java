@@ -14,7 +14,7 @@ import org.jspecify.annotations.Nullable;
 /// @param paidAt           when the covering payment was marked, or null when unpaid
 /// @param kind             what the covering payment was, or null when unpaid
 /// @param throughHousehold true when another household member's household payment is what covers it
-/// @param payment          how to pay, when unpaid; null when paid
+/// @param payment          how to pay, when unpaid; null when paid or when the member has no account
 public record FeeStatus(
         int year,
         @Nullable Instant paidAt,
