@@ -1,8 +1,11 @@
 package se.teaterihuskvarna.member;
 
 import java.util.List;
+import java.util.Optional;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.domain.Limit;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -16,6 +19,15 @@ import org.springframework.data.repository.query.Param;
 ///
 /// The address is on the [Account], so a search by address joins it.
 interface MemberRepository extends JpaRepository<Member, Long> {
+
+    /// Serialises household creation for one member, so two submissions cannot
+    /// create separate households and leave one empty.
+    ///
+    /// @param memberId the member to lock
+    /// @return the member, or empty when removed
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select m from Member m where m.id = :memberId")
+    Optional<Member> findForUpdate(@Param("memberId") long memberId);
 
     /// Members whose name, account address, phone or city contains the pattern,
     /// by name. The caller lower-cases the pattern and escapes `%`, `_` and `\`

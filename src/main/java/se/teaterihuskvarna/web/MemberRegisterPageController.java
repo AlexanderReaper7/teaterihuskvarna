@@ -26,6 +26,7 @@ import se.teaterihuskvarna.member.FeeKind;
 import se.teaterihuskvarna.member.FeeMark;
 import se.teaterihuskvarna.member.FeeService;
 import se.teaterihuskvarna.member.HouseholdService;
+import se.teaterihuskvarna.member.HouseholdOwnerForm;
 import se.teaterihuskvarna.member.InvitationRequest;
 import se.teaterihuskvarna.member.InvitationService;
 import se.teaterihuskvarna.member.MemberDetails;
@@ -250,6 +251,25 @@ public class MemberRegisterPageController {
             return householdsPage(form, FieldErrors.of(e), model);
         }
         redirected.addFlashAttribute("notice", copy.text("household.created", form.name().strip()));
+        return "redirect:" + HOUSEHOLDS;
+    }
+
+    /// @param id the household
+    /// @param form the next member owner, or administrator management
+    /// @param redirected receives confirmation or an invalid selection message
+    /// @return the household list
+    @PostMapping(HOUSEHOLDS + "/{id}/agare")
+    public String changeHouseholdOwner(@PathVariable long id, @ModelAttribute HouseholdOwnerForm form,
+            RedirectAttributes redirected) {
+        try {
+            households.changeOwner(id, form);
+        } catch (ConstraintViolationException | NoSuchMember e) {
+            redirected.addFlashAttribute("notice", copy.text("household.owner.invalid"));
+            return "redirect:" + HOUSEHOLDS;
+        } catch (NoSuchHousehold e) {
+            throw notFound(e);
+        }
+        redirected.addFlashAttribute("notice", copy.text("household.owner.saved"));
         return "redirect:" + HOUSEHOLDS;
     }
 
