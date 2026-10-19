@@ -607,6 +607,11 @@ class LoginIT extends IntegrationTestSupport {
         mockMvc.perform(get("/api/development/routes")).andExpect(status().isNotFound());
         mockMvc.perform(get("/api/development/login-accounts")).andExpect(status().isNotFound());
         mockMvc.perform(get("/api/development/environment")).andExpect(status().isNotFound());
+        for (String path : new String[] {"/dev/login", "/api/development/login"}) {
+            mockMvc.perform(post(path).param("kind", "ADMINISTRATOR").param("email", firstAdministratorEmail)
+                            .with(csrf()))
+                    .andExpect(status().isNotFound());
+        }
         mockMvc.perform(get("/"))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("Nästa evenemang")));

@@ -47,6 +47,8 @@ Version 1 must satisfy all 21 MUST requirements in [requirements.md](requirement
 | Mailings to selected member groups | SMS |
 | Migration of relevant content from WordPress | More than one visitor language |
 
+The [Swish research](research/swish-payments.md) examines automatic confirmation of membership fees as a possible scope change. It is research, not an accepted version 1 requirement.
+
 Volunteer booking is a MUST requirement even though its row in the original, V1, says B, because the original's scope table lists it inside version 1. Where the customer's document contradicts itself, the scope table wins. [requirements.md](requirements.md) records the exception.
 
 ## Public content and member data stay in separate systems
@@ -109,6 +111,8 @@ The current fee rule is:
 - a member without a household has no household identifier;
 - amounts use integer öre rather than a fixed 50 or 100 kr value;
 - the record identifies the administrator who marked it paid.
+
+A member pays the fee by bankgiro with their account's email address as the payment message, because the email address is unique and a name is not. Only members with an account pay. A member without an account is covered through the household fee and is shown no payment instruction. Decided by the user on 2026-10-09. Whether banks let a payer type an email address in the message is not established, see [research/bankgiro-payment-message.md](research/bankgiro-payment-message.md).
 
 Before building reconciliation, compare this rule with real anonymised bankgiro examples. A payer's name may differ from the covered member's name. If the examples break the rule, update the model and record the reason before implementation.
 

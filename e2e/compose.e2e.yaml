@@ -49,6 +49,11 @@ services:
     labels:
       traefik.enable: "false"
 
+  db:
+    # compose.dev.yaml publishes the dev database. Two suites, or a suite and a
+    # dev stack, would then fight over one host port.
+    ports: !reset []
+
   mail:
     labels:
       traefik.enable: "false"

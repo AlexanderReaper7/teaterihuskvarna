@@ -6,6 +6,7 @@ import java.util.List;
 import org.springframework.boot.servlet.autoconfigure.MultipartProperties;
 import org.springframework.boot.session.autoconfigure.DefaultCookieSerializerCustomizer;
 import org.springframework.context.MessageSource;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
@@ -38,6 +39,8 @@ import org.springframework.security.web.util.matcher.OrRequestMatcher;
 import org.springframework.security.web.util.matcher.RequestMatcher;
 import org.springframework.security.web.webauthn.management.UserCredentialRepository;
 import org.springframework.security.web.webauthn.management.WebAuthnRelyingPartyOperations;
+import org.springframework.session.config.SessionRepositoryCustomizer;
+import org.springframework.session.jdbc.JdbcIndexedSessionRepository;
 import org.springframework.session.jdbc.PostgreSqlJdbcIndexedSessionRepositoryCustomizer;
 import org.springframework.session.security.web.authentication.SpringSessionRememberMeServices;
 import org.springframework.util.StringUtils;
@@ -75,6 +78,7 @@ class SecurityConfiguration {
     private final UserCredentialRepository passkeys;
     private final DeviceNames devices;
     private final ContentSettings content;
+    private final ObjectProvider<DevelopmentLogin> development;
 
     /// The public pages with content from Sanity, which anyone may read and the
     /// Studio may show in its Presentation preview (R009). `/forhandsgranska`
@@ -100,8 +104,9 @@ class SecurityConfiguration {
     SecurityConfiguration(LoginLinks links, LinkRequestLimiter limiter, JdbcClient jdbc, LoginSettings settings,
             List<LoginDirectory> directories, WebAuthnRelyingPartyOperations relyingParty,
             UserCredentialRepository passkeys, MessageSource messages, ContentSettings content,
-            MultipartProperties multipart) {
+            MultipartProperties multipart, ObjectProvider<DevelopmentLogin> development) {
         this.content = content;
+        this.development = development;
         this.largestRequest = multipart.getMaxRequestSize().toBytes();
         this.links = links;
         this.limiter = limiter;
@@ -152,6 +157,7 @@ class SecurityConfiguration {
                         // Only the dev profile maps anything here; elsewhere
                         // these paths answer 404.
                         "/dev",
+                        "/dev/login",
                         "/api/development/**",
                         "/error").permitAll()
                 // The stylesheet, fonts, logo, favicon and scripts under
@@ -163,6 +169,7 @@ class SecurityConfiguration {
                 .requestMatchers("/medlem", "/medlem/**", "/api/member", "/api/member/**").hasRole("MEMBER")
                 .anyRequest().access(UnknownPaths.denied()));
         login(http, LoginKind.MEMBER, settings.memberSession());
+        development.ifAvailable(configurer -> http.with(configurer, Customizer.withDefaults()));
         // Sanity signs the webhook instead, and cannot fetch a CSRF token first.
         http.csrf(csrf -> csrf.ignoringRequestMatchers(
                 PathPatternRequestMatcher.withDefaults().matcher(HttpMethod.POST, "/api/sanity/webhook")));
@@ -225,6 +232,29 @@ class SecurityConfiguration {
     @Bean
     PostgreSqlJdbcIndexedSessionRepositoryCustomizer sessionAttributeUpsert() {
         return new PostgreSqlJdbcIndexedSessionRepositoryCustomizer();
+    }
+
+    /// Lists a person's sessions sorted by session, for [DeviceService]. Spring
+    /// Session's own query is this one without the `ORDER BY`, and its reader
+    /// starts a new session whenever a row belongs to another session than the
+    /// row before. Once the tables grow, PostgreSQL joins them by hash and
+    /// returns the rows in the order they lie in the attribute table, where an
+    /// attribute added after the login lies apart from the rest. The session
+    /// then came back as several partial copies, and the last one won: a device
+    /// listed without its name, or left out because its end was missing.
+    /// `SessionStoreIT` reproduces it.
+    ///
+    /// @return the customizer Boot applies to the session repository
+    @Bean
+    SessionRepositoryCustomizer<JdbcIndexedSessionRepository> sessionsListedInOrder() {
+        return repository -> repository.setListSessionsByPrincipalNameQuery("""
+                SELECT S.PRIMARY_ID, S.SESSION_ID, S.CREATION_TIME, S.LAST_ACCESS_TIME, S.MAX_INACTIVE_INTERVAL,
+                    SA.ATTRIBUTE_NAME, SA.ATTRIBUTE_BYTES
+                FROM %TABLE_NAME% S
+                LEFT JOIN %TABLE_NAME%_ATTRIBUTES SA ON S.PRIMARY_ID = SA.SESSION_PRIMARY_ID
+                WHERE S.PRINCIPAL_NAME = ?
+                ORDER BY S.PRIMARY_ID
+                """);
     }
 
     /// The one-time-token login, passkeys, the rate limit, the end of a login,
