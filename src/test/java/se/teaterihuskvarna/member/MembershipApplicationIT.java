@@ -95,7 +95,7 @@ class MembershipApplicationIT extends IntegrationTestSupport {
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString(bankgiro)))
                 .andExpect(content().string(containsString("Årsavgiften är 50 kr för en person eller 100 kr för ett "
-                        + "hushåll. Betala till bankgiro " + bankgiro + " och skriv Karin Karlsson i meddelandet.")));
+                        + "hushåll. Betala till bankgiro " + bankgiro + " och skriv " + KARIN + " i meddelandet.")));
         mockMvc.perform(get("/bli-medlem"))
                 .andExpect(content().string(containsString("kostar 50 kr per år för en person")));
 

@@ -26,6 +26,7 @@ C9, C10 and C17 were also deferred from that meeting by the user on 2026-09-30.
 C12 is deferred until bank reconciliation is considered. The [system plan](projektplan.md#must-requirements-determine-whether-version-1-can-launch) excludes automatic bank reconciliation from version 1; fee marking remains manual.
 
 - [ ] **C12. Can the association provide real bankgiro payments, anonymised, before reconciliation is built?** The plan's rule for matching a payment to a member has to be checked against them. A payer's name may differ from the member's.
+- [ ] **C27. What does a bankgiro payment with an email address as the message look like on the association's statement?** Members write their account's email address as the message. Banks cap the message at as few as 12 characters until autumn 2026, and whether `@` survives is unknown, see [research/bankgiro-payment-message.md](research/bankgiro-payment-message.md). A 1 kr test payment from SEB and from the Swedbank app, read by whoever sees the statement, answers both. Move it to the next meeting's document when that document is created.
 
 ## For Lexicon
 
