@@ -27,6 +27,19 @@
     @endif
     @for(HouseholdDetails household : households)
         <h2>${household.name()}</h2>
+        <form method="post" action="/admin/hushall/${household.id()}/agare">
+            @template.tag.csrf(csrf = csrf)
+            <label for="owner-${household.id()}">${copy.text("household.owner.label")}</label>
+            <select id="owner-${household.id()}" name="memberId">
+                <option value="" selected="${household.ownerMemberId() == null}">${copy.text("household.owner.admin")}</option>
+                @for(HouseholdMember member : household.members())
+                    @if(member.hasAccount())
+                        <option value="${member.id()}" selected="${member.id().equals(household.ownerMemberId())}">${member.fullName()}</option>
+                    @endif
+                @endfor
+            </select>
+            <button type="submit">${copy.text("household.owner.save")}</button>
+        </form>
         @if(household.members().isEmpty())
             <p>${copy.text("household.empty")}</p>
         @else
