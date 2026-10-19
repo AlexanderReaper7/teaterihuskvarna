@@ -65,7 +65,8 @@ class FeeIT extends MemberRegisterSupport {
                 .andExpect(content().string(containsString("123-4567")))
                 .andExpect(content().string(containsString("50 kr")))
                 .andExpect(content().string(containsString("100 kr")))
-                .andExpect(content().string(containsString("Skriv Johan Bergström i meddelandet.")));
+                .andExpect(content().string(containsString(
+                        "Skriv exakt " + JOHAN_EMAIL + " i meddelandet och inget annat.")));
 
         mockMvc.perform(get("/api/member").with(asMember(johanAccount, JOHAN_EMAIL)))
                 .andExpect(jsonPath("$.fee.year").value(thisYear()))
@@ -73,7 +74,7 @@ class FeeIT extends MemberRegisterSupport {
                 .andExpect(jsonPath("$.fee.payment.bankgiro").value("123-4567"))
                 .andExpect(jsonPath("$.fee.payment.individualOre").value(5000))
                 .andExpect(jsonPath("$.fee.payment.householdOre").value(10_000))
-                .andExpect(jsonPath("$.fee.payment.message").value("Johan Bergström"));
+                .andExpect(jsonPath("$.fee.payment.message").value(JOHAN_EMAIL));
     }
 
     /// The amount comes from the settings when none is given, and the
@@ -219,6 +220,26 @@ class FeeIT extends MemberRegisterSupport {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.fees.length()").value(2))
                 .andExpect(jsonPath("$.household.name").value("Familjen Lindqvist"));
+    }
+
+    /// A member without an account cannot pay, so gets no payment instruction.
+    /// The household payment covers them once it is made.
+    @Test
+    void aHouseholdMemberWithoutAnAccountGetsNoPaymentInstruction() throws Exception {
+        long child = insertMember("Lisa Lindqvist");
+        moveTo(child, household);
+
+        mockMvc.perform(get("/api/admin/members/" + child).with(asAdministrator()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.fees[0].year").value(thisYear()))
+                .andExpect(jsonPath("$.fees[0].paidAt").doesNotExist())
+                .andExpect(jsonPath("$.fees[0].payment").doesNotExist());
+
+        insertFee(erik, "HOUSEHOLD");
+
+        mockMvc.perform(get("/api/admin/members/" + child).with(asAdministrator()))
+                .andExpect(jsonPath("$.fees[0].paidAt").isNotEmpty())
+                .andExpect(jsonPath("$.fees[0].throughHousehold").value(true));
     }
 
     @Test

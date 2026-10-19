@@ -2,7 +2,7 @@
 # Copies .env.example to .env when the checkout has none, so the dev stack starts
 # in a new worktree without a manual step. Git runs this after every checkout,
 # `git worktree add` included, from the top of the checked-out tree. The build
-# copies this file into .git/hooks, like pre-push.
+# copies this file into .git/hooks.
 if [ ! -f .env ] && [ -f .env.example ]; then
   cp .env.example .env
 fi

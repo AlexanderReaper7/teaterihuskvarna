@@ -1,10 +1,10 @@
 ---
 created: 2026-09-22
 provenance: unreviewed
-description: Historical deferral of branch protection and the rules enabled after publication.
+description: The rulesets that protect main, enabled on 2026-09-30.
 ---
 
-# 0003: No branch protection on main, for now
+# 0003: Branch protection on main
 
 ## Current state, 2026-09-30
 
@@ -23,7 +23,3 @@ The rulesets enforce [0020](0020-pull-requests-and-merging.md) with the user's e
 Secret scanning, secret scanning push protection, vulnerability alerts and Dependabot security updates are enabled. Existing squash/rebase merge settings, automatic branch deletion, read-only default workflow tokens and the ban on Actions approving pull requests remain enabled.
 
 Verification read the rulesets and security settings back from GitHub. No rejected push or merge was attempted. The required check names and their GitHub Actions app ID came from an existing pull request's check runs.
-
-## Previous state
-
-Protection was deferred while the repository was private because GitHub returned 403 and required GitHub Pro or public visibility. The team followed [0020](0020-pull-requests-and-merging.md) through its guide and local hooks. Public visibility removed that restriction; the original reasoning remains in git history.
