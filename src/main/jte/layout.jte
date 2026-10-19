@@ -25,7 +25,10 @@
 @endif
 <header class="site-header">
     <a href="/" class="site-logo"><img src="/img/logo-negative.png" width="1534" height="1444" alt="${copy.text("site.logo.alt")}"></a>
-    <button type="button" class="menu-button" aria-controls="huvudmeny" aria-expanded="false" hidden>${copy.text("nav.menu")}</button>
+    <button type="button" class="menu-button" aria-controls="huvudmeny" aria-expanded="false" aria-label="Öppna meny" data-label-open="Öppna meny" data-label-close="Stäng meny" hidden>
+               <svg class="menu-icon-open" src="design/old-site/assets/icons/menu-open.svg" width="28" height="28" viewBox="0 0 28 28" aria-hidden="true" focusable="false"><path d="M3 6h22M3 14h22M3 22h22" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+                <svg class="menu-icon-close" src="design/old-site/assets/icons/menu-close.svg" width="28" height="28" viewBox="0 0 28 28" aria-hidden="true" focusable="false"><path d="m5 5 18 18M23 5 5 23" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+          </button>
     <nav id="huvudmeny" class="site-nav" aria-label="${copy.text("nav.label")}">
         <ul>
             <li><a href="/kalender">${copy.text("nav.calendar")}</a></li>
