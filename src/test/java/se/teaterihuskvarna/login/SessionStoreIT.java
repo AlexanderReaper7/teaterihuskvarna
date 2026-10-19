@@ -82,7 +82,7 @@ class SessionStoreIT extends IntegrationTestSupport {
             ids.add(session.getId());
         }
         for (int i = 0; i < SESSIONS; i += 3) {
-            S session = repository.findById(ids.get(i));
+            S session = requireNonNull(repository.findById(ids.get(i)));
             session.setAttribute("later", "x");
             repository.save(session);
         }
