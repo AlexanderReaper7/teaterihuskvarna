@@ -22,10 +22,10 @@ Nothing else. Java and Maven are not installed on your machine: the build runs i
 
 ### Logging in
 
-Nobody has a password. Logging in works by a link sent by mail, and locally every mail goes to Mailpit instead of a real inbox.
+Nobody has a password. The development index offers immediate login for any listed member or administrator. This shortcut exists only under the `dev` profile. Normal login uses an email link, and locally every mail goes to Mailpit instead of a real inbox.
 
-1. On [http://localhost:8000/dev](http://localhost:8000/dev), which is the development index, pick a seeded member or administrator and press its button. The application mails that address a login link.
-2. Open [http://localhost:8000/mailpit/](http://localhost:8000/mailpit/), open the newest mail and follow the link.
+1. On [http://localhost:8000/dev](http://localhost:8000/dev), pick a member or administrator and press `Log in now` to open that account's page immediately.
+2. To test normal login instead, press `Send link`, open [Mailpit](http://localhost:8000/mailpit/), then open the newest mail and follow its link.
 
 The seeded people are invented, under `.test` addresses that cannot reach anyone. Karin Holmberg has both a member account and an administrator account on the same address, which is the case the two login pages (`/logga-in` and `/admin/logga-in`) exist for.
 
@@ -56,7 +56,7 @@ Public content comes from the development Sanity dataset. Login and invitation m
 
 Only Alexander Öberg merges into `main`. Everyone else works on a branch made from an issue and opens a pull request, step by step in [the guide](docs/branches-and-pull-requests.md). The rules and their reasons are in [decisions/0020](docs/decisions/0020-pull-requests-and-merging.md).
 
-GitHub cannot enforce this on the repository's current plan ([0003](docs/decisions/0003-no-branch-protection-yet.md)), so the [`pre-push`](.githooks/pre-push) [git hook](#git-hooks) enforces part of it on your machine. It cannot see the merge button on GitHub, so the rule above still holds for everything the hook misses.
+GitHub enforces this with rulesets on `main`, listed in [0003](docs/decisions/0003-no-branch-protection-yet.md). They cover only `main`, so the rule against force-pushing your own branch is on you.
 
 ### Git hooks
 
@@ -64,10 +64,9 @@ The hooks live in [`.githooks/`](.githooks/). Every Maven build (`verify`, `test
 
 | Hook | Runs | Does |
 | --- | --- | --- |
-| [`pre-push`](.githooks/pre-push) | Before `git push` sends anything | Refuses a push to `main`, a force-push to any branch, and any branch that contains a commit taken off `main`. `git push --no-verify` skips it. |
 | [`post-checkout`](.githooks/post-checkout) | After `git switch`, `git checkout` and `git worktree add`. Not after `git clone`, which runs before any hook is installed. | Copies [`.env.example`](.env.example) to `.env` when there is none. In a git worktree it also adds `BUILD_GIT_DIR` and `BUILD_GIT_WORKTREE` to `.env`, which the image build needs to find the repository's history. |
 
-The build overwrites a hook of your own with the same name, and warns when it replaces a different [`pre-push`](.githooks/pre-push). A git worktree uses the main checkout's `.git/hooks/`, so the build skips the copy there.
+The build overwrites a hook of your own with the same name. A git worktree uses the main checkout's `.git/hooks/`, so the build skips the copy there.
 
 `.env` is created in more places than the hook: the Maven build and the VS Code compose tasks also copy [`.env.example`](.env.example) when `.env` is missing. None of them ever changes an existing `.env`.
 
@@ -91,8 +90,6 @@ A clone made before [`f9df7d5`](https://github.com/AlexanderReaper7/teaterihuskv
 - **The app container stops, and its log says `Migration checksum mismatch`.** The database volume was created by an older version of a migration. `docker compose down -v` deletes it, and the next start builds it again.
 - **`address already in use` or `port is already allocated` on 8000.** Another program has the port. Set `PROXY_HTTP_PORT=8001` in `.env`, run `docker compose up -d` again and use [http://localhost:8001/](http://localhost:8001/).
 - **`Cannot connect to the Docker daemon`, or on Windows `error during connect`.** Docker is not running. Start Docker Desktop and wait until it says it is running.
-- **`pre-push: refusing to push to main`.** Your commits are on `main` instead of a branch. `git switch -c <branch-name>` moves them onto a new branch, then push that. Your local `main` still points at them, so reset it afterwards: `git switch main` then `git reset --hard origin/main`.
-- **`pre-push: ... contains 5f57ec0...`.** The branch was started before `main` was rewritten on 2026-09-25. The message prints the `git rebase` command that moves your own commits onto the current `main`.
 - **The build fails at `checkstyle`, `spotbugs` or `pmd`.** The code breaks one of the static analysis rules, and the message names the file and line. See [Static analysis](#static-analysis).
 - **Anything else.** Read the end of `docker compose logs app`. The first `ERROR` line usually names the problem.
 
@@ -107,6 +104,8 @@ startup.
 HTTP on `PROXY_HTTP_PORT` (8000 unless set), turns on the `dev` profile with
 invented settings ([`application-dev.yaml`](src/main/resources/application-dev.yaml)) and invented members, and starts
 Mailpit, which catches every mail the application sends, and Sanity Studio at [http://localhost:3333/](http://localhost:3333/). Studio uses the `dev` dataset unless `SANITY_DATASET_NAME` selects another one, and previews the application on `PROXY_HTTP_PORT`. Set `STUDIO_HTTP_PORT` to change its host port. Studio code changes need `docker compose up -d --build studio`.
+
+A database client on the host, such as VS Code, connects to PostgreSQL at `127.0.0.1`, port 5432 unless `POSTGRES_HOST_PORT` sets another, with the database, user and password from `POSTGRES_DB`, `POSTGRES_USER` and `POSTGRES_PASSWORD` in `.env`. The port is bound to loopback only, so nothing else on the network reaches it. The application itself still connects to `db:5432` inside the stack.
 
 Under the `dev` profile, [http://localhost:8000/dev](http://localhost:8000/dev) is the development index. It lists every route, has a button per seeded member and
 administrator that mails that address a login link, and shows the schema
@@ -250,4 +249,6 @@ checks. CI runs it; see [.github/workflows/docs.yml](.github/workflows/docs.yml)
 | [`docs/requirements.md`](docs/requirements.md) | What the system has to do, by requirement id |
 | [`docs/meetings/`](docs/meetings/) | One document per meeting, with its questions and answers |
 | [`docs/onboarding.md`](docs/onboarding.md) | How the team works, its meetings and the Kanban board, for someone who has never used one |
+| [`docs/runbook.md`](docs/runbook.md) | How to back up the database, check that a backup restores and restore after data loss ([0007](docs/decisions/0007-postgres-in-a-container.md)) |
+| [`scripts/backup.sh`](scripts/backup.sh), [`scripts/restore-check.sh`](scripts/restore-check.sh) | Dump the database and prove the dump restores |
 | [`e2e/`](e2e/) | The Playwright suite, its compose file and [`run.sh`](e2e/run.sh) ([0017](docs/decisions/0017-playwright-e2e-in-docker.md)) |
