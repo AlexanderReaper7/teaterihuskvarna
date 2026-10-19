@@ -1,10 +1,10 @@
 ---
 created: 2026-10-15
-provenance: user
+provenance: agent
 description: what the site header looks like, by colours, typography, shapes, components, logo and icons.
 ---
 
- # Style guide
+# Style guide
 
 This guide is written by an agent and updated by the assigned team member, and is a default, not a decision. Nothing here is a decision by the user or the product owner. The values were read from the stylesheet and the header template on `main` (commit `8974923`), so the stylesheet is the source of truth: [site.css](../../../src/main/resources/static/css/site.css), [layout.jte](../../../src/main/jte/layout.jte) and [menu.js](../../../src/main/resources/static/js/menu.js). Rows marked TBD are not known yet.
 
@@ -26,7 +26,7 @@ The palette is named by role in `:root` of the stylesheet ([site.css](../../../s
 
 Contrast, as stated in the stylesheet: every text pair reaches 4.5:1 and every interface component 3:1. Examples from the file: error red is 6.54:1 on white and 6.08:1 on mint, black on the hover teal is 4.98:1, and white on the hover teal is only 4.22:1, so button text turns black on hover. Teal against body text is 1.83:1, which is why links are underlined. Change a colour and measure the pairs again.
 
- ## Typography
+## Typography
 
 | Use | Style |
 | --- | --- |
@@ -40,33 +40,32 @@ Contrast, as stated in the stylesheet: every text pair reaches 4.5:1 and every i
 Bold is used as it is now. Do not add more weights without a reason.
 
 
-Bold is used as it is now. Do not add more weights without a reason
 
- ## Shapes
+## Shapes
 
-- Square edges (`border-radius:0`) on buttons, fields and tablles.No shadows and no gradients.
+- Square edges (`border-radius:0`) on buttons, fields and tables.No shadows and no gradients.
 - Buttons and fields have a 2px border.
-- Panels, cards and message use the light colour as backgrund. Messages have a 6px left border, teal for a status and red for an alert.
+- Panels, cards and message use the light colour as background. Messages have a 6px left border, teal for a status and red for an alert.
 - the focus ring is 3px black, and light inside the header and footer.
 
 
- ## Underlines in the menu
+## Underlines in the menu
 
 Links are underlined everywhere, the menu included: bold, 1px underline, 3px on hover. The underlines 
 on the desktop menu therefore already follow into the mobile menu, so the site looks the same on desktop and mobile.
 
- ## Components Desktop
+## Components Desktop
 
 | Component | States | Notes |
 | --- | --- | --- |
 | Header | One | Teal. Logo in the center, the menu in one centred row under it|
-| Menu | Always open | Ten links in one row that wraps the screen is narrow|
-| Footer | One | Teal, blod assocasion name and a link to administration. Left as it is |
-| Buttons | Rest, hover, focus | Teals with light text. Secondary: white with teal text|
+| Menu | Always open | Ten links in one row that wraps when screen is narrow|
+| Footer | One | Teal, bold assocasion name and a link to administration. Left as it is |
+| Buttons | Rest, hover, focus | Teal with light text. Secondary: white with teal text|
 | Forms | buttons, cards, error messages | TBD | 
 
 
- ## Components Mobile
+## Components Mobile
 | Component| States| Notes|
 | ---| ---| --- |
 | Header | One | Logo centred, 4.5 rem high |
@@ -77,7 +76,7 @@ on the desktop menu therefore already follow into the mobile menu, so the site l
 
 
 
- ## Open
+## Open
 
 
 - Whether the menu button should show a hamburger and a cross instead of the word "Meny". The old site uses white icons without a border, `#ffffff` on the teal, and a dark side panel `#21282d` for the open menu. The code has neither.
@@ -85,7 +84,7 @@ on the desktop menu therefore already follow into the mobile menu, so the site l
 - Whether bold should change. The team decides.
 - Whether the product owner wants the guide as a task of its own. It is not a requirement.
  
- ## Brand/UI
+## Brand/UI
 
 The logo exists already from the old site, and the application uses it at `/img/logo-negative.png`. Source files: [design/old-site/assets/brand](../../../design/old-site/assets/brand/)
 
@@ -122,7 +121,7 @@ Renderings of the header as it is on `main`, made from the real stylesheet and h
 
 ![Desktop header](../img/desktop.png)
 
- ## Sources
+## Sources
 
 | Claim | Source |
 | --- | --- |
@@ -135,4 +134,4 @@ Renderings of the header as it is on `main`, made from the real stylesheet and h
 | Old site's menu button, icons and drawer colours | Screenshots of the old site, 2026-10-16, sampled by an agent. They are not stored in the repository |
 | The old site's logo image, its size and link | Page source of [Föreningen byter hemsida – Teater i Huskvarna](https://teaterihuskvarna.se/news/foreningen-byter-hemsida/), fetched 2026-10-15 |
 | Logo wanted centred with its text, recognisable old style, originals come with the WordPress credentials | [Meeting 1](../../meetings/2026-09-24-meeting-1.md) (C20, C21) and [meeting 2](../../meetings/2026-09-30-meeting-2.md) (C24) |
-| Terms such as member page and login | [GLOSSARY.md](../../../GLOSSARY.md) |rms such as member page and login | [GLOSSARY.md](../../../GLOSSARY.md) |
+| Terms such as member page and login | [GLOSSARY.md](../../../GLOSSARY.md) |
