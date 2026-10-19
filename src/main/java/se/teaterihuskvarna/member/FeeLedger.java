@@ -55,9 +55,10 @@ class FeeLedger {
     }
 
     /// @param member a member
+    /// @param email the address of the member's account, or null when the member has no account
     /// @return one status per year the member or their household has a payment
     ///         for, and this year, newest first
-    List<FeeStatus> history(Member member) {
+    List<FeeStatus> history(Member member, @Nullable String email) {
         Map<Integer, Fee> own = new HashMap<>();
         for (Fee fee : fees.findByMemberId(member.getId())) {
             own.put(fee.getYear(), fee);
@@ -75,20 +76,22 @@ class FeeLedger {
         years.addAll(household.keySet());
         List<FeeStatus> statuses = new ArrayList<>();
         for (int year : years) {
-            statuses.add(status(year, own.get(year), household.get(year), member.getFullName()));
+            statuses.add(status(year, own.get(year), household.get(year), email));
         }
         return statuses;
     }
 
-    private FeeStatus status(int year, @Nullable Fee own, @Nullable Instant household, String fullName) {
+    private FeeStatus status(int year, @Nullable Fee own, @Nullable Instant household, @Nullable String email) {
         if (own != null) {
             return new FeeStatus(year, own.getPaidAt(), own.getKind(), false, null);
         }
         if (household != null) {
             return new FeeStatus(year, household, FeeKind.HOUSEHOLD, true, null);
         }
-        return new FeeStatus(year, null, null, false, new PaymentInstruction(association.bankgiro(),
-                association.feeIndividualOre(), association.feeHouseholdOre(), fullName));
+        PaymentInstruction payment = email == null ? null
+                : new PaymentInstruction(association.bankgiro(), association.feeIndividualOre(),
+                association.feeHouseholdOre(), email);
+        return new FeeStatus(year, null, null, false, payment);
     }
 
     private static Instant earlier(Instant first, Instant second) {
@@ -110,10 +113,10 @@ class FeeLedger {
 
         /// @param member a member, whose household must be loaded or a proxy
         /// @return the member's status for this year
-        FeeStatus status(Member member) {
+        FeeStatus status(Member member, @Nullable String email) {
             Household household = member.getHousehold();
             Instant householdPaid = household == null ? null : households.get(household.getId());
-            return FeeLedger.this.status(value, own.get(member.getId()), householdPaid, member.getFullName());
+            return FeeLedger.this.status(value, own.get(member.getId()), householdPaid, email);
         }
     }
 }
