@@ -22,10 +22,10 @@ Nothing else. Java and Maven are not installed on your machine: the build runs i
 
 ### Logging in
 
-Nobody has a password. Logging in works by a link sent by mail, and locally every mail goes to Mailpit instead of a real inbox.
+Nobody has a password. The development index offers immediate login for any listed member or administrator. This shortcut exists only under the `dev` profile. Normal login uses an email link, and locally every mail goes to Mailpit instead of a real inbox.
 
-1. On [http://localhost:8000/dev](http://localhost:8000/dev), which is the development index, pick a seeded member or administrator and press its button. The application mails that address a login link.
-2. Open [http://localhost:8000/mailpit/](http://localhost:8000/mailpit/), open the newest mail and follow the link.
+1. On [http://localhost:8000/dev](http://localhost:8000/dev), pick a member or administrator and press `Log in now` to open that account's page immediately.
+2. To test normal login instead, press `Send link`, open [Mailpit](http://localhost:8000/mailpit/), then open the newest mail and follow its link.
 
 The seeded people are invented, under `.test` addresses that cannot reach anyone. Karin Holmberg has both a member account and an administrator account on the same address, which is the case the two login pages (`/logga-in` and `/admin/logga-in`) exist for.
 
