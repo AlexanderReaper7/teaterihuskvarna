@@ -25,6 +25,8 @@
 @param String notice
 !{Instant paidAt = member.fee().paidAt();}
 !{PaymentInstruction payment = member.fee().payment();}
+!{String feeBadgeKey= paidAt != null ? "fee.badge.paid" : "fee.badge.unpaid";}
+!{String feeBadgeClass= paidAt != null ? "badge badge-paid" : "badge badge-unpaid";}
 @template.member.layout(copy = copy, title = copy.text("member.heading"), content = @`
     <h1>${copy.text("member.heading")}</h1>
     @if(offerPasskey)
@@ -53,19 +55,22 @@
     <p><a href="/medlem/kontaktuppgifter">${copy.text("member.contact.edit")}</a></p>
     <p>${copy.text("member.contact.emailNote")}</p>
 
-    <h2>${copy.text("fee.heading", String.valueOf(member.fee().year()))}</h2>
-    @if(paidAt != null)
-        <p>
-            ${copy.text("fee.paid", copy.date(paidAt))}
-            @if(member.fee().throughHousehold())
-                ${copy.text("fee.throughHousehold")}
-            @endif
-        </p>
-    @elseif(payment != null)
-        <p>${copy.text("fee.unpaid")}</p>
-        <p>${copy.text("fee.howToPay", copy.kronor(payment.individualOre()),
+    <h2>${copy.text("application.fee.heading", String.valueOf(member.fee().year()))}
+
+            <span class="${feeBadgeClass}">${copy.text("feeBadgeKey")}</span>
+    </h2>
+    @if(paidAt !=null)
+    <p>
+        ${copy.text("fee.paid", copy.date(paidAt))}
+        @if(member.fee().throughHousehold())
+            ${copy.text("fee.throughHousehold")}
+        @endif
+    </p>
+@elseif(payment != null)
+    <p>${copy.text("fee.unpaid")}</p>
+    <p>${copy.text("fee.howToPay", copy.kronor(payment.individualOre()),
                 copy.kronor(payment.householdOre()), payment.bankgiro())}</p>
-        <p>${copy.text("fee.message", payment.message())}</p>
+    <p>${copy.text("fee.message", payment.message())}</p>
     @endif
 
     <h2>${copy.text("member.household")}</h2>
