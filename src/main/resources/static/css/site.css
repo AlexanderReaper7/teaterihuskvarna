@@ -528,6 +528,24 @@ tbody tr:nth-child(even) {
 td form {
   margin: 0;
 }
+/*=== badge paid & unpaid member status */
+.badge{
+  display: inline-block;
+  padding: 0.1rem 0.6rem;
+  border-radius: 1rem;
+  font-size: var(--size-body);
+  font-weight: var(--weight-link);
+  vertical-align: middle;
+}
+.badge-paid{
+  background: var(--color-primary);
+  color: var(--color-white);
+}
+.badge-unpaid{
+  background: var(--color-white);
+  color: var(--color-error);
+  border: 2px solid var(--color-error);
+}
 
 /* Fields beyond a one-line input: the offer description and the document
  * kind. Drawn the same as an input. */
