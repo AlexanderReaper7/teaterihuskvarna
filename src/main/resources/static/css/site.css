@@ -540,6 +540,7 @@ td form {
 .badge-paid{
   background: var(--color-primary);
   color: var(--color-white);
+  border: 2px solid var(--color-primary);
 }
 .badge-unpaid{
   background: var(--color-white);
