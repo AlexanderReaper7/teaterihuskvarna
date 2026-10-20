@@ -55,9 +55,9 @@
     <p><a href="/medlem/kontaktuppgifter">${copy.text("member.contact.edit")}</a></p>
     <p>${copy.text("member.contact.emailNote")}</p>
 
-    <h2>${copy.text("application.fee.heading", String.valueOf(member.fee().year()))}
+    <h2>${copy.text("fee.heading", String.valueOf(member.fee().year()))}
 
-            <span class="${feeBadgeClass}">${copy.text("feeBadgeKey")}</span>
+            <span class="${feeBadgeClass}">${copy.text(feeBadgeKey)}</span>
     </h2>
     @if(paidAt !=null)
     <p>
