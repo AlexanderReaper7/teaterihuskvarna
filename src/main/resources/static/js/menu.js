@@ -1,7 +1,7 @@
 // The header's menu button on a narrow screen. Without this script the button
 // stays hidden and the navigation stays open, so every link is still reachable.
 document.addEventListener("DOMContentLoaded", () => {
-    const button = document.querySelector(".menu-button");
+    const button = document.querySelector(".menu-button-toggle");
     const nav = document.getElementById("huvudmeny");
     if (!button || !nav) {
         return;

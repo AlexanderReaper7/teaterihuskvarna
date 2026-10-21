@@ -593,10 +593,14 @@ td button {
 
 
 /* Mobile header: the menu remains available when JavaScript is disabled. */
-.site-nav[hidden], .menu-button[hidden] { display: none; }
-.menu-button .menu-icon-close,
-.menu-button[aria-expanded="true"] .menu-icon-open { display: none; }
-.menu-button[aria-expanded="true"] .menu-icon-close { display: block; }
+.menu-button-toggle {
+  .menu-icon-close {
+    display: none;
+  }
+}
+.menu-button-toggle[aria-expanded="true"] .menu-icon-open { display: none; }
+.menu-button-toggle[aria-expanded="true"] .menu-icon-close { display: block; }
+
 @media (max-width: 767px) {
     .site-header {
      display: grid;
@@ -605,9 +609,9 @@ td button {
      padding: 0;
       text-align: left;
     }
-    .site-logo { min-width: 0; width: fit-content; margin: 12px var(--gutter); }
+   .site-logo { min-width: 0; width: fit-content; margin: 12px var(--gutter); }
    .site-header img { display: block; width: 62px; height: 59px; object-fit: contain; }
-   .menu-button {
+   .menu-button-toggle {
      display: grid;
      place-items: center;
       width: 48px;
@@ -619,7 +623,7 @@ td button {
      background: transparent;
       color: var(--color-on-primary);
     }
-    .menu-button:hover { background: color-mix(in srgb, var(--color-on-primary) 10%, transparent); }
+    .menu-button-toggle:hover { background: color-mix(in srgb, var(--color-on-primary) 10%, transparent); }
     .site-nav {
       grid-column: 1 / -1;
       width: 100%;

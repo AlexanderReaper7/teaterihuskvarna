@@ -4,6 +4,7 @@
 @param String title
 @param Content content
 @param boolean preview = false
+@param boolean expanded = true
 <!DOCTYPE html>
 <html lang="sv">
 <head>
@@ -25,9 +26,34 @@
 @endif
 <header class="site-header">
     <a href="/" class="site-logo"><img src="/img/logo-negative.png" width="1534" height="1444" alt="${copy.text("site.logo.alt")}"></a>
-    <button type="button" class="menu-button" aria-controls="huvudmeny" aria-expanded="false" aria-label="Öppna meny" data-label-open="Öppna meny" data-label-close="Stäng meny" hidden>
-               <svg class="menu-icon-open" src="design/new-site/menu-open.svg" width="28" height="28" viewBox="0 0 28 28" aria-hidden="true" focusable="false"><path d="M3 6h22M3 14h22M3 22h22" fill="none" stroke="currentColor" stroke-width="2"/></svg>
-                <svg class="menu-icon-close" src="design/new-site/menu-close.svg" width="28" height="28" viewBox="0 0 28 28" aria-hidden="true" focusable="false"><path d="m5 5 18 18M23 5 5 23" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+    <button type="button"
+            class="menu-button-toggle"
+            onclick="toggleMenu(this)"
+            aria-haspopup="true"
+            aria-label="Mobilmeny"
+            aria-expanded="${expanded ? "true" : "false"}">
+               <svg class="menu-icon-open"
+                    src="design/new-site/menu-open.svg"
+                    aria-hidden="true"
+                    width="24"
+                    height="24"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round">
+                   <path d="M4 6h1643 12h16M4 18h16" /></svg>
+                <svg class="menu-icon-close"
+                     src="design/new-site/menu-close.svg"
+                     aria-hidden="true"
+                     width="24"
+                     height="24"
+                     viewBox="0 0 24 24"
+                     fill="none"
+                     stroke="currentColor"
+                     stroke-width="2"
+                     stroke-linecap="round">
+                    <path d="M6 6l 12 12M18 6L6 18" /></svg>
           </button>
     <nav id="huvudmeny" class="site-nav" aria-label="${copy.text("nav.label")}">
         <ul>
