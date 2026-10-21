@@ -79,7 +79,7 @@ on the desktop menu therefore already follow into the mobile menu, so the site l
 ## Open
 
 
-- Whether the menu button should show a hamburger and a cross instead of the word "Meny". The old site uses white icons without a border, `#ffffff` on the teal, and a dark side panel `#21282d` for the open menu. The code has neither.
+- Whether the menu button should show a hamburger and a cross instead of the word "Meny". The old site uses white reusable html-component  without a border, `#ffffff` on the teal, and a dark side panel `#21282d` for the open menu. The code has neither.
 - Whether a person icon should lead to login. The code has none, and "Mina sidor" is the last link in the menu.
 - Whether bold should change. The team decides.
 - Whether the product owner wants the guide as a task of its own. It is not a requirement.
@@ -106,10 +106,16 @@ Icons exist already from the old site, in [design/old-site/assets/icons](../../.
 - [facebook.svg](../../../design/old-site/assets/icons/facebook.svg)
 - [instagram-square.svg](../../../design/old-site/assets/icons/instagram-square.svg)
 
+Icons have added in [design/new-site](../../../design/new-site).
+
+- [menu-open.svg](../../../design/new-site/menu-open.svg)
+- [menu-close.svg](../../../design/new-site/menu-close.svg)
+
 | Item | Today | Old site |
 | --- | --- | --- |
 | Menu button, closed | The word "Meny" in a bordered button | Three thin white lines, `#ffffff`, no border |
 | Menu button, open | The same button, `aria-expanded="true"` | A white cross, `#ffffff`, on a dimmed header |
+
 
 
 
