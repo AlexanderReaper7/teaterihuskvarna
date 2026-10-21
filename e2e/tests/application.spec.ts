@@ -56,7 +56,7 @@ test.describe("what works", () => {
     await confirm(page, link);
     await expect(page.getByRole("heading", { name: text("application.welcome.heading", "Åsa Öberg") }))
       .toBeVisible();
-    await expect(page.getByText(text("application.welcome.payment", "50 kr", "100 kr", "123-4567", "Åsa Öberg")))
+    await expect(page.getByText(text("application.welcome.payment", "50 kr", "100 kr", "123-4567", email)))
       .toBeVisible();
     await expect(page.getByText(text("application.welcome.login", email))).toBeVisible();
 

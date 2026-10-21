@@ -12,6 +12,7 @@
 @param List<LoginAccount> accounts
 @param RunningEnvironment environment
 @param SignedIn signedIn
+@param boolean loginFailed = false
 !{String schemaVersion = environment.schemaVersion();}
 !{RunningEnvironment.Commit commit = environment.commit();}
 !{java.time.Instant commitTime = commit == null ? null : commit.time();}
@@ -54,7 +55,10 @@
     </dl>
 
     <h2>Accounts that can log in</h2>
-    <p>Each button asks for a login link, as the login page would. The link arrives in <a href="${environment.mailpitUrl()}">Mailpit</a>.</p>
+    <p>Log in now opens the account's page immediately. Send link tests the normal email flow through <a href="${environment.mailpitUrl()}">Mailpit</a>.</p>
+    @if(loginFailed)
+        <p role="alert">That account can no longer log in. Choose an account from the current list.</p>
+    @endif
     <table>
         <thead>
             <tr>
@@ -62,6 +66,7 @@
                 <th scope="col">Email</th>
                 <th scope="col">Kind</th>
                 <th scope="col">Link</th>
+                <th scope="col">Immediate login</th>
             </tr>
         </thead>
         <tbody>
@@ -75,6 +80,14 @@
                             @template.tag.csrf(csrf = csrf)
                             <input type="hidden" name="email" value="${account.email()}">
                             <button type="submit">Send link</button>
+                        </form>
+                    </td>
+                    <td>
+                        <form method="post" action="/dev/login">
+                            @template.tag.csrf(csrf = csrf)
+                            <input type="hidden" name="kind" value="${account.kind().name()}">
+                            <input type="hidden" name="email" value="${account.email()}">
+                            <button type="submit">Log in now</button>
                         </form>
                     </td>
                 </tr>

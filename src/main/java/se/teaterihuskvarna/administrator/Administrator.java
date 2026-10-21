@@ -27,7 +27,7 @@ public class Administrator {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private @Nullable Long id;
 
     @Column(name = "email", nullable = false, length = 254)
     private String email;
@@ -39,13 +39,13 @@ public class Administrator {
     private Instant createdAt = Instant.now();
 
     @Column(name = "created_by")
-    private Long createdBy;
+    private @Nullable Long createdBy;
 
     @Column(name = "removed_at")
-    private Instant removedAt;
+    private @Nullable Instant removedAt;
 
     @Column(name = "removed_by")
-    private Long removedBy;
+    private @Nullable Long removedBy;
 
     protected Administrator() {
         // for JPA
@@ -60,7 +60,12 @@ public class Administrator {
         this.createdBy = createdBy;
     }
 
+    /// @return the ID assigned by Hibernate
+    /// @throws IllegalStateException if this entity has not been persisted
     public Long getId() {
+        if (id == null) {
+            throw new IllegalStateException("Entity has not been persisted");
+        }
         return id;
     }
 
