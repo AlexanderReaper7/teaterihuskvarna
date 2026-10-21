@@ -28,8 +28,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7.0.1
-      - name: Tests and the three static analysis gates
+      - name: Tests and static analysis
         run: sh scripts/maven.sh verify
+      - name: Prove nullability compiler enforcement
+        run: sh scripts/check-nullability.sh
 
   image:
     runs-on: ubuntu-latest

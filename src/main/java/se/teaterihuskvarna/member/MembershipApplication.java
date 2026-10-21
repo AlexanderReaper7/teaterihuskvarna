@@ -8,6 +8,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.Instant;
+import org.jspecify.annotations.Nullable;
 
 /// A Bli medlem submission nobody has confirmed yet. It becomes a [Member] with
 /// an [Account] when the applicant follows the link in the confirmation mail,
@@ -28,7 +29,7 @@ public class MembershipApplication {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private @Nullable Long id;
 
     @Column(name = "full_name", nullable = false, length = 100)
     private String fullName;
@@ -37,7 +38,7 @@ public class MembershipApplication {
     private String email;
 
     @Embedded
-    private ContactDetails contact;
+    private @Nullable ContactDetails contact;
 
     @Column(name = "token_hash", nullable = false, length = 64)
     private String tokenHash;
@@ -52,7 +53,12 @@ public class MembershipApplication {
         // for JPA
     }
 
+    /// @return the ID assigned by Hibernate
+    /// @throws IllegalStateException if this entity has not been persisted
     public Long getId() {
+        if (id == null) {
+            throw new IllegalStateException("Entity has not been persisted");
+        }
         return id;
     }
 

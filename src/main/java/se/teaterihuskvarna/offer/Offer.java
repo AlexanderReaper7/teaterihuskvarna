@@ -19,7 +19,7 @@ public class Offer {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private @Nullable Long id;
 
     @Column(name = "title", nullable = false, length = 200)
     private String title;
@@ -28,13 +28,13 @@ public class Offer {
     private String description;
 
     @Column(name = "starts_at")
-    private Instant startsAt;
+    private @Nullable Instant startsAt;
 
     @Column(name = "registration_closes_at")
-    private Instant registrationClosesAt;
+    private @Nullable Instant registrationClosesAt;
 
     @Column(name = "capacity")
-    private Integer capacity;
+    private @Nullable Integer capacity;
 
     @Column(name = "published", nullable = false)
     private boolean published;
@@ -61,7 +61,12 @@ public class Offer {
         this.capacity = values.capacity();
     }
 
+    /// @return the ID assigned by Hibernate
+    /// @throws IllegalStateException if this entity has not been persisted
     public Long getId() {
+        if (id == null) {
+            throw new IllegalStateException("Entity has not been persisted");
+        }
         return id;
     }
 

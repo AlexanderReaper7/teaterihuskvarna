@@ -102,6 +102,8 @@ Every member with an account is a contact on one Brevo list, updated on every ch
 
 The register stores name, phone, address and household for every member, and an email address for each account. A member added to a household has no account, and so no email address, until they accept an invitation sent by an administrator or by a member with an account in that household. Mailings therefore reach only members with an account. The register does not store a personal identity number. Development and test environments use invented data.
 
+A member without a household can create one. The creator becomes its first owner. Only the current owner can rename it, add people, edit its members' contact details and remove other people, even when those people have accounts. Administrators can change ownership. Any member can leave; an owner first chooses a successor with an account, or administrators take over when no account holder remains. Removal preserves membership and login access; the existing fee rules determine coverage afterwards. Login email changes remain administrator-only. The user's 2026-09-30 and 2026-10-01 decisions are in [0025](decisions/0025-member-register-in-the-application.md).
+
 The current fee rule is:
 
 - one fee record belongs to one member account and one year;
@@ -111,6 +113,8 @@ The current fee rule is:
 - a member without a household has no household identifier;
 - amounts use integer öre rather than a fixed 50 or 100 kr value;
 - the record identifies the administrator who marked it paid.
+
+A member pays the fee by bankgiro with their account's email address as the payment message, because the email address is unique and a name is not. Only members with an account pay. A member without an account is covered through the household fee and is shown no payment instruction. Decided by the user on 2026-10-09. Whether banks let a payer type an email address in the message is not established, see [research/bankgiro-payment-message.md](research/bankgiro-payment-message.md).
 
 Before building reconciliation, compare this rule with real anonymised bankgiro examples. A payer's name may differ from the covered member's name. If the examples break the rule, update the model and record the reason before implementation.
 

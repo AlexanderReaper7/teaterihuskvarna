@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.List;
 import java.util.Optional;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import se.teaterihuskvarna.IntegrationTestSupport;
@@ -29,7 +30,8 @@ class MemberRegisterSchemaIT extends IntegrationTestSupport {
 
     @Test
     void migrationsCreateEveryTable() {
-        List<String> tables = jdbc.sql("SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'")
+        List<@Nullable String> tables = jdbc.sql(
+                "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'")
                 .query(String.class)
                 .list();
 
