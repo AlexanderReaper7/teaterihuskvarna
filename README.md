@@ -22,10 +22,10 @@ Nothing else. Java and Maven are not installed on your machine: the build runs i
 
 ### Logging in
 
-Nobody has a password. Logging in works by a link sent by mail, and locally every mail goes to Mailpit instead of a real inbox.
+Nobody has a password. The development index offers immediate login for any listed member or administrator. This shortcut exists only under the `dev` profile. Normal login uses an email link, and locally every mail goes to Mailpit instead of a real inbox.
 
-1. On [http://localhost:8000/dev](http://localhost:8000/dev), which is the development index, pick a seeded member or administrator and press its button. The application mails that address a login link.
-2. Open [http://localhost:8000/mailpit/](http://localhost:8000/mailpit/), open the newest mail and follow the link.
+1. On [http://localhost:8000/dev](http://localhost:8000/dev), pick a member or administrator and press `Log in now` to open that account's page immediately.
+2. To test normal login instead, press `Send link`, open [Mailpit](http://localhost:8000/mailpit/), then open the newest mail and follow its link.
 
 The seeded people are invented, under `.test` addresses that cannot reach anyone. Karin Holmberg has both a member account and an administrator account on the same address, which is the case the two login pages (`/logga-in` and `/admin/logga-in`) exist for.
 
@@ -35,7 +35,7 @@ Start at [the public home](http://localhost:8000/). Its menu connects the calend
 
 Use the development index and [Mailpit](http://localhost:8000/mailpit/) to sign in with an invented account in the same browser that requested the link.
 
-- [Member overview](http://localhost:8000/medlem) connects contact details, fee status and payment instructions, household invitations, offers and registrations, documents and volunteer bookings.
+- [Member overview](http://localhost:8000/medlem) connects contact details, fee status and payment instructions, household creation and management, invitations, offers and registrations, documents and volunteer bookings. The household owner can edit or remove people, including people with accounts. Members can leave; an owner first chooses a successor with an account, or administrators take over when none remains. Administrators can change the owner. Removal preserves membership and accounts.
 - [Administrator overview](http://localhost:8000/admin) connects the member register, household management, fee marking, CSV exports, offers and registrations, documents, volunteer shifts and mailings. It also manages administrator accounts and links to Sanity for editing public content and Brevo for recipient groups and campaigns. Sanity links use `SANITY_STUDIO_URL`; without a configured address the pages explain that the editor is not connected and link to [Sanity's project dashboard](https://www.sanity.io/manage).
 
 Public content comes from the development Sanity dataset. Login and invitation mail goes to Mailpit. Brevo contact updates and campaign drafts use an in-memory fake by default, so the development stack can demonstrate preparing a mailing but does not send a real campaign. The [local stack](#the-local-stack) section describes the Sanity connection and switching to a real Brevo account.
@@ -173,11 +173,13 @@ CI runs the suite only when started by hand: `gh workflow run e2e.yml`, or "Run 
 
 ## Static analysis
 
+NullAway checks nullability during production and test compilation. Every Java package declares `@NullMarked`, so references are non-null unless annotated `@Nullable`. Unsafe null use fails the build, and new packages must declare a default. Run `sh scripts/check-nullability.sh` to prove the compiler rejects unsafe fixtures using the actual build configuration ([0027](docs/decisions/0027-compile-time-nullability.md)).
+
 Checkstyle, SpotBugs and PMD all fail the build ([0013](docs/decisions/0013-three-static-analysis-gates.md)).
 Checkstyle is bound to `validate`, so a style violation stops the build before
 anything compiles and `docker build` runs it too. SpotBugs and PMD need bytecode
 and run at `verify`. The `verify` command above is the one that runs all three;
-`./mvnw test` runs only Checkstyle.
+`./mvnw test` runs Checkstyle and the nullability compiler checks.
 
 Doc comments are `///` Markdown (JEP 467). Checkstyle rejects `/** */`, but it
 cannot read what is inside a `///` comment, so `@param` and `@return` are a
@@ -249,4 +251,6 @@ checks. CI runs it; see [.github/workflows/docs.yml](.github/workflows/docs.yml)
 | [`docs/requirements.md`](docs/requirements.md) | What the system has to do, by requirement id |
 | [`docs/meetings/`](docs/meetings/) | One document per meeting, with its questions and answers |
 | [`docs/onboarding.md`](docs/onboarding.md) | How the team works, its meetings and the Kanban board, for someone who has never used one |
+| [`docs/runbook.md`](docs/runbook.md) | How to back up the database, check that a backup restores and restore after data loss ([0007](docs/decisions/0007-postgres-in-a-container.md)) |
+| [`scripts/backup.sh`](scripts/backup.sh), [`scripts/restore-check.sh`](scripts/restore-check.sh) | Dump the database and prove the dump restores |
 | [`e2e/`](e2e/) | The Playwright suite, its compose file and [`run.sh`](e2e/run.sh) ([0017](docs/decisions/0017-playwright-e2e-in-docker.md)) |

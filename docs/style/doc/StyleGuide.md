@@ -9,7 +9,7 @@ description: what the site header looks like, by colours, typography, shapes, co
 This guide is written by an agent and updated by the assigned team member, and is a default, not a decision. Nothing here is a decision by the user or the product owner. The values were read from the stylesheet and the header template on `main` (commit `8974923`), so the stylesheet is the source of truth: [site.css](../../../src/main/resources/static/css/site.css), [layout.jte](../../../src/main/jte/layout.jte) and [menu.js](../../../src/main/resources/static/js/menu.js). Rows marked TBD are not known yet.
 
 No requirement in [requirements.md](../../requirements.md) asks for this page. R006 #9 in that file ("Fungerar på mobil, tillgänglighet enligt WCAG 2.1 AA") is the nearest one, and it sets the contrast rules below. The same rule is in [projektplan.md](../../projektplan.md), section "Accessibility needs automated and manual checks". See [Sources](#sources) for where every other claim comes from.
- 
+
 ## Colours
 
 The palette is named by role in `:root` of the stylesheet ([site.css](../../../src/main/resources/static/css/site.css)). Orange `#ee6810` from the old site is dropped on purpose, because it reaches only 3.17:1 on white and 1.96:1 on teal.
@@ -39,33 +39,29 @@ Contrast, as stated in the stylesheet: every text pair reaches 4.5:1 and every i
 
 Bold is used as it is now. Do not add more weights without a reason.
 
-
-
 ## Shapes
 
-- Square edges (`border-radius:0`) on buttons, fields and tables.No shadows and no gradients.
+- Square edges (`border-radius:0`) on buttons, fields and tables. No shadows and no gradients.
 - Buttons and fields have a 2px border.
-- Panels, cards and message use the light colour as background. Messages have a 6px left border, teal for a status and red for an alert.
-- the focus ring is 3px black, and light inside the header and footer.
-
+- Panels, cards and messages use the light colour as background. Messages have a 6px left border, teal for a status and red for an alert.
+- The focus ring is 3px black, and light inside the header and footer.
 
 ## Underlines in the menu
 
-Links are underlined everywhere, the menu included: bold, 1px underline, 3px on hover. The underlines 
-on the desktop menu therefore already follow into the mobile menu, so the site looks the same on desktop and mobile.
+Links are underlined everywhere, the menu included: bold, 1px underline, 3px on hover. The underlines on the desktop menu therefore already follow into the mobile menu, so the site looks the same on desktop and mobile.
 
 ## Components Desktop
 
 | Component | States | Notes |
 | --- | --- | --- |
-| Header | One | Teal. Logo in the center, the menu in one centred row under it|
-| Menu | Always open | Ten links in one row that wraps when screen is narrow|
-| Footer | One | Teal, bold assocasion name and a link to administration. Left as it is |
-| Buttons | Rest, hover, focus | Teal with light text. Secondary: white with teal text|
-| Forms | buttons, cards, error messages | TBD | 
-
+| Header | One | Teal. Logo in the center, the menu in one centred row under it |
+| Menu | Always open | Ten links in one row that wraps when the screen is narrow |
+| Footer | One | Teal, bold association name and a link to administration. Left as it is |
+| Buttons | Rest, hover, focus | Teal with light text. Secondary: white with teal text |
+| Forms | buttons, cards, error messages | TBD |
 
 ## Components Mobile
+
 | Component| States| Notes|
 | ---| ---| --- |
 | Header | One | Logo centred, 4.5 rem high |
@@ -74,16 +70,13 @@ on the desktop menu therefore already follow into the mobile menu, so the site l
 | Footer | One | Left as it is on the old site |
 | Forms, buttons, cards, messages | As on desktop | Gutter 1.25 rem instead of 1.5 rem |
 
-
-
 ## Open
 
-
-- Whether the menu button should show a hamburger and a cross instead of the word "Meny". The old site uses white reusable html-component  without a border, `#ffffff` on the teal, and a dark side panel `#21282d` for the open menu. The code has neither.
+- Whether the menu button should show a hamburger and a cross instead of the word "Meny". The old site uses white icons without a border, `#ffffff` on the teal, and a dark side panel `#21282d` for the open menu. The code has neither.
 - Whether a person icon should lead to login. The code has none, and "Mina sidor" is the last link in the menu.
 - Whether bold should change. The team decides.
 - Whether the product owner wants the guide as a task of its own. It is not a requirement.
- 
+
 ## Brand/UI
 
 The logo exists already from the old site, and the application uses it at `/img/logo-negative.png`. Source files: [design/old-site/assets/brand](../../../design/old-site/assets/brand/)
@@ -91,14 +84,13 @@ The logo exists already from the old site, and the application uses it at `/img/
 - ![favicon](../../../design/old-site/assets/brand/favicon.png)
 - ![jatten-vist](../../../design/old-site/assets/brand/jatten-vist.png)
 - ![logo-negative](../../../design/old-site/assets/brand/logo-negative.png)
- 
 
 | Item | In the code |
 | --- | --- |
 | Logo | [logo-negative.png](../../../src/main/resources/static/img/logo-negative.png), 1534 by 1444 pixels, white on teal, with its own lettering ("Föreningen Teater i Huskvarna"). Centred, 6 rem high on desktop and 4.5 rem on mobile, `width: auto`. A link to the start page with the alt text "Föreningen Teater i Huskvarna, till startsidan" |
 | Sharpness | A raster file cannot be scaled up or recoloured, so keep its natural proportions and prefer a vector file when the originals arrive from the association |
 
- ## Icons/UX
+## Icons/UX
 
 Icons exist already from the old site, in [design/old-site/assets/icons](../../../design/old-site/assets/icons/). The application has no icons in the header today.
 
@@ -106,18 +98,10 @@ Icons exist already from the old site, in [design/old-site/assets/icons](../../.
 - [facebook.svg](../../../design/old-site/assets/icons/facebook.svg)
 - [instagram-square.svg](../../../design/old-site/assets/icons/instagram-square.svg)
 
-Icons have added in [design/new-site](../../../design/new-site).
-
-- [menu-open.svg](../../../design/new-site/menu-open.svg)
-- [menu-close.svg](../../../design/new-site/menu-close.svg)
-
 | Item | Today | Old site |
 | --- | --- | --- |
 | Menu button, closed | The word "Meny" in a bordered button | Three thin white lines, `#ffffff`, no border |
 | Menu button, open | The same button, `aria-expanded="true"` | A white cross, `#ffffff`, on a dimmed header |
-
-
-
 
 ## Preview
 

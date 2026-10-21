@@ -14,6 +14,7 @@ import java.net.URI;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpMethod;
@@ -289,7 +290,7 @@ class HttpBrevoTest {
         }
     }
 
-    private static BrevoSettings settings(String key, Long folder, Long testList) {
+    private static BrevoSettings settings(String key, @Nullable Long folder, @Nullable Long testList) {
         return new BrevoSettings(BrevoSettings.Api.HTTP, key, URI.create(API), folder, testList,
                 "Teater i Huskvarna", "utskick@example.test");
     }
