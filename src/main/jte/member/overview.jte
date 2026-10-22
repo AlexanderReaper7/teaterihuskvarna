@@ -53,7 +53,8 @@
     <p><a href="/medlem/kontaktuppgifter">${copy.text("member.contact.edit")}</a></p>
     <p>${copy.text("member.contact.emailNote")}</p>
 
-    <h2>${copy.text("fee.heading", String.valueOf(member.fee().year()))}</h2>
+    <h2>${copy.text("fee.heading", String.valueOf(member.fee().year()))}
+        @template.tag.feeBadge(copy = copy, paid = paidAt != null)</h2>
     @if(paidAt != null)
         <p>
             ${copy.text("fee.paid", copy.date(paidAt))}
