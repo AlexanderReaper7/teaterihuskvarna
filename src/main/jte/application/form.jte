@@ -3,12 +3,16 @@
 @import se.teaterihuskvarna.web.Copy
 @import se.teaterihuskvarna.web.CsrfField
 @import se.teaterihuskvarna.web.FieldErrors
+@import java.time.Instant
+@import se.teaterihuskvarna.member.MemberDetails
 @param Copy copy
 @param CsrfField csrf
 @param boolean stale
 @param ApplicationForm form
 @param FieldErrors errors
 @param AssociationSettings fees
+@param MemberDetails member
+!{Instant paidAt = member.fee().paidAt();}
 @template.layout(copy = copy, title = copy.text("application.heading"), content = @`
     <h1>${copy.text("application.heading")}</h1>
     <p>${copy.text("application.pitch")}</p>
@@ -28,6 +32,8 @@
     @endif
     @template.tag.errors(copy = copy, errors = errors)
     <form method="post" action="/bli-medlem">
+        <h2>${copy.text("fee.heading", String.valueOf(member.fee().year()))}
+            @templete.tag.feebadge(copy = copy, paid = paidAt ! = null)</h2>
         @template.tag.csrf(csrf = csrf)
         @template.tag.field(name = "fullName", label = copy.text("application.form.fullName"), type = "text",
                 autocomplete = "name", value = form.fullName(), error = errors.message("fullName"), required = true)
