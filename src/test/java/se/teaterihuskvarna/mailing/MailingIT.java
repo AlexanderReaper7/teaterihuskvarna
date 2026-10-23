@@ -1,5 +1,6 @@
 package se.teaterihuskvarna.mailing;
 
+import static java.util.Objects.requireNonNull;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.not;
@@ -150,7 +151,7 @@ class MailingIT extends IntegrationTestSupport {
         assertThat(jdbc.sql("SELECT created_by FROM mailing").query(Long.class).single())
                 .isEqualTo(firstAdministratorId());
 
-        mockMvc.perform(get(locationOf(result)).with(asAdministrator()))
+        mockMvc.perform(get(requireNonNull(locationOf(result))).with(asAdministrator()))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("Utkast")))
                 .andExpect(content().string(containsString("Alla medlemmar med konto")));

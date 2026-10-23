@@ -1,5 +1,6 @@
 package se.teaterihuskvarna.login;
 
+import static java.util.Objects.requireNonNull;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
@@ -335,7 +336,7 @@ class DeviceIT extends IntegrationTestSupport {
 
     private static <S extends Session> void setEnd(FindByIndexNameSessionRepository<S> repository, String sessionId,
             @Nullable Instant endsAt) {
-        S session = repository.findById(sessionId);
+        S session = requireNonNull(repository.findById(sessionId));
         if (endsAt == null) {
             session.removeAttribute(LoginSession.ENDS_AT);
         } else {

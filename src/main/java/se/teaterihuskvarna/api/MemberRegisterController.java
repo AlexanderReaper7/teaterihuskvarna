@@ -22,6 +22,7 @@ import se.teaterihuskvarna.login.SignedIn;
 import se.teaterihuskvarna.member.FeeMark;
 import se.teaterihuskvarna.member.FeeService;
 import se.teaterihuskvarna.member.HouseholdDetails;
+import se.teaterihuskvarna.member.HouseholdOwnerForm;
 import se.teaterihuskvarna.member.HouseholdService;
 import se.teaterihuskvarna.member.InvitationRequest;
 import se.teaterihuskvarna.member.InvitationService;
@@ -127,6 +128,14 @@ public class MemberRegisterController {
     @ResponseStatus(HttpStatus.CREATED)
     public HouseholdDetails createHousehold(@RequestBody NewHousehold form) {
         return households.create(form);
+    }
+
+    /// @param id the household
+    /// @param form its new member owner, or administrator management
+    /// @return the updated household
+    @PutMapping("/api/admin/households/{id}/owner")
+    public HouseholdDetails changeHouseholdOwner(@PathVariable long id, @RequestBody HouseholdOwnerForm form) {
+        return households.changeOwner(id, form);
     }
 
     /// @return the whole register as a CSV download, as `/admin/medlemmar.csv` gives it
