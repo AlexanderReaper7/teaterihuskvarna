@@ -12,6 +12,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.time.Duration;
+import java.time.Year;
 import java.util.List;
 import java.util.Map;
 import org.jspecify.annotations.Nullable;
@@ -96,6 +97,8 @@ class MembershipApplicationIT extends IntegrationTestSupport {
 
         mockMvc.perform(post(CONFIRMATION).param("token", token).with(csrf()))
                 .andExpect(status().isOk())
+                .andExpect(content().string(containsString("Medlemsavgift " + Year.now(FeeLedger.SWEDEN).getValue())))
+                .andExpect(content().string(containsString("<span class=\"badge badge-unpaid\">Ej betald</span>")))
                 .andExpect(content().string(containsString(bankgiro)))
                 .andExpect(content().string(containsString("Årsavgiften är 50 kr för en person eller 100 kr för ett "
                         + "hushåll. Betala till bankgiro " + bankgiro + " och skriv " + KARIN + " i meddelandet.")));
@@ -258,7 +261,10 @@ class MembershipApplicationIT extends IntegrationTestSupport {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.fullName").value("Karin Karlsson"))
                 .andExpect(jsonPath("$.email").value(KARIN))
-                .andExpect(jsonPath("$.bankgiro").value(bankgiro));
+                .andExpect(jsonPath("$.bankgiro").value(bankgiro))
+                .andExpect(jsonPath("$.fee.year").value(Year.now(FeeLedger.SWEDEN).getValue()))
+                .andExpect(jsonPath("$.fee.paidAt").doesNotExist())
+                .andExpect(jsonPath("$.fee.payment.message").value(KARIN));
         mockMvc.perform(confirmByApi(token)).andExpect(status().isNotFound());
 
         assertThat(rowsIn("member")).isEqualTo(1);
