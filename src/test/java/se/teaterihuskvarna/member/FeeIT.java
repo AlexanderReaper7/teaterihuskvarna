@@ -77,6 +77,27 @@ class FeeIT extends MemberRegisterSupport {
                 .andExpect(jsonPath("$.fee.payment.message").value(JOHAN_EMAIL));
     }
 
+    /// The badge by the heading on /medlem (#78) says the status in words, and
+    /// follows the household rule. The span is matched whole because "Betald"
+    /// is also the start of the paid date line.
+    @Test
+    void theMemberPageShowsTheFeeStatusAsABadge() throws Exception {
+        String unpaid = "<span class=\"badge badge-unpaid\">Ej betald</span>";
+        String paid = "<span class=\"badge badge-paid\">Betald</span>";
+        mockMvc.perform(get("/medlem").with(asMember(johanAccount, JOHAN_EMAIL)))
+                .andExpect(content().string(containsString(unpaid)))
+                .andExpect(content().string(not(containsString(paid))))
+                .andExpect(content().string(containsString("123-4567")));
+
+        insertFee(erik, "HOUSEHOLD");
+        mockMvc.perform(get("/medlem").with(asMember(erikAccount, ERIK_EMAIL)))
+                .andExpect(content().string(containsString(paid)))
+                .andExpect(content().string(not(containsString(unpaid))));
+        mockMvc.perform(get("/medlem").with(asMember(mariaAccount, MARIA_EMAIL)))
+                .andExpect(content().string(containsString(paid)))
+                .andExpect(content().string(not(containsString(unpaid))));
+    }
+
     /// The amount comes from the settings when none is given, and the
     /// administrator who marked it is recorded.
     @Test
