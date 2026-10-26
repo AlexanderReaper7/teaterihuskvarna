@@ -166,9 +166,21 @@ body {
   list-style: none;
 }
 
-.menu-button {
-  margin-top: 0.75rem;
-  border-color: var(--color-on-primary);
+/* The menu button, shown only on a narrow screen and only by menu.js. Without
+ * the script the button keeps its hidden attribute and every link stays shown,
+ * so [hidden] has to win over the display the narrow layout gives both. */
+.menu-button[hidden],
+.site-nav[hidden] {
+  display: none;
+}
+
+.menu-button .menu-icon-close,
+.menu-button[aria-expanded="true"] .menu-icon-open {
+  display: none;
+}
+
+.menu-button[aria-expanded="true"] .menu-icon-close {
+  display: block;
 }
 
 /* Hidden until focused, for a keyboard user who wants to pass the menu. */
@@ -590,8 +602,69 @@ td button {
     --gutter: 1.25rem;
   }
 
+  /* Logo on the left, the menu button on the right, and the open menu as a
+   * full-width list below them. */
+  .site-header {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    padding: 0;
+    text-align: left;
+  }
+
+  .site-logo {
+    min-width: 0;
+    width: fit-content;
+    margin: 12px var(--gutter);
+  }
+
   .site-header img {
-    height: 4.5rem;
+    width: 62px;
+    height: 59px;
+    object-fit: contain;
+  }
+
+  .menu-button {
+    display: grid;
+    place-items: center;
+    width: 48px;
+    height: 48px;
+    margin: 0 var(--gutter) 0 0;
+    padding: 0;
+    border: 0;
+    border-radius: 4px;
+    background: transparent;
+    color: var(--color-on-primary);
+  }
+
+  .menu-button:hover {
+    background: color-mix(in srgb, var(--color-on-primary) 10%, transparent);
+  }
+
+  .site-nav {
+    grid-column: 1 / -1;
+    width: 100%;
+    border-top: 1px solid color-mix(in srgb, var(--color-on-primary) 25%, transparent);
+  }
+
+  .site-nav ul {
+    display: block;
+    margin: 0;
+    padding: 0;
+  }
+
+  .site-nav li + li {
+    border-top: 1px solid color-mix(in srgb, var(--color-on-primary) 25%, transparent);
+  }
+
+  .site-nav a {
+    display: block;
+    padding: 15px var(--gutter);
+    font-size: 20px;
+    line-height: 1.4;
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 6px;
   }
 
   main {
@@ -608,56 +681,3 @@ td button {
     padding: 0.5rem;
   }
 }
-
-
-
-/* Mobile header: the menu remains available when JavaScript is disabled. */
-.menu-button-toggle {
-  .menu-icon-close {
-    display: none;
-  }
-}
-.menu-button-toggle[aria-expanded="true"] .menu-icon-open { display: none; }
-.menu-button-toggle[aria-expanded="true"] .menu-icon-close { display: block; }
-
-@media (max-width: 767px) {
-    .site-header {
-     display: grid;
-     grid-template-columns: minmax(0, 1fr) auto;
-      align-items: center;
-     padding: 0;
-      text-align: left;
-    }
-   .site-logo { min-width: 0; width: fit-content; margin: 12px var(--gutter); }
-   .site-header img { display: block; width: 62px; height: 59px; object-fit: contain; }
-   .menu-button-toggle {
-     display: grid;
-     place-items: center;
-      width: 48px;
-      height: 48px;
-      margin: 0 var(--gutter) 0 0;
-     padding: 0;
-      border: 0;
-     border-radius: 4px;
-     background: transparent;
-      color: var(--color-on-primary);
-    }
-    .menu-button-toggle:hover { background: color-mix(in srgb, var(--color-on-primary) 10%, transparent); }
-    .site-nav {
-      grid-column: 1 / -1;
-      width: 100%;
-      border-top: 1px solid color-mix(in srgb, var(--color-on-primary) 25%, transparent);
-    }
-    .site-nav ul { display: block; margin: 0; padding: 0; }
-    .site-nav li + li { border-top: 1px solid color-mix(in srgb, var(--color-on-primary) 25%, transparent); }
-    .site-nav a {
-      display: block;
-      padding: 15px var(--gutter);
-      font-size: 20px;
-      line-height: 1.4;
-      text-decoration: underline;
-      text-decoration-thickness: 1px;
-      text-underline-offset: 6px;
-    }
-}
-
