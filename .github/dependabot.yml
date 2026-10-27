@@ -1,0 +1,80 @@
+# Weekly pull requests that raise pinned versions. Security updates come on
+# their own when an alert opens, whatever the schedule.
+#
+# Every pull request is labelled no-issue, which the pull request workflow
+# accepts in place of "Closes #N": docs/decisions/0020-pull-requests-and-merging.md.
+# Minor and patch updates are grouped per ecosystem, so a week brings a few
+# pull requests rather than one per artifact. A major update comes alone.
+#
+# A new release waits seven days before it is proposed, so that a hijacked
+# release is more likely found before it gets here. trivy-action's hijacked
+# tags of 2026-03-19 were replaced by a clean release the next day. Security
+# updates skip the wait.
+#
+# Versions Dependabot cannot see, and what keeps them in step:
+# - The Temurin tag in .vscode/tasks.json: scripts/check-pins.sh, run in CI.
+# - The Playwright image in e2e/run.sh: read from e2e/package.json.
+# - The Java version of the devcontainer image: by hand, see its comment.
+version: 2
+
+updates:
+  - package-ecosystem: maven
+    directory: /
+    schedule: { interval: weekly, day: monday }
+    cooldown: { default-days: 7 }
+    labels: [dependencies, no-issue]
+    groups:
+      # pmd-core and pmd-java are pinned ahead of the PMD plugin and must
+      # move together: docs/decisions/0013-three-static-analysis-gates.md.
+      pmd:
+        patterns: ["net.sourceforge.pmd:*"]
+      maven-minor-and-patch:
+        update-types: [minor, patch]
+
+  # The Dockerfile's two FROM lines, the JDK that builds and the JRE that runs,
+  # move together, or the image runs on a different Java than it was tested on.
+  - package-ecosystem: docker
+    directories: [/, /studio]
+    schedule: { interval: weekly, day: monday }
+    cooldown: { default-days: 7 }
+    labels: [dependencies, no-issue]
+    groups:
+      temurin:
+        patterns: [eclipse-temurin]
+      docker-minor-and-patch:
+        update-types: [minor, patch]
+
+  - package-ecosystem: docker-compose
+    directory: /
+    schedule: { interval: weekly, day: monday }
+    cooldown: { default-days: 7 }
+    labels: [dependencies, no-issue]
+    groups:
+      compose-minor-and-patch:
+        update-types: [minor, patch]
+
+  - package-ecosystem: npm
+    directories: [/e2e, /studio]
+    schedule: { interval: weekly, day: monday }
+    cooldown: { default-days: 7 }
+    labels: [dependencies, no-issue]
+    groups:
+      npm-minor-and-patch:
+        update-types: [minor, patch]
+
+  # Updates the commit hash of a pinned action together with its version
+  # comment.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule: { interval: weekly, day: monday }
+    cooldown: { default-days: 7 }
+    labels: [dependencies, no-issue]
+    groups:
+      actions-minor-and-patch:
+        update-types: [minor, patch]
+
+  - package-ecosystem: devcontainers
+    directory: /
+    schedule: { interval: weekly, day: monday }
+    cooldown: { default-days: 7 }
+    labels: [dependencies, no-issue]

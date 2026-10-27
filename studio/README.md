@@ -52,3 +52,16 @@ The application needs these in its `.env`, listed in [`.env.example`](../.env.ex
 ## Fields
 
 The schema's field names are the ones the application reads in [`ContentService.java`](../src/main/java/se/teaterihuskvarna/content/ContentService.java). Renaming a field here without renaming it there hides the field on the site. A new style or mark in [`blockContent.ts`](schemaTypes/blockContent.ts) needs the same in [`PortableText.java`](../src/main/java/se/teaterihuskvarna/content/PortableText.java).
+
+## Dependency overrides
+
+`overrides` in [`package.json`](package.json) raise four packages that Sanity's CLI pulls in at versions with known vulnerabilities. Upstream still pinned all four on 2026-10-26, so neither `npm update` nor Dependabot could raise them:
+
+| Package | Pulled in by | Pinned upstream | Override |
+|---|---|---|---|
+| `js-yaml` | `@vercel/frameworks` 3.29.0 | 3.13.1 | `^3.15.2` |
+| `smol-toml` | `@vercel/frameworks` 3.29.0 | 1.5.2 | `^1.9.1` |
+| `uuid` | `typeid-js` 1.2.0 | `^10.0.0` | `^11.1.1` |
+| `undici` | `@module-federation/dts-plugin` 2.9.2 | 7.29.1 | `^7.30.1` |
+
+Each override stays inside the major version the parent package uses: js-yaml 3 still has `safeLoad`, which `@vercel/frameworks` calls. Dependabot does not remove an override, so when one of the parents raises its own version, delete that entry and run `npm install` and `npm audit`.
