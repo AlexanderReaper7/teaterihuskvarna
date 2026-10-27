@@ -24,7 +24,7 @@ jobs:
         run: sh e2e/run.sh
       - name: Keep the report and the traces of failed tests
         if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@v7.0.1
+        uses: actions/upload-artifact@v7.0.2
         with:
           name: playwright-report
           path: |
