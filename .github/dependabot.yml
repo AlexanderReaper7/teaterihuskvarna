@@ -38,6 +38,11 @@ updates:
     schedule: { interval: weekly, day: monday }
     cooldown: { default-days: 7 }
     labels: [dependencies, no-issue]
+    # Java 25 is the LTS the system plan commits to. A new major Java is a
+    # decision for docs/projektplan.md, not a weekly bump.
+    ignore:
+      - dependency-name: eclipse-temurin
+        update-types: [version-update:semver-major]
     groups:
       temurin:
         patterns: [eclipse-temurin]
