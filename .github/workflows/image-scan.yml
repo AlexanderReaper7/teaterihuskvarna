@@ -1,0 +1,71 @@
+# Scans the runtime image for known vulnerabilities with Trivy: the Alpine
+# packages, the Temurin JRE and every jar inside application.jar. Dependabot
+# alerts see only what pom.xml declares, nothing inside the base image.
+#
+# A fixable CRITICAL or HIGH finding fails the check. An unfixed one does not,
+# because nobody can act on it and it would block every pull request.
+# Accepted exceptions are in .trivyignore.yaml, each with a reason and an
+# expiry date after which it fails the check again.
+#
+# The weekly run on main catches a new CVE in an image nobody changed. Every
+# run uploads its findings to the Security tab.
+#
+# A workflow of its own rather than a job in build.yml, so that build.yml keeps
+# its read-only token and the weekly run does not rerun the integration tests.
+name: image scan
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: "0 5 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  trivy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      # Uploading SARIF to code scanning. This job has no other write access.
+      security-events: write
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - name: Build the image
+        run: docker build --build-context git=.git -t teaterihuskvarna:${{ github.sha }} .
+
+      # Pinned to a commit, and Trivy itself to a version, not to a tag: on
+      # 2026-03-19 an attacker force-pushed 76 of trivy-action's 77 tags to code
+      # that stole CI secrets, and published a malicious Trivy v0.69.4
+      # (CVE-2026-33634). A tag can move; a commit hash cannot.
+      - name: Scan for the Security tab
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          version: v0.76.1
+          image-ref: teaterihuskvarna:${{ github.sha }}
+          trivyignores: .trivyignore.yaml
+          ignore-unfixed: true
+          format: sarif
+          output: trivy.sarif
+          exit-code: "0"
+      - name: Upload to code scanning
+        uses: github/codeql-action/upload-sarif@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
+        with:
+          sarif_file: trivy.sarif
+          category: trivy-image
+
+      # The same scan again, as a table in the log and with the exit code that
+      # fails the check. The database is cached from the step above.
+      - name: Fail on fixable CRITICAL and HIGH
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          version: v0.76.1
+          image-ref: teaterihuskvarna:${{ github.sha }}
+          trivyignores: .trivyignore.yaml
+          ignore-unfixed: true
+          severity: CRITICAL,HIGH
+          format: table
+          exit-code: "1"

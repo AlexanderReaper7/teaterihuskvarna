@@ -30,6 +30,8 @@ jobs:
       - uses: actions/checkout@v7.0.1
       - name: Tests and static analysis
         run: sh scripts/maven.sh verify
+      - name: Pinned Temurin versions agree
+        run: sh scripts/check-pins.sh
       - name: Prove nullability compiler enforcement
         run: sh scripts/check-nullability.sh
 

@@ -46,6 +46,7 @@ public class MembershipApplicationService {
     private final MailSettings mail;
     private final AssociationSettings association;
     private final ApplicationEventPublisher events;
+    private final FeeLedger ledger;
 
     MembershipApplicationService(
             MembershipApplicationRepository applications,
@@ -58,7 +59,8 @@ public class MembershipApplicationService {
             LoginSettings login,
             MailSettings mail,
             AssociationSettings association,
-            ApplicationEventPublisher events) {
+            ApplicationEventPublisher events,
+            FeeLedger ledger) {
         this.applications = applications;
         this.accounts = accounts;
         this.members = members;
@@ -70,6 +72,7 @@ public class MembershipApplicationService {
         this.mail = mail;
         this.association = association;
         this.events = events;
+        this.ledger = ledger;
     }
 
     /// Receives a Bli medlem form. Returns nothing, and returns the same way in
@@ -175,8 +178,16 @@ public class MembershipApplicationService {
         accounts.save(new Account(member, new Email(application.getEmail())));
         events.publishEvent(new MemberChanged(member.getId()));
 
+        // Read from the ledger like every other fee status rather than written
+        // as unpaid here, so R005's "ej betald" is the status the member page
+        // and the register show too.
+        int year = ledger.currentYear();
+        FeeStatus fee = ledger.history(member, application.getEmail()).stream()
+                .filter(status -> status.year() == year)
+                .findFirst()
+                .orElseThrow();
         return Optional.of(new Welcome(member.getFullName(), application.getEmail(), association.bankgiro(),
-                association.feeIndividualOre(), association.feeHouseholdOre()));
+                association.feeIndividualOre(), association.feeHouseholdOre(), fee));
     }
 
     private static @Nullable String blankToNull(@Nullable String value) {

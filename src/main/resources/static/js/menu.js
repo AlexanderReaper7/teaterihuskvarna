@@ -11,10 +11,27 @@ document.addEventListener("DOMContentLoaded", () => {
     button.hidden = !narrow.matches;
     nav.hidden = narrow.matches && button.getAttribute("aria-expanded") !== "true";
   };
+  const close = () => {
+    button.setAttribute("aria-expanded", "false");
+    update();
+  };
   button.addEventListener("click", () => {
     button.setAttribute("aria-expanded", String(button.getAttribute("aria-expanded") !== "true"));
     update();
   });
-  narrow.addEventListener("change", update);
+  // Escape closes an open menu and returns focus to the button, so a keyboard
+  // user is not left on a link that just disappeared.
+  document.querySelector(".site-header").addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && narrow.matches && button.getAttribute("aria-expanded") === "true") {
+      close();
+      button.focus();
+    }
+  });
+  nav.addEventListener("click", (event) => {
+    if (event.target.closest("a") && narrow.matches) {
+      close();
+    }
+  });
+  narrow.addEventListener("change", close);
   update();
 });

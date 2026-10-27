@@ -4,6 +4,8 @@
 @param Welcome welcome
 @template.layout(copy = copy, title = copy.text("application.welcome.title"), content = @`
     <h1>${copy.text("application.welcome.heading", welcome.fullName())}</h1>
+    <h2>${copy.text("fee.heading", String.valueOf(welcome.fee().year()))}
+        @template.tag.feeBadge(copy = copy, paid = welcome.fee().paid())</h2>
     <p>${copy.text("application.welcome.payment", copy.kronor(welcome.feeIndividualOre()),
         copy.kronor(welcome.feeHouseholdOre()), welcome.bankgiro(), welcome.email())}</p>
     <p>${copy.text("application.welcome.household")}</p>
