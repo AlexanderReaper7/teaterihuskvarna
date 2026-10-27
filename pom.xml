@@ -35,18 +35,18 @@
     <!-- The three static analysis gates: docs/decisions/0013. Checked against
          Maven Central on 2026-09-22; each is the latest release. -->
     <checkstyle.plugin.version>3.6.0</checkstyle.plugin.version>
-    <checkstyle.version>14.1.0</checkstyle.version>
-    <spotbugs.plugin.version>4.10.4.1</spotbugs.plugin.version>
+    <checkstyle.version>14.3.0</checkstyle.version>
+    <spotbugs.plugin.version>4.10.5.0</spotbugs.plugin.version>
     <pmd.plugin.version>3.28.0</pmd.plugin.version>
-    <pmd.version>7.27.0</pmd.version>
+    <pmd.version>7.28.0</pmd.version>
     <!-- Tie PMD's analysis target to the compiler target, so a Java upgrade
          cannot leave PMD reading class files it does not understand. -->
     <pmd.target.jdk>${java.version}</pmd.target.jdk>
-    <archunit.version>1.5.0</archunit.version>
+    <archunit.version>1.5.1</archunit.version>
     <!-- spring-security-webauthn 7.1.1 asks for 0.31.9.RELEASE, and Boot does
          not manage it. 0.31.10.RELEASE is Maven Central's latest, checked on
          2026-09-23. The test emulator is pinned to the same release. -->
-    <webauthn4j.version>0.31.10.RELEASE</webauthn4j.version>
+    <webauthn4j.version>0.31.11.RELEASE</webauthn4j.version>
   </properties>
 
   <dependencies>
