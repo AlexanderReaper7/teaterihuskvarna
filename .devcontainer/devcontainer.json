@@ -22,7 +22,7 @@
     // The docker CLI plus the host's socket. Testcontainers starts real
     // PostgreSQL containers and cannot work without a daemon, and the tasks in
     // .vscode/tasks.json are all docker commands: docs/decisions/0011.
-    "ghcr.io/devcontainers/features/docker-outside-of-docker:1.9.1": {
+    "ghcr.io/devcontainers/features/docker-outside-of-docker:1.10.1": {
       "moby": false
     }
   },
