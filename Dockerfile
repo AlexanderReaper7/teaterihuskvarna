@@ -10,7 +10,7 @@
 # it. The git plugin runs git itself, so that untracked files count as
 # uncommitted changes (see the plugin's comment in pom.xml) and so that a git
 # worktree records its own commit rather than the main checkout's.
-FROM eclipse-temurin:25.0.4_7-jdk-alpine AS jdk
+FROM eclipse-temurin:26.0.2_10-jdk-alpine AS jdk
 RUN apk add --no-cache git
 
 # The repository's git directory, supplied as a named build context:
@@ -54,7 +54,7 @@ RUN --mount=type=cache,id=teaterihuskvarna-m2,target=/root/.m2/repository \
     GIT_DIR="/git${BUILD_GIT_WORKTREE:+/worktrees/$BUILD_GIT_WORKTREE}" GIT_WORK_TREE=/build \
     ./mvnw -B -ntp -Dmaven.gitcommitid.nativegit=true package
 
-FROM eclipse-temurin:25.0.4_7-jre-alpine AS runtime
+FROM eclipse-temurin:26.0.2_10-jre-alpine AS runtime
 WORKDIR /app
 
 # Alpine's security fixes, which reach its repository days or weeks before
