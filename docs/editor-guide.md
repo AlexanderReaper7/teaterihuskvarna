@@ -10,6 +10,7 @@ Den här guiden är till för föreningens redaktörer. Den är skriven på sven
 
 ## Logga in
 ## Skapa och publicera ett evenemang
+![Ett nytt, tomt evenemang i Sanity Studio. Markören står i fältet Titel.](img/editor-guide/evenemang-nytt.png)
 ## Skapa och publicera en nyhet
 ## Redigera en fast sida
 ## Lägg till eller ändra en partner
