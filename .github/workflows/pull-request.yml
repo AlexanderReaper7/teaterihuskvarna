@@ -6,6 +6,12 @@
 # description, so it agrees with what the merge will actually do. An issue
 # linked by hand under Development counts, but linking one does not rerun this;
 # edit the description or push to rerun it.
+#
+# It asks for the labels as well, rather than reading them from the event. A
+# pull request that gets its labels just after it opens, as Dependabot's do,
+# fires several runs at once, and a run whose event predates the no-issue label
+# could otherwise finish last and fail the check. Only the newest run per pull
+# request is kept.
 name: pull request
 
 on:
@@ -17,6 +23,10 @@ permissions:
   pull-requests: read
   issues: read
 
+concurrency:
+  group: pull-request-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
 jobs:
   closes-an-issue:
     runs-on: ubuntu-latest
@@ -27,22 +37,23 @@ jobs:
           OWNER: ${{ github.repository_owner }}
           REPO: ${{ github.event.repository.name }}
           NUMBER: ${{ github.event.pull_request.number }}
-          NO_ISSUE: ${{ contains(github.event.pull_request.labels.*.name, 'no-issue') }}
         run: |
-          if [ "$NO_ISSUE" = true ]; then
-            echo "Labelled no-issue."
-            exit 0
-          fi
           # The $ names are GraphQL variables, not shell ones.
           # shellcheck disable=SC2016
-          closes=$(gh api graphql -F owner="$OWNER" -F repo="$REPO" -F number="$NUMBER" -f query='
+          pr=$(gh api graphql -F owner="$OWNER" -F repo="$REPO" -F number="$NUMBER" -f query='
             query($owner: String!, $repo: String!, $number: Int!) {
               repository(owner: $owner, name: $repo) {
                 pullRequest(number: $number) {
+                  labels(first: 50) { nodes { name } }
                   closingIssuesReferences(first: 10) { nodes { number } }
                 }
               }
-            }' --jq '[.data.repository.pullRequest.closingIssuesReferences.nodes[].number | "#\(.)"] | join(" ")')
+            }' --jq '.data.repository.pullRequest')
+          if [ "$(echo "$pr" | jq '[.labels.nodes[].name] | index("no-issue") != null')" = true ]; then
+            echo "Labelled no-issue."
+            exit 0
+          fi
+          closes=$(echo "$pr" | jq -r '[.closingIssuesReferences.nodes[].number | "#\(.)"] | join(" ")')
           if [ -z "$closes" ]; then
             echo "::error::This pull request closes no issue. Add 'Closes #<number>' with your issue's number to the description."
             exit 1

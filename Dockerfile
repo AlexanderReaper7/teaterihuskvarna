@@ -57,6 +57,13 @@ RUN --mount=type=cache,id=teaterihuskvarna-m2,target=/root/.m2/repository \
 FROM eclipse-temurin:25.0.4_7-jre-alpine AS runtime
 WORKDIR /app
 
+# Alpine's security fixes, which reach its repository days or weeks before
+# Temurin rebuilds the base image. Without this the image scan in
+# .github/workflows/image-scan.yml fails on fixes nobody here can pick up by
+# raising the FROM tag. The cost is that two builds of one commit can differ
+# in their Alpine packages.
+RUN apk upgrade --no-cache
+
 RUN addgroup -S app && adduser -S -G app app
 USER app
 

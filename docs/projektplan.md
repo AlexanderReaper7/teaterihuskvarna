@@ -139,7 +139,7 @@ Swedish is the visitor and member language. English is used for code and project
 - A restore into an empty database must succeed before launch.
 - Container images use immutable commit tags so the deployed revision and rollback target are known.
 
-Java 25 LTS and Spring Boot 4.1.1 are the committed runtime versions. GitHub Actions tests and builds the image. A successful build of `main` pushes the image to GHCR and deploys it over SSH.
+Java 25 LTS and Spring Boot 4.1.2 are the committed runtime versions. GitHub Actions tests and builds the image. A successful build of `main` pushes the image to GHCR and deploys it over SSH.
 
 ## The association remains responsible for personal data
 
