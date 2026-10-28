@@ -1,6 +1,6 @@
 @import java.time.Instant
 @import java.util.List
-@import se.teaterihuskvarna.member.FeeStatus
+@import se.teaterihuskvarna.member.*
 @import se.teaterihuskvarna.member.HouseholdDetails
 @import se.teaterihuskvarna.member.HouseholdMember
 @import se.teaterihuskvarna.member.MemberFile
@@ -8,6 +8,7 @@
 @import se.teaterihuskvarna.web.Copy
 @import se.teaterihuskvarna.web.CsrfField
 @import se.teaterihuskvarna.web.FieldErrors
+@import se.teaterihuskvarna.member.MemberDetails
 @param Copy copy
 @param CsrfField csrf
 @param MemberFile file
@@ -36,7 +37,8 @@
     @endif
     <p>${copy.text("register.memberSince", copy.date(file.member().memberSince()))}</p>
 
-    <h2>${copy.text("fee.heading", String.valueOf(thisYear.year()))}</h2>
+    <h2>${copy.text("fee.heading", String.valueOf(thisYear.year()))}
+        @template.tag.feeBadge(copy = copy, paid = paidAt != null)</h2>
     @if(paidAt != null)
         <p>
             ${copy.text("fee.paid", copy.date(paidAt))}
@@ -54,15 +56,15 @@
     @if(!thisYear.paid() || thisYear.throughHousehold())
         <form method="post" action="/admin/medlemmar/${id}/avgift">
             @template.tag.csrf(csrf = csrf)
-            <fieldset>
+            <fieldset class="radio">
                 <legend>${copy.text("fee.mark")}</legend>
                 <p>
-                    <input id="kind-individual" name="kind" type="radio" value="INDIVIDUAL" checked>
+                    <input  id="kind-individual" name="kind" type="radio" value="INDIVIDUAL" checked>
                     <label for="kind-individual">${copy.text("fee.kind.individual")}</label>
                 </p>
                 <p>
-                    <input id="kind-household" name="kind" type="radio" value="HOUSEHOLD">
-                    <label for="kind-household">${copy.text("fee.kind.household")}</label>
+                    <input  id="kind-household" name="kind" type="radio" value="HOUSEHOLD">
+                    <label  for="kind-household">${copy.text("fee.kind.household")}</label>
                 </p>
                 <p>
                     <label for="kronor">${copy.text("fee.amount")}</label>
