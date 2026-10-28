@@ -33,23 +33,25 @@
         <caption>${copy.text("register.caption", String.valueOf(list.members().size()))}</caption>
         <thead>
             <tr>
-                <th scope="col">${copy.text("member.name")}</th>
-                <th scope="col">${copy.text("member.email")}</th>
-                <th scope="col">${copy.text("member.phone")}</th>
-                <th scope="col">${copy.text("member.city")}</th>
-                <th scope="col">${copy.text("member.household")}</th>
-                <th scope="col">${copy.text("register.feeColumn")}</th>
+                <th class="nowarp" scope="col">${copy.text("member.name")}</th>
+                <th class="nowarp" scope="col">${copy.text("member.email")}</th>
+                <th class="nowarp"  scope="col">${copy.text("member.phone")}</th>
+                <th class="nowarp" scope="col">${copy.text("member.city")}</th>
+                <th class="nowarp" scope="col">${copy.text("member.household")}</th>
+                <th class="nowarp" scope="col">${copy.text("register.feeColumn")}</th>
+                <th class="nowarp" scope="col">${copy.text("register.paidDateColumn")}</th>
             </tr>
         </thead>
         <tbody>
             @for(MemberDetails member : list.members())
                 <tr>
-                    <td><a href="/admin/medlemmar/${member.id()}">${member.fullName()}</a></td>
-                    <td>${member.email()}</td>
-                    <td>${member.phone()}</td>
-                    <td>${member.city()}</td>
-                    <td>${member.household()}</td>
-                    <td>@if(member.fee().paid())${copy.date(member.fee().paidAt())}@else${copy.text("fee.notPaid")}@endif</td>
+                    <td class="nowarp"><a href="/admin/medlemmar/${member.id()}">${member.fullName()}</a></td>
+                    <td class="nowarp">${member.email()}</td>
+                    <td class="nowarp">${member.phone()}</td>
+                    <td class="nowarp">${member.city()}</td>
+                    <td class="nowarp">${member.household()}</td>
+                    <td class="nowarp">@template.tag.feeBadge(copy = copy, paid = member.fee().paid())</td>
+                    <td class="nowarp">@if(member.fee().paid())${copy.date(member.fee().paidAt())}@endif</td>
                 </tr>
             @endfor
         </tbody>

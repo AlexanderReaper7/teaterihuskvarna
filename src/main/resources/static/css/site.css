@@ -410,14 +410,31 @@ button {
   font: inherit;
 }
 
+
+
+
 input {
-  width: 100%;
-  max-width: 28rem;
-  padding: 0.5rem 0.75rem;
-  border: 2px solid var(--color-muted);
-  background: var(--color-white);
-  color: var(--color-text);
+    width: 100%;
+    max-width: 28rem;
+    padding: 0.5rem 0.75rem;
+    border: 2px solid var(--color-muted);
+    background: var(--color-white);
+    color: var(--color-text);
 }
+/*Radio-gruppen: */
+fieldset.radio p input[type="radio"]{
+    vertical-align: middle;
+        width: auto;
+        max-width: none;
+        padding: 0;
+        border: 0;
+        margin:  0 0.5rem 0 0;
+    }
+fieldset.radio p input[type="radio"] + label{
+        display: inline;
+    }
+
+
 
 input[aria-invalid="true"] {
   border-color: var(--color-error);
@@ -531,6 +548,13 @@ td {
 
 th {
   border-bottom: 2px solid var(--color-primary);
+}
+td, th {
+  word-break:normal;
+  overflow-wrap: normal;
+}
+.nowarp {
+  white-space: nowrap;
 }
 
 tbody tr:nth-child(even) {
