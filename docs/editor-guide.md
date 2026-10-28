@@ -30,7 +30,7 @@ Innan du kan logga in måste du ha blivit inbjuden till Sanity-projektet. Be en 
    | Fält | Vad du gör |
    |------|------------|
    | **Titel** | Skriv evenemangets namn. |
-   | **Adress** | Skriv den sista delen av sidans webbadress, till exempel `varshowen`. Hela adressen blir `/evenemang/varshowen`. | 
+   | **Adress** | Klicka på **Generate** så skapas adressen av titeln. Hela adressen blir till exempel `/evenemang/exempelfoerestaellning`. Å, ä och ö ersätts med andra bokstäver, och det är normalt. |
    | **Datum och tid** | Välj när evenemanget börjar. | 
    | **Plats** | Skriv var evenemanget hålls. | 
    | **Serie** | Välj serie om evenemanget hör till en, till exempel Kaffe med drömmar. Lämna tomt för ett fristående evenemang. | 
