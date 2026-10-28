@@ -46,6 +46,9 @@ Innan du kan logga in måste du ha blivit inbjuden till Sanity-projektet. Be en 
    Om ett obligatoriskt fält är tomt går det inte att publicera. Fältet får en röd ram och ett rött utropstecken. Fyll i fältet och klicka på **Publish** igen.
 
 4. Klicka på knappen **Publish** längst ned till höger.
+
+   ![Ett ifyllt evenemang med den aktiva knappen Publish längst ned till höger.](img/editor-guide/evenemang-publicera.png)
+
 5. Kontrollera att fliken **Published** nu är markerad högst upp. Då är evenemanget publicerat och syns på webbplatsen inom en minut.
 
 ## Skapa och publicera en nyhet
