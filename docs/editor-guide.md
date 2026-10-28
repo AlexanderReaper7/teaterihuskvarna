@@ -78,6 +78,36 @@ Innan du kan logga in måste du ha blivit inbjuden till Sanity-projektet. Be en 
 5. Kontrollera att fliken **Published** nu är markerad högst upp. Då är nyheten publicerad och syns på webbplatsen inom en minut.
 
 ## Redigera en fast sida
+De fasta sidorna är **Om föreningen**, **Styrelsen**, **Produktioner**, **Ludde-priser** och **Kontakt**. Du ändrar texten på dem, men skapar inga nya sidor.
+
+1. Klicka på **Sida** i listan **Content** till vänster. De fasta sidorna visas i mittenkolumnen.
+
+   ![Listan över de fem fasta sidorna i Sanity Studio](img/editor-guide/sida-lista.png)
+
+2. Klicka på den sida du vill ändra. Formuläret öppnas till höger.
+3. Ändra det du vill i formuläret. Det är längre än fönstret, så **rulla nedåt** för att se alla fält.
+
+   | Fält | Vad du gör |
+      |------|------------|
+   | **Rubrik** | Ändra inte. Webbplatsen använder den för att hitta rätt sida. |
+   | **Vilken sida** | Ändra inte. Det finns bara fem sidor, och adressen måste vara en av dem. |
+   | **Bild överst** | Dra en bild hit eller klistra in den. Du kan också klicka på **Upload** för att välja en bild från datorn, eller **Select** för att välja en bild som redan finns. |
+   | **Alternativ text** | Beskriv bilden för den som inte ser den, till exempel "Tre skådespelare på scenen". |
+   | **Innehåll** | Skriv eller ändra sidans text. Verktygsraden ovanför texten har bland annat fet stil, kursiv, punktlista, numrerad lista och länk. |
+
+   ![Sidan Om föreningen där texten har ändrats och knappen Publish är aktiv](img/editor-guide/sida-redigera.png)
+
+4. Klicka på knappen **Publish** längst ned till höger när du är nöjd.
+5. Kontrollera att fliken **Published** är markerad högst upp. Ändringen syns på webbplatsen inom en minut.
+
+### Om du ångrar dig innan du har publicerat
+Du kan kasta alla ändringar du har gjort sedan sidan senast publicerades.
+
+1. Klicka på de tre prickarna (**...**) bredvid **Publish**.
+2. Välj **Discard changes**.
+3. Klicka på den röda knappen **Discard changes** för att bekräfta. Tryck på **Cancel** om du ångrar dig.
+
+   ![Frågan Discard changes med knapparna Cancel och Discard changes](img/editor-guide/sida-kasta.png)
 
 ## Lägg till eller ändra en partner
 
