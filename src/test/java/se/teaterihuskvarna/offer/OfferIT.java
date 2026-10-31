@@ -414,6 +414,12 @@ class OfferIT extends IntegrationTestSupport {
         assertThat(page).contains("1 av 10", "Nej, utkast").doesNotContain("/admin/erbjudanden/" + past + "\"");
         assertThat(page.indexOf("/admin/erbjudanden/" + sooner + "\"")).isPositive()
                 .isLessThan(page.indexOf("/admin/erbjudanden/" + later + "\""));
+        assertThat(page.replaceAll("\\s+", " ")).contains("Platser kvar", "<td>9</td>", "<td>Obegränsat</td>");
+        mockMvc.perform(get("/api/admin/offers/upcoming").with(asAdministrator()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(2))
+                .andExpect(jsonPath("$[0].id").value(sooner))
+                .andExpect(jsonPath("$[1].id").value(later));
     }
 
     @Test

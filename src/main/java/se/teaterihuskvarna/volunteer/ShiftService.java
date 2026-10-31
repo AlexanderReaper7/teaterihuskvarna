@@ -151,6 +151,16 @@ public class ShiftService {
         return details(shifts.findStartingFrom(startOfToday()));
     }
 
+    /// The shifts an administrator still has to find volunteers for, which
+    /// the administrators' start page lists.
+    ///
+    /// @return the shifts that have not started and have places left, earliest first
+    public List<ShiftDetails> needingVolunteers() {
+        return details(shifts.findStartingFrom(clock.instant())).stream()
+                .filter(shift -> shift.booked() < shift.places())
+                .toList();
+    }
+
     /// The shifts [#list] no longer shows, so their bookings can still be
     /// found and exported (R020).
     ///
