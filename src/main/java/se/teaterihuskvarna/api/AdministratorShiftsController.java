@@ -33,6 +33,12 @@ public class AdministratorShiftsController {
         return shifts.list();
     }
 
+    /// @return the shifts that have not started and have places left, earliest first
+    @GetMapping("/api/admin/shifts/needing-volunteers")
+    public List<ShiftDetails> needingVolunteers() {
+        return shifts.needingVolunteers();
+    }
+
     /// @return every shift that started before today, latest first
     @GetMapping("/api/admin/shifts/past")
     public List<ShiftDetails> past() {

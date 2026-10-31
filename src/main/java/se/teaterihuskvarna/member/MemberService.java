@@ -129,6 +129,13 @@ public class MemberService {
         return new MemberList(more ? found.subList(0, SEARCH_LIMIT) : found, more);
     }
 
+    /// @return how many members have and have not paid this year's fee
+    public FeeCount feeCount() {
+        List<MemberDetails> all = detailsOf(members.findAll());
+        long paid = all.stream().filter(member -> member.fee().paid()).count();
+        return new FeeCount(ledger.currentYear(), paid, all.size() - paid);
+    }
+
     /// @param memberId a member
     /// @return everything an administrator sees about the member
     /// @throws NoSuchMember if there is no such member

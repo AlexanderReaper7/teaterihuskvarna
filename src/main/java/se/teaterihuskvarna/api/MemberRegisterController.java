@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import se.teaterihuskvarna.login.SignedIn;
+import se.teaterihuskvarna.member.FeeCount;
 import se.teaterihuskvarna.member.FeeFilter;
 import se.teaterihuskvarna.member.FeeMark;
 import se.teaterihuskvarna.member.FeeService;
@@ -60,6 +61,12 @@ public class MemberRegisterController {
     public MemberList search(@RequestParam(name = "q", required = false) @Nullable String query,
             @RequestParam(name = "fee", required = false) @Nullable FeeFilter fee) {
         return members.search(query, fee == null ? FeeFilter.ALL : fee);
+    }
+
+    /// @return how many members have and have not paid this year's fee
+    @GetMapping("/api/admin/fees")
+    public FeeCount feeCount() {
+        return members.feeCount();
     }
 
     /// @param form the new member; an address gives them an account
