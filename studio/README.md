@@ -57,6 +57,20 @@ The schema's field names are the ones the application reads in [`ContentService.
 
 [`structure.ts`](structure.ts) orders the content list for editors: upcoming events soonest first, then past events, news newest first, the rest by name. "Generera" makes an address with [`slug.ts`](slug.ts), which writes å and ä as a and ö as o, where Sanity's default follows German and writes ö as oe. The interface is Swedish through `@sanity/locale-sv-se`, and only the project's administrators see the Vision query tool.
 
+## Importing the old site
+
+[`import/wordpress.ts`](import/wordpress.ts) turns a snapshot of the old WordPress site into an NDJSON file for `sanity dataset import`. The snapshot is not in the repository, because it holds members' names, addresses and numbers. The one read on 2026-10-24 is at `~/Projects/scratch/teaterihuskvarna-wp` on the owner's machine, with the alt texts the user approved in `alt-text/approved.json`.
+
+```sh
+npx sanity exec import/wordpress.ts -- <snapshot> <snapshot>/alt-text/approved.json wordpress.ndjson
+npx sanity dataset export dev dev-before-import.tar.gz
+npx sanity dataset import wordpress.ndjson --dataset dev --replace
+```
+
+Both datasets answer queries without a token, so whatever is imported is public. The script therefore writes "(kontaktuppgift borttagen)" in place of a private e-mail address or a mobile number, unless given `--keep-private-contacts`. An image without an approved alt text is left out. The script prints what it left out and why: links to files the old site hosted, posts that were private in WordPress and become drafts, and the pages the new site has no address for.
+
+The ids come from WordPress, as `wp-<id>`, and the three fixed pages and Jönköpings kommun keep the ids they already have, so a second import replaces the first one's documents instead of adding copies. The same snapshot gives a byte-identical file.
+
 ## Dependency overrides
 
 `overrides` in [`package.json`](package.json) raise four packages that Sanity's CLI pulls in at versions with known vulnerabilities. Upstream still pinned all four on 2026-10-26, so neither `npm update` nor Dependabot could raise them:
