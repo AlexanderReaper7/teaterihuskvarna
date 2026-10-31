@@ -4,6 +4,10 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import jakarta.validation.ConstraintViolationException;
+import java.time.Clock;
+import java.time.Instant;
+import java.util.Comparator;
+import java.util.List;
 import org.jspecify.annotations.Nullable;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
@@ -21,10 +25,15 @@ import se.teaterihuskvarna.administrator.NewAdministrator;
 import se.teaterihuskvarna.administrator.NoSuchAdministrator;
 import se.teaterihuskvarna.administrator.TooFewAdministrators;
 import se.teaterihuskvarna.login.SignedIn;
+import se.teaterihuskvarna.member.MemberService;
+import se.teaterihuskvarna.offer.OfferDetails;
+import se.teaterihuskvarna.offer.OfferService;
+import se.teaterihuskvarna.volunteer.ShiftService;
 
-/// The administrators' start page: who the administrators are, a form to add one,
-/// a button to remove each, and the logged-in administrator's own passkeys and
-/// devices.
+/// The administrators' start page. It opens with what needs doing: this year's
+/// fees, the upcoming shifts with free places and the upcoming offers. Then it
+/// lists who the administrators are, with a form to add one and a button to
+/// remove each, and the logged-in administrator's own passkeys and devices.
 /// Spring Security lets only an administrator account reach it.
 ///
 /// A failed add shows the page again with the typed values kept. A remove has no
@@ -39,24 +48,37 @@ public class AdministratorPageController {
 
     private static final String REDIRECT = "redirect:/admin";
 
+    /// Offers without a start time last, as they have no date to sort by.
+    private static final Comparator<OfferDetails> SOONEST_FIRST =
+            Comparator.comparing(OfferDetails::startsAt, Comparator.nullsLast(Comparator.naturalOrder()));
+
     private final AdministratorService administrators;
+    private final MemberService members;
+    private final OfferService offers;
+    private final ShiftService shifts;
     private final Copy copy;
     private final PasskeySection passkeys;
     private final DeviceSection devices;
+    private final Clock clock;
 
-    AdministratorPageController(AdministratorService administrators, Copy copy, PasskeySection passkeys,
-            DeviceSection devices) {
+    AdministratorPageController(AdministratorService administrators, MemberService members, OfferService offers,
+            ShiftService shifts, Copy copy, PasskeySection passkeys, DeviceSection devices, Clock clock) {
         this.administrators = administrators;
+        this.members = members;
+        this.offers = offers;
+        this.shifts = shifts;
         this.copy = copy;
         this.passkeys = passkeys;
         this.devices = devices;
+        this.clock = clock;
     }
 
     /// @param signedIn the logged-in administrator
     /// @param session  holds whether a link login just happened, which offers a passkey
     /// @param request  may say the offer was declined on this browser
-    /// @param model    receives the administrators, an empty form, passkeys, devices, and any flash message
-    /// @return the administrators page
+    /// @param model    receives what needs doing, the administrators, an empty form, passkeys, devices, and any
+    ///                 flash message
+    /// @return the start page
     @GetMapping("/admin")
     public String overview(@AuthenticationPrincipal SignedIn signedIn, HttpSession session,
             HttpServletRequest request, Model model) {
@@ -161,6 +183,9 @@ public class AdministratorPageController {
     private String page(SignedIn signedIn, HttpSession session, NewAdministrator form, FieldErrors errors,
             @Nullable String error, boolean offerPasskey, Model model) {
         model.addAttribute("signedIn", signedIn);
+        model.addAttribute("fees", members.feeCount());
+        model.addAttribute("shifts", shifts.list().stream().filter(shift -> shift.booked() < shift.places()).toList());
+        model.addAttribute("offers", upcomingOffers());
         passkeys.addTo(model, signedIn, offerPasskey);
         devices.addTo(model, signedIn, session);
         model.addAttribute("administrators", administrators.list());
@@ -170,5 +195,18 @@ public class AdministratorPageController {
             model.addAttribute("error", error);
         }
         return "admin/overview";
+    }
+
+    private List<OfferDetails> upcomingOffers() {
+        Instant now = clock.instant();
+        return offers.list().stream()
+                .filter(offer -> notStarted(offer, now))
+                .sorted(SOONEST_FIRST)
+                .toList();
+    }
+
+    private static boolean notStarted(OfferDetails offer, Instant now) {
+        Instant startsAt = offer.startsAt();
+        return startsAt == null || startsAt.isAfter(now);
     }
 }

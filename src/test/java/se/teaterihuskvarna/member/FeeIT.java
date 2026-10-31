@@ -143,6 +143,23 @@ class FeeIT extends MemberRegisterSupport {
     }
 
     @Test
+    void theStartPageCountsWhoHasPaidAndLinksToTheRest() throws Exception {
+        insertFee(erik, "HOUSEHOLD");
+
+        assertThat(page("/admin").replaceAll("\\s+", " "))
+                .contains("Medlemsavgifter " + thisYear(), "2 av 3 medlemmar har betalat.")
+                .contains("<a href=\"/admin/medlemmar?avgift=obetald\">Visa den som inte har betalat</a>");
+        mockMvc.perform(get("/api/admin/fees").with(asAdministrator()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.year").value(thisYear()))
+                .andExpect(jsonPath("$.paid").value(2))
+                .andExpect(jsonPath("$.unpaid").value(1));
+
+        insertFee(johan, "INDIVIDUAL");
+        assertThat(page("/admin")).contains("3 av 3 medlemmar har betalat.").doesNotContain("inte har betalat");
+    }
+
+    @Test
     void aButtonInTheRegisterMarksAFeeAndGoesBackToTheSameList() throws Exception {
         String register = page("/admin/medlemmar?avgift=obetald");
         assertThat(register)

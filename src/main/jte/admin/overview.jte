@@ -6,6 +6,9 @@
 @import se.teaterihuskvarna.login.PasskeyDetails
 @import se.teaterihuskvarna.login.PasskeyUrls
 @import se.teaterihuskvarna.login.SignedIn
+@import se.teaterihuskvarna.member.FeeCount
+@import se.teaterihuskvarna.offer.OfferDetails
+@import se.teaterihuskvarna.volunteer.ShiftDetails
 @import se.teaterihuskvarna.web.Copy
 @import se.teaterihuskvarna.web.CsrfField
 @import se.teaterihuskvarna.web.DeviceUrls
@@ -14,6 +17,9 @@
 @param Copy copy
 @param CsrfField csrf
 @param SignedIn signedIn
+@param FeeCount fees
+@param List<ShiftDetails> shifts
+@param List<OfferDetails> offers
 @param List<AdministratorDetails> administrators
 @param NewAdministrator form
 @param FieldErrors errors
@@ -29,6 +35,38 @@
     <h1>${copy.text("admin.heading")}</h1>
     <p>${copy.text("admin.signedInAs", signedIn.fullName())}</p>
     @template.tag.logout(copy = copy, csrf = csrf, action = "/admin/logga-ut")
+    @if(offerPasskey)
+        @template.tag.passkeyOffer(copy = copy, csrf = csrf, urls = passkeyUrls)
+    @endif
+    @if(error != null)
+        <p role="alert">${error}</p>
+    @endif
+    @if(notice != null)
+        <p role="status">${notice}</p>
+    @endif
+
+    <h2>${copy.text("admin.fees.heading", String.valueOf(fees.year()))}</h2>
+    <p>${copy.text("admin.fees.count", fees.paid(), fees.paid() + fees.unpaid())}</p>
+    @if(fees.unpaid() > 0)
+        <p><a href="/admin/medlemmar?avgift=obetald">${copy.text("admin.fees.unpaid", fees.unpaid())}</a></p>
+    @endif
+
+    <h2>${copy.text("admin.shifts.heading")}</h2>
+    @if(shifts.isEmpty())
+        <p>${copy.text("admin.shifts.none")}</p>
+    @else
+        @template.tag.shiftTable(copy = copy, caption = copy.text("admin.shifts.caption"), shifts = shifts)
+    @endif
+    <p><a href="/admin/volontarpass">${copy.text("admin.shifts.all")}</a></p>
+
+    <h2>${copy.text("admin.offers.heading")}</h2>
+    @if(offers.isEmpty())
+        <p>${copy.text("admin.offers.none")}</p>
+    @else
+        @template.tag.offerTable(copy = copy, caption = copy.text("admin.offers.caption"), offers = offers)
+    @endif
+    <p><a href="/admin/erbjudanden">${copy.text("admin.offers.all")}</a></p>
+
     <section aria-labelledby="webbplatsens-innehall">
         <h2 id="webbplatsens-innehall">${copy.text("admin.content.heading")}</h2>
         <p>${copy.text("admin.content.explain")}</p>
@@ -43,16 +81,8 @@
         <p><a href="https://app.brevo.com/contact/segment">${copy.text("adminMailings.segments.open")}</a></p>
         <p><a href="https://app.brevo.com/campaigns/listing/email">${copy.text("adminMailings.campaigns.open")}</a></p>
     </section>
-    @if(offerPasskey)
-        @template.tag.passkeyOffer(copy = copy, csrf = csrf, urls = passkeyUrls)
-    @endif
-    @if(error != null)
-        <p role="alert">${error}</p>
-    @endif
-    @if(notice != null)
-        <p role="status">${notice}</p>
-    @endif
 
+    <h2>${copy.text("admin.administrators.heading")}</h2>
     <table>
         <caption>${copy.text("admin.list.caption")}</caption>
         <thead>
@@ -83,7 +113,7 @@
         </tbody>
     </table>
 
-    <h2>${copy.text("admin.add.heading")}</h2>
+    <h3>${copy.text("admin.add.heading")}</h3>
     @template.tag.errors(copy = copy, errors = errors)
     <form method="post" action="/admin/administratorer">
         @template.tag.csrf(csrf = csrf)
