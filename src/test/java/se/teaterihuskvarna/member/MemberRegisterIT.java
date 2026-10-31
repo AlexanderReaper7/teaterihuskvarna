@@ -71,6 +71,19 @@ class MemberRegisterIT extends MemberRegisterSupport {
     }
 
     @Test
+    void theRegisterLeavesTheCityToTheMemberPage() throws Exception {
+        long erik = memberOf(insertAccount("Erik Lindqvist", ERIK));
+        jdbc.sql("UPDATE member SET city = 'Gränna' WHERE id = ?").param(erik).update();
+
+        mockMvc.perform(get("/admin/medlemmar").with(asAdministrator()))
+                .andExpect(content().string(containsString("Erik Lindqvist")))
+                .andExpect(content().string(not(containsString("Gränna"))))
+                .andExpect(content().string(not(containsString(">Ort</th>"))));
+        mockMvc.perform(get("/admin/medlemmar/" + erik).with(asAdministrator()))
+                .andExpect(content().string(containsString("Gränna")));
+    }
+
+    @Test
     void addingWithAnAddressCreatesAnAccountAndWithoutOneDoesNot() throws Exception {
         MvcResult added = mockMvc.perform(post("/admin/medlemmar")
                         .param("fullName", "Erik Lindqvist")

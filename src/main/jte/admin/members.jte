@@ -52,7 +52,6 @@
                 <th scope="col">${copy.text("member.name")}</th>
                 <th scope="col">${copy.text("member.email")}</th>
                 <th scope="col">${copy.text("member.phone")}</th>
-                <th scope="col">${copy.text("member.city")}</th>
                 <th scope="col">${copy.text("member.household")}</th>
                 <th scope="col">${copy.text("register.feeColumn")}</th>
             </tr>
@@ -63,7 +62,6 @@
                     <td><a href="/admin/medlemmar/${member.id()}">${member.fullName()}</a></td>
                     <td>${member.email()}</td>
                     <td>${member.phone()}</td>
-                    <td>${member.city()}</td>
                     <td>${member.household()}</td>
                     <td>
                         @if(member.fee().paid())
