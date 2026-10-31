@@ -162,6 +162,12 @@ class FeeIT extends MemberRegisterSupport {
     }
 
     @Test
+    void aSearchKeepsAPlusAndBracesInTheFilterLinksAndAfterMarkingAFee() throws Exception {
+        assertSearchSurvives(johan, "a+b", "a%2Bb");
+        assertSearchSurvives(maria, "{a}", "%7Ba%7D");
+    }
+
+    @Test
     void theApiMarksAPaymentWithAGivenAmountAndUndoesIt() throws Exception {
         mockMvc.perform(post("/api/admin/members/" + johan + "/fee")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -331,11 +337,25 @@ class FeeIT extends MemberRegisterSupport {
         assertThat(rowsIn("fee")).isZero();
     }
 
+    /// A `+` read back as a space, or braces read as a URI template in the
+    /// redirect, would change or break the search the administrator came from.
+    private void assertSearchSurvives(long member, String query, String encoded) throws Exception {
+        String register = mockMvc.perform(get("/admin/medlemmar").param("q", query).with(asAdministrator()))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
+        assertThat(register).as(query).contains("href=\"/admin/medlemmar?q=" + encoded + "&amp;avgift=obetald\"");
+        assertRedirect(markFromRegister(member, query), "/admin/medlemmar?q=" + encoded + "&avgift=obetald");
+    }
+
     private MvcResult markFromRegister(long member) throws Exception {
+        return markFromRegister(member, "Bergström");
+    }
+
+    private MvcResult markFromRegister(long member, String query) throws Exception {
         return mockMvc.perform(post("/admin/medlemmar/" + member + "/avgift")
                         .param("kind", "INDIVIDUAL")
                         .param("tillbaka", "lista")
-                        .param("q", "Bergström")
+                        .param("q", query)
                         .param("avgift", "obetald")
                         .with(asAdministrator())
                         .with(csrf()))
