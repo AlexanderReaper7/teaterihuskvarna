@@ -110,6 +110,9 @@
         <p><a href="/medlem/hushall">${copy.text("household.create")}</a></p>
     @else
         <p>${household.name()}</p>
+        @if(household.ownerMemberId() == null)
+            <p>${copy.text("member.household.adminManaged")}</p>
+        @endif
         <p><a href="/medlem/hushall">${copy.text("member.household.manage")}</a></p>
         <ul>
             @for(HouseholdMember other : household.members())

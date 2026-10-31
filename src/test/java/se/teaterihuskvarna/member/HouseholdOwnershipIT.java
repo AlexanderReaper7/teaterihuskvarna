@@ -65,11 +65,22 @@ class HouseholdOwnershipIT extends MemberRegisterSupport {
     @Test
     void everyoneInTheHouseholdSeesWhoOwnsIt() throws Exception {
         for (String page : new String[] {PAGE, "/medlem"}) {
-            String html = mockMvc.perform(get(page).with(otherLogin)).andExpect(status().isOk())
-                    .andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8)
-                    .replaceAll("\\s+", " ");
-            assertThat(html).as(page).contains("Erik Exempel (ägare)").doesNotContain("Maria Exempel (ägare)");
+            assertThat(html(page)).as(page).contains("Erik Exempel (ägare)").doesNotContain("Maria Exempel (ägare)");
         }
+    }
+
+    @Test
+    void aHouseholdWithoutAnOwnerSaysAdministratorsManageIt() throws Exception {
+        jdbc.sql("UPDATE household SET owner_member_id = NULL WHERE id = ?").param(household).update();
+        String page = html(PAGE);
+        assertThat(page).contains("Administratörerna sköter hushållet, det har ingen ägare.")
+                .doesNotContain("Endast ägaren").doesNotContain("(ägare)");
+        assertThat(html("/medlem")).contains("Administratörerna sköter hushållet.").doesNotContain("(ägare)");
+    }
+
+    private String html(String page) throws Exception {
+        return mockMvc.perform(get(page).with(otherLogin)).andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8).replaceAll("\\s+", " ");
     }
 
     @Test
