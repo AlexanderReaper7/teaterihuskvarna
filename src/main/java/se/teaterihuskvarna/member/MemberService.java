@@ -109,17 +109,24 @@ public class MemberService {
     }
 
     /// Searches the register by name, account address, phone and city, as a
-    /// case insensitive substring of any of them. A blank query lists everyone.
+    /// case insensitive substring of any of them, and keeps the members whose
+    /// fee this year the filter admits. A blank query lists everyone.
+    ///
+    /// The fee status is computed, not stored, so a filtered search reads every
+    /// match before it counts to [#SEARCH_LIMIT].
     ///
     /// @param query what the administrator typed, or null
+    /// @param fee   which members to keep, by this year's fee
     /// @return the first [#SEARCH_LIMIT] matches by name, and whether there were more
-    public MemberList search(@Nullable String query) {
+    public MemberList search(@Nullable String query, FeeFilter fee) {
         String typed = query == null ? "" : query.strip().toLowerCase(Swedish.LOCALE);
         String pattern = "%" + typed.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%";
-        List<Member> found = members.search(pattern, Limit.of(SEARCH_LIMIT + 1));
+        Limit limit = fee == FeeFilter.ALL ? Limit.of(SEARCH_LIMIT + 1) : Limit.unlimited();
+        List<MemberDetails> found = detailsOf(members.search(pattern, limit)).stream()
+                .filter(member -> fee.admits(member.fee()))
+                .toList();
         boolean more = found.size() > SEARCH_LIMIT;
-        List<Member> shown = more ? found.subList(0, SEARCH_LIMIT) : found;
-        return new MemberList(detailsOf(shown), more);
+        return new MemberList(more ? found.subList(0, SEARCH_LIMIT) : found, more);
     }
 
     /// @param memberId a member
