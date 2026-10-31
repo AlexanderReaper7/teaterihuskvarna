@@ -8,6 +8,8 @@
 @import se.teaterihuskvarna.member.HouseholdMember
 @import se.teaterihuskvarna.member.MemberDetails
 @import se.teaterihuskvarna.member.PaymentInstruction
+@import se.teaterihuskvarna.offer.MemberOffer
+@import se.teaterihuskvarna.volunteer.MemberShift
 @import se.teaterihuskvarna.web.Copy
 @import se.teaterihuskvarna.web.CsrfField
 @import se.teaterihuskvarna.web.DeviceUrls
@@ -15,6 +17,8 @@
 @param CsrfField csrf
 @param MemberDetails member
 @param HouseholdDetails household = null
+@param List<MemberOffer> registrations
+@param List<MemberShift> shifts
 @param List<PasskeyDetails> passkeys
 @param PasskeyUrls passkeyUrls
 @param boolean offerPasskey = false
@@ -36,23 +40,6 @@
     @if(notice != null)
         <p role="status">${notice}</p>
     @endif
-    <dl>
-        <dt>${copy.text("member.name")}</dt>
-        <dd>${member.fullName()}</dd>
-        <dt>${copy.text("member.email")}</dt>
-        <dd>@if(member.email() == null)${copy.text("member.missing")}@else${member.email()}@endif</dd>
-        <dt>${copy.text("member.phone")}</dt>
-        <dd>@if(member.phone() == null)${copy.text("member.missing")}@else${member.phone()}@endif</dd>
-        <dt>${copy.text("member.address")}</dt>
-        <dd>@if(member.address() == null)${copy.text("member.missing")}@else${member.address()}@endif</dd>
-        <dt>${copy.text("member.postalCode")}</dt>
-        <dd>@if(member.postalCode() == null)${copy.text("member.missing")}@else${member.postalCode()}@endif</dd>
-        <dt>${copy.text("member.city")}</dt>
-        <dd>@if(member.city() == null)${copy.text("member.missing")}@else${member.city()}@endif</dd>
-    </dl>
-    <p><a href="/medlem/kontaktuppgifter">${copy.text("member.contact.edit")}</a></p>
-    <p>${copy.text("member.contact.emailNote")}</p>
-
     <h2>${copy.text("fee.heading", String.valueOf(member.fee().year()))}
         @template.tag.feeBadge(copy = copy, paid = paidAt != null)</h2>
     @if(paidAt != null)
@@ -75,6 +62,48 @@
         </ol>
     @endif
 
+    <h2>${copy.text("member.registrations.heading")}</h2>
+    @if(registrations.isEmpty())
+        <p>${copy.text("member.registrations.none")} <a href="/medlem/erbjudanden">${copy.text("member.registrations.find")}</a></p>
+    @else
+        <ul>
+            @for(MemberOffer offer : registrations)
+                <li><a href="/medlem/erbjudanden/${offer.id()}">${offer.title()}</a>@if(offer.startsAt() != null), ${copy.dateTime(offer.startsAt())}@endif</li>
+            @endfor
+        </ul>
+    @endif
+
+    <h2>${copy.text("member.shifts.heading")}</h2>
+    @if(shifts.isEmpty())
+        <p>${copy.text("member.shifts.none")} <a href="/medlem/volontar">${copy.text("member.shifts.find")}</a></p>
+    @else
+        <ul>
+            @for(MemberShift shift : shifts)
+                <li>${copy.text("member.shifts.item", copy.text("shift.task." + shift.task().name()), shift.eventTitle(),
+                        copy.text("shifts.between", copy.dateTime(shift.startsAt()), copy.time(shift.endsAt())))}</li>
+            @endfor
+        </ul>
+        <p><a href="/medlem/volontar">${copy.text("member.shifts.manage")}</a></p>
+    @endif
+
+    <h2>${copy.text("member.contact.heading")}</h2>
+    <dl class="details">
+        <dt>${copy.text("member.name")}</dt>
+        <dd>${member.fullName()}</dd>
+        <dt>${copy.text("member.email")}</dt>
+        <dd>@if(member.email() == null)${copy.text("member.missing")}@else${member.email()}@endif</dd>
+        <dt>${copy.text("member.phone")}</dt>
+        <dd>@if(member.phone() == null)${copy.text("member.missing")}@else${member.phone()}@endif</dd>
+        <dt>${copy.text("member.address")}</dt>
+        <dd>@if(member.address() == null)${copy.text("member.missing")}@else${member.address()}@endif</dd>
+        <dt>${copy.text("member.postalCode")}</dt>
+        <dd>@if(member.postalCode() == null)${copy.text("member.missing")}@else${member.postalCode()}@endif</dd>
+        <dt>${copy.text("member.city")}</dt>
+        <dd>@if(member.city() == null)${copy.text("member.missing")}@else${member.city()}@endif</dd>
+    </dl>
+    <p><a href="/medlem/kontaktuppgifter">${copy.text("member.contact.edit")}</a></p>
+    <p>${copy.text("member.contact.emailNote")}</p>
+
     <h2>${copy.text("member.household")}</h2>
     @if(household == null)
         <p>${copy.text("member.noHousehold")}</p>
@@ -86,6 +115,9 @@
             @for(HouseholdMember other : household.members())
                 <li>
                     ${other.fullName()}
+                    @if(other.id().equals(household.ownerMemberId()))
+                        ${copy.text("household.isOwner")}
+                    @endif
                     @if(other.hasAccount())
                         ${copy.text("household.hasAccount")}
                     @elseif(!other.id().equals(member.id()))

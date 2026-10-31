@@ -39,6 +39,13 @@ public class MemberOffersController {
     }
 
     /// @param signedIn the logged-in account
+    /// @return the published offers this member is registered for that have not started, closed ones included
+    @GetMapping("/api/member/registrations")
+    public List<MemberOffer> registrations(@AuthenticationPrincipal SignedIn signedIn) {
+        return offers.registeredOffers(memberId(signedIn));
+    }
+
+    /// @param signedIn the logged-in account
     /// @param id       the offer
     /// @return the offer, which may have closed
     @GetMapping("/api/member/offers/{id}")

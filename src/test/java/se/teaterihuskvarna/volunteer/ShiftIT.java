@@ -33,6 +33,7 @@ import org.springframework.test.web.servlet.request.RequestPostProcessor;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 import se.teaterihuskvarna.IntegrationTestSupport;
+import se.teaterihuskvarna.Swedish;
 import se.teaterihuskvarna.content.ContentService;
 import se.teaterihuskvarna.login.LoginKind;
 import se.teaterihuskvarna.login.Mailer;
@@ -297,6 +298,25 @@ class ShiftIT extends IntegrationTestSupport {
         List<String> lines = new String(bytes, StandardCharsets.UTF_8).substring(1).lines().toList();
         assertThat(lines.get(0)).isEqualTo("Namn;E-post;Telefon;Bokat");
         assertThat(lines.get(1)).startsWith("'=Karin Holm;karin@example.test;");
+    }
+
+    @Test
+    void theStartPageListsOnlyTheShiftsTheMemberBooked() throws Exception {
+        long booked = insertShift(Instant.now().plus(Duration.ofDays(3)), 2);
+        insertShift(Instant.now().plus(Duration.ofDays(5)), 2);
+        long account = insertAccount("Karin Holm", "karin@example.test");
+        RequestPostProcessor member = asMember(account);
+        String none = messages.getMessage("member.shifts.none", null, Swedish.LOCALE);
+
+        String before = mockMvc.perform(get("/medlem").with(member)).andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
+        assertThat(before).contains(none).doesNotContain("Kulturnatten på torget");
+
+        insertBooking(booked, memberOf(account), Instant.now());
+        String after = mockMvc.perform(get("/medlem").with(member)).andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
+        assertThat(after).doesNotContain(none);
+        assertThat(after.split("Kulturnatten på torget", -1)).hasSize(2);
     }
 
     private long insertShift(Instant startsAt, int places) {
