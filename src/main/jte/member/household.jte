@@ -42,6 +42,9 @@
             @for(HouseholdMember member : household.members())
                 <li>
                     ${member.fullName()}
+                    @if(member.id().equals(household.ownerMemberId()))
+                        ${copy.text("household.isOwner")}
+                    @endif
                     @if(member.hasAccount())
                         ${copy.text("household.hasAccount")}
                     @endif
