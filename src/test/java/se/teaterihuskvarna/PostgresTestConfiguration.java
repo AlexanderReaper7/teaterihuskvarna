@@ -23,6 +23,6 @@ public class PostgresTestConfiguration {
     @Bean
     @ServiceConnection
     PostgreSQLContainer<?> postgres() {
-        return new PostgreSQLContainer<>("postgres:18.2-alpine");
+        return new PostgreSQLContainer<>("postgres:18.4-alpine");
     }
 }

@@ -12,7 +12,8 @@
 # updates skip the wait.
 #
 # Versions Dependabot cannot see, and what keeps them in step:
-# - The Temurin tag in .vscode/tasks.json: scripts/check-pins.sh, run in CI.
+# - The Temurin tag in .vscode/tasks.json and the PostgreSQL image the
+#   integration tests start: scripts/check-pins.sh, run in CI.
 # - The Playwright image in e2e/run.sh: read from e2e/package.json.
 # - The Java version of the devcontainer image: by hand, see its comment.
 version: 2
