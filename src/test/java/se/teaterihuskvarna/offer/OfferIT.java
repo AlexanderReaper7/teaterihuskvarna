@@ -1,6 +1,7 @@
 package se.teaterihuskvarna.offer;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.not;
@@ -488,6 +489,51 @@ class OfferIT extends IntegrationTestSupport {
         register(first, anna);
 
         assertThat(offers.offerIdsOf(memberOf(anna))).containsExactly(first, second);
+    }
+
+    @Test
+    void theStartPageListsUpcomingRegistrationsAlsoAfterRegistrationCloses() throws Exception {
+        long open = insertOffer("Öppen verkstad", true, null, IN_A_MONTH, null);
+        long closed = insertOffer("Stängd läsning", true, null, IN_A_MONTH, YESTERDAY);
+        long past = insertOffer("Gammal utflykt", true, null, YESTERDAY, null);
+        long draft = insertOffer("Hemligt utkast", false, null, IN_A_MONTH, null);
+        long others = insertOffer("Annans kurs", true, null, IN_A_MONTH, null);
+        long karin = insertAccount("Karin Holm", "karin@example.test");
+        register(open, karin);
+        for (long offer : new long[] {closed, past, draft}) {
+            jdbc.sql("INSERT INTO offer_registration (offer_id, member_id, created_at) VALUES (?, ?, now())")
+                    .param(offer)
+                    .param(memberOf(karin))
+                    .update();
+        }
+        register(others, insertAccount("Bo Sen", "bo@example.test"));
+        RequestPostProcessor member = asMember(karin);
+
+        mockMvc.perform(get("/api/member/registrations").with(member))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[*].id", contains((int) open, (int) closed)))
+                .andExpect(jsonPath("$[1].open").value(false));
+        mockMvc.perform(get("/medlem").with(member))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("/medlem/erbjudanden/" + open + "\"")))
+                .andExpect(content().string(containsString("Stängd läsning")))
+                .andExpect(content().string(not(containsString("Gammal utflykt"))))
+                .andExpect(content().string(not(containsString("Hemligt utkast"))))
+                .andExpect(content().string(not(containsString("Annans kurs"))));
+    }
+
+    @Test
+    void theStartPageSaysWhereToSignUpWhenNothingIs() throws Exception {
+        insertOffer("Verkstad", true, null, IN_A_MONTH, null);
+        RequestPostProcessor member = asMember(insertAccount("Karin Holm", "karin@example.test"));
+
+        mockMvc.perform(get("/api/member/registrations").with(member))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(0));
+        mockMvc.perform(get("/medlem").with(member))
+                .andExpect(content().string(containsString(copy.text("member.registrations.none"))))
+                .andExpect(content().string(containsString(copy.text("member.shifts.none"))));
+        mockMvc.perform(get("/api/member/registrations")).andExpect(status().isUnauthorized());
     }
 
     // Helpers

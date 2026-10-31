@@ -62,6 +62,20 @@ public class OfferService {
                 .toList();
     }
 
+    /// Includes an offer whose registration has closed, which [#openOffers]
+    /// leaves out, so the member still sees what they are going to.
+    ///
+    /// @param memberId the member asking
+    /// @return the published offers the member is registered for that have not started, soonest first
+    public List<MemberOffer> registeredOffers(long memberId) {
+        Instant now = Instant.now();
+        List<Offer> mine = offers.findUpcomingRegisteredBy(memberId, now);
+        Map<Long, Long> counts = counts(mine);
+        return mine.stream()
+                .map(offer -> memberOffer(offer, counts.getOrDefault(offer.getId(), 0L), true, now))
+                .toList();
+    }
+
     /// Also answers for a published offer whose registration has closed, so a
     /// registered member can still read what they signed up for.
     ///
