@@ -37,7 +37,7 @@
     @endif
     @if(household != null)
         <h2>${copy.text("member.household.members")}</h2>
-        <p>${copy.text("member.household.permissions")}</p>
+        <p>${copy.text(household.ownerMemberId() == null ? "member.household.adminPermissions" : "member.household.permissions")}</p>
         <ul>
             @for(HouseholdMember member : household.members())
                 <li>
