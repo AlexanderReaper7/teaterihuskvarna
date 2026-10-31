@@ -15,6 +15,7 @@
     <link rel="stylesheet" href="/css/site.css">
     <script src="/js/forms.js" defer></script>
     <script src="/js/menu.js" defer></script>
+    <script src="/js/tables.js" defer></script>
 </head>
 <body>
 <a class="skip-link" href="#innehall">${copy.text("site.skip")}</a>

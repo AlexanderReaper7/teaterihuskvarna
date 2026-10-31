@@ -242,7 +242,8 @@ main > * {
   max-width: var(--width-text);
 }
 
-main > table {
+main > table,
+main > .table-scroll {
   max-width: none;
 }
 
@@ -521,12 +522,15 @@ caption {
   text-align: left;
 }
 
+/* break-word rather than anywhere: a column is never narrower than its longest
+ * word, so the table wraps at spaces instead of inside words, and only a word
+ * wider than the column itself, such as a long email address, breaks. */
 th,
 td {
   padding: 0.5rem 0.75rem;
   text-align: left;
   vertical-align: middle;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
 }
 
 th {
@@ -539,6 +543,17 @@ tbody tr:nth-child(even) {
 
 td form {
   margin: 0;
+}
+
+/* tables.js puts each table in this box, which scrolls sideways when the table
+ * is wider than the page, so the page itself never does. */
+.table-scroll {
+  margin: 0 0 2rem;
+  overflow-x: auto;
+}
+
+.table-scroll > table {
+  margin-bottom: 0;
 }
 /*=== badge paid & unpaid member status */
 .badge{
@@ -679,5 +694,56 @@ td button {
   th,
   td {
     padding: 0.5rem;
+  }
+
+  /* Without tables.js a table stays a table, and may break words anywhere
+   * rather than scroll the page sideways. */
+  table:not(.stackable) :is(th, td) {
+    overflow-wrap: anywhere;
+  }
+
+  /* With it, every row is a block. The first cell is the block's title, and
+   * each other cell starts with its column's heading, which tables.js copied
+   * into data-label. The heading row stays for a screen reader only, and the
+   * "/ ''" keeps a screen reader from reading the copied heading twice. */
+  table.stackable,
+  table.stackable :is(caption, tbody, tr, th, td) {
+    display: block;
+  }
+
+  table.stackable thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  table.stackable tbody tr {
+    padding: 0.75rem;
+  }
+
+  table.stackable tbody :is(th, td) {
+    padding: 0;
+  }
+
+  table.stackable tbody tr > :first-child {
+    font-weight: 700;
+  }
+
+  table.stackable td[data-label]::before {
+    content: attr(data-label) ": ";
+    content: attr(data-label) ": " / "";
+    font-weight: 700;
+  }
+
+  table.stackable td[data-blank],
+  table.stackable td:has(> form)::before {
+    display: none;
+  }
+
+  table.stackable td:has(> form) {
+    margin-top: 0.5rem;
   }
 }
