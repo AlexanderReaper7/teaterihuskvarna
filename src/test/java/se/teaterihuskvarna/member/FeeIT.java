@@ -146,9 +146,9 @@ class FeeIT extends MemberRegisterSupport {
     void aButtonInTheRegisterMarksAFeeAndGoesBackToTheSameList() throws Exception {
         String register = page("/admin/medlemmar?avgift=obetald");
         assertThat(register)
-                .contains("Markera avgiften som betald för Johan Bergström, enskild medlem")
-                .doesNotContain("Markera avgiften som betald för Johan Bergström, hushåll")
-                .contains("Markera avgiften som betald för Erik Lindqvist, hushåll");
+                .contains("Betald, enskild: Johan Bergström")
+                .doesNotContain("Betald, hushåll: Johan Bergström")
+                .contains("Betald, hushåll: Erik Lindqvist och alla i hushållet");
 
         String back = "/admin/medlemmar?q=Bergstr%C3%B6m&avgift=obetald";
         MvcResult first = markFromRegister(johan);

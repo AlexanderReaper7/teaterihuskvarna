@@ -608,6 +608,14 @@ td button {
   white-space: nowrap;
 }
 
+/* Buttons grouped in a cell, such as the register's fee buttons, may wrap
+ * between words. Unbroken, "Betald, enskild" holds the fee column so wide that
+ * the register no longer fits a 320 px phone. */
+td .buttons button {
+  white-space: normal;
+  overflow-wrap: normal;
+}
+
 /* The old site's one working breakpoint. */
 @media (max-width: 767px) {
   :root {
