@@ -17,14 +17,14 @@
         <p role="status">${notice}</p>
     @endif
     <p>
-        <a href="/admin/medlemmar/ny">${copy.text("register.add")}</a>
-        · <a href="/admin/hushall">${copy.text("household.heading")}</a>
-        · <a href="/admin/medlemmar.csv" download>${copy.text("register.export")}</a>
+        <a href="/admin/medlemmar/ny">@template.icon.plus() ${copy.text("register.add")}</a>
+        · <a href="/admin/hushall">@template.icon.house() ${copy.text("household.heading")}</a>
+        · <a href="/admin/medlemmar.csv" download>@template.icon.download() ${copy.text("register.export")}</a>
     </p>
     <form method="get" action="/admin/medlemmar" role="search">
         <label for="q">${copy.text("register.search")}</label>
         <input id="q" name="q" type="search" value="${query}">
-        <button type="submit">${copy.text("register.search.submit")}</button>
+        <button type="submit">@template.icon.search() ${copy.text("register.search.submit")}</button>
     </form>
     @if(list.more())
         <p role="status">${copy.text("register.more", String.valueOf(MemberService.SEARCH_LIMIT))}</p>

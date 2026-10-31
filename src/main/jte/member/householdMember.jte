@@ -27,7 +27,7 @@
                 autocomplete = "off", value = form.postalCode(), error = errors.message("postalCode"), required = false)
         @template.tag.field(name = "city", label = copy.text("member.city"), type = "text",
                 autocomplete = "off", value = form.city(), error = errors.message("city"), required = false)
-        <button type="submit">${copy.text("member.contact.submit")}</button>
+        <button type="submit">@template.icon.save() ${copy.text("member.contact.submit")}</button>
     </form>
     <p><a href="/medlem/hushall">${copy.text("member.household.back")}</a></p>
 `)

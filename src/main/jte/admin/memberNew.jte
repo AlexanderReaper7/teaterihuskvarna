@@ -25,6 +25,6 @@
     <form method="post" action="/admin/medlemmar">
         @template.tag.csrf(csrf = csrf)
         @template.tag.memberFields(copy = copy, form = form, errors = errors, households = households)
-        <button type="submit">${copy.text("register.add.submit")}</button>
+        <button type="submit">@template.icon.plus() ${copy.text("register.add.submit")}</button>
     </form>
 `)

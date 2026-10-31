@@ -453,6 +453,25 @@ button:hover {
   color: var(--color-primary);
 }
 
+/* A Lucide icon before a menu link's or an action's text, from
+ * scripts/lucide-icons.py. It draws in the text's colour, so a button's hover
+ * colour reaches it. The link or button becomes a flex box, which drops the
+ * space after the icon, so a link's underline starts at its first letter. A
+ * display set here would beat the hidden attribute, which passkey.js and
+ * session.js use to hide buttons, so a hidden one is left alone. */
+.icon {
+  width: 1.25em;
+  height: 1.25em;
+  flex: none;
+}
+
+a:has(> .icon):not([hidden]),
+button:has(> .icon):not([hidden]) {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35em;
+}
+
 /* Buttons side by side. Without it the only gap is the space between the
  * tags, and none at all once a narrow screen wraps them onto two lines. */
 .buttons {

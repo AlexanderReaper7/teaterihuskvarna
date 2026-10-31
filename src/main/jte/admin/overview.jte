@@ -33,15 +33,15 @@
         <h2 id="webbplatsens-innehall">${copy.text("admin.content.heading")}</h2>
         <p>${copy.text("admin.content.explain")}</p>
         @if(studioUrl != null)
-            <p><a href="${studioUrl}">${copy.text("admin.content.open")}</a></p>
+            <p><a href="${studioUrl}">@template.icon.externalLink() ${copy.text("admin.content.open")}</a></p>
         @else
-            <p>${copy.text("admin.content.unavailable")} <a href="https://www.sanity.io/manage">${copy.text("admin.content.manage")}</a></p>
+            <p>${copy.text("admin.content.unavailable")} <a href="https://www.sanity.io/manage">@template.icon.externalLink() ${copy.text("admin.content.manage")}</a></p>
         @endif
     </section>
     <section aria-labelledby="brevo">
         <h2 id="brevo">${copy.text("admin.brevo.heading")}</h2>
-        <p><a href="https://app.brevo.com/contact/segment">${copy.text("adminMailings.segments.open")}</a></p>
-        <p><a href="https://app.brevo.com/campaigns/listing/email">${copy.text("adminMailings.campaigns.open")}</a></p>
+        <p><a href="https://app.brevo.com/contact/segment">@template.icon.externalLink() ${copy.text("adminMailings.segments.open")}</a></p>
+        <p><a href="https://app.brevo.com/campaigns/listing/email">@template.icon.externalLink() ${copy.text("adminMailings.campaigns.open")}</a></p>
     </section>
     @if(offerPasskey)
         @template.tag.passkeyOffer(copy = copy, csrf = csrf, urls = passkeyUrls)
@@ -73,7 +73,7 @@
                             <form method="post" action="/admin/administratorer/${administrator.id()}/ta-bort">
                                 @template.tag.csrf(csrf = csrf)
                                 <button type="submit" class="button-secondary" aria-label="${removeLabel}">
-                                    ${copy.text("admin.remove")}
+                                    @template.icon.trash2() ${copy.text("admin.remove")}
                                 </button>
                             </form>
                         @endif
@@ -91,7 +91,7 @@
                 autocomplete = "off", value = form.fullName(), error = errors.message("fullName"), required = true)
         @template.tag.field(name = "email", label = copy.text("admin.add.email"), type = "email",
                 autocomplete = "off", value = form.email(), error = errors.message("email"), required = true)
-        <button type="submit">${copy.text("admin.add.submit")}</button>
+        <button type="submit">@template.icon.plus() ${copy.text("admin.add.submit")}</button>
     </form>
 
     @template.tag.passkeys(copy = copy, csrf = csrf, passkeys = passkeys, urls = passkeyUrls)
