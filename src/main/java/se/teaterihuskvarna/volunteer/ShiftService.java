@@ -87,6 +87,12 @@ public class ShiftService {
                 .toList();
     }
 
+    /// @param memberId the member asking
+    /// @return the shifts the member has a place on that have not started, earliest first
+    public List<MemberShift> booked(long memberId) {
+        return upcoming(memberId).stream().filter(MemberShift::booked).toList();
+    }
+
     /// Takes a place. The shift row stays locked from the read until the
     /// commit, so a second booking for the same shift waits and then counts
     /// the first one.
