@@ -262,6 +262,27 @@ class ShiftIT extends IntegrationTestSupport {
     }
 
     @Test
+    void theAdministratorStartPageListsOnlyUpcomingShiftsWithFreePlaces() throws Exception {
+        long full = insertShift(Instant.now().plus(Duration.ofDays(2)), 1);
+        long open = insertShift(Instant.now().plus(Duration.ofDays(3)), 3);
+        long past = insertShift(Instant.now().minus(Duration.ofDays(2)), 3);
+        long anna = memberOf(insertAccount("Anna Först", "anna@example.test"));
+        insertBooking(full, anna, Instant.now());
+        insertBooking(open, anna, Instant.now());
+
+        String page = mockMvc.perform(get("/admin").with(asAdministrator())).andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
+        assertThat(page).contains("/admin/volontarpass/" + open + "\"", "1 av 3")
+                .doesNotContain("/admin/volontarpass/" + full + "\"")
+                .doesNotContain("/admin/volontarpass/" + past + "\"");
+
+        insertBooking(open, memberOf(insertAccount("Bo Andra", "bo@example.test")), Instant.now());
+        insertBooking(open, memberOf(insertAccount("Cia Tredje", "cia@example.test")), Instant.now());
+        mockMvc.perform(get("/admin").with(asAdministrator()))
+                .andExpect(content().string(containsString("Inget kommande pass har lediga platser.")));
+    }
+
+    @Test
     void theLastShiftIsTheLatestThatHasStarted() {
         Instant past = Instant.now().minus(Duration.ofDays(20));
         long earlier = insertShift(past.minus(Duration.ofDays(30)), 3);

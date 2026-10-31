@@ -403,6 +403,20 @@ class OfferIT extends IntegrationTestSupport {
     }
 
     @Test
+    void theAdministratorStartPageListsUpcomingOffersSoonestFirst() throws Exception {
+        long later = insertOffer("Sommarläger", true, 10, IN_A_MONTH, null);
+        long sooner = insertOffer("Höstverkstad", false, null, IN_A_WEEK, null);
+        long past = insertOffer("Gammal kurs", true, null, YESTERDAY, null);
+        register(later, insertAccount("Anna Först", "anna@example.test"));
+
+        String page = mockMvc.perform(get("/admin").with(asAdministrator())).andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
+        assertThat(page).contains("1 av 10", "Nej, utkast").doesNotContain("/admin/erbjudanden/" + past + "\"");
+        assertThat(page.indexOf("/admin/erbjudanden/" + sooner + "\"")).isPositive()
+                .isLessThan(page.indexOf("/admin/erbjudanden/" + later + "\""));
+    }
+
+    @Test
     void deletingAsksFirstAndTakesTheRegistrations() throws Exception {
         long id = insertOffer("Verkstad", true, null, IN_A_MONTH, null);
         register(id, insertAccount("Anna Först", "anna@example.test"));

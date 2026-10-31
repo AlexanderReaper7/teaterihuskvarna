@@ -541,7 +541,9 @@ td {
   overflow-wrap: anywhere;
 }
 
-th {
+/* The line under the column headings. A row's heading cell is a th too and
+ * takes no line. */
+thead th {
   border-bottom: 2px solid var(--color-primary);
 }
 
