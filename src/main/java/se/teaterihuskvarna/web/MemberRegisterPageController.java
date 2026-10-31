@@ -2,6 +2,11 @@ package se.teaterihuskvarna.web;
 
 import jakarta.validation.ConstraintViolationException;
 import java.nio.charset.StandardCharsets;
+import java.time.Year;
+import java.time.ZoneId;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import org.jspecify.annotations.Nullable;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
@@ -18,10 +23,12 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+import org.springframework.web.util.UriComponentsBuilder;
 import se.teaterihuskvarna.login.SignedIn;
 import se.teaterihuskvarna.member.AccountNeedsEmail;
 import se.teaterihuskvarna.member.EmailTaken;
 import se.teaterihuskvarna.member.FeeAlreadyMarked;
+import se.teaterihuskvarna.member.FeeFilter;
 import se.teaterihuskvarna.member.FeeKind;
 import se.teaterihuskvarna.member.FeeMark;
 import se.teaterihuskvarna.member.FeeService;
@@ -51,6 +58,11 @@ public class MemberRegisterPageController {
 
     private static final String LIST = "/admin/medlemmar";
     private static final String HOUSEHOLDS = "/admin/hushall";
+    /// The fee year is the year in Sweden, as the fee ledger counts it.
+    private static final ZoneId SWEDEN = ZoneId.of("Europe/Stockholm");
+    /// The register's `avgift` parameter for each choice of fee, in Swedish like the path.
+    private static final String PAID = "betald";
+    private static final String UNPAID = "obetald";
 
     private final MemberService members;
     private final HouseholdService households;
@@ -68,12 +80,23 @@ public class MemberRegisterPageController {
     }
 
     /// @param query what to search for, or nothing to list everyone
-    /// @param model receives the matches and the query
+    /// @param fee   `betald` or `obetald` for only those whose fee this year is or is not paid
+    /// @param model receives the matches, the query and the choices of fee
     /// @return the register
     @GetMapping(LIST)
-    public String list(@RequestParam(name = "q", required = false) @Nullable String query, Model model) {
+    public String list(@RequestParam(name = "q", required = false) @Nullable String query,
+            @RequestParam(name = "avgift", required = false) @Nullable String fee, Model model) {
+        FeeFilter filter = filter(fee);
+        String year = String.valueOf(Year.now(SWEDEN).getValue());
         model.addAttribute("query", query == null ? "" : query);
-        model.addAttribute("list", members.search(query));
+        model.addAttribute("fee", filter == FeeFilter.ALL ? "" : fee);
+        model.addAttribute("list", members.search(query, filter));
+        model.addAttribute("filters", List.of(
+                new RegisterFilter(copy.text("register.filter.all"), listUrl(query, null), filter == FeeFilter.ALL),
+                new RegisterFilter(copy.text("register.filter.unpaid", year), listUrl(query, UNPAID),
+                        filter == FeeFilter.UNPAID),
+                new RegisterFilter(copy.text("register.filter.paid", year), listUrl(query, PAID),
+                        filter == FeeFilter.PAID)));
         return "admin/members";
     }
 
@@ -170,25 +193,34 @@ public class MemberRegisterPageController {
     /// @param id         the member who paid
     /// @param kind       `INDIVIDUAL` or `HOUSEHOLD`
     /// @param kronor     the amount in whole kronor, or blank for the configured amount
+    /// @param back       `lista` when the button was in the register, which is where to go back to
+    /// @param query      the register's search, to go back to
+    /// @param fee        the register's choice of fee, to go back to
     /// @param redirected receives the outcome, shown after the redirect
-    /// @return a redirect to the member's page
+    /// @return a redirect to the member's page, or to the register the button was in
     @PostMapping(LIST + "/{id}/avgift")
     public String markPaid(@AuthenticationPrincipal SignedIn signedIn, @PathVariable long id,
             @RequestParam(required = false) @Nullable String kind,
-            @RequestParam(required = false) @Nullable String kronor, RedirectAttributes redirected) {
+            @RequestParam(required = false) @Nullable String kronor,
+            @RequestParam(name = "tillbaka", required = false) @Nullable String back,
+            @RequestParam(name = "q", required = false) @Nullable String query,
+            @RequestParam(name = "avgift", required = false) @Nullable String fee, RedirectAttributes redirected) {
+        String to = "lista".equals(back) ? "redirect:" + listUrl(query, fee) : redirect(id);
         try {
             fees.markPaid(id, new FeeMark(kind(kind), ore(kronor)), signedIn.id());
         } catch (ConstraintViolationException e) {
             redirected.addFlashAttribute("error", MemberPageController.firstMessage(e));
-            return redirect(id);
+            return to;
         } catch (FeeAlreadyMarked e) {
             redirected.addFlashAttribute("error", copy.text("fee.error.alreadyMarked"));
-            return redirect(id);
+            return to;
         } catch (NoSuchMember e) {
             throw notFound(e);
         }
-        redirected.addFlashAttribute("notice", copy.text("fee.marked"));
-        return redirect(id);
+        redirected.addFlashAttribute("notice", "lista".equals(back)
+                ? copy.text("fee.markedFor", file(id).member().fullName())
+                : copy.text("fee.marked"));
+        return to;
     }
 
     /// @param id         the member whose mark to undo
@@ -328,6 +360,34 @@ public class MemberRegisterPageController {
 
     private static String redirect(long id) {
         return "redirect:" + LIST + "/" + id;
+    }
+
+    private static FeeFilter filter(@Nullable String fee) {
+        if (PAID.equals(fee)) {
+            return FeeFilter.PAID;
+        }
+        return UNPAID.equals(fee) ? FeeFilter.UNPAID : FeeFilter.ALL;
+    }
+
+    /// The register with a search and a choice of fee, each left out when there is none.
+    ///
+    /// The values go in as URI variables, which `encode()` encodes strictly. A
+    /// value written straight into the query keeps a `+`, which the next request
+    /// reads as a space, and keeps braces, which a redirect reads as a URI
+    /// template and fails on.
+    private static String listUrl(@Nullable String query, @Nullable String fee) {
+        UriComponentsBuilder url = UriComponentsBuilder.fromPath(LIST);
+        Map<String, String> values = new HashMap<>();
+        if (query != null && !query.isBlank()) {
+            url.queryParam("q", "{q}");
+            values.put("q", query);
+        }
+        FeeFilter filter = filter(fee);
+        if (filter != FeeFilter.ALL) {
+            url.queryParam("avgift", "{avgift}");
+            values.put("avgift", filter == FeeFilter.PAID ? PAID : UNPAID);
+        }
+        return url.encode().buildAndExpand(values).toUriString();
     }
 
     /// An unknown kind becomes null, which the service refuses with its own
