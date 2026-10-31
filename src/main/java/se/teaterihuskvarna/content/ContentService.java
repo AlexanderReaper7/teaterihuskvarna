@@ -13,8 +13,8 @@ import org.jspecify.annotations.Nullable;
 import org.springframework.stereotype.Service;
 import tools.jackson.databind.JsonNode;
 
-/// The public content from Sanity: events, news, the fixed pages and partners,
-/// R001 to R004.
+/// The public content from Sanity: events, news, the fixed pages with their
+/// productions, board and Ludde prizes, and partners, R001 to R004.
 ///
 /// Both adapters call these methods, the public JTE pages and `/api/content`,
 /// per `docs/decisions/0014-one-service-layer-two-adapters.md`. Every method
@@ -152,6 +152,61 @@ public class ContentService {
     }
 
     /// @param perspective published, or drafts for a preview
+    /// @return every production, the latest year first and those without a year last
+    public List<Production> productions(Perspective perspective) {
+        List<Production> productions = new ArrayList<>();
+        for (JsonNode document : cache.documents("produktion", perspective)) {
+            String title = Json.text(document, "title");
+            if (title != null) {
+                Integer first = Json.integer(document, "ar");
+                Integer last = Json.integer(document, "tillAr");
+                productions.add(new Production(title, first, first == null || first.equals(last) ? null : last,
+                        images.of(document.get("huvudbild")), portableText.html(document.get("beskrivning"))));
+            }
+        }
+        productions.sort(Comparator.comparing(ContentService::latestYear,
+                Comparator.nullsLast(Comparator.<Integer>reverseOrder()))
+                .thenComparing(production -> production.title().toLowerCase(Locale.ROOT)));
+        return productions;
+    }
+
+    /// @param perspective published, or drafts for a preview
+    /// @return the board, in the order the editors gave, then by name
+    public List<BoardMember> board(Perspective perspective) {
+        record Ordered(@Nullable Integer order, BoardMember member) {
+        }
+        List<Ordered> board = new ArrayList<>();
+        for (JsonNode document : cache.documents("styrelseledamot", perspective)) {
+            String name = Json.text(document, "namn");
+            String role = Json.text(document, "roll");
+            if (name != null && role != null) {
+                board.add(new Ordered(Json.integer(document, "ordning"), new BoardMember(name, role,
+                        images.of(document.get("bild")), Json.text(document, "ansvar"))));
+            }
+        }
+        board.sort(Comparator.comparing(Ordered::order, Comparator.nullsLast(Comparator.<Integer>naturalOrder()))
+                .thenComparing(ordered -> ordered.member().name().toLowerCase(Locale.ROOT)));
+        return board.stream().map(Ordered::member).toList();
+    }
+
+    /// @param perspective published, or drafts for a preview
+    /// @return every Ludde prize, the latest year first
+    public List<LuddePrize> luddePrizes(Perspective perspective) {
+        List<LuddePrize> prizes = new ArrayList<>();
+        for (JsonNode document : cache.documents("luddepris", perspective)) {
+            String recipient = Json.text(document, "mottagare");
+            Integer year = Json.integer(document, "ar");
+            if (recipient != null && year != null) {
+                prizes.add(new LuddePrize(recipient, year, images.of(document.get("bild")),
+                        portableText.html(document.get("motivering"))));
+            }
+        }
+        prizes.sort(Comparator.comparing(LuddePrize::year).reversed()
+                .thenComparing(prize -> prize.recipient().toLowerCase(Locale.ROOT)));
+        return prizes;
+    }
+
+    /// @param perspective published, or drafts for a preview
     /// @return every partner, by name
     public List<Partner> partners(Perspective perspective) {
         List<Partner> partners = new ArrayList<>();
@@ -256,5 +311,10 @@ public class ContentService {
         }
         String lower = url.strip().toLowerCase(Locale.ROOT);
         return lower.startsWith("https://") || lower.startsWith("http://") ? url.strip() : null;
+    }
+
+    private static @Nullable Integer latestYear(Production production) {
+        Integer last = production.lastYear();
+        return last != null ? last : production.firstYear();
     }
 }

@@ -64,6 +64,23 @@ class ContentIT extends IntegrationTestSupport {
     }
 
     @Test
+    void theListPagesShowTheirDocumentsInOrderAndSkipIncompleteOnes() throws Exception {
+        String productions = html("/produktioner");
+        assertThat(productions).contains("Panik på kliniken", "Bara tusen korta år", "1994–1997", "Läs nyhetsbrevet",
+                "Sommarens fars i Huskvarna.");
+        assertThat(productions.indexOf("Panik på kliniken")).isLessThan(productions.indexOf("Bara tusen korta år"));
+        assertThat(productions.indexOf("Bara tusen korta år")).isLessThan(productions.indexOf("Läs nyhetsbrevet"));
+
+        String board = html("/styrelsen");
+        assertThat(board).contains("Marianne Exempel", "Ordförande", "Folkrörelsearkivet", "Ulla Exempel")
+                .doesNotContain("Utan Roll");
+        assertThat(board.indexOf("Marianne Exempel")).isLessThan(board.indexOf("Ulla Exempel"));
+
+        assertThat(html("/ludde-priser")).contains("Barngrupperna", "2022", "En Julsaga").doesNotContain("Utan år");
+        assertThat(html("/kontakt")).doesNotContain("class=\"cards\"");
+    }
+
+    @Test
     void anUnknownSlugIsNotFound() throws Exception {
         assertThat(status("/evenemang/finns-inte")).isEqualTo(404);
         assertThat(status("/api/content/events/finns-inte")).isEqualTo(404);
@@ -79,6 +96,10 @@ class ContentIT extends IntegrationTestSupport {
         assertThat(json("/api/content/series")).contains("Teatercafé");
         assertThat(json("/api/content/pages/kontakt")).contains("info@example.test");
         assertThat(json("/api/content/partners")).contains("Studieförbundet");
+        assertThat(json("/api/content/productions")).contains("\"firstYear\":1994", "\"lastYear\":1997")
+                .doesNotContain("\"firstYear\":2020");
+        assertThat(json("/api/content/board")).contains("Marianne Exempel").doesNotContain("Utan Roll");
+        assertThat(json("/api/content/ludde-prizes")).contains("\"year\":2022").doesNotContain("Utan år");
     }
 
     @Test

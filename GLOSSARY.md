@@ -128,6 +128,18 @@ The site as it looks with an editor's unpublished drafts, shown inside Sanity's 
 
 One of the pages R004 names, such as Styrelsen, written in Sanity as a `sida` document whose slug is the page's address.
 
+### Production | Produktion
+
+A play or programme the association has staged or arranged, with the year it opened and, for one that ran several seasons, the last year. A `produktion` document in Sanity, listed newest first on `/produktioner` under that page's own text.
+
+### Board member | Styrelseledamot
+
+A person on the association's board, with a role such as Ordförande or Kassör. A `styrelseledamot` document in Sanity, listed on `/styrelsen` by its order number. It holds no contact details, because Sanity's datasets answer anonymous queries.
+
+### Ludde prize | Luddepriset
+
+The prize the association gives for a notable cultural contribution in the municipality, named after Ludde in Bara tusen korta år. A `luddepris` document in Sanity is one year's recipient, listed newest first on `/ludde-priser`.
+
 ### Offer | Erbjudande
 
 A member benefit or limited-capacity activity for which a member may register. An administrator creates it on `/admin/erbjudanden`, and members see it on `/medlem/erbjudanden` once it is published. Offers live in PostgreSQL, not in Sanity: decided by the user on 2026-09-28.
