@@ -6,8 +6,9 @@
 @template.layout(copy = copy, title = title, content = @`
     <nav class="section-nav" aria-label="${copy.text("nav.member.label")}">
         <ul>
-            <li><a href="/medlem">${copy.text("nav.overview")}</a></li>
+            <li><a href="/medlem">${copy.text("member.heading")}</a></li>
             <li><a href="/medlem/kontaktuppgifter">${copy.text("member.contact.heading")}</a></li>
+            <li><a href="/medlem/hushall">${copy.text("member.household")}</a></li>
             <li><a href="/medlem/erbjudanden">${copy.text("offers.heading")}</a></li>
             <li><a href="/medlem/handlingar">${copy.text("documents.heading")}</a></li>
             <li><a href="/medlem/volontar">${copy.text("shifts.heading")}</a></li>

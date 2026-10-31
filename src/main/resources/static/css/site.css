@@ -295,6 +295,19 @@ dd {
   margin: 0 0 1rem;
 }
 
+/* Short facts with short names, such as contact details: each name beside its
+ * value instead of above it. */
+dl.details {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 0.25rem 1.5rem;
+}
+
+dl.details dd {
+  margin: 0;
+  overflow-wrap: break-word;
+}
+
 /* Content from Sanity */
 
 .meta {

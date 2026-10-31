@@ -33,7 +33,7 @@
             </thead>
             <tbody>
                 @for(MemberShift shift : shifts)
-                    <tr>
+                    <tr id="pass-${shift.id()}">
                         <th scope="row"><a href="/evenemang/${shift.eventSlug()}">${shift.eventTitle()}</a></th>
                         <td>${copy.text("shift.task." + shift.task().name())}</td>
                         <td>${copy.text("shifts.between", copy.dateTime(shift.startsAt()), copy.time(shift.endsAt()))}</td>

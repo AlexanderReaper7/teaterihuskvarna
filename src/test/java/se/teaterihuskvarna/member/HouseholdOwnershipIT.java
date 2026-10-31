@@ -12,6 +12,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.nio.charset.StandardCharsets;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -59,6 +60,27 @@ class HouseholdOwnershipIT extends MemberRegisterSupport {
         moveTo(owner, household);
         moveTo(other, household);
         jdbc.sql("UPDATE household SET owner_member_id = ? WHERE id = ?").params(owner, household).update();
+    }
+
+    @Test
+    void everyoneInTheHouseholdSeesWhoOwnsIt() throws Exception {
+        for (String page : new String[] {PAGE, "/medlem"}) {
+            assertThat(html(page)).as(page).contains("Erik Exempel (ägare)").doesNotContain("Maria Exempel (ägare)");
+        }
+    }
+
+    @Test
+    void aHouseholdWithoutAnOwnerSaysAdministratorsManageIt() throws Exception {
+        jdbc.sql("UPDATE household SET owner_member_id = NULL WHERE id = ?").param(household).update();
+        String page = html(PAGE);
+        assertThat(page).contains("Administratörerna sköter hushållet, det har ingen ägare.")
+                .doesNotContain("Endast ägaren").doesNotContain("(ägare)");
+        assertThat(html("/medlem")).contains("Administratörerna sköter hushållet.").doesNotContain("(ägare)");
+    }
+
+    private String html(String page) throws Exception {
+        return mockMvc.perform(get(page).with(otherLogin)).andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8).replaceAll("\\s+", " ");
     }
 
     @Test

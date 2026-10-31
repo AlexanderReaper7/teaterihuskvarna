@@ -26,10 +26,13 @@ import se.teaterihuskvarna.member.MemberDetails;
 import se.teaterihuskvarna.member.MemberHasAccount;
 import se.teaterihuskvarna.member.MemberService;
 import se.teaterihuskvarna.member.NoSuchMember;
+import se.teaterihuskvarna.offer.OfferService;
+import se.teaterihuskvarna.volunteer.ShiftService;
 
-/// The logged-in member's own page: contact details, this year's fee, the
-/// household with its invitations, passkeys and devices. Spring Security lets
-/// only a member's account reach it.
+/// The logged-in member's own page: this year's fee, the offers and volunteer
+/// shifts the member has signed up for, contact details, the household with its
+/// invitations, passkeys and devices. Spring Security lets only a member's
+/// account reach it.
 @Controller
 public class MemberPageController {
 
@@ -38,15 +41,19 @@ public class MemberPageController {
     private final MemberService members;
     private final HouseholdService households;
     private final InvitationService invitations;
+    private final OfferService offers;
+    private final ShiftService shifts;
     private final Copy copy;
     private final PasskeySection passkeys;
     private final DeviceSection devices;
 
     MemberPageController(MemberService members, HouseholdService households, InvitationService invitations,
-            Copy copy, PasskeySection passkeys, DeviceSection devices) {
+            OfferService offers, ShiftService shifts, Copy copy, PasskeySection passkeys, DeviceSection devices) {
         this.members = members;
         this.households = households;
         this.invitations = invitations;
+        this.offers = offers;
+        this.shifts = shifts;
         this.copy = copy;
         this.passkeys = passkeys;
         this.devices = devices;
@@ -55,12 +62,15 @@ public class MemberPageController {
     /// @param signedIn the logged-in account
     /// @param session  holds whether a link login just happened, which offers a passkey
     /// @param request  may say the offer was declined on this browser
-    /// @param model    receives the member, their household, passkeys and devices
+    /// @param model    receives the member, what they signed up for, their household, passkeys and devices
     /// @return the member page
     @GetMapping("/medlem")
     public String member(@AuthenticationPrincipal SignedIn signedIn, HttpSession session,
             HttpServletRequest request, Model model) {
-        model.addAttribute("member", member(signedIn));
+        MemberDetails member = member(signedIn);
+        model.addAttribute("member", member);
+        model.addAttribute("registrations", offers.registeredOffers(member.id()));
+        model.addAttribute("shifts", shifts.booked(member.id()));
         model.addAttribute("household", households.forAccount(signedIn.id()).orElse(null));
         passkeys.addTo(model, signedIn, passkeys.offer(session, request));
         devices.addTo(model, signedIn, session);
