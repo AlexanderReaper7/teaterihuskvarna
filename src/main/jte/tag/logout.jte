@@ -5,5 +5,5 @@
 @param String action
 <form method="post" action="${action}">
     @template.tag.csrf(csrf = csrf)
-    <button type="submit" class="button-secondary">${copy.text("logout.submit")}</button>
+    <button type="submit" class="button-secondary">@template.icon.logOut() ${copy.text("logout.submit")}</button>
 </form>

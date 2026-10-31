@@ -11,5 +11,5 @@
     <p><a href="/admin/erbjudanden">${copy.text("adminOffers.back")}</a></p>
     <p>${copy.text("adminOffers.new.draft")}</p>
     @template.tag.offerForm(copy = copy, csrf = csrf, form = form, errors = errors, action = "/admin/erbjudanden",
-            submit = copy.text("adminOffers.new.submit"))
+            submit = copy.text("adminOffers.new.submit"), icon = @`@template.icon.plus()`)
 `)

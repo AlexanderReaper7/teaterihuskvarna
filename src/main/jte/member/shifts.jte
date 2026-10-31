@@ -42,12 +42,12 @@
                             @if(shift.booked())
                                 <form method="post" action="/medlem/volontar/${shift.id()}/avboka">
                                     @template.tag.csrf(csrf = csrf)
-                                    <button type="submit" class="button-secondary">${copy.text("shifts.cancel")}</button>
+                                    <button type="submit" class="button-secondary">@template.icon.calendarX() ${copy.text("shifts.cancel")}</button>
                                 </form>
                             @elseif(shift.placesLeft() > 0)
                                 <form method="post" action="/medlem/volontar/${shift.id()}/boka">
                                     @template.tag.csrf(csrf = csrf)
-                                    <button type="submit">${copy.text("shifts.book")}</button>
+                                    <button type="submit">@template.icon.calendarPlus() ${copy.text("shifts.book")}</button>
                                 </form>
                             @else
                                 ${copy.text("shifts.full")}

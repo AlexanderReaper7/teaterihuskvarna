@@ -54,7 +54,7 @@
                                 @template.tag.csrf(csrf = csrf)
                                 <button type="submit" class="button-secondary"
                                         aria-label="${removeLabel}">
-                                    ${copy.text("adminDocuments.remove")}
+                                    @template.icon.trash2() ${copy.text("adminDocuments.remove")}
                                 </button>
                             </form>
                         </td>
@@ -97,6 +97,6 @@
             @endif
         </p>
         <p>${copy.text("adminDocuments.upload.limit")}</p>
-        <button type="submit">${copy.text("adminDocuments.upload.submit")}</button>
+        <button type="submit">@template.icon.upload() ${copy.text("adminDocuments.upload.submit")}</button>
     </form>
 `)

@@ -14,7 +14,7 @@
     @if(notice != null)
         <p role="status">${notice}</p>
     @endif
-    <p><a href="/admin/erbjudanden/nytt">${copy.text("adminOffers.new")}</a></p>
+    <p><a href="/admin/erbjudanden/nytt">@template.icon.plus() ${copy.text("adminOffers.new")}</a></p>
     @if(offers.isEmpty())
         <p>${copy.text("adminOffers.none")}</p>
     @else
