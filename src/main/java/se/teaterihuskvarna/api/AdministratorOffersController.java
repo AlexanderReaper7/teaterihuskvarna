@@ -36,6 +36,12 @@ public class AdministratorOffersController {
         return offers.list();
     }
 
+    /// @return the offers that have not started, the soonest first and those without a start time last
+    @GetMapping("/api/admin/offers/upcoming")
+    public List<OfferDetails> upcoming() {
+        return offers.upcoming();
+    }
+
     /// @param form the title, description, times and capacity
     /// @return the offer as stored, unpublished
     @PostMapping("/api/admin/offers")
