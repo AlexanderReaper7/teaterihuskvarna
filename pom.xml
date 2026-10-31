@@ -20,14 +20,14 @@
   <properties>
     <java.version>25</java.version>
     <java.sourceDirectory>${project.basedir}/src/main/java</java.sourceDirectory>
-    <!-- Latest stable releases checked against Maven Central on 2026-10-01. -->
+    <!-- Latest stable releases checked against Maven Central on 2026-10-31. -->
     <jspecify.version>1.0.1</jspecify.version>
-    <error-prone.version>2.50.0</error-prone.version>
-    <nullaway.version>0.14.2</nullaway.version>
+    <error-prone.version>2.51.0</error-prone.version>
+    <nullaway.version>0.14.3</nullaway.version>
     <!-- Versions newer than the ones Spring Boot 4.1.2 manages. Checked against
-         Maven Central on 2026-09-22; see docs/decisions/0010 and 0011. -->
+         Maven Central on 2026-10-31; see docs/decisions/0010. -->
     <jte.version>3.2.4</jte.version>
-    <flyway.version>13.7.0</flyway.version>
+    <flyway.version>13.11.1</flyway.version>
     <!-- Boot 4.1.2 manages 9.2.0. 10.0.1 is Maven Central's latest, checked on
          2026-09-23. -->
     <git-commit-id-maven-plugin.version>10.0.1</git-commit-id-maven-plugin.version>
@@ -43,8 +43,8 @@
     <pmd.target.jdk>${java.version}</pmd.target.jdk>
     <archunit.version>1.5.1</archunit.version>
     <!-- spring-security-webauthn 7.1.1 asks for 0.31.9.RELEASE, and Boot does
-         not manage it. 0.31.10.RELEASE is Maven Central's latest, checked on
-         2026-09-23. The test emulator is pinned to the same release. -->
+         not manage it. The pin is newer, and the test emulator is pinned to
+         the same release. -->
     <webauthn4j.version>0.31.11.RELEASE</webauthn4j.version>
   </properties>
 
@@ -110,9 +110,13 @@
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-flyway</artifactId>
     </dependency>
+    <!-- Boot's dependency management already reads flyway.version. Naming it
+         here is for Dependabot: on 2026-10-27, while only the BOM read the
+         property, it proposed none of Flyway 13.8 to 13.10. -->
     <dependency>
       <groupId>org.flywaydb</groupId>
       <artifactId>flyway-database-postgresql</artifactId>
+      <version>${flyway.version}</version>
     </dependency>
     <dependency>
       <groupId>org.postgresql</groupId>
