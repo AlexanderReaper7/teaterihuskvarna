@@ -14,7 +14,7 @@
     <div class="buttons">
         <form method="post" action="/admin/erbjudanden/${offer.id()}/ta-bort">
             @template.tag.csrf(csrf = csrf)
-            <button type="submit">${copy.text("adminOffers.delete.submit")}</button>
+            <button type="submit">@template.icon.trash2() ${copy.text("adminOffers.delete.submit")}</button>
         </form>
     </div>
     <p><a href="/admin/erbjudanden/${offer.id()}">${copy.text("adminOffers.delete.cancel")}</a></p>

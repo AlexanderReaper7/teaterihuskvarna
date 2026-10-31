@@ -11,11 +11,11 @@
     <div data-login-ending hidden>
         <p role="alert" data-login-ending-text></p>
         <p data-login-remaining></p>
-        <button type="button" data-login-extend>${copy.text("session.extend")}</button>
+        <button type="button" data-login-extend>@template.icon.refreshCw() ${copy.text("session.extend")}</button>
     </div>
     <div data-login-ended hidden>
         <p role="alert" data-login-ended-text></p>
-        <a href="${urls.login()}">${copy.text("session.login")}</a>
+        <a href="${urls.login()}">@template.icon.logIn() ${copy.text("session.login")}</a>
     </div>
 </div>
 <script src="/js/session.js" defer></script>

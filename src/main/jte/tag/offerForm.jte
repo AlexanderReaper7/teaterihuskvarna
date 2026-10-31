@@ -9,6 +9,7 @@
 @param FieldErrors errors
 @param String action
 @param String submit
+@param gg.jte.Content icon
 !{String descriptionError = errors.message("description");}
 !{String descriptionInvalid = descriptionError == null ? null : "true";}
 !{String descriptionDescribedBy = descriptionError == null ? null : "description-error";}
@@ -37,5 +38,5 @@
             autocomplete = "off", value = Objects.toString(form.capacity(), null),
             error = errors.message("capacity"), required = false)
     <p>${copy.text("adminOffers.form.capacityHint")}</p>
-    <button type="submit">${submit}</button>
+    <button type="submit">${icon} ${submit}</button>
 </form>

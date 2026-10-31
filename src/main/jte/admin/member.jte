@@ -47,7 +47,7 @@
         @if(!thisYear.throughHousehold())
             <form method="post" action="/admin/medlemmar/${id}/avgift/angra">
                 @template.tag.csrf(csrf = csrf)
-                <button type="submit" class="button-secondary">${copy.text("fee.undo")}</button>
+                <button type="submit" class="button-secondary">@template.icon.undo2() ${copy.text("fee.undo")}</button>
             </form>
         @endif
     @endif
@@ -68,7 +68,7 @@
                     <label for="kronor">${copy.text("fee.amount")}</label>
                     <input id="kronor" name="kronor" type="text" inputmode="numeric" autocomplete="off">
                 </p>
-                <button type="submit">${copy.text("fee.mark.submit")}</button>
+                <button type="submit">@template.icon.badgeCheck() ${copy.text("fee.mark.submit")}</button>
             </fieldset>
         </form>
     @endif
@@ -127,7 +127,7 @@
             @template.tag.csrf(csrf = csrf)
             <label for="invite-email">${copy.text("invitation.email", file.member().fullName())}</label>
             <input id="invite-email" name="email" type="email" autocomplete="off" required>
-            <button type="submit">${copy.text("invitation.send")}</button>
+            <button type="submit">@template.icon.send() ${copy.text("invitation.send")}</button>
         </form>
     @endif
 
@@ -136,8 +136,8 @@
     <form method="post" action="/admin/medlemmar/${id}">
         @template.tag.csrf(csrf = csrf)
         @template.tag.memberFields(copy = copy, form = form, errors = errors, households = households)
-        <button type="submit">${copy.text("register.edit.submit")}</button>
+        <button type="submit">@template.icon.save() ${copy.text("register.edit.submit")}</button>
     </form>
 
-    <p><a href="/admin/medlemmar/${id}/ta-bort">${copy.text("register.delete")}</a></p>
+    <p><a href="/admin/medlemmar/${id}/ta-bort">@template.icon.trash2() ${copy.text("register.delete")}</a></p>
 `)

@@ -30,7 +30,7 @@
     @if(volunteers.isEmpty())
         <p>${copy.text("adminShifts.noVolunteers")}</p>
     @else
-        <p><a href="/admin/volontarpass/${shift.id()}/bokningar.csv">${copy.text("adminShifts.csv")}</a></p>
+        <p><a href="/admin/volontarpass/${shift.id()}/bokningar.csv">@template.icon.download() ${copy.text("adminShifts.csv")}</a></p>
         <table>
             <caption>${copy.text("adminShifts.volunteersCaption", title)}</caption>
             <thead>
@@ -60,6 +60,6 @@
     <p>${copy.text("adminShifts.deleteWarning", shift.booked())}</p>
     <form method="post" action="/admin/volontarpass/${shift.id()}/ta-bort">
         @template.tag.csrf(csrf = csrf)
-        <button type="submit" class="button-secondary">${copy.text("adminShifts.delete")}</button>
+        <button type="submit" class="button-secondary">@template.icon.trash2() ${copy.text("adminShifts.delete")}</button>
     </form>
 `)

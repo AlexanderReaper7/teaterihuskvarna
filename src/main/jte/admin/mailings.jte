@@ -34,9 +34,9 @@
     <h2>${copy.text("adminMailings.new")}</h2>
     <p>${copy.text("adminMailings.how")}</p>
     @if(studioUrl != null)
-        <p><a href="${studioUrl}">${copy.text("adminMailings.content.open")}</a></p>
+        <p><a href="${studioUrl}">@template.icon.externalLink() ${copy.text("adminMailings.content.open")}</a></p>
     @else
-        <p>${copy.text("admin.content.unavailable")} <a href="https://www.sanity.io/manage">${copy.text("admin.content.manage")}</a></p>
+        <p>${copy.text("admin.content.unavailable")} <a href="https://www.sanity.io/manage">@template.icon.externalLink() ${copy.text("admin.content.manage")}</a></p>
     @endif
     @template.tag.errors(copy = copy, errors = errors)
     <form method="post" action="/admin/utskick/forhandsgranska">
@@ -54,7 +54,7 @@
                 <span id="audience-error" class="field-error">${audienceError}</span>
             @endif
         </p>
-        <p id="audience-hint">${copy.text("adminMailings.segments")} <a href="https://app.brevo.com/contact/segment">${copy.text("adminMailings.segments.open")}</a></p>
+        <p id="audience-hint">${copy.text("adminMailings.segments")} <a href="https://app.brevo.com/contact/segment">@template.icon.externalLink() ${copy.text("adminMailings.segments.open")}</a></p>
         @if(audiences.segmentsUnavailable())
             <p role="alert">${copy.text("adminMailings.segmentsUnavailable")}</p>
         @endif
@@ -89,7 +89,7 @@
                               checked="${form.newsSlugs().contains(item.slug())}"> ${item.title()}, ${copy.date(item.publishedAt())}</label><br>
             @endfor
         </fieldset>
-        <button type="submit">${copy.text("adminMailings.form.preview")}</button>
+        <button type="submit">@template.icon.eye() ${copy.text("adminMailings.form.preview")}</button>
     </form>
 
     <h2>${copy.text("adminMailings.log")}</h2>

@@ -30,7 +30,7 @@
                 @endfor
             </select>
         @endif
-        <button type="submit">${copy.text("member.household.removeSubmit")}</button>
+        <button type="submit">@template.icon.trash2() ${copy.text("member.household.removeSubmit")}</button>
     </form>
     <p><a href="/medlem/hushall">${copy.text("member.household.back")}</a></p>
 `)
