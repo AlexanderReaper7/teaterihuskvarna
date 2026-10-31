@@ -450,5 +450,113 @@
       "namn": "Jönköpings kommun",
       "beskrivning": "Stöder föreningens verksamhet."
     }
+  ],
+  "produktion": [
+    {
+      "_id": "produktion-tusen",
+      "_type": "produktion",
+      "title": "Bara tusen korta år",
+      "ar": 1994,
+      "tillAr": 1997,
+      "beskrivning": [
+        {
+          "_type": "block",
+          "_key": "p0",
+          "style": "normal",
+          "markDefs": [],
+          "children": [
+            {
+              "_type": "span",
+              "_key": "p0s",
+              "text": "En krönika om Huskvarna, spelad fyra somrar.",
+              "marks": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "_id": "produktion-kliniken",
+      "_type": "produktion",
+      "title": "Panik på kliniken",
+      "ar": 2023,
+      "beskrivning": [
+        {
+          "_type": "block",
+          "_key": "p1",
+          "style": "normal",
+          "markDefs": [],
+          "children": [
+            {
+              "_type": "span",
+              "_key": "p1s",
+              "text": "Sommarens fars i Huskvarna.",
+              "marks": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "_id": "produktion-utan-ar",
+      "_type": "produktion",
+      "title": "Läs nyhetsbrevet"
+    },
+    {
+      "_id": "produktion-utan-titel",
+      "_type": "produktion",
+      "ar": 2020
+    }
+  ],
+  "styrelseledamot": [
+    {
+      "_id": "styrelse-ledamot",
+      "_type": "styrelseledamot",
+      "namn": "Ulla Exempel",
+      "roll": "Ledamot",
+      "ordning": 3
+    },
+    {
+      "_id": "styrelse-ordforande",
+      "_type": "styrelseledamot",
+      "namn": "Marianne Exempel",
+      "roll": "Ordförande",
+      "ordning": 1,
+      "ansvar": "Dokumentation, kontakt med Folkrörelsearkivet"
+    },
+    {
+      "_id": "styrelse-utan-roll",
+      "_type": "styrelseledamot",
+      "namn": "Utan Roll"
+    }
+  ],
+  "luddepris": [
+    {
+      "_id": "ludde-barn",
+      "_type": "luddepris",
+      "mottagare": "Barngrupperna",
+      "ar": 2022,
+      "motivering": [
+        {
+          "_type": "block",
+          "_key": "l0",
+          "style": "normal",
+          "markDefs": [],
+          "children": [
+            {
+              "_type": "span",
+              "_key": "l0s",
+              "text": "Ungdomsludde går till barngrupperna som medverkade i En Julsaga.",
+              "marks": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "_id": "ludde-utan-ar",
+      "_type": "luddepris",
+      "mottagare": "Utan år"
+    }
   ]
 }
