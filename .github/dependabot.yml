@@ -64,6 +64,13 @@ updates:
     schedule: { interval: weekly, day: monday }
     cooldown: { default-days: 7 }
     labels: [dependencies, no-issue]
+    # TypeScript 7 has no JavaScript API, and the Studio's ESLint config reads
+    # types through typescript-eslint, whose 8.72 peer range ends below 6.1.
+    # With 7.0.2 `npm run lint` crashes in ts-api-utils (measured 2026-10-31).
+    # Lift this once typescript-eslint accepts 7.
+    ignore:
+      - dependency-name: typescript
+        update-types: [version-update:semver-major]
     groups:
       npm-minor-and-patch:
         update-types: [minor, patch]
