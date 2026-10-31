@@ -1,6 +1,7 @@
 package se.teaterihuskvarna.volunteer;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.containsString;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
@@ -315,8 +316,16 @@ class ShiftIT extends IntegrationTestSupport {
         insertBooking(booked, memberOf(account), Instant.now());
         String after = mockMvc.perform(get("/medlem").with(member)).andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
-        assertThat(after).doesNotContain(none);
+        assertThat(after).doesNotContain(none).contains("href=\"/medlem/volontar#pass-" + booked + "\"");
         assertThat(after.split("Kulturnatten på torget", -1)).hasSize(2);
+        mockMvc.perform(get("/api/member/shifts/booked").with(member))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[*].id", contains((int) booked)));
+
+        String shiftsPage = mockMvc.perform(get("/medlem/volontar").with(member)).andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
+        assertThat(shiftsPage).contains("id=\"pass-" + booked + "\"")
+                .contains("href=\"/medlem\">Mina sidor</a>").doesNotContain("Översikt");
     }
 
     private long insertShift(Instant startsAt, int places) {

@@ -27,7 +27,6 @@ import se.teaterihuskvarna.member.MemberHasAccount;
 import se.teaterihuskvarna.member.MemberService;
 import se.teaterihuskvarna.member.NoSuchMember;
 import se.teaterihuskvarna.offer.OfferService;
-import se.teaterihuskvarna.volunteer.MemberShift;
 import se.teaterihuskvarna.volunteer.ShiftService;
 
 /// The logged-in member's own page: this year's fee, the offers and volunteer
@@ -71,7 +70,7 @@ public class MemberPageController {
         MemberDetails member = member(signedIn);
         model.addAttribute("member", member);
         model.addAttribute("registrations", offers.registeredOffers(member.id()));
-        model.addAttribute("shifts", shifts.upcoming(member.id()).stream().filter(MemberShift::booked).toList());
+        model.addAttribute("shifts", shifts.booked(member.id()));
         model.addAttribute("household", households.forAccount(signedIn.id()).orElse(null));
         passkeys.addTo(model, signedIn, passkeys.offer(session, request));
         devices.addTo(model, signedIn, session);

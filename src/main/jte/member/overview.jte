@@ -79,8 +79,9 @@
     @else
         <ul>
             @for(MemberShift shift : shifts)
-                <li>${copy.text("member.shifts.item", copy.text("shift.task." + shift.task().name()), shift.eventTitle(),
-                        copy.text("shifts.between", copy.dateTime(shift.startsAt()), copy.time(shift.endsAt())))}</li>
+                <li><a href="/medlem/volontar#pass-${shift.id()}">${copy.text("member.shifts.item",
+                        copy.text("shift.task." + shift.task().name()), shift.eventTitle(),
+                        copy.text("shifts.between", copy.dateTime(shift.startsAt()), copy.time(shift.endsAt())))}</a></li>
             @endfor
         </ul>
         <p><a href="/medlem/volontar">${copy.text("member.shifts.manage")}</a></p>
