@@ -3,7 +3,8 @@ import type {StructureResolver} from 'sanity/structure'
 const API_VERSION = 'v2025-02-19'
 
 // The content list, ordered by what editors look for: the next events first,
-// the newest news first, and the rest by name. An event without a date yet is
+// the newest news first, productions and prizes by year, the board in its
+// order, and the rest by name. An event without a date yet is
 // a draft being written, so it is listed with the upcoming ones.
 export const structure: StructureResolver = (S) =>
   S.list()
@@ -54,6 +55,29 @@ export const structure: StructureResolver = (S) =>
         .title('Sidor')
         .schemaType('sida')
         .child(S.documentTypeList('sida').title('Sidor').defaultOrdering([{field: 'title', direction: 'asc'}])),
+      S.listItem()
+        .title('Produktioner')
+        .schemaType('produktion')
+        .child(
+          S.documentTypeList('produktion').title('Produktioner').defaultOrdering([{field: 'ar', direction: 'desc'}]),
+        ),
+      S.listItem()
+        .title('Styrelsen')
+        .schemaType('styrelseledamot')
+        .child(
+          S.documentTypeList('styrelseledamot')
+            .title('Styrelsen')
+            .defaultOrdering([
+              {field: 'ordning', direction: 'asc'},
+              {field: 'namn', direction: 'asc'},
+            ]),
+        ),
+      S.listItem()
+        .title('Ludde-priser')
+        .schemaType('luddepris')
+        .child(
+          S.documentTypeList('luddepris').title('Ludde-priser').defaultOrdering([{field: 'ar', direction: 'desc'}]),
+        ),
       S.listItem()
         .title('Partners')
         .schemaType('partner')
