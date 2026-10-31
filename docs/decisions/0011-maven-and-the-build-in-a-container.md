@@ -8,7 +8,7 @@ description: Which build tool builds the project, and where the build runs.
 
 ## Decision
 
-Maven 4, version `4.0.0-rc-7`, through the checked-in [`mvnw`](../../mvnw) wrapper. Tests use Testcontainers 1.21.4 against the same pinned PostgreSQL image the application runs against.
+Maven 4, version `4.0.0-rc-7`, through the checked-in [`mvnw`](../../mvnw) wrapper. Tests use Testcontainers, at the version Spring Boot manages, against the same pinned PostgreSQL image the application runs against.
 
 No JDK is required on the machine doing the building. `docker compose build` produces the image and the toolchain belongs to the Dockerfile, not to a laptop.
 
@@ -52,9 +52,9 @@ So the two run in different places:
 
 CI runs both before an image reaches GHCR, so the split changes where tests run, not whether a green build means they passed.
 
-## One thing to watch
+## Testcontainers follows Spring Boot
 
-Testcontainers 1.21.4 was published 2025-12-16. Nine quiet months is not abandonment for a library at this maturity, but the gap is worth rechecking rather than assuming, and the check is cheap.
+Testcontainers 2 renamed its modules, `postgresql` to `testcontainers-postgresql`, so the 1.x artifact ids stop at 1.21.4 and Dependabot sees no newer release of them. A pin on the old ids therefore goes stale without a pull request. The pom names no version and takes the one Spring Boot manages, so Testcontainers moves with Boot.
 
 ## What it costs to undo
 
