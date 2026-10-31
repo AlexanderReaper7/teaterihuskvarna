@@ -4,7 +4,9 @@ import jakarta.validation.ConstraintViolationException;
 import java.nio.charset.StandardCharsets;
 import java.time.Year;
 import java.time.ZoneId;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import org.jspecify.annotations.Nullable;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
@@ -368,15 +370,24 @@ public class MemberRegisterPageController {
     }
 
     /// The register with a search and a choice of fee, each left out when there is none.
+    ///
+    /// The values go in as URI variables, which `encode()` encodes strictly. A
+    /// value written straight into the query keeps a `+`, which the next request
+    /// reads as a space, and keeps braces, which a redirect reads as a URI
+    /// template and fails on.
     private static String listUrl(@Nullable String query, @Nullable String fee) {
         UriComponentsBuilder url = UriComponentsBuilder.fromPath(LIST);
+        Map<String, String> values = new HashMap<>();
         if (query != null && !query.isBlank()) {
-            url.queryParam("q", query);
+            url.queryParam("q", "{q}");
+            values.put("q", query);
         }
-        if (filter(fee) != FeeFilter.ALL) {
-            url.queryParam("avgift", fee);
+        FeeFilter filter = filter(fee);
+        if (filter != FeeFilter.ALL) {
+            url.queryParam("avgift", "{avgift}");
+            values.put("avgift", filter == FeeFilter.PAID ? PAID : UNPAID);
         }
-        return url.encode().build().toUriString();
+        return url.encode().buildAndExpand(values).toUriString();
     }
 
     /// An unknown kind becomes null, which the service refuses with its own
