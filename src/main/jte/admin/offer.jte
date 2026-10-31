@@ -34,12 +34,12 @@
         @if(offer.published())
             <form method="post" action="/admin/erbjudanden/${offer.id()}/avpublicera">
                 @template.tag.csrf(csrf = csrf)
-                <button type="submit" class="button-secondary">${copy.text("adminOffers.unpublish")}</button>
+                <button type="submit" class="button-secondary">@template.icon.eyeOff() ${copy.text("adminOffers.unpublish")}</button>
             </form>
         @else
             <form method="post" action="/admin/erbjudanden/${offer.id()}/publicera">
                 @template.tag.csrf(csrf = csrf)
-                <button type="submit">${copy.text("adminOffers.publish")}</button>
+                <button type="submit">@template.icon.eye() ${copy.text("adminOffers.publish")}</button>
             </form>
         @endif
     </div>
@@ -49,7 +49,7 @@
     @if(registrations.isEmpty())
         <p>${copy.text("adminOffers.registrations.none")}</p>
     @else
-        <p><a href="/admin/erbjudanden/${offer.id()}/anmalningar.csv">${copy.text("adminOffers.registrations.csv")}</a></p>
+        <p><a href="/admin/erbjudanden/${offer.id()}/anmalningar.csv">@template.icon.download() ${copy.text("adminOffers.registrations.csv")}</a></p>
         <table>
             <caption>${copy.text("adminOffers.registrations.caption", offer.title())}</caption>
             <thead>
@@ -75,8 +75,9 @@
 
     <h2>${copy.text("adminOffers.edit.heading")}</h2>
     @template.tag.offerForm(copy = copy, csrf = csrf, form = form, errors = errors,
-            action = "/admin/erbjudanden/" + offer.id(), submit = copy.text("adminOffers.edit.submit"))
+            action = "/admin/erbjudanden/" + offer.id(), submit = copy.text("adminOffers.edit.submit"),
+            icon = @`@template.icon.save()`)
 
     <h2>${copy.text("adminOffers.delete.heading")}</h2>
-    <p><a href="/admin/erbjudanden/${offer.id()}/ta-bort">${copy.text("adminOffers.delete.link")}</a></p>
+    <p><a href="/admin/erbjudanden/${offer.id()}/ta-bort">@template.icon.trash2() ${copy.text("adminOffers.delete.link")}</a></p>
 `)

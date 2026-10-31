@@ -108,13 +108,13 @@
     <h2>${copy.text("member.household")}</h2>
     @if(household == null)
         <p>${copy.text("member.noHousehold")}</p>
-        <p><a href="/medlem/hushall">${copy.text("household.create")}</a></p>
+        <p><a href="/medlem/hushall">@template.icon.plus() ${copy.text("household.create")}</a></p>
     @else
         <p>${household.name()}</p>
         @if(household.ownerMemberId() == null)
             <p>${copy.text("member.household.adminManaged")}</p>
         @endif
-        <p><a href="/medlem/hushall">${copy.text("member.household.manage")}</a></p>
+        <p><a href="/medlem/hushall">@template.icon.house() ${copy.text("member.household.manage")}</a></p>
         <ul>
             @for(HouseholdMember other : household.members())
                 <li>
@@ -133,7 +133,7 @@
                             !{String fieldId = "invite-" + other.id();}
                             <label for="${fieldId}">${copy.text("invitation.email", other.fullName())}</label>
                             <input id="${fieldId}" name="email" type="email" autocomplete="off" required>
-                            <button type="submit">${copy.text("invitation.send")}</button>
+                            <button type="submit">@template.icon.send() ${copy.text("invitation.send")}</button>
                         </form>
                     @endif
                 </li>
