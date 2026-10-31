@@ -53,6 +53,10 @@ The application needs these in its `.env`, listed in [`.env.example`](../.env.ex
 
 The schema's field names are the ones the application reads in [`ContentService.java`](../src/main/java/se/teaterihuskvarna/content/ContentService.java). Renaming a field here without renaming it there hides the field on the site. A new style or mark in [`blockContent.ts`](schemaTypes/blockContent.ts) needs the same in [`PortableText.java`](../src/main/java/se/teaterihuskvarna/content/PortableText.java).
 
+## Lists, addresses and language
+
+[`structure.ts`](structure.ts) orders the content list for editors: upcoming events soonest first, then past events, news newest first, the rest by name. "Generera" makes an address with [`slug.ts`](slug.ts), which writes å and ä as a and ö as o, where Sanity's default follows German and writes ö as oe. The interface is Swedish through `@sanity/locale-sv-se`, and only the project's administrators see the Vision query tool.
+
 ## Dependency overrides
 
 `overrides` in [`package.json`](package.json) raise four packages that Sanity's CLI pulls in at versions with known vulnerabilities. Upstream still pinned all four on 2026-10-26, so neither `npm update` nor Dependabot could raise them:
