@@ -4,10 +4,6 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import jakarta.validation.ConstraintViolationException;
-import java.time.Clock;
-import java.time.Instant;
-import java.util.Comparator;
-import java.util.List;
 import org.jspecify.annotations.Nullable;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
@@ -26,7 +22,6 @@ import se.teaterihuskvarna.administrator.NoSuchAdministrator;
 import se.teaterihuskvarna.administrator.TooFewAdministrators;
 import se.teaterihuskvarna.login.SignedIn;
 import se.teaterihuskvarna.member.MemberService;
-import se.teaterihuskvarna.offer.OfferDetails;
 import se.teaterihuskvarna.offer.OfferService;
 import se.teaterihuskvarna.volunteer.ShiftService;
 
@@ -48,10 +43,6 @@ public class AdministratorPageController {
 
     private static final String REDIRECT = "redirect:/admin";
 
-    /// Offers without a start time last, as they have no date to sort by.
-    private static final Comparator<OfferDetails> SOONEST_FIRST =
-            Comparator.comparing(OfferDetails::startsAt, Comparator.nullsLast(Comparator.naturalOrder()));
-
     private final AdministratorService administrators;
     private final MemberService members;
     private final OfferService offers;
@@ -59,10 +50,9 @@ public class AdministratorPageController {
     private final Copy copy;
     private final PasskeySection passkeys;
     private final DeviceSection devices;
-    private final Clock clock;
 
     AdministratorPageController(AdministratorService administrators, MemberService members, OfferService offers,
-            ShiftService shifts, Copy copy, PasskeySection passkeys, DeviceSection devices, Clock clock) {
+            ShiftService shifts, Copy copy, PasskeySection passkeys, DeviceSection devices) {
         this.administrators = administrators;
         this.members = members;
         this.offers = offers;
@@ -70,7 +60,6 @@ public class AdministratorPageController {
         this.copy = copy;
         this.passkeys = passkeys;
         this.devices = devices;
-        this.clock = clock;
     }
 
     /// @param signedIn the logged-in administrator
@@ -184,8 +173,8 @@ public class AdministratorPageController {
             @Nullable String error, boolean offerPasskey, Model model) {
         model.addAttribute("signedIn", signedIn);
         model.addAttribute("fees", members.feeCount());
-        model.addAttribute("shifts", shifts.list().stream().filter(shift -> shift.booked() < shift.places()).toList());
-        model.addAttribute("offers", upcomingOffers());
+        model.addAttribute("shifts", shifts.needingVolunteers());
+        model.addAttribute("offers", offers.upcoming());
         passkeys.addTo(model, signedIn, offerPasskey);
         devices.addTo(model, signedIn, session);
         model.addAttribute("administrators", administrators.list());
@@ -195,18 +184,5 @@ public class AdministratorPageController {
             model.addAttribute("error", error);
         }
         return "admin/overview";
-    }
-
-    private List<OfferDetails> upcomingOffers() {
-        Instant now = clock.instant();
-        return offers.list().stream()
-                .filter(offer -> notStarted(offer, now))
-                .sorted(SOONEST_FIRST)
-                .toList();
-    }
-
-    private static boolean notStarted(OfferDetails offer, Instant now) {
-        Instant startsAt = offer.startsAt();
-        return startsAt == null || startsAt.isAfter(now);
     }
 }
