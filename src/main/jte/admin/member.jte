@@ -56,14 +56,8 @@
             @template.tag.csrf(csrf = csrf)
             <fieldset>
                 <legend>${copy.text("fee.mark")}</legend>
-                <p>
-                    <input id="kind-individual" name="kind" type="radio" value="INDIVIDUAL" checked>
-                    <label for="kind-individual">${copy.text("fee.kind.individual")}</label>
-                </p>
-                <p>
-                    <input id="kind-household" name="kind" type="radio" value="HOUSEHOLD">
-                    <label for="kind-household">${copy.text("fee.kind.household")}</label>
-                </p>
+                <label><input id="kind-individual" name="kind" type="radio" value="INDIVIDUAL" checked> ${copy.text("fee.kind.individual")}</label>
+                <label><input id="kind-household" name="kind" type="radio" value="HOUSEHOLD"> ${copy.text("fee.kind.household")}</label>
                 <p>
                     <label for="kronor">${copy.text("fee.amount")}</label>
                     <input id="kronor" name="kronor" type="text" inputmode="numeric" autocomplete="off">
