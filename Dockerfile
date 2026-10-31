@@ -3,8 +3,10 @@
 # can see the runtime in a FROM line.
 #
 # The build stage is a plain JDK plus the checked-in wrapper rather than a maven
-# image, because Docker Hub's maven image stops at 4.0.0-rc-5 and this project
-# pins 4.0.0-rc-6: docs/decisions/0011-maven-and-the-build-in-a-container.md.
+# image, so the Maven version is the one in .mvn/wrapper/maven-wrapper.properties
+# and never waits for Docker Hub to publish it. On 2026-09-22 Docker Hub's maven
+# image was a release candidate behind Apache:
+# docs/decisions/0011-maven-and-the-build-in-a-container.md.
 
 # The JDK with git. scripts/maven.sh builds this stage alone and runs Maven in
 # it. The git plugin runs git itself, so that untracked files count as
