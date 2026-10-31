@@ -423,6 +423,41 @@ input[aria-invalid="true"] {
   border-color: var(--color-error);
 }
 
+/* A radio button or checkbox goes inside its label, before the text, and the
+ * label lays them out on one line, so the whole line takes the click. The box
+ * is 24 px, the minimum target size in WCAG 2.2. Without this the input rule
+ * above stretched the box to 28rem and pushed the text below it. */
+label:has(> input:is([type="radio"], [type="checkbox"])) {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+  font-weight: 400;
+}
+
+input:is([type="radio"], [type="checkbox"]) {
+  flex: none;
+  width: 1.5rem;
+  height: 1.5rem;
+  margin: 0;
+  padding: 0;
+  accent-color: var(--color-primary);
+}
+
+/* A group of fields: the legend looks like a label, without the browser's box. */
+fieldset {
+  min-width: 0;
+  margin: 0 0 1.5rem;
+  padding: 0;
+  border: 0;
+}
+
+legend {
+  margin-bottom: 0.5rem;
+  padding: 0;
+  font-weight: 700;
+}
+
 .field-error {
   display: block;
   margin-top: 0.25rem;

@@ -1,8 +1,10 @@
 // Pages at a phone's width up to the user's own 2560 px view. Checks what a
 // person would see as broken: sideways scrolling, buttons touching each other,
-// and buttons poking out of the box they sit in.
+// buttons poking out of the box they sit in, and radio buttons or checkboxes
+// away from their text.
 import { expect, test, type Page } from "@playwright/test";
 import { linkLogin } from "../support/auth";
+import { text } from "../support/copy";
 import { clearLinkRequests, resetAdministrators } from "../support/db";
 import { ADMINISTRATORS, MEMBERS, PATHS } from "../support/site";
 
@@ -58,6 +60,42 @@ async function problems(page: Page): Promise<string[]> {
         }
       }
     }
+    // A radio button or checkbox is at least 24 px square, the WCAG 2.2 target
+    // size, and no wider than it looks: a stretched one draws its box in the
+    // middle of a wide element, so the element's edge says nothing about where
+    // the box is. It sits just before the first letter of its label, on the
+    // same line.
+    for (const input of document.querySelectorAll<HTMLInputElement>("input[type=radio], input[type=checkbox]")) {
+      if (input.getClientRects().length === 0) {
+        continue;
+      }
+      const size = input.getBoundingClientRect();
+      if (size.width < 23.5 || size.height < 23.5 || size.width > 32) {
+        found.push(`a ${input.type} is ${size.width.toFixed(0)} by ${size.height.toFixed(0)} px`);
+        continue;
+      }
+      const label = input.labels?.[0];
+      const texts = label ? document.createTreeWalker(label, NodeFilter.SHOW_TEXT) : null;
+      let first: Node | null = null;
+      for (let node = texts?.nextNode() ?? null; node && !first; node = texts!.nextNode()) {
+        first = node.textContent?.trim() ? node : null;
+      }
+      if (!label || !first) {
+        found.push(`a ${input.type} has no label text`);
+        continue;
+      }
+      const letter = document.createRange();
+      const at = first.textContent!.search(/\S/);
+      letter.setStart(first, at);
+      letter.setEnd(first, at + 1);
+      const l = letter.getBoundingClientRect();
+      const box = input.getBoundingClientRect();
+      const gap = l.left - box.right;
+      if (l.top >= box.bottom || box.top >= l.bottom || gap < 0 || gap > 24) {
+        found.push(`the ${input.type} for ${JSON.stringify(label.textContent!.trim().slice(0, 40))}`
+          + ` is not just before its text (${gap.toFixed(0)} px to the right, ${(l.top - box.top).toFixed(0)} px down)`);
+      }
+    }
     return found;
   });
 }
@@ -82,6 +120,23 @@ for (const width of WIDTHS) {
     test("the administrator page with the passkey offer has no layout problems", async ({ page }) => {
       await linkLogin(page, "administrator", ADMINISTRATORS.ada);
       await expect(page.locator("[data-passkey-offer]")).toBeVisible();
+      expect(await problems(page)).toEqual([]);
+    });
+
+    for (const path of ["/admin/utskick", "/admin/volontarpass"]) {
+      test(`${path} has no layout problems`, async ({ page }) => {
+        await linkLogin(page, "administrator", ADMINISTRATORS.ada);
+        await page.goto(path);
+        await expect(page.locator("input[type=checkbox], input[type=radio]").first()).toBeVisible();
+        expect(await problems(page)).toEqual([]);
+      });
+    }
+
+    test("an unpaid member's page has no layout problems", async ({ page }) => {
+      await linkLogin(page, "administrator", ADMINISTRATORS.ada);
+      await page.goto("/admin/medlemmar");
+      await page.getByRole("row").filter({ hasText: text("fee.notPaid") }).first().getByRole("link").click();
+      await expect(page.locator("input[type=radio]").first()).toBeVisible();
       expect(await problems(page)).toEqual([]);
     });
   });
