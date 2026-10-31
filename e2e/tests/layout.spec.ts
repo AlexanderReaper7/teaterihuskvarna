@@ -1,6 +1,6 @@
 // Pages at a phone's width up to the user's own 2560 px view. Checks what a
 // person would see as broken: sideways scrolling, buttons touching each other,
-// and buttons poking out of the box they sit in.
+// buttons poking out of the box they sit in, and words in a table broken in two.
 import { expect, test, type Page } from "@playwright/test";
 import { linkLogin } from "../support/auth";
 import { clearLinkRequests, resetAdministrators } from "../support/db";
@@ -58,6 +58,50 @@ async function problems(page: Page): Promise<string[]> {
         }
       }
     }
+    // A word in a table breaks only where a line may break anyway, after a
+    // hyphen, unless it is wider than the room it has. In a table that room is
+    // the box the table sits in, not the cell: a table that squeezes its columns
+    // makes every cell too narrow for its words, and that squeeze is the fault.
+    // In a stacked table the cell is the whole row wide. Widths are measured on
+    // a canvas in the word's font.
+    const ruler = document.createElement("canvas").getContext("2d")!;
+    for (const cell of document.querySelectorAll("td, th")) {
+      const table = cell.closest("table");
+      if (cell.getClientRects().length === 0 || !table?.parentElement) {
+        continue;
+      }
+      const around = getComputedStyle(cell).display === "block" ? cell : table.parentElement;
+      const box = getComputedStyle(around);
+      const room = around.clientWidth - parseFloat(box.paddingLeft) - parseFloat(box.paddingRight);
+      const texts = document.createTreeWalker(cell, NodeFilter.SHOW_TEXT);
+      for (let node = texts.nextNode(); node; node = texts.nextNode()) {
+        const font = getComputedStyle(node.parentElement!);
+        ruler.font = `${font.fontStyle} ${font.fontWeight} ${font.fontSize} ${font.fontFamily}`;
+        // Firefox adds an empty rectangle where a line ends just before a range.
+        const lines = (from: number, to: number) => {
+          const range = document.createRange();
+          range.setStart(node!, from);
+          range.setEnd(node!, to);
+          return [...range.getClientRects()].filter((rect) => rect.width > 0.5);
+        };
+        for (const word of (node.textContent ?? "").matchAll(/\S+/g)) {
+          const start = word.index!;
+          const text = word[0];
+          if (lines(start, start + text.length).length < 2 || ruler.measureText(text).width > room) {
+            continue;
+          }
+          for (let i = 1; i < text.length; i++) {
+            const before = lines(start + i - 1, start + i)[0];
+            const after = lines(start + i, start + i + 1)[0];
+            if (before && after && after.top > before.top + 1 && text[i - 1] !== "-") {
+              found.push(`${JSON.stringify(text)} breaks after ${JSON.stringify(text.slice(0, i))}`
+                + ` in a table with ${room.toFixed(0)} px of room`);
+              break;
+            }
+          }
+        }
+      }
+    }
     return found;
   });
 }
@@ -82,6 +126,13 @@ for (const width of WIDTHS) {
     test("the administrator page with the passkey offer has no layout problems", async ({ page }) => {
       await linkLogin(page, "administrator", ADMINISTRATORS.ada);
       await expect(page.locator("[data-passkey-offer]")).toBeVisible();
+      expect(await problems(page)).toEqual([]);
+    });
+
+    test("the member register has no layout problems", async ({ page }) => {
+      await linkLogin(page, "administrator", ADMINISTRATORS.ada);
+      await page.goto("/admin/medlemmar");
+      await expect(page.locator("tbody tr").first()).toBeVisible();
       expect(await problems(page)).toEqual([]);
     });
   });
