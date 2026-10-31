@@ -3,9 +3,9 @@
   "private": true,
   "description": "End-to-end tests, run through e2e/run.sh: docs/decisions/0017",
   "devDependencies": {
-    "@axe-core/playwright": "4.13.0",
-    "@playwright/test": "1.63.0",
+    "@axe-core/playwright": "4.14.0",
+    "@playwright/test": "1.64.1",
     "@types/pg": "8.23.1",
-    "pg": "8.23.0"
+    "pg": "8.23.1"
   }
 }

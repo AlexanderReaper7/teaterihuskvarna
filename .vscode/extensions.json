@@ -33,7 +33,7 @@
   ],
 
   // Deliberately absent: shengchen.vscode-checkstyle. It runs its own copy of
-  // Checkstyle, set by java.checkstyle.version, and pom.xml pins 14.1.0 for the
+  // Checkstyle, set by java.checkstyle.version, and pom.xml pins its own for the
   // build. Two version numbers in two files with nothing checking they agree is
   // the coupling docs/decisions/0012 rejected for Hibernate's allocationSize.
   // The "checkstyle" task in tasks.json runs the pinned version instead and

@@ -75,7 +75,7 @@ A passkey row holds a public key, the label (browser and system), when it was ad
 
 ## webauthn4j is pinned
 
-spring-security-webauthn 7.1.1 asks for webauthn4j-core 0.31.9.RELEASE, and Spring Boot does not manage the version. [`pom.xml`](../../pom.xml) pins 0.31.10.RELEASE, Maven Central's latest on 2026-09-23, with `webauthn4j-test` at the same release for the software authenticator the tests use. A Spring Security upgrade means checking which release it asks for.
+spring-security-webauthn 7.1.1 asks for webauthn4j-core 0.31.9.RELEASE, and Spring Boot does not manage the version. [`pom.xml`](../../pom.xml) pins a newer release, with `webauthn4j-test` at the same release for the software authenticator the tests use. A Spring Security upgrade means checking which release it asks for.
 
 ## Rejected
 
