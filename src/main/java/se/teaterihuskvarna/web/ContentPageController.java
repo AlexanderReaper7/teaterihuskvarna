@@ -101,16 +101,25 @@ public class ContentPageController {
     }
 
     /// One of [ContentService#PAGES]: R004. The pattern keeps this mapping
-    /// from answering for any other one-segment path.
+    /// from answering for any other one-segment path. Produktioner, Styrelsen
+    /// and Ludde-priser list their documents below the page's own text.
     ///
     /// @param slug        the page's slug
     /// @param perspective published or drafts
-    /// @param model       receives the page
+    /// @param model       receives the page, and the list the page shows, if any
     /// @return the page, or 404 if the editors have not written it
     @GetMapping("/{slug:om-foreningen|styrelsen|produktioner|ludde-priser|kontakt}")
     public String page(@PathVariable String slug, @ModelAttribute("perspective") Perspective perspective,
             Model model) {
         model.addAttribute("page", content.page(slug, perspective).orElseThrow(ContentPageController::notFound));
+        switch (slug) {
+            case "produktioner" -> model.addAttribute("productions", content.productions(perspective));
+            case "styrelsen" -> model.addAttribute("board", content.board(perspective));
+            case "ludde-priser" -> model.addAttribute("prizes", content.luddePrizes(perspective));
+            default -> {
+                // The other pages are text only.
+            }
+        }
         return "content/page";
     }
 
