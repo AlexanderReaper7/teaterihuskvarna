@@ -30,13 +30,14 @@
             <property name="illegalClassNames" value="var"/>
         </module>
 
-        <!-- No Javadoc rules here, deliberately. Checkstyle 14.1.0 has no
-             Markdown Javadoc parser, so JavadocMethod and JavadocType read a
-             `///` comment as an ordinary comment and check nothing in it. The
-             same missing `@param` fails as `/** */` and passes as `///`, which
-             was measured, not assumed: docs/decisions/0013. A rule that reports
-             success while checking nothing is worse than no rule, so the two are
-             gone and the regex below keeps the comment style uniform instead. -->
+        <!-- No Javadoc rules here, deliberately. Checkstyle has no Markdown
+             Javadoc parser, so JavadocMethod and JavadocType read a `///`
+             comment as an ordinary comment and check nothing in it. The same
+             missing `@param` fails as `/** */` and passes as `///`, which was
+             measured on 14.1.0 and 14.3.0, not assumed: docs/decisions/0013. A
+             rule that reports success while checking nothing is worse than no
+             rule, so the two are gone and the regex below keeps the comment
+             style uniform instead. -->
 
         <!-- Compact style -->
         <module name="SingleSpaceSeparator">
