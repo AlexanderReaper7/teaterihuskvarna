@@ -28,7 +28,6 @@
          Maven Central on 2026-09-22; see docs/decisions/0010 and 0011. -->
     <jte.version>3.2.4</jte.version>
     <flyway.version>13.7.0</flyway.version>
-    <testcontainers.version>1.21.4</testcontainers.version>
     <!-- Boot 4.1.2 manages 9.2.0. 10.0.1 is Maven Central's latest, checked on
          2026-09-23. -->
     <git-commit-id-maven-plugin.version>10.0.1</git-commit-id-maven-plugin.version>
@@ -160,14 +159,11 @@
       <artifactId>spring-boot-testcontainers</artifactId>
       <scope>test</scope>
     </dependency>
+    <!-- Testcontainers 2 renamed its modules, so the old artifact ids stop at
+         1.21.4. Spring Boot manages the version. -->
     <dependency>
       <groupId>org.testcontainers</groupId>
-      <artifactId>junit-jupiter</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.testcontainers</groupId>
-      <artifactId>postgresql</artifactId>
+      <artifactId>testcontainers-postgresql</artifactId>
       <scope>test</scope>
     </dependency>
   </dependencies>
