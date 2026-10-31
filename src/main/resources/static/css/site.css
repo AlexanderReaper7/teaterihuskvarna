@@ -157,13 +157,25 @@ body {
   margin-bottom: 2rem;
 }
 
-.section-nav ul {
+.section-nav ul,
+.choices ul {
   display: flex;
   flex-wrap: wrap;
   gap: 0.75rem 1.25rem;
   margin: 0;
   padding: 0;
   list-style: none;
+}
+
+/* Links that choose what a page lists, such as the register's fee filter. */
+.choices {
+  margin-bottom: 1.5rem;
+}
+
+/* The page or choice the visitor is on reads as text, not as a link. */
+[aria-current="page"] {
+  color: var(--color-text);
+  text-decoration: none;
 }
 
 /* The menu button, shown only on a narrow screen and only by menu.js. Without

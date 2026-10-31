@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import se.teaterihuskvarna.login.SignedIn;
+import se.teaterihuskvarna.member.FeeFilter;
 import se.teaterihuskvarna.member.FeeMark;
 import se.teaterihuskvarna.member.FeeService;
 import se.teaterihuskvarna.member.HouseholdDetails;
@@ -53,10 +54,12 @@ public class MemberRegisterController {
     }
 
     /// @param query a case insensitive part of a name, address, phone or city, or nothing for everyone
+    /// @param fee   `PAID` or `UNPAID` for only those whose fee this year is or is not paid, or nothing for everyone
     /// @return the first matches by name, and whether there were more
     @GetMapping("/api/admin/members")
-    public MemberList search(@RequestParam(name = "q", required = false) @Nullable String query) {
-        return members.search(query);
+    public MemberList search(@RequestParam(name = "q", required = false) @Nullable String query,
+            @RequestParam(name = "fee", required = false) @Nullable FeeFilter fee) {
+        return members.search(query, fee == null ? FeeFilter.ALL : fee);
     }
 
     /// @param form the new member; an address gives them an account
