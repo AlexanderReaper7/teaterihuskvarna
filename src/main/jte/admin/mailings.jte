@@ -76,7 +76,7 @@
             @endif
             @for(Event event : content.events())
                 <label><input type="checkbox" name="events" value="${event.slug()}"
-                              checked="${form.eventSlugs().contains(event.slug())}"> ${event.title()}, ${copy.dateTime(event.startsAt())}</label><br>
+                              checked="${form.eventSlugs().contains(event.slug())}"> ${event.title()}, ${copy.dateTime(event.startsAt())}</label>
             @endfor
         </fieldset>
         <fieldset>
@@ -86,7 +86,7 @@
             @endif
             @for(NewsItem item : content.news())
                 <label><input type="checkbox" name="news" value="${item.slug()}"
-                              checked="${form.newsSlugs().contains(item.slug())}"> ${item.title()}, ${copy.date(item.publishedAt())}</label><br>
+                              checked="${form.newsSlugs().contains(item.slug())}"> ${item.title()}, ${copy.date(item.publishedAt())}</label>
             @endfor
         </fieldset>
         <button type="submit">${copy.text("adminMailings.form.preview")}</button>
