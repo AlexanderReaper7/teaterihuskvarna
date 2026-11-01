@@ -63,7 +63,7 @@
                     <%-- A line may break before a dot or the @, so a long address wraps in its column instead of pushing the fee buttons out of the table's box. --%>
                     !{String email = member.email();}
                     <td>@if(email != null)@for(String part : email.split("(?=[.@])"))<wbr>${part}@endfor@endif</td>
-                    <td>${member.phone()}</td>
+                    <td class="tel">${member.phone()}</td>
                     <td>${member.household()}</td>
                     <td>
                         @if(member.fee().paid())

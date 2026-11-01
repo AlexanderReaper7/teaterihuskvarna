@@ -205,7 +205,9 @@ class MemberRegisterIT extends MemberRegisterSupport {
 
         mockMvc.perform(get("/admin/medlemmar/" + erik + "/ta-bort").with(asAdministrator()))
                 .andExpect(status().isOk())
-                .andExpect(content().string(containsString("Ta bort Erik Lindqvist?")));
+                .andExpect(content().string(containsString("Ta bort Erik Lindqvist?")))
+                .andExpect(content().string(containsString(
+                        "anmälningarna till erbjudanden och de bokade volontärpassen tas bort")));
         assertThat(rowsIn("member")).isEqualTo(1);
 
         mockMvc.perform(delete("/api/admin/members/" + erik).with(asAdministrator()).with(csrf()))
