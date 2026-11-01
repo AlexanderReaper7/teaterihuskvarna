@@ -193,8 +193,11 @@ class ShiftIT extends IntegrationTestSupport {
         long tomorrow = insertShift(tomorrowEvening, 3);
         long later = insertShift(tomorrowEvening.plus(Duration.ofDays(2)), 3);
         long karin = memberOf(insertAccount("Karin Holm", "karin@example.test"));
-        shifts.book(tomorrow, karin);
-        shifts.book(later, karin);
+        // Booked at noon, before the day's last run. A booking after it is
+        // reminded at once, so on the real clock this failed from 21:00.
+        LocalDateTime noon = LocalDate.now(SWEDEN).atTime(12, 0);
+        book(noon, tomorrow, karin);
+        book(noon, later, karin);
 
         assertThat(shifts.sendReminders()).isOne();
         SimpleMailMessage mail = awaitMail();
