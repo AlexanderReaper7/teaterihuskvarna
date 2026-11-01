@@ -359,7 +359,7 @@ class ShiftIT extends IntegrationTestSupport {
         String shiftsPage = mockMvc.perform(get("/medlem/volontar").with(member)).andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
         assertThat(shiftsPage).contains("id=\"pass-" + booked + "\"")
-                .contains("href=\"/medlem\">Mina sidor</a>").doesNotContain("Översikt");
+                .contains("href=\"/medlem\" aria-current=\"true\">Mina sidor</a>").doesNotContain("Översikt");
     }
 
     private long insertShift(Instant startsAt, int places) {
