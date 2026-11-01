@@ -358,6 +358,17 @@ main > article {
   max-width: none;
 }
 
+/* An article keeps its text to the measure every other page has, and only its
+ * main picture, its cards and its gallery take the whole column. Without this
+ * a page from Sanity ran about 130 characters a line at 2560 px. */
+main > article > * {
+  max-width: var(--width-text);
+}
+
+main > article > :is(.hero, .cards, .gallery) {
+  max-width: none;
+}
+
 .cards {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(18rem, 1fr));
@@ -368,6 +379,7 @@ main > article {
 .card {
   padding: 1rem;
   background: var(--color-panel);
+  overflow-wrap: break-word;
 }
 
 .card h2,
@@ -375,13 +387,32 @@ main > article {
   margin-top: 0.75rem;
 }
 
+/* Every picture in a list of cards has the same 4:3 box and shows whole
+ * inside it, so the titles in a row line up whatever the pictures' own
+ * proportions. A card without a picture keeps an empty box of the same size
+ * when another card in the list has one. Productions are posters, upright, so
+ * their list uses an upright box. */
 .card img {
   width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: contain;
+}
+
+.cards:has(img:not(.logo)) .card:not(:has(img))::before {
+  content: "";
+  display: block;
+  aspect-ratio: 4 / 3;
+}
+
+.cards.posters img,
+.cards.posters .card:not(:has(img))::before {
+  aspect-ratio: 3 / 4;
 }
 
 .card img.logo {
   width: auto;
   max-height: 6rem;
+  aspect-ratio: auto;
 }
 
 .gallery {
@@ -416,6 +447,27 @@ a.button:hover {
 
 form {
   margin: 0 0 1.5rem;
+}
+
+/* A one-line field followed by its button, as in the register's search: the
+ * two share a line when there is room, and keep a gap when a narrow screen
+ * puts the button below. As inline boxes they had none, so the button's border
+ * met the field's. The label and anything else has a line of its own, and the
+ * label's own margin gives way to the gap. */
+:has(> :is(input:not([type="hidden"], [type="radio"], [type="checkbox"]), select) ~ button) {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+:has(> :is(input:not([type="hidden"], [type="radio"], [type="checkbox"]), select) ~ button)
+  > :not(input, select, button) {
+  flex-basis: 100%;
+}
+
+:has(> :is(input:not([type="hidden"], [type="radio"], [type="checkbox"]), select) ~ button) > label {
+  margin-bottom: -0.25rem;
 }
 
 /* The passkey section ends in a bare button rather than a form, so it keeps
@@ -529,8 +581,16 @@ button:hover {
 a:has(> .icon):not([hidden]),
 button:has(> .icon):not([hidden]) {
   display: inline-flex;
-  align-items: center;
+  align-items: baseline;
   gap: 0.35em;
+}
+
+/* The words set the baseline, so a link or button with an icon lines up with
+ * the text and fields beside it as one without would. An inline-flex box takes
+ * its baseline from its first item that has one, and the icon's is its bottom
+ * edge, which put the words 4 px high. Centred, the icon has none. */
+:is(a, button) > .icon {
+  align-self: center;
 }
 
 /* Buttons side by side. Without it the only gap is the space between the
