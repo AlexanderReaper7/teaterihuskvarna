@@ -82,6 +82,16 @@ class MailingIT extends IntegrationTestSupport {
     }
 
     @Test
+    void eachEventAndNewsItemToChooseGivesItsDateInBrackets() throws Exception {
+        // A title often ends in its own punctuation, which a comma after it doubled.
+        mockMvc.perform(get("/admin/utskick").with(asAdministrator()))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("Ny webbplats (")))
+                .andExpect(content().string(containsString("Kulturnatten på torget (")))
+                .andExpect(content().string(not(containsString("Ny webbplats,"))));
+    }
+
+    @Test
     void thePreviewShowsTheChosenContentAndTouchesNothing() throws Exception {
         mockMvc.perform(post("/admin/utskick/forhandsgranska").with(asAdministrator()).with(csrf())
                         .param("audience", "LIST")
