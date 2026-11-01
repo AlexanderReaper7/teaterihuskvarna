@@ -442,6 +442,15 @@ button {
   font: inherit;
 }
 
+/* A one-line field is as tall as a button, one line of text, the button's
+ * padding and its border, so a field and the button beside it line up. A
+ * select needs it most: both browsers give it line-height: normal whatever the
+ * page says, which left it 8 to 10 px short of a button. */
+input:not([type="radio"], [type="checkbox"]),
+select {
+  min-height: calc(var(--line-height-body) * 1em + 1.25rem + 4px);
+}
+
 input {
   width: 100%;
   max-width: 28rem;
