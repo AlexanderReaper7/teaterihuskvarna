@@ -60,9 +60,9 @@
             @for(MemberDetails member : list.members())
                 <tr>
                     <td><a href="/admin/medlemmar/${member.id()}">${member.fullName()}</a></td>
-                    <%-- A line may break before a dot or the @, so a long address wraps in its column instead of pushing the fee buttons out of the table's box. --%>
+                    <%-- A line may break before a dot or the @, and after a hyphen, so a long address wraps in its column instead of pushing the fee buttons out of the table's box. Firefox does not break after a hyphen that a digit follows unless told it may. --%>
                     !{String email = member.email();}
-                    <td>@if(email != null)@for(String part : email.split("(?=[.@])"))<wbr>${part}@endfor@endif</td>
+                    <td>@if(email != null)@for(String part : email.split("(?=[.@])|(?<=-)"))<wbr>${part}@endfor@endif</td>
                     <td class="tel">${member.phone()}</td>
                     <td>${member.household()}</td>
                     <td>
