@@ -15,7 +15,6 @@
 @param String notice
 @template.admin.layout(copy = copy, title = copy.text("register.heading"), content = @`
     <h1>${copy.text("register.heading")}</h1>
-    <p><a href="/admin">${copy.text("register.back")}</a></p>
     @if(error != null)
         <p role="alert">${error}</p>
     @endif
