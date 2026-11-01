@@ -64,7 +64,7 @@
 
     <h2>${copy.text("member.registrations.heading")}</h2>
     @if(registrations.isEmpty())
-        <p>${copy.text("member.registrations.none")} <a href="/medlem/erbjudanden">${copy.text("member.registrations.find")}</a></p>
+        <p>${copy.text("member.registrations.none")} <a href="/medlem/erbjudanden">@template.icon.ticket() ${copy.text("member.registrations.find")}</a></p>
     @else
         <ul>
             @for(MemberOffer offer : registrations)
@@ -75,7 +75,7 @@
 
     <h2>${copy.text("member.shifts.heading")}</h2>
     @if(shifts.isEmpty())
-        <p>${copy.text("member.shifts.none")} <a href="/medlem/volontar">${copy.text("member.shifts.find")}</a></p>
+        <p>${copy.text("member.shifts.none")} <a href="/medlem/volontar">@template.icon.handHelping() ${copy.text("member.shifts.find")}</a></p>
     @else
         <ul>
             @for(MemberShift shift : shifts)
@@ -84,7 +84,7 @@
                         copy.text("shifts.between", copy.dateTime(shift.startsAt()), copy.time(shift.endsAt())))}</a></li>
             @endfor
         </ul>
-        <p><a href="/medlem/volontar">${copy.text("member.shifts.manage")}</a></p>
+        <p><a href="/medlem/volontar">@template.icon.handHelping() ${copy.text("member.shifts.manage")}</a></p>
     @endif
 
     <h2>${copy.text("member.contact.heading")}</h2>
@@ -102,7 +102,7 @@
         <dt>${copy.text("member.city")}</dt>
         <dd>@if(member.city() == null)${copy.text("member.missing")}@else${member.city()}@endif</dd>
     </dl>
-    <p><a href="/medlem/kontaktuppgifter">${copy.text("member.contact.edit")}</a></p>
+    <p><a href="/medlem/kontaktuppgifter">@template.icon.pencil() ${copy.text("member.contact.edit")}</a></p>
     <p>${copy.text("member.contact.emailNote")}</p>
 
     <h2>${copy.text("member.household")}</h2>
