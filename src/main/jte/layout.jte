@@ -1,5 +1,6 @@
 @import gg.jte.Content
 @import se.teaterihuskvarna.web.Copy
+@import se.teaterihuskvarna.web.Navigation
 @param Copy copy
 @param String title
 @param Content content
@@ -35,16 +36,16 @@
     </button>
     <nav id="huvudmeny" class="site-nav" aria-label="${copy.text("nav.label")}">
         <ul>
-            <li><a href="/kalender">${copy.text("nav.calendar")}</a></li>
-            <li><a href="/nyheter">${copy.text("nav.news")}</a></li>
-            <li><a href="/produktioner">${copy.text("nav.productions")}</a></li>
-            <li><a href="/ludde-priser">${copy.text("nav.ludde")}</a></li>
-            <li><a href="/om-foreningen">${copy.text("nav.about")}</a></li>
-            <li><a href="/styrelsen">${copy.text("nav.board")}</a></li>
-            <li><a href="/partners">${copy.text("nav.partners")}</a></li>
-            <li><a href="/kontakt">${copy.text("nav.contact")}</a></li>
-            <li><a href="/bli-medlem">${copy.text("nav.join")}</a></li>
-            <li><a href="/medlem">${copy.text("nav.member")}</a></li>
+            <li><a href="/kalender" aria-current="${Navigation.current("/kalender")}">${copy.text("nav.calendar")}</a></li>
+            <li><a href="/nyheter" aria-current="${Navigation.current("/nyheter")}">${copy.text("nav.news")}</a></li>
+            <li><a href="/produktioner" aria-current="${Navigation.current("/produktioner")}">${copy.text("nav.productions")}</a></li>
+            <li><a href="/ludde-priser" aria-current="${Navigation.current("/ludde-priser")}">${copy.text("nav.ludde")}</a></li>
+            <li><a href="/om-foreningen" aria-current="${Navigation.current("/om-foreningen")}">${copy.text("nav.about")}</a></li>
+            <li><a href="/styrelsen" aria-current="${Navigation.current("/styrelsen")}">${copy.text("nav.board")}</a></li>
+            <li><a href="/partners" aria-current="${Navigation.current("/partners")}">${copy.text("nav.partners")}</a></li>
+            <li><a href="/kontakt" aria-current="${Navigation.current("/kontakt")}">${copy.text("nav.contact")}</a></li>
+            <li><a href="/bli-medlem" aria-current="${Navigation.current("/bli-medlem")}">${copy.text("nav.join")}</a></li>
+            <li><a href="/medlem" aria-current="${Navigation.current("/medlem")}">${copy.text("nav.member")}</a></li>
         </ul>
     </nav>
 </header>
