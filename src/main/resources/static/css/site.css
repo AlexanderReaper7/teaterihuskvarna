@@ -392,21 +392,24 @@ main > article > :is(.hero, .cards, .gallery) {
  * proportions. A card without a picture keeps an empty box of the same size
  * when another card in the list has one. Productions are posters, upright, so
  * their list uses an upright box. */
+.cards {
+  --picture-ratio: 4 / 3;
+}
+
+.cards.posters {
+  --picture-ratio: 3 / 4;
+}
+
 .card img {
   width: 100%;
-  aspect-ratio: 4 / 3;
+  aspect-ratio: var(--picture-ratio);
   object-fit: contain;
 }
 
 .cards:has(img:not(.logo)) .card:not(:has(img))::before {
   content: "";
   display: block;
-  aspect-ratio: 4 / 3;
-}
-
-.cards.posters img,
-.cards.posters .card:not(:has(img))::before {
-  aspect-ratio: 3 / 4;
+  aspect-ratio: var(--picture-ratio);
 }
 
 .card img.logo {
