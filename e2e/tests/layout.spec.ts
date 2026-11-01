@@ -5,7 +5,7 @@
 import { expect, test, type Page } from "@playwright/test";
 import { linkLogin } from "../support/auth";
 import { text } from "../support/copy";
-import { clearLinkRequests, resetAdministrators } from "../support/db";
+import { clearLinkRequests, resetAdministrators, sql } from "../support/db";
 import { ADMINISTRATORS, MEMBERS, PATHS } from "../support/site";
 
 test.beforeEach(async () => {
@@ -14,6 +14,21 @@ test.beforeEach(async () => {
 });
 
 const WIDTHS = [320, 420, 900, 2560];
+
+/// The register lists every member, including those other specs add, so its
+/// layout is checked with the widest of them whatever order the specs run in:
+/// admin.spec's name with a long word, and an address of the kind freshAddress
+/// writes, which Firefox does not break after a hyphen before a digit.
+const WIDE_MEMBER = { name: `<img src=x onerror="window.injected=1">`, email: "markup-1793560718668-820173@example.test" };
+
+async function wideMember(): Promise<void> {
+  const [found] = await sql("SELECT 1 FROM account WHERE LOWER(email) = $1", [WIDE_MEMBER.email]);
+  if (!found) {
+    const [person] = await sql<{ id: string }>(
+      "INSERT INTO member (full_name, created_at) VALUES ($1, now()) RETURNING id", [WIDE_MEMBER.name]);
+    await sql("INSERT INTO account (member_id, email, created_at) VALUES ($1, $2, now())", [person.id, WIDE_MEMBER.email]);
+  }
+}
 
 /// Every problem found on the page as it is now, as readable sentences.
 async function problems(page: Page): Promise<string[]> {
@@ -176,8 +191,10 @@ for (const width of WIDTHS) {
     });
 
     test("the member register has no layout problems", async ({ page }) => {
+      await wideMember();
       await linkLogin(page, "administrator", ADMINISTRATORS.ada);
       await page.goto("/admin/medlemmar");
+      await expect(page.getByRole("row").filter({ hasText: WIDE_MEMBER.email })).toBeVisible();
       await expect(page.locator("tbody tr").first()).toBeVisible();
       expect(await problems(page)).toEqual([]);
     });
