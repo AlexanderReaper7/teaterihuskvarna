@@ -13,7 +13,7 @@
     <p>${copy.text("register.delete.body")}</p>
     <form method="post" action="/admin/medlemmar/${file.member().id()}/ta-bort">
         @template.tag.csrf(csrf = csrf)
-        <button type="submit">${copy.text("register.delete.submit")}</button>
+        <button type="submit">@template.icon.trash2() ${copy.text("register.delete.submit")}</button>
     </form>
     <p><a href="/admin/medlemmar/${file.member().id()}">${copy.text("register.delete.cancel")}</a></p>
 `)

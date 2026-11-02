@@ -37,7 +37,7 @@
                             @template.tag.csrf(csrf = csrf)
                             <button type="submit" class="button-secondary"
                                     aria-label="${copy.text("device.end.label", device.name())}">
-                                ${copy.text("device.end")}
+                                @template.icon.logOut() ${copy.text("device.end")}
                             </button>
                         </form>
                     </td>
@@ -48,7 +48,7 @@
     @if(devices.size() > 1)
         <form method="post" action="${urls.endOthers()}">
             @template.tag.csrf(csrf = csrf)
-            <button type="submit" class="button-secondary">${copy.text("device.endOthers")}</button>
+            <button type="submit" class="button-secondary">@template.icon.logOut() ${copy.text("device.endOthers")}</button>
         </form>
     @endif
 </section>

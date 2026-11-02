@@ -1,4 +1,5 @@
 import {defineField, defineType} from 'sanity'
+import {swedishSlug} from '../slug'
 
 /** A series of events, such as Kaffe med drömmar. The calendar filters by it (R002). */
 export default defineType({
@@ -12,7 +13,7 @@ export default defineType({
       title: 'Adress',
       description: 'Används i kalenderns filter, /kalender?serie=<adress>.',
       type: 'slug',
-      options: {source: 'title', maxLength: 96},
+      options: {source: 'title', maxLength: 96, slugify: (input: string) => swedishSlug(input)},
       validation: (rule) => rule.required(),
     }),
   ],

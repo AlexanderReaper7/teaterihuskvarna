@@ -23,9 +23,34 @@ async function violations(page: Page): Promise<string[]> {
     v.nodes.map((n) => `${v.id} (${v.impact}): ${n.target.join(" ")}: ${n.failureSummary ?? v.help}`));
 }
 
+/// An icon is decoration beside a control's text: hidden from screen readers,
+/// so every visible link or button that carries one is still named by its own
+/// text, or by its aria-label where it has one.
+async function iconProblems(page: Page): Promise<string[]> {
+  const found = await page.locator("svg.icon").evaluateAll((icons) => icons
+    .filter((icon) => icon.getAttribute("aria-hidden") !== "true" || icon.getAttribute("focusable") !== "false")
+    .map((icon) => `the icon in ${JSON.stringify(icon.parentElement?.textContent?.trim() ?? "")}`
+      + " is not hidden from screen readers"));
+  for (const control of await page.locator("a:has(svg.icon), button:has(svg.icon)").all()) {
+    if (!(await control.isVisible())) {
+      continue;
+    }
+    const text = (await control.innerText()).trim();
+    const expected = (await control.getAttribute("aria-label")) ?? text;
+    const name = /^- [a-z]+ "(.*?)"/.exec(await control.ariaSnapshot())?.[1] ?? "";
+    if (!text) {
+      found.push("a control shows an icon and no text");
+    } else if (name !== expected) {
+      found.push(`${JSON.stringify(text)} is named ${JSON.stringify(name)}`);
+    }
+  }
+  return found;
+}
+
 async function scan(page: Page, path: string): Promise<void> {
   await page.goto(path);
   expect(await violations(page), path).toEqual([]);
+  expect(await iconProblems(page), path).toEqual([]);
 }
 
 /// The first link on `list` whose address starts with `prefix` and continues
@@ -45,6 +70,17 @@ async function firstDetail(page: Page, list: string, prefix: string): Promise<st
 test("the scan reports an image without a text alternative", async ({ page }) => {
   await page.setContent('<html lang="sv"><title>t</title><main><img src="data:,"></main></html>');
   expect(await violations(page)).toEqual([expect.stringMatching(/^image-alt \(critical\)/)]);
+});
+
+// Proves the icon check can fail: an icon a screen reader reaches, whose title
+// then becomes part of the button's name.
+test("the icon check reports an icon a screen reader reaches", async ({ page }) => {
+  await page.setContent('<html lang="sv"><title>t</title><main><button><svg class="icon" focusable="false">'
+    + "<title>Diskett</title></svg> Spara</button></main></html>");
+  expect(await iconProblems(page)).toEqual([
+    'the icon in "Diskett Spara" is not hidden from screen readers',
+    '"Spara" is named "Diskett Spara"',
+  ]);
 });
 
 const PUBLIC = [

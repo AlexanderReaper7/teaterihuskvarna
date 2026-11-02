@@ -3,7 +3,7 @@
 
 services:
   proxy:
-    image: traefik:v3.7.13
+    image: traefik:v3.7.15
     restart: unless-stopped
     command:
       # Routes come from labels on the services below. Only a container that
@@ -88,7 +88,7 @@ services:
 
   db:
     # Pinned, and the same tag the tests run against: docs/decisions/0007.
-    image: postgres:18.2-alpine
+    image: postgres:18.4-alpine
     restart: unless-stopped
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-teaterihuskvarna}

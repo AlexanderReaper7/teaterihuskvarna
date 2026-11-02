@@ -38,8 +38,8 @@
             <input type="hidden" name="news" value="${slug}">
         @endfor
         @if(reach == null || reach.nonMembers() == 0)
-            <button type="submit" formaction="/admin/utskick">${copy.text("adminMailings.preview.prepare")}</button>
+            <button type="submit" formaction="/admin/utskick">@template.icon.plus() ${copy.text("adminMailings.preview.prepare")}</button>
         @endif
-        <button type="submit" formaction="/admin/utskick/andra" class="button-secondary">${copy.text("adminMailings.preview.change")}</button>
+        <button type="submit" formaction="/admin/utskick/andra" class="button-secondary">@template.icon.pencil() ${copy.text("adminMailings.preview.change")}</button>
     </form>
 `)
