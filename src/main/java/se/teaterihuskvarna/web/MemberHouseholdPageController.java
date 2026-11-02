@@ -167,12 +167,13 @@ public class MemberHouseholdPageController {
 
     /// @param signedIn the logged-in account
     /// @param memberId the person to remove, possibly the caller
-    /// @param model receives the person's name
+    /// @param model receives the person's name, and whether the caller is leaving
     /// @return the confirmation page
     @GetMapping("/medlem/hushall/medlemmar/{memberId}/ta-bort")
     public String removeForm(@AuthenticationPrincipal SignedIn signedIn, @PathVariable long memberId, Model model) {
         model.addAttribute("fullName", households.memberForAccount(signedIn.id(), memberId).fullName());
         model.addAttribute("memberId", memberId);
+        model.addAttribute("leaving", leaving(signedIn, memberId));
         HouseholdDetails household = households.forAccount(signedIn.id())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
         model.addAttribute("successors", household.ownedBy(memberId) ? household.members().stream()
@@ -190,13 +191,15 @@ public class MemberHouseholdPageController {
     public String remove(@AuthenticationPrincipal SignedIn signedIn, @PathVariable long memberId,
             @RequestParam(required = false) @Nullable Long successorMemberId, Model model,
             RedirectAttributes redirected) {
+        boolean leaving = leaving(signedIn, memberId);
         try {
             households.removeForAccount(signedIn.id(), memberId, successorMemberId);
         } catch (HouseholdSuccessorRequired e) {
             model.addAttribute("error", copy.text("household.successor.required"));
             return removeForm(signedIn, memberId, model);
         }
-        redirected.addFlashAttribute("notice", copy.text("member.household.memberRemoved"));
+        redirected.addFlashAttribute("notice",
+                copy.text(leaving ? "member.household.left" : "member.household.memberRemoved"));
         return "redirect:/medlem";
     }
 
@@ -212,6 +215,12 @@ public class MemberHouseholdPageController {
     @ExceptionHandler(HouseholdOwnerRequired.class)
     public void forbidden(HttpServletResponse response) throws IOException {
         response.sendError(HttpStatus.FORBIDDEN.value());
+    }
+
+    /// Whether the person to remove is the caller, who then leaves the household
+    /// and is told so in the first person.
+    private boolean leaving(SignedIn signedIn, long memberId) {
+        return members.findByAccount(signedIn.id()).map(own -> own.id() == memberId).orElse(false);
     }
 
     private String householdPage(SignedIn signedIn, Model model) {

@@ -294,7 +294,7 @@ class ShiftIT extends IntegrationTestSupport {
         insertBooking(open, memberOf(insertAccount("Bo Andra", "bo@example.test")), Instant.now());
         insertBooking(open, memberOf(insertAccount("Cia Tredje", "cia@example.test")), Instant.now());
         mockMvc.perform(get("/admin").with(asAdministrator()))
-                .andExpect(content().string(containsString("Inget kommande pass har lediga platser.")));
+                .andExpect(content().string(containsString("Inget kommande pass saknar volontärer.")));
     }
 
     @Test

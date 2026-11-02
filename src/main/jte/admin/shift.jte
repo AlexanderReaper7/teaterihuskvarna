@@ -36,7 +36,7 @@
             <thead>
                 <tr>
                     <th scope="col">${copy.text("shift.csv.name")}</th>
-                    <th scope="col">${copy.text("shift.csv.email")}</th>
+                    <th scope="col">${copy.text("member.email")}</th>
                     <th scope="col">${copy.text("shift.csv.phone")}</th>
                     <th scope="col">${copy.text("shift.csv.bookedAt")}</th>
                 </tr>
