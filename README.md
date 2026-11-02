@@ -40,6 +40,12 @@ Use the development index and [Mailpit](http://localhost:8000/mailpit/) to sign 
 
 Public content comes from the development Sanity dataset. Login and invitation mail goes to Mailpit. Brevo contact updates and campaign drafts use an in-memory fake by default, so the development stack can demonstrate preparing a mailing but does not send a real campaign. The [local stack](#the-local-stack) section describes the Sanity connection and switching to a real Brevo account.
 
+### Search and shared links
+
+Public pages include a description, canonical URL and [Open Graph](https://ogp.me/) metadata. Event and news pages use their title, summary and main image; other pages use their text or a fixed description. Canonical URLs and [the sitemap](http://localhost:8000/sitemap.xml) use `SITE_URL`, the configured address also used for login mail. They never use the request's Host header.
+
+The sitemap includes published public pages and articles. It excludes future news and account pages. The same paths are available at `/api/content/public-paths`. Draft previews and pages without public metadata have `noindex, nofollow`; [robots.txt](http://localhost:8000/robots.txt) points crawlers to the sitemap. These directions do not replace the application's access checks.
+
 ### Everyday commands
 
 | To | Run |

@@ -3,14 +3,16 @@
 @import se.teaterihuskvarna.content.Perspective
 @import se.teaterihuskvarna.content.Series
 @import se.teaterihuskvarna.web.Copy
+@import se.teaterihuskvarna.web.PageMetadata
 @param Copy copy
+@param PageMetadata metadata
 @param Perspective perspective
 @param Event event
 !{String place = event.place();}
 !{Series series = event.series();}
 !{String summary = event.summary();}
 !{String ticketUrl = event.ticketUrl();}
-@template.layout(copy = copy, title = event.title(), preview = perspective == Perspective.DRAFTS, content = @`
+@template.layout(metadata = metadata, copy = copy, title = event.title(), preview = perspective == Perspective.DRAFTS, content = @`
     <article>
         <h1>${event.title()}</h1>
         <p class="meta"><time datetime="${event.startsAt().toString()}">${copy.dateTime(event.startsAt())}</time>@if(place != null), ${place}@endif</p>

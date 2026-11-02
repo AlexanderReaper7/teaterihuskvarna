@@ -3,12 +3,14 @@
 @import se.teaterihuskvarna.content.NewsItem
 @import se.teaterihuskvarna.content.Perspective
 @import se.teaterihuskvarna.web.Copy
+@import se.teaterihuskvarna.web.PageMetadata
 @param Copy copy
+@param PageMetadata metadata
 @param Perspective perspective
 @param Event next
 @param List<Event> events
 @param List<NewsItem> news
-@template.layout(copy = copy, title = null, preview = perspective == Perspective.DRAFTS, content = @`
+@template.layout(metadata = metadata, copy = copy, title = null, preview = perspective == Perspective.DRAFTS, content = @`
     <h1>${copy.text("home.title")}</h1>
     @if(next == null)
         <p>${copy.text("home.noEvents")}</p>

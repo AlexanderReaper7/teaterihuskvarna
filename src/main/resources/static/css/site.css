@@ -259,6 +259,15 @@ main > .table-scroll {
   max-width: none;
 }
 
+/* Registers and booking tables need more room than public articles. */
+main.admin-content {
+  max-width: 96rem;
+}
+
+main.admin-content > :is(.table-scroll, .section-nav) {
+  max-width: none;
+}
+
 h1 {
   margin: 0 0 2rem;
   font-size: 2.75rem;

@@ -1,24 +1,18 @@
 @import se.teaterihuskvarna.member.ApplicationForm
 @import se.teaterihuskvarna.member.AssociationSettings
 @import se.teaterihuskvarna.web.Copy
+@import se.teaterihuskvarna.web.PageMetadata
 @import se.teaterihuskvarna.web.CsrfField
 @import se.teaterihuskvarna.web.FieldErrors
 @param Copy copy
+@param PageMetadata metadata
 @param CsrfField csrf
 @param boolean stale
 @param ApplicationForm form
 @param FieldErrors errors
 @param AssociationSettings fees
-@template.layout(copy = copy, title = copy.text("application.heading"), content = @`
+@template.layout(metadata = metadata, copy = copy, title = copy.text("application.heading"), content = @`
     <h1>${copy.text("application.heading")}</h1>
-    <p>${copy.text("application.pitch")}</p>
-    <h2>${copy.text("application.benefits.heading")}</h2>
-    <ul>
-        <li>${copy.text("application.benefit.support")}</li>
-        <li>${copy.text("application.benefit.information")}</li>
-        <li>${copy.text("application.benefit.offers")}</li>
-    </ul>
-    <h2>${copy.text("application.fee.heading")}</h2>
     <p>${copy.text("application.fee.body", copy.kronor(fees.feeIndividualOre()),
         copy.kronor(fees.feeHouseholdOre()))}</p>
     <p>${copy.text("application.household")}</p>
@@ -46,4 +40,10 @@
                 required = false)
         <button type="submit">${copy.text("application.submit")}</button>
     </form>
+    <h2>${copy.text("application.benefits.heading")}</h2>
+    <ul>
+        <li>${copy.text("application.benefit.support")}</li>
+        <li>${copy.text("application.benefit.information")}</li>
+        <li>${copy.text("application.benefit.offers")}</li>
+    </ul>
 `)

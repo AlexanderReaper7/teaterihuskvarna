@@ -1,9 +1,12 @@
+@import se.teaterihuskvarna.web.PageMetadata
 @import gg.jte.Content
 @import se.teaterihuskvarna.web.Copy
 @param Copy copy
 @param String title
 @param Content content
 @param boolean preview = false
+@param String mainClass = null
+@param PageMetadata metadata = null
 <!DOCTYPE html>
 <html lang="sv">
 <head>
@@ -11,6 +14,21 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="color-scheme" content="light">
     <title>@if(title == null)${copy.text("site.name")}@else${copy.text("site.pageTitle", title)}@endif</title>
+    @if(metadata != null)
+        <meta name="description" content="${metadata.description()}">
+        <link rel="canonical" href="${metadata.url()}">
+        <meta property="og:title" content="${metadata.title()}">
+        <meta property="og:description" content="${metadata.description()}">
+        <meta property="og:type" content="${metadata.type()}">
+        <meta property="og:url" content="${metadata.url()}">
+        <meta property="og:image" content="${metadata.image()}">
+        <meta property="og:image:alt" content="${metadata.imageAlt()}">
+        <meta property="og:locale" content="sv_SE">
+        <meta property="og:site_name" content="${copy.text("site.name")}">
+    @endif
+    @if(preview || metadata == null)
+        <meta name="robots" content="noindex, nofollow">
+    @endif
     <link rel="icon" href="/img/favicon.png" type="image/png">
     <link rel="stylesheet" href="/css/site.css">
     <script src="/js/forms.js" defer></script>
@@ -48,7 +66,7 @@
         </ul>
     </nav>
 </header>
-<main id="innehall">
+<main id="innehall" class="${mainClass}">
 ${content}
 </main>
 <footer class="site-footer">
