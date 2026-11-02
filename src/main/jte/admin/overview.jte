@@ -117,9 +117,9 @@
     @template.tag.errors(copy = copy, errors = errors)
     <form method="post" action="/admin/administratorer">
         @template.tag.csrf(csrf = csrf)
-        @template.tag.field(name = "fullName", label = copy.text("admin.add.fullName"), type = "text",
+        @template.tag.field(copy = copy, name = "fullName", label = copy.text("admin.add.fullName"), type = "text",
                 autocomplete = "off", value = form.fullName(), error = errors.message("fullName"), required = true)
-        @template.tag.field(name = "email", label = copy.text("admin.add.email"), type = "email",
+        @template.tag.field(copy = copy, name = "email", label = copy.text("admin.add.email"), type = "email",
                 autocomplete = "off", value = form.email(), error = errors.message("email"), required = true)
         <button type="submit">@template.icon.plus() ${copy.text("admin.add.submit")}</button>
     </form>

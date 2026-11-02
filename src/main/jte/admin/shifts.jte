@@ -28,6 +28,7 @@
     @if(notice != null)
         <p role="status">${notice}</p>
     @endif
+    <h2>${copy.text("adminShifts.upcoming")}</h2>
     @if(shifts.isEmpty())
         <p>${copy.text("adminShifts.none")}</p>
     @else
@@ -63,15 +64,15 @@
                     <span class="field-error">${taskError}</span>
                 @endif
             </fieldset>
-            @template.tag.field(name = "startsAt", label = copy.text("adminShifts.form.startsAt"), type = "datetime-local",
+            @template.tag.field(copy = copy, name = "startsAt", label = copy.text("adminShifts.form.startsAt"), type = "datetime-local",
                     autocomplete = "off", value = Objects.toString(form.startsAt(), null),
                     error = errors.message("startsAt"), required = true)
             <div id="endsAfterStart">
-            @template.tag.field(name = "endsAt", label = copy.text("adminShifts.form.endsAt"), type = "datetime-local",
+            @template.tag.field(copy = copy, name = "endsAt", label = copy.text("adminShifts.form.endsAt"), type = "datetime-local",
                     autocomplete = "off", value = Objects.toString(form.endsAt(), null),
                     error = timesError != null ? timesError : errors.message("endsAt"), required = true)
             </div>
-            @template.tag.field(name = "places", label = copy.text("adminShifts.form.places"), type = "number",
+            @template.tag.field(copy = copy, name = "places", label = copy.text("adminShifts.form.places"), type = "number",
                     autocomplete = "off", value = Objects.toString(form.places(), null),
                     error = errors.message("places"), required = true)
             <button type="submit">@template.icon.plus() ${copy.text("adminShifts.form.submit")}</button>

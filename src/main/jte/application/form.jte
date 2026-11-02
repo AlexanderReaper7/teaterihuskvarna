@@ -29,19 +29,19 @@
     @template.tag.errors(copy = copy, errors = errors)
     <form method="post" action="/bli-medlem">
         @template.tag.csrf(csrf = csrf)
-        @template.tag.field(name = "fullName", label = copy.text("application.form.fullName"), type = "text",
+        @template.tag.field(copy = copy, name = "fullName", label = copy.text("member.name"), type = "text",
                 autocomplete = "name", value = form.fullName(), error = errors.message("fullName"), required = true)
-        @template.tag.field(name = "email", label = copy.text("application.form.email"), type = "email",
+        @template.tag.field(copy = copy, name = "email", label = copy.text("member.email"), type = "email",
                 autocomplete = "email", value = form.email(), error = errors.message("email"), required = true)
-        @template.tag.field(name = "phone", label = copy.text("application.form.phone"), type = "tel",
+        @template.tag.field(copy = copy, name = "phone", label = copy.text("member.phone"), type = "tel",
                 autocomplete = "tel", value = form.phone(), error = errors.message("phone"), required = false)
-        @template.tag.field(name = "address", label = copy.text("application.form.address"), type = "text",
+        @template.tag.field(copy = copy, name = "address", label = copy.text("member.address"), type = "text",
                 autocomplete = "street-address", value = form.address(), error = errors.message("address"),
                 required = false)
-        @template.tag.field(name = "postalCode", label = copy.text("application.form.postalCode"), type = "text",
+        @template.tag.field(copy = copy, name = "postalCode", label = copy.text("member.postalCode"), type = "text",
                 autocomplete = "postal-code", value = form.postalCode(), error = errors.message("postalCode"),
                 required = false)
-        @template.tag.field(name = "city", label = copy.text("application.form.city"), type = "text",
+        @template.tag.field(copy = copy, name = "city", label = copy.text("member.city"), type = "text",
                 autocomplete = "address-level2", value = form.city(), error = errors.message("city"),
                 required = false)
         <button type="submit">${copy.text("application.submit")}</button>

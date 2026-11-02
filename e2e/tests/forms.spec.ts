@@ -1,0 +1,91 @@
+// Every form says which of its text fields may be left empty, the same way
+// everywhere, and calls one field by one name: decided in #180.
+import { expect, test, type Page } from "@playwright/test";
+import { linkLogin } from "../support/auth";
+import { clearLinkRequests, resetAdministrators } from "../support/db";
+import { ADMINISTRATORS, MEMBERS } from "../support/site";
+
+test.beforeEach(async () => {
+  await resetAdministrators();
+  await clearLinkRequests();
+});
+
+const OPTIONAL = " (frivilligt)";
+
+/// Every field on the page that breaks the rule, as readable sentences. A
+/// text field is an input a person types into, or a textarea. One that is the
+/// only text field in its form, such as the register's search, is left out:
+/// a form of one field has nothing to tell apart.
+async function problems(page: Page): Promise<string[]> {
+  return page.evaluate((optional) => {
+    const found: string[] = [];
+    for (const form of document.querySelectorAll("main form")) {
+      const fields = [...form.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>(
+        "input:not([type=hidden], [type=checkbox], [type=radio], [type=submit], [type=file]), textarea")]
+        .filter((field) => field.labels && field.labels.length > 0);
+      if (fields.length < 2) {
+        continue;
+      }
+      for (const field of fields) {
+        const label = field.labels![0].textContent!.trim().replace(/\s+/g, " ");
+        if (field.required === label.endsWith(optional)) {
+          found.push(`${JSON.stringify(label)} is ${field.required ? "required" : "optional"}`);
+        }
+        if (/^Adress\b/.test(label)) {
+          found.push(`${JSON.stringify(label)} is called Gatuadress elsewhere`);
+        }
+      }
+    }
+    return found;
+  }, OPTIONAL);
+}
+
+async function scan(page: Page, paths: string[]): Promise<string[]> {
+  const found: string[] = [];
+  for (const path of paths) {
+    await page.goto(path);
+    found.push(...(await problems(page)).map((problem) => `${path}: ${problem}`));
+  }
+  return found;
+}
+
+/// The first link on `list` that leads to `prefix` and a number.
+async function firstDetail(page: Page, list: string, prefix: string): Promise<string> {
+  await page.goto(list);
+  const href = await page.locator(`a[href^="${prefix}"]`).evaluateAll(
+    (links, p) => links.map((a) => a.getAttribute("href") ?? "").find((h) => new RegExp(`^${p}\\d+$`).test(h)) ?? "",
+    prefix);
+  expect(href, `a link to ${prefix}<id> on ${list}`).not.toBe("");
+  return href;
+}
+
+// Proves the check can fail, both ways and on the name.
+test("the check reports an unmarked optional field, a marked required one and Adress", async ({ page }) => {
+  await page.setContent(`<main><form>
+    <label for="a">Telefon</label><input id="a">
+    <label for="b">Namn (frivilligt)</label><input id="b" required>
+    <label for="c">Adress (frivilligt)</label><input id="c">
+  </form></main>`);
+  expect(await problems(page)).toEqual([
+    '"Telefon" is optional',
+    '"Namn (frivilligt)" is required',
+    '"Adress (frivilligt)" is called Gatuadress elsewhere',
+  ]);
+});
+
+test("the join form follows the rule", async ({ page }) => {
+  expect(await scan(page, ["/bli-medlem"])).toEqual([]);
+});
+
+test("the member's forms follow the rule", async ({ page }) => {
+  await linkLogin(page, "member", MEMBERS.erik);
+  expect(await scan(page, ["/medlem", "/medlem/kontaktuppgifter", "/medlem/hushall"])).toEqual([]);
+});
+
+test("the administrators' forms follow the rule", async ({ page }) => {
+  await linkLogin(page, "administrator", ADMINISTRATORS.ada);
+  const member = await firstDetail(page, "/admin/medlemmar", "/admin/medlemmar/");
+  const offer = await firstDetail(page, "/admin/erbjudanden", "/admin/erbjudanden/");
+  expect(await scan(page, ["/admin", "/admin/medlemmar", "/admin/medlemmar/ny", member, "/admin/hushall",
+    "/admin/erbjudanden/nytt", offer, "/admin/handlingar", "/admin/volontarpass", "/admin/utskick"])).toEqual([]);
+});

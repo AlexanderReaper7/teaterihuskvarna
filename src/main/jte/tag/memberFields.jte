@@ -7,17 +7,17 @@
 @param MemberForm form
 @param FieldErrors errors
 @param List<HouseholdDetails> households
-@template.tag.field(name = "fullName", label = copy.text("member.name"), type = "text",
+@template.tag.field(copy = copy, name = "fullName", label = copy.text("member.name"), type = "text",
         autocomplete = "off", value = form.fullName(), error = errors.message("fullName"), required = true)
-@template.tag.field(name = "email", label = copy.text("register.form.email"), type = "email",
+@template.tag.field(copy = copy, name = "email", label = copy.text("register.form.email"), type = "email",
         autocomplete = "off", value = form.email(), error = errors.message("email"), required = false)
-@template.tag.field(name = "phone", label = copy.text("member.phone"), type = "tel",
+@template.tag.field(copy = copy, name = "phone", label = copy.text("member.phone"), type = "tel",
         autocomplete = "off", value = form.phone(), error = errors.message("phone"), required = false)
-@template.tag.field(name = "address", label = copy.text("member.address"), type = "text",
+@template.tag.field(copy = copy, name = "address", label = copy.text("member.address"), type = "text",
         autocomplete = "off", value = form.address(), error = errors.message("address"), required = false)
-@template.tag.field(name = "postalCode", label = copy.text("member.postalCode"), type = "text",
+@template.tag.field(copy = copy, name = "postalCode", label = copy.text("member.postalCode"), type = "text",
         autocomplete = "off", value = form.postalCode(), error = errors.message("postalCode"), required = false)
-@template.tag.field(name = "city", label = copy.text("member.city"), type = "text",
+@template.tag.field(copy = copy, name = "city", label = copy.text("member.city"), type = "text",
         autocomplete = "off", value = form.city(), error = errors.message("city"), required = false)
 <p>
     <label for="householdId">${copy.text("member.household")}</label>
