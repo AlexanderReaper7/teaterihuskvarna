@@ -1,4 +1,4 @@
-// Pages at a phone's width up to the user's own 2560 px view. Checks what a
+// Every page, at a phone's width up to the user's own 2560 px view. Checks what a
 // person would see as broken: sideways scrolling, buttons touching each other,
 // buttons poking out of the box they sit in, words or phone numbers in a table
 // broken in two, a menu on two lines with room for one, a field and its button
@@ -203,62 +203,87 @@ async function problems(page: Page): Promise<string[]> {
   });
 }
 
+const PUBLIC = ["/", "/kalender", "/evenemang/kulturnatten", "/nyheter", "/nyheter/ny-webbplats", "/om-foreningen",
+  "/styrelsen", "/produktioner", "/ludde-priser", "/kontakt", "/partners", "/bli-medlem", PATHS.member.login,
+  PATHS.administrator.login, "/finns-inte"];
+const MEMBER = ["/medlem/kontaktuppgifter", "/medlem/erbjudanden", "/medlem/handlingar", "/medlem/volontar",
+  "/medlem/hushall"];
+const ADMIN = ["/admin/medlemmar", "/admin/medlemmar/ny", "/admin/hushall", "/admin/erbjudanden",
+  "/admin/erbjudanden/nytt", "/admin/handlingar", "/admin/volontarpass", "/admin/utskick"];
+
+/// What has to be on a page before it is checked, so the checks see what they
+/// were written for: the register's widest address, and the checkboxes and
+/// radio buttons of the mailing and shift forms.
+const SHOWN: Record<string, string> = {
+  "/admin/medlemmar": `tr:has-text("${WIDE_MEMBER.email}")`,
+  "/admin/utskick": "input[type=checkbox], input[type=radio]",
+  "/admin/volontarpass": "input[type=checkbox], input[type=radio]",
+};
+
+/// The pages behind the first two links on `list` that lead to `prefix` and a
+/// number, such as an offer's page from the list of offers.
+async function details(page: Page, list: string, prefix: string): Promise<string[]> {
+  await page.goto(list);
+  const hrefs = await page.locator(`a[href^="${prefix}"]`).evaluateAll(
+    (links, p) => links.map((a) => a.getAttribute("href") ?? "").filter((h) => new RegExp(`^${p}\\d+$`).test(h)),
+    prefix);
+  return [...new Set(hrefs)].slice(0, 2);
+}
+
+/// The problems on the page as it is now, each after the page's path.
+async function here(page: Page, path: string): Promise<string[]> {
+  return (await problems(page)).map((problem) => `${path}: ${problem}`);
+}
+
+async function scan(page: Page, paths: string[], shown = SHOWN): Promise<string[]> {
+  const found: string[] = [];
+  for (const path of paths) {
+    await page.goto(path);
+    if (shown[path]) {
+      await expect(page.locator(shown[path]).first()).toBeVisible();
+    }
+    found.push(...await here(page, path));
+  }
+  return found;
+}
+
 for (const width of WIDTHS) {
   test.describe(`${width} px wide`, () => {
     test.use({ viewport: { width, height: 900 } });
 
-    for (const path of [
-      PATHS.member.login,
-      PATHS.administrator.login,
-      "/kalender",
-      "/bli-medlem",
-      "/produktioner",
-      "/styrelsen",
-      "/ludde-priser",
-      "/finns-inte",
-    ]) {
-      test(`${path} has no layout problems`, async ({ page }) => {
-        await page.goto(path);
-        expect(await problems(page)).toEqual([]);
-      });
-    }
+    test("every public page has no layout problems", async ({ page }) => {
+      expect(await scan(page, PUBLIC)).toEqual([]);
+    });
 
-    test("the member page with the passkey offer has no layout problems", async ({ page }) => {
+    // The passkey offer is on the first page after a login only.
+    test("every member page has no layout problems", async ({ page }) => {
       await linkLogin(page, "member", MEMBERS.erik);
       await expect(page.locator("[data-passkey-offer]")).toBeVisible();
-      expect(await problems(page)).toEqual([]);
+      const found = await here(page, "/medlem");
+      const offers = await details(page, "/medlem/erbjudanden", "/medlem/erbjudanden/");
+      expect(offers).not.toEqual([]);
+      expect([...found, ...await scan(page, [...MEMBER, ...offers])]).toEqual([]);
     });
 
-    test("the administrator page with the passkey offer has no layout problems", async ({ page }) => {
-      await linkLogin(page, "administrator", ADMINISTRATORS.ada);
-      await expect(page.locator("[data-passkey-offer]")).toBeVisible();
-      expect(await problems(page)).toEqual([]);
-    });
-
-    test("the member register has no layout problems", async ({ page }) => {
+    test("every administrator page has no layout problems", async ({ page }) => {
       await wideMember();
       await linkLogin(page, "administrator", ADMINISTRATORS.ada);
+      await expect(page.locator("[data-passkey-offer]")).toBeVisible();
+      const found = await here(page, "/admin");
       await page.goto("/admin/medlemmar");
-      await expect(page.getByRole("row").filter({ hasText: WIDE_MEMBER.email })).toBeVisible();
-      await expect(page.locator("tbody tr").first()).toBeVisible();
-      expect(await problems(page)).toEqual([]);
-    });
-
-    for (const path of ["/admin/utskick", "/admin/volontarpass"]) {
-      test(`${path} has no layout problems`, async ({ page }) => {
-        await linkLogin(page, "administrator", ADMINISTRATORS.ada);
-        await page.goto(path);
-        await expect(page.locator("input[type=checkbox], input[type=radio]").first()).toBeVisible();
-        expect(await problems(page)).toEqual([]);
-      });
-    }
-
-    test("an unpaid member's page has no layout problems", async ({ page }) => {
-      await linkLogin(page, "administrator", ADMINISTRATORS.ada);
-      await page.goto("/admin/medlemmar");
-      await page.getByRole("row").filter({ hasText: text("fee.notPaid") }).first().getByRole("link").click();
-      await expect(page.locator("input[type=radio]").first()).toBeVisible();
-      expect(await problems(page)).toEqual([]);
+      const unpaid = await page.getByRole("row").filter({ hasText: text("fee.notPaid") }).first()
+        .getByRole("link").getAttribute("href");
+      expect(unpaid).not.toBeNull();
+      // An unpaid member's page has the radio buttons to record a payment.
+      const shown = { ...SHOWN, [unpaid!]: "input[type=radio]" };
+      const members = await details(page, "/admin/medlemmar", "/admin/medlemmar/");
+      const offers = await details(page, "/admin/erbjudanden", "/admin/erbjudanden/");
+      expect(offers).not.toEqual([]);
+      // A fresh stack has no shifts or mailings; other specs add them.
+      const shifts = await details(page, "/admin/volontarpass", "/admin/volontarpass/");
+      const mailings = await details(page, "/admin/utskick", "/admin/utskick/");
+      const paths = [...new Set([...ADMIN, unpaid!, ...members, ...offers, ...shifts, ...mailings])];
+      expect([...found, ...await scan(page, paths, shown)]).toEqual([]);
     });
   });
 }
