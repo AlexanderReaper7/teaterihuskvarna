@@ -7,7 +7,8 @@ import { expect, test, type Page } from "@playwright/test";
 import { linkLogin } from "../support/auth";
 import { text } from "../support/copy";
 import { clearLinkRequests, resetAdministrators, sql } from "../support/db";
-import { ADMINISTRATORS, MEMBERS, PATHS } from "../support/site";
+import { ADMINISTRATORS } from "../support/site";
+import { ADMIN, MEMBER, PUBLIC, details, householdPages, prepareAdministratorPages, saveMailingDraft, scan } from "../support/pages";
 
 test.beforeEach(async () => {
   await resetAdministrators();
@@ -203,14 +204,6 @@ async function problems(page: Page): Promise<string[]> {
   });
 }
 
-const PUBLIC = ["/", "/kalender", "/evenemang/kulturnatten", "/nyheter", "/nyheter/ny-webbplats", "/om-foreningen",
-  "/styrelsen", "/produktioner", "/ludde-priser", "/kontakt", "/partners", "/bli-medlem", PATHS.member.login,
-  PATHS.administrator.login, "/finns-inte"];
-const MEMBER = ["/medlem/kontaktuppgifter", "/medlem/erbjudanden", "/medlem/handlingar", "/medlem/volontar",
-  "/medlem/hushall"];
-const ADMIN = ["/admin/medlemmar", "/admin/medlemmar/ny", "/admin/hushall", "/admin/erbjudanden",
-  "/admin/erbjudanden/nytt", "/admin/handlingar", "/admin/volontarpass", "/admin/utskick"];
-
 /// What has to be on a page before it is checked, so the checks see what they
 /// were written for: the register's widest address, and the checkboxes and
 /// radio buttons of the mailing and shift forms.
@@ -220,31 +213,9 @@ const SHOWN: Record<string, string> = {
   "/admin/volontarpass": "input[type=checkbox], input[type=radio]",
 };
 
-/// The pages behind the first two links on `list` that lead to `prefix` and a
-/// number, such as an offer's page from the list of offers.
-async function details(page: Page, list: string, prefix: string): Promise<string[]> {
-  await page.goto(list);
-  const hrefs = await page.locator(`a[href^="${prefix}"]`).evaluateAll(
-    (links, p) => links.map((a) => a.getAttribute("href") ?? "").filter((h) => new RegExp(`^${p}\\d+$`).test(h)),
-    prefix);
-  return [...new Set(hrefs)].slice(0, 2);
-}
-
 /// The problems on the page as it is now, each after the page's path.
 async function here(page: Page, path: string): Promise<string[]> {
   return (await problems(page)).map((problem) => `${path}: ${problem}`);
-}
-
-async function scan(page: Page, paths: string[], shown = SHOWN): Promise<string[]> {
-  const found: string[] = [];
-  for (const path of paths) {
-    await page.goto(path);
-    if (shown[path]) {
-      await expect(page.locator(shown[path]).first()).toBeVisible();
-    }
-    found.push(...await here(page, path));
-  }
-  return found;
 }
 
 for (const width of WIDTHS) {
@@ -252,17 +223,18 @@ for (const width of WIDTHS) {
     test.use({ viewport: { width, height: 900 } });
 
     test("every public page has no layout problems", async ({ page }) => {
-      expect(await scan(page, PUBLIC)).toEqual([]);
+      expect(await scan(page, PUBLIC, problems)).toEqual([]);
     });
 
     // The passkey offer is on the first page after a login only.
     test("every member page has no layout problems", async ({ page }) => {
-      await linkLogin(page, "member", MEMBERS.erik);
+      const household = await householdPages();
+      await linkLogin(page, "member", household.email);
       await expect(page.locator("[data-passkey-offer]")).toBeVisible();
       const found = await here(page, "/medlem");
       const offers = await details(page, "/medlem/erbjudanden", "/medlem/erbjudanden/");
       expect(offers).not.toEqual([]);
-      expect([...found, ...await scan(page, [...MEMBER, ...offers])]).toEqual([]);
+      expect([...found, ...await scan(page, [...MEMBER.filter((path) => path !== "/medlem"), ...offers, ...household.paths], problems, SHOWN)]).toEqual([]);
     });
 
     test("every administrator page has no layout problems", async ({ page }) => {
@@ -279,11 +251,14 @@ for (const width of WIDTHS) {
       const members = await details(page, "/admin/medlemmar", "/admin/medlemmar/");
       const offers = await details(page, "/admin/erbjudanden", "/admin/erbjudanden/");
       expect(offers).not.toEqual([]);
-      // A fresh stack has no shifts or mailings; other specs add them.
+      await prepareAdministratorPages(page);
+      found.push(...await here(page, "/admin/utskick/forhandsgranska"));
+      await saveMailingDraft(page);
       const shifts = await details(page, "/admin/volontarpass", "/admin/volontarpass/");
       const mailings = await details(page, "/admin/utskick", "/admin/utskick/");
-      const paths = [...new Set([...ADMIN, unpaid!, ...members, ...offers, ...shifts, ...mailings])];
-      expect([...found, ...await scan(page, paths, shown)]).toEqual([]);
+      const paths = [...new Set([...ADMIN, unpaid!, ...members, ...offers, ...shifts, ...mailings,
+        ...members.map((path) => path + "/ta-bort"), ...offers.map((path) => path + "/ta-bort")])];
+      expect([...found, ...await scan(page, paths, problems, shown)]).toEqual([]);
     });
   });
 }
