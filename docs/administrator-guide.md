@@ -42,7 +42,7 @@ Efter en inloggning med länk frågar sidan om du vill lägga till en lösenords
 
 ### Logga ut andra enheter
 
-Under **Inloggade enheter** på översikten står varje webbläsare där du är inloggad. Känner du inte igen en, tryck **Logga ut** på dess rad. **Logga ut överallt annars** loggar ut alla utom den du sitter vid.
+Under **Inloggade enheter** på översikten står varje webbläsare där du är inloggad. Känner du inte igen en, tryck **Logga ut** på dess rad. **Logga ut på alla andra enheter** loggar ut alla utom den du sitter vid.
 
 ![Lösenordsnycklar och inloggade enheter på översikten](administrator-guide/enheter.png)
 
@@ -205,7 +205,7 @@ Ett utskick är ett mejl till medlemmarna med din egen text och evenemang och ny
 
 Under **Tidigare utskick** på sidan Utskick står alla utskick, det senaste först, med status och hur många som har öppnat dem.
 
-### Mottagargrupper
+### Målgrupper och segment
 
 **Alla medlemmar med konto** finns alltid. Andra grupper, till exempel de som har betalat i år, volontärerna eller de anmälda till ett erbjudande, gör du som segment i Brevo. Varje medlem med konto finns där med tre egenskaper:
 
@@ -235,6 +235,8 @@ Skriv vad du gjorde, vad du väntade dig och vad som hände i stället, och ta g
 ## Verifiering
 
 En agent följde varje steg ovan den 1 november 2026 på den lokala utvecklingsmiljön, inloggad som den påhittade administratören Ada Admin, med ett skript som också tog bilderna. Skriptet kontrollerade att varje sida svarade som guiden säger, och från en påhittad medlems inloggning att medlemmarna ser det som guiden säger att de ser. Lösenordsnyckeln prövades med Chromiums låtsade autentiserare, inte med ett fingeravtryck eller en telefon.
+
+Knappen för att logga ut andra enheter heter "Logga ut på alla andra enheter" sedan #187. Guidens text och bilden av enheterna uppdaterades den 2 november 2026 på den lokala testmiljön med två webbläsare inloggade som den påhittade administratören Gunnar Wik.
 
 Inte prövat:
 
