@@ -34,6 +34,9 @@ async function problems(page: Page): Promise<string[]> {
         if (/^Adress\b/.test(label)) {
           found.push(`${JSON.stringify(label)} is called Gatuadress elsewhere`);
         }
+        if ((label.match(/\(/g) ?? []).length > 1) {
+          found.push(`${JSON.stringify(label)} has more than one pair of brackets`);
+        }
       }
     }
     return found;
@@ -59,17 +62,19 @@ async function firstDetail(page: Page, list: string, prefix: string): Promise<st
   return href;
 }
 
-// Proves the check can fail, both ways and on the name.
-test("the check reports an unmarked optional field, a marked required one and Adress", async ({ page }) => {
+// Proves the check can fail, both ways, on the name and on the brackets.
+test("the check reports an unmarked optional field, a marked required one, Adress and two brackets", async ({ page }) => {
   await page.setContent(`<main><form>
     <label for="a">Telefon</label><input id="a">
     <label for="b">Namn (frivilligt)</label><input id="b" required>
     <label for="c">Adress (frivilligt)</label><input id="c">
+    <label for="d">När (datum och tid) (frivilligt)</label><input id="d">
   </form></main>`);
   expect(await problems(page)).toEqual([
     '"Telefon" is optional',
     '"Namn (frivilligt)" is required',
     '"Adress (frivilligt)" is called Gatuadress elsewhere',
+    '"När (datum och tid) (frivilligt)" has more than one pair of brackets',
   ]);
 });
 
