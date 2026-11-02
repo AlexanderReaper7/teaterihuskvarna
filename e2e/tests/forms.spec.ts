@@ -3,7 +3,8 @@
 import { expect, test, type Page } from "@playwright/test";
 import { linkLogin } from "../support/auth";
 import { clearLinkRequests, resetAdministrators } from "../support/db";
-import { ADMINISTRATORS, MEMBERS } from "../support/site";
+import { ADMINISTRATORS } from "../support/site";
+import { details, householdPages, scan } from "../support/pages";
 
 test.beforeEach(async () => {
   await resetAdministrators();
@@ -43,25 +44,6 @@ async function problems(page: Page): Promise<string[]> {
   }, OPTIONAL);
 }
 
-async function scan(page: Page, paths: string[]): Promise<string[]> {
-  const found: string[] = [];
-  for (const path of paths) {
-    await page.goto(path);
-    found.push(...(await problems(page)).map((problem) => `${path}: ${problem}`));
-  }
-  return found;
-}
-
-/// The first link on `list` that leads to `prefix` and a number.
-async function firstDetail(page: Page, list: string, prefix: string): Promise<string> {
-  await page.goto(list);
-  const href = await page.locator(`a[href^="${prefix}"]`).evaluateAll(
-    (links, p) => links.map((a) => a.getAttribute("href") ?? "").find((h) => new RegExp(`^${p}\\d+$`).test(h)) ?? "",
-    prefix);
-  expect(href, `a link to ${prefix}<id> on ${list}`).not.toBe("");
-  return href;
-}
-
 // Proves the check can fail, both ways, on the name and on the brackets.
 test("the check reports an unmarked optional field, a marked required one, Adress and two brackets", async ({ page }) => {
   await page.setContent(`<main><form>
@@ -79,18 +61,19 @@ test("the check reports an unmarked optional field, a marked required one, Adres
 });
 
 test("the join form follows the rule", async ({ page }) => {
-  expect(await scan(page, ["/bli-medlem"])).toEqual([]);
+  expect(await scan(page, ["/bli-medlem"], problems)).toEqual([]);
 });
 
 test("the member's forms follow the rule", async ({ page }) => {
-  await linkLogin(page, "member", MEMBERS.erik);
-  expect(await scan(page, ["/medlem", "/medlem/kontaktuppgifter", "/medlem/hushall"])).toEqual([]);
+  const household = await householdPages();
+  await linkLogin(page, "member", household.email);
+  expect(await scan(page, ["/medlem", "/medlem/kontaktuppgifter", "/medlem/hushall", ...household.paths], problems)).toEqual([]);
 });
 
 test("the administrators' forms follow the rule", async ({ page }) => {
   await linkLogin(page, "administrator", ADMINISTRATORS.ada);
-  const member = await firstDetail(page, "/admin/medlemmar", "/admin/medlemmar/");
-  const offer = await firstDetail(page, "/admin/erbjudanden", "/admin/erbjudanden/");
+  const member = (await details(page, "/admin/medlemmar", "/admin/medlemmar/"))[0];
+  const offer = (await details(page, "/admin/erbjudanden", "/admin/erbjudanden/"))[0];
   expect(await scan(page, ["/admin", "/admin/medlemmar", "/admin/medlemmar/ny", member, "/admin/hushall",
-    "/admin/erbjudanden/nytt", offer, "/admin/handlingar", "/admin/volontarpass", "/admin/utskick"])).toEqual([]);
+    "/admin/erbjudanden/nytt", offer, "/admin/handlingar", "/admin/volontarpass", "/admin/utskick"], problems)).toEqual([]);
 });
