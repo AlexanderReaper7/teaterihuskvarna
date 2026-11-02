@@ -74,7 +74,7 @@
             @template.tag.field(name = "places", label = copy.text("adminShifts.form.places"), type = "number",
                     autocomplete = "off", value = Objects.toString(form.places(), null),
                     error = errors.message("places"), required = true)
-            <button type="submit">${copy.text("adminShifts.form.submit")}</button>
+            <button type="submit">@template.icon.plus() ${copy.text("adminShifts.form.submit")}</button>
         </form>
     @endif
 

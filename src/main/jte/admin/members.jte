@@ -1,9 +1,15 @@
 @import se.teaterihuskvarna.member.MemberDetails
 @import se.teaterihuskvarna.member.MemberList
 @import se.teaterihuskvarna.member.MemberService
+@import java.util.List
 @import se.teaterihuskvarna.web.Copy
+@import se.teaterihuskvarna.web.CsrfField
+@import se.teaterihuskvarna.web.RegisterFilter
 @param Copy copy
+@param CsrfField csrf
 @param String query
+@param String fee
+@param List<RegisterFilter> filters
 @param MemberList list
 @param String error
 @param String notice
@@ -17,15 +23,25 @@
         <p role="status">${notice}</p>
     @endif
     <p>
-        <a href="/admin/medlemmar/ny">${copy.text("register.add")}</a>
-        · <a href="/admin/hushall">${copy.text("household.heading")}</a>
-        · <a href="/admin/medlemmar.csv" download>${copy.text("register.export")}</a>
+        <a href="/admin/medlemmar/ny">@template.icon.plus() ${copy.text("register.add")}</a>
+        · <a href="/admin/hushall">@template.icon.house() ${copy.text("household.heading")}</a>
+        · <a href="/admin/medlemmar.csv" download>@template.icon.download() ${copy.text("register.export")}</a>
     </p>
     <form method="get" action="/admin/medlemmar" role="search">
         <label for="q">${copy.text("register.search")}</label>
         <input id="q" name="q" type="search" value="${query}">
-        <button type="submit">${copy.text("register.search.submit")}</button>
+        @if(!fee.isEmpty())
+            <input type="hidden" name="avgift" value="${fee}">
+        @endif
+        <button type="submit">@template.icon.search() ${copy.text("register.search.submit")}</button>
     </form>
+    <nav class="choices" aria-label="${copy.text("register.filter.label")}">
+        <ul>
+            @for(RegisterFilter filter : filters)
+                <li><a href="${filter.url()}" aria-current="${filter.current() ? "page" : null}">${filter.label()}</a></li>
+            @endfor
+        </ul>
+    </nav>
     @if(list.more())
         <p role="status">${copy.text("register.more", String.valueOf(MemberService.SEARCH_LIMIT))}</p>
     @endif

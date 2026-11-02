@@ -37,7 +37,7 @@
                                 @template.tag.csrf(csrf = csrf)
                                 <button type="submit" class="button-secondary"
                                         aria-label="${copy.text("passkey.remove.label", passkey.label())}">
-                                    ${copy.text("passkey.remove")}
+                                    @template.icon.trash2() ${copy.text("passkey.remove")}
                                 </button>
                             </form>
                         </td>
@@ -48,5 +48,5 @@
     @endif
     <p role="alert" data-passkey-error hidden></p>
     <p data-passkey-unsupported hidden>${copy.text("passkey.unsupported")}</p>
-    <button type="button" data-passkey-add hidden>${copy.text("passkey.add")}</button>
+    <button type="button" data-passkey-add hidden>@template.icon.keyRound() ${copy.text("passkey.add")}</button>
 </section>

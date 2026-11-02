@@ -27,6 +27,14 @@ final class Json {
 
     /// @param node  an object
     /// @param field the field's name
+    /// @return the field as a whole number, or null if it is missing or not one
+    static @Nullable Integer integer(JsonNode node, String field) {
+        JsonNode value = node.path(field);
+        return value.isIntegralNumber() && value.canConvertToInt() ? value.intValue() : null;
+    }
+
+    /// @param node  an object
+    /// @param field the field's name
     /// @return the field as a moment, or null if it is missing or not an ISO 8601 date and time
     static @Nullable Instant instant(JsonNode node, String field) {
         String text = text(node, field);

@@ -6,6 +6,9 @@
 @import se.teaterihuskvarna.login.PasskeyDetails
 @import se.teaterihuskvarna.login.PasskeyUrls
 @import se.teaterihuskvarna.login.SignedIn
+@import se.teaterihuskvarna.member.FeeCount
+@import se.teaterihuskvarna.offer.OfferDetails
+@import se.teaterihuskvarna.volunteer.ShiftDetails
 @import se.teaterihuskvarna.web.Copy
 @import se.teaterihuskvarna.web.CsrfField
 @import se.teaterihuskvarna.web.DeviceUrls
@@ -14,6 +17,9 @@
 @param Copy copy
 @param CsrfField csrf
 @param SignedIn signedIn
+@param FeeCount fees
+@param List<ShiftDetails> shifts
+@param List<OfferDetails> offers
 @param List<AdministratorDetails> administrators
 @param NewAdministrator form
 @param FieldErrors errors
@@ -29,20 +35,6 @@
     <h1>${copy.text("admin.heading")}</h1>
     <p>${copy.text("admin.signedInAs", signedIn.fullName())}</p>
     @template.tag.logout(copy = copy, csrf = csrf, action = "/admin/logga-ut")
-    <section aria-labelledby="webbplatsens-innehall">
-        <h2 id="webbplatsens-innehall">${copy.text("admin.content.heading")}</h2>
-        <p>${copy.text("admin.content.explain")}</p>
-        @if(studioUrl != null)
-            <p><a href="${studioUrl}">${copy.text("admin.content.open")}</a></p>
-        @else
-            <p>${copy.text("admin.content.unavailable")} <a href="https://www.sanity.io/manage">${copy.text("admin.content.manage")}</a></p>
-        @endif
-    </section>
-    <section aria-labelledby="brevo">
-        <h2 id="brevo">${copy.text("admin.brevo.heading")}</h2>
-        <p><a href="https://app.brevo.com/contact/segment">${copy.text("adminMailings.segments.open")}</a></p>
-        <p><a href="https://app.brevo.com/campaigns/listing/email">${copy.text("adminMailings.campaigns.open")}</a></p>
-    </section>
     @if(offerPasskey)
         @template.tag.passkeyOffer(copy = copy, csrf = csrf, urls = passkeyUrls)
     @endif
@@ -53,6 +45,44 @@
         <p role="status">${notice}</p>
     @endif
 
+    <h2>${copy.text("admin.fees.heading", String.valueOf(fees.year()))}</h2>
+    <p>${copy.text("admin.fees.count", fees.paid(), fees.paid() + fees.unpaid())}</p>
+    @if(fees.unpaid() > 0)
+        <p><a href="/admin/medlemmar?avgift=obetald">${copy.text("admin.fees.unpaid", fees.unpaid())}</a></p>
+    @endif
+
+    <h2>${copy.text("admin.shifts.heading")}</h2>
+    @if(shifts.isEmpty())
+        <p>${copy.text("admin.shifts.none")}</p>
+    @else
+        @template.tag.shiftTable(copy = copy, caption = copy.text("admin.shifts.caption"), shifts = shifts)
+    @endif
+    <p><a href="/admin/volontarpass">${copy.text("admin.shifts.all")}</a></p>
+
+    <h2>${copy.text("admin.offers.heading")}</h2>
+    @if(offers.isEmpty())
+        <p>${copy.text("admin.offers.none")}</p>
+    @else
+        @template.tag.offerTable(copy = copy, caption = copy.text("admin.offers.caption"), offers = offers)
+    @endif
+    <p><a href="/admin/erbjudanden">${copy.text("admin.offers.all")}</a></p>
+
+    <section aria-labelledby="webbplatsens-innehall">
+        <h2 id="webbplatsens-innehall">${copy.text("admin.content.heading")}</h2>
+        <p>${copy.text("admin.content.explain")}</p>
+        @if(studioUrl != null)
+            <p><a href="${studioUrl}">@template.icon.externalLink() ${copy.text("admin.content.open")}</a></p>
+        @else
+            <p>${copy.text("admin.content.unavailable")} <a href="https://www.sanity.io/manage">@template.icon.externalLink() ${copy.text("admin.content.manage")}</a></p>
+        @endif
+    </section>
+    <section aria-labelledby="brevo">
+        <h2 id="brevo">${copy.text("admin.brevo.heading")}</h2>
+        <p><a href="https://app.brevo.com/contact/segment">@template.icon.externalLink() ${copy.text("adminMailings.segments.open")}</a></p>
+        <p><a href="https://app.brevo.com/campaigns/listing/email">@template.icon.externalLink() ${copy.text("adminMailings.campaigns.open")}</a></p>
+    </section>
+
+    <h2>${copy.text("admin.administrators.heading")}</h2>
     <table>
         <caption>${copy.text("admin.list.caption")}</caption>
         <thead>
@@ -73,7 +103,7 @@
                             <form method="post" action="/admin/administratorer/${administrator.id()}/ta-bort">
                                 @template.tag.csrf(csrf = csrf)
                                 <button type="submit" class="button-secondary" aria-label="${removeLabel}">
-                                    ${copy.text("admin.remove")}
+                                    @template.icon.trash2() ${copy.text("admin.remove")}
                                 </button>
                             </form>
                         @endif
@@ -83,7 +113,7 @@
         </tbody>
     </table>
 
-    <h2>${copy.text("admin.add.heading")}</h2>
+    <h3>${copy.text("admin.add.heading")}</h3>
     @template.tag.errors(copy = copy, errors = errors)
     <form method="post" action="/admin/administratorer">
         @template.tag.csrf(csrf = csrf)
@@ -91,7 +121,7 @@
                 autocomplete = "off", value = form.fullName(), error = errors.message("fullName"), required = true)
         @template.tag.field(name = "email", label = copy.text("admin.add.email"), type = "email",
                 autocomplete = "off", value = form.email(), error = errors.message("email"), required = true)
-        <button type="submit">${copy.text("admin.add.submit")}</button>
+        <button type="submit">@template.icon.plus() ${copy.text("admin.add.submit")}</button>
     </form>
 
     @template.tag.passkeys(copy = copy, csrf = csrf, passkeys = passkeys, urls = passkeyUrls)

@@ -50,7 +50,7 @@ for (const width of [320, 2560]) {
       await expect(page.getByLabel("Ort", { exact: true })).toHaveValue("Huskvarna");
       await page.getByLabel("Namn", { exact: true }).fill("Olle Nytt namn");
       await page.getByRole("button", { name: "Spara", exact: true }).click();
-      await page.getByRole("link", { name: "Tillbaka till Mina uppgifter" }).click();
+      await page.getByRole("link", { name: "Tillbaka till Mina sidor" }).click();
       await expect(page.getByLabel("E-postadress till Olle Nytt namn")).toBeVisible();
 
       const [own] = await sql<{ household_id: string }>("SELECT household_id FROM member WHERE id = $1", [ownId]);

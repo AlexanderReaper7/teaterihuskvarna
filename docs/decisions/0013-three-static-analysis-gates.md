@@ -20,11 +20,11 @@ Doc comments are `///` Markdown (JEP 467), never `/** */`. Checkstyle enforces t
 
 Its own argument for doing this early applies harder here. Eight Java files is the smallest this codebase will ever be. The member register alone adds fees, offers, registrations, volunteer bookings and login tokens; retrofitting a ruleset across those later is a day of work instead of the hour it took now.
 
-Versions were resolved from Maven Central on 2026-09-22 rather than copied: `maven-checkstyle-plugin` 3.6.0 with Checkstyle 14.1.0, `spotbugs-maven-plugin` 4.10.4.1, `maven-pmd-plugin` 3.28.0 with PMD pinned to 7.27.0.
+Versions were resolved from Maven Central rather than copied from the reference project, and [`pom.xml`](../../pom.xml) holds them.
 
 ## PMD is pinned ahead of the plugin
 
-`maven-pmd-plugin` 3.28.0 bundles PMD 7.17, which cannot read Java 25 class files. The failure is quiet: PMD resolves types from the compiled classes on the auxclasspath, every lookup fails down to `java/lang/Object`, syntactic rules still fire, and the build looks healthy while every type-aware rule checks nothing. `pmd-core` and `pmd-java` are pinned to 7.27.0 in the plugin's own `<dependencies>`, and `pmd.target.jdk` is tied to `java.version` so a Java upgrade cannot leave PMD behind.
+`maven-pmd-plugin` 3.28.0 bundles PMD 7.17, which cannot read Java 25 class files. The failure is quiet: PMD resolves types from the compiled classes on the auxclasspath, every lookup fails down to `java/lang/Object`, syntactic rules still fire, and the build looks healthy while every type-aware rule checks nothing. `pmd-core` and `pmd-java` are pinned to a newer PMD in the plugin's own `<dependencies>`, and `pmd.target.jdk` is tied to `java.version` so a Java upgrade cannot leave PMD behind.
 
 The two pins must move together. This is the other project's [0014](https://github.com/AlexanderReaper7/Lexicon-flight-reservation/blob/main/docs/decisions/0014-pin-pmd-ahead-of-the-plugin.md), carried over before it could cost a second debugging session.
 
@@ -32,7 +32,7 @@ The two pins must move together. This is the other project's [0014](https://gith
 
 This is the one place the port does not work, and it is the reason this record exists rather than a commit message.
 
-The reference ruleset keeps `JavadocMethod` with `allowMissingParamTags=false` and calls it the expensive half, kept on purpose. Checkstyle 14.1.0 has no Markdown Javadoc parser. It reads a `///` comment as an ordinary comment and validates nothing inside it.
+The reference ruleset keeps `JavadocMethod` with `allowMissingParamTags=false` and calls it the expensive half, kept on purpose. Checkstyle has no Markdown Javadoc parser, measured on 14.1.0 and again on 14.3.0 on 2026-10-31, where `JavadocMethod` with `allowMissingParamTags=false` reported two errors on a method documented with `/** */` and none on the same method documented with `///`. It reads a `///` comment as an ordinary comment and validates nothing inside it.
 
 Measured on 2026-09-22, same constructor, same missing tag, same ruleset:
 

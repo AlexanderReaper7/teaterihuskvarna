@@ -33,7 +33,7 @@
             </thead>
             <tbody>
                 @for(MemberShift shift : shifts)
-                    <tr>
+                    <tr id="pass-${shift.id()}">
                         <th scope="row"><a href="/evenemang/${shift.eventSlug()}">${shift.eventTitle()}</a></th>
                         <td>${copy.text("shift.task." + shift.task().name())}</td>
                         <td>${copy.text("shifts.between", copy.dateTime(shift.startsAt()), copy.time(shift.endsAt()))}</td>
@@ -42,12 +42,12 @@
                             @if(shift.booked())
                                 <form method="post" action="/medlem/volontar/${shift.id()}/avboka">
                                     @template.tag.csrf(csrf = csrf)
-                                    <button type="submit" class="button-secondary">${copy.text("shifts.cancel")}</button>
+                                    <button type="submit" class="button-secondary">@template.icon.calendarX() ${copy.text("shifts.cancel")}</button>
                                 </form>
                             @elseif(shift.placesLeft() > 0)
                                 <form method="post" action="/medlem/volontar/${shift.id()}/boka">
                                     @template.tag.csrf(csrf = csrf)
-                                    <button type="submit">${copy.text("shifts.book")}</button>
+                                    <button type="submit">@template.icon.calendarPlus() ${copy.text("shifts.book")}</button>
                                 </form>
                             @else
                                 ${copy.text("shifts.full")}
