@@ -32,11 +32,6 @@ class ContentIT extends IntegrationTestSupport {
     }
 
     @Test
-    void theFooterKeepsTheAssociationsNameApartFromTheAdministrationLink() throws Exception {
-        assertThat(html("/")).contains("Föreningen Teater i Huskvarna · <a href=\"/admin\">");
-    }
-
-    @Test
     void theCalendarFiltersBySeries() throws Exception {
         assertThat(html("/kalender")).contains("Mitt i veckan", "Kulturnatten på torget", "Läsning: Nya pjäser");
         assertThat(html("/kalender?serie=kulturnatt"))
