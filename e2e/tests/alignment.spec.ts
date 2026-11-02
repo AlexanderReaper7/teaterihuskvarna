@@ -155,6 +155,42 @@ for (const width of WIDTHS) {
   });
 }
 
+// An article's main picture is 1200 px wide in its HTML, the width Sanity is
+// asked for, and the fixture content has none, so each kind of article gets one
+// where its template puts it. It may take the column, and no more.
+for (const width of [390, 2560]) {
+  test.describe(`an article's main picture at ${width} px`, () => {
+    test.use({ viewport: { width, height: 900 } });
+
+    for (const path of ["/om-foreningen", "/nyheter/ny-webbplats", "/evenemang/kulturnatten"]) {
+      test(`${path} keeps it inside the column`, async ({ page }) => {
+        await page.goto(path);
+        const found = await page.locator("main > article").evaluate(async (article) => {
+          const img = document.createElement("img");
+          img.className = "hero";
+          img.width = 1200;
+          img.height = 800;
+          img.alt = "";
+          img.src = `data:image/svg+xml,${encodeURIComponent(
+            '<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800"><rect width="1200" height="800" fill="teal"/></svg>')}`;
+          [...article.querySelectorAll(":scope > h1, :scope > .meta")].pop()!.after(img);
+          await img.decode();
+          const style = getComputedStyle(article);
+          const box = article.getBoundingClientRect();
+          const right = box.right - parseFloat(style.paddingRight);
+          const root = document.documentElement;
+          return [
+            ...(root.scrollWidth > root.clientWidth ? [`the page scrolls sideways: ${root.scrollWidth} px in ${root.clientWidth}`] : []),
+            ...(img.getBoundingClientRect().right > right + 0.5
+              ? [`the picture ends at ${img.getBoundingClientRect().right.toFixed(0)} px, past the column's ${right.toFixed(0)}`] : []),
+          ];
+        });
+        expect(found).toEqual([]);
+      });
+    }
+  });
+}
+
 // The fixture content has no pictures, so these pages get some: an upright
 // one, a square one and a wide one in turn, and none in the last card.
 test.describe("cards with pictures of any proportions", () => {

@@ -365,8 +365,14 @@ main > article > * {
   max-width: var(--width-text);
 }
 
-main > article > :is(.hero, .cards, .gallery) {
+main > article > :is(.cards, .gallery) {
   max-width: none;
+}
+
+/* The main picture's HTML width is the 1200 px Sanity is asked for, so the
+ * column, not the picture, sets how wide it may be. */
+main > article > .hero {
+  max-width: 100%;
 }
 
 .cards {
