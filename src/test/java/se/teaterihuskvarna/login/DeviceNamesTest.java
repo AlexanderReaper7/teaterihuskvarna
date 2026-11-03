@@ -18,41 +18,37 @@ public class DeviceNamesTest {
         return source;
     }
 
-    private String describe(String userAgent) {
-        return deviceNames.of(userAgent);
-    }
-
     @Test
     void firefoxOnWindows() {
         assertEquals("Firefox på Windows",
                 deviceNames.of("Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:131.0)"
-                        + " Gecko/20100101 Firefox/131.0)"));
+                        + " Gecko/20100101 Firefox/131.0"));
     }
 
     @Test
-    void edgeOnWidows() {
+    void edgeOnWindows() {
         assertEquals("Edge på Windows",
-                deviceNames.of("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppWebKit/537.36(KHTML, like Gecko)"
-                        + " Chrome/130.0.0.0 safari/537.36 Edg/130.0.0.0"));
+                deviceNames.of("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko)"
+                        + " Chrome/130.0.0.0 Safari/537.36 Edg/130.0.0.0"));
     }
 
     @Test
-    void chromOnAndroids() {
+    void chromeOnAndroid() {
         assertEquals("Chrome på Android",
-                deviceNames.of("Mozilla/5.0 (Linux; Android 14; Pixel 8) AppWebKit/537.36(KHTML, like Gecko)"
-                        + " Chrome/130.0.0.0 Mobile safari/537.36"));
+                deviceNames.of("Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko)"
+                        + " Chrome/130.0.0.0 Mobile Safari/537.36"));
     }
 
     @Test
     void safariOnIos() {
         assertEquals("Safari på iOS",
-                deviceNames.of("Mozilla/5.0(iPhone; CPU iPhone OS 18_0 like Mac OS X) AppWebKit/605.1.15"
-                        + "(KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1"));
+                deviceNames.of("Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15"
+                        + " (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1"));
     }
 
     @Test
     void curlIsUnknown() {
-        assertEquals("okänd på okänd", deviceNames.of("crul/8.10.1"));
+        assertEquals("okänd på okänd", deviceNames.of("curl/8.10.1"));
     }
 
     @Test
