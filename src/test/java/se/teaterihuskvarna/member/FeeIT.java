@@ -159,7 +159,7 @@ class FeeIT extends MemberRegisterSupport {
         // The fee column and the member's page say the status with the same badge as /medlem (#110).
         assertThat(unpaid).contains("<span class=\"badge badge-unpaid\">Ej betald</span>");
         assertThat(page("/admin/medlemmar?avgift=betald")).contains("<span class=\"badge badge-paid\">Betald</span>",
-                "<th scope=\"col\">Bokföringsdatum</th>");
+                "<th scope=\"col\">Markerad som betald</th>");
         assertThat(page("/admin/medlemmar/" + johan)).contains("<span class=\"badge badge-unpaid\">Ej betald</span>");
 
         mockMvc.perform(get("/api/admin/members").param("fee", "UNPAID").with(asAdministrator()))
