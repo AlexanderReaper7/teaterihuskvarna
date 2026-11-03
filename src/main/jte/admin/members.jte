@@ -15,7 +15,6 @@
 @param String notice
 @template.admin.layout(copy = copy, title = copy.text("register.heading"), content = @`
     <h1>${copy.text("register.heading")}</h1>
-    <p><a href="/admin">${copy.text("register.back")}</a></p>
     @if(error != null)
         <p role="alert">${error}</p>
     @endif
@@ -80,7 +79,7 @@
                                         <input type="hidden" name="avgift" value="${fee}">
                                         <button type="submit" class="button-secondary"
                                                 aria-label="${copy.text("register.markPaid.label." + kind, member.fullName())}">
-                                            ${copy.text("register.markPaid." + kind)}
+                                            @template.icon.badgeCheck() ${copy.text("register.markPaid." + kind)}
                                         </button>
                                     </form>
                                 @endfor

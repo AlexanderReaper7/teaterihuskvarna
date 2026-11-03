@@ -23,7 +23,6 @@
 !{String introError = errors.message("intro");}
 @template.admin.layout(copy = copy, title = copy.text("adminMailings.heading"), content = @`
     <h1>${copy.text("adminMailings.heading")}</h1>
-    <p><a href="/admin">${copy.text("admin.toOverview")}</a></p>
     @if(error != null)
         <p role="alert">${error}</p>
     @endif
