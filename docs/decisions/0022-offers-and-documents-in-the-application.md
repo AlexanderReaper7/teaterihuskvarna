@@ -6,6 +6,8 @@ description: Where member offers and member documents live, why not in Sanity, a
 
 # 0022: Offers and member documents live in the application
 
+Amended by the user on 2026-10-24. The old site's documents are members-only.
+
 The Decision section is the user's. Everything under Agent notes is an agent's.
 
 ## Decision
@@ -31,6 +33,6 @@ Written by an agent on 2026-09-28. Everything below is a default the user has no
 The notes below on the old site's documents were written by an agent on 2026-10-24, from a snapshot of the old site taken that day. The snapshot stays out of this repository, because it holds names and photos.
 
 - The old site holds 27 association documents from 2012 to 2025: 24 PDFs and 3 docx files, 7.2 MB in all. The largest, a medlemsbrev from June, is 2.7 MB, so every one fits the 10 MB limit. Two pairs are byte-identical copies, the protocol of 2020-02-17 and stadgar version 3, which leaves 25 distinct documents.
-- Every file had a public address under `/wp-content/uploads/`, but a page linked only 4 of them, all from one news item about the årsmöte 2024. How readers reached the other 23 is unknown. Links in sent emails are the agent's guess, unchecked, and such a link reaches a login page or nothing once the old site is gone.
+- Every file had a public address under `/wp-content/uploads/`, and the snapshot's pages link 21 of them: 12 from Om föreningen, 5 from Bli medlem and 4 from the news item about the årsmöte 2024. Of the 6 without a link, 2 are byte-identical copies of linked files. How readers reached the other 4, three medlemsbrev from 2012 and the proposed verksamhetsplan for 2020, is unknown. Links in sent emails are the agent's guess, unchecked. Any link to the old addresses reaches a login page or nothing once the old site is gone.
 - The 3 docx files are the proposed verksamhetsplan for 2024, the proposed agenda and the revisionsberättelse for 2023, all for the årsmöte 2024. [`MemberDocumentService`](../../src/main/java/se/teaterihuskvarna/document/MemberDocumentService.java) rejects a file that does not start with `%PDF-`, so they need converting to PDF before the import. The 24 PDFs pass that check.
 - The same uploads hold `affisch1.pdf`, the poster for the production Panik på kliniken. It is not an association document, so this decision does not cover it, and no page shows it.
