@@ -178,9 +178,18 @@ main > .section-nav {
   margin-bottom: 1.5rem;
 }
 
-/* The page or choice the visitor is on reads as text, not as a link. */
-[aria-current="page"] {
+/* The page or choice the visitor is on reads as text, not as a link. In a
+ * menu, so does the link to the section a page belongs to, such as
+ * "Erbjudanden" on an offer's page. */
+[aria-current="page"],
+nav [aria-current="true"] {
   color: var(--color-text);
+  text-decoration: none;
+}
+
+/* The header's menu keeps its light text on teal. */
+.site-nav [aria-current] {
+  color: var(--color-on-primary);
   text-decoration: none;
 }
 
