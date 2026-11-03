@@ -34,8 +34,8 @@ The machine this was written on runs Temurin 26.0.2.1. The project is pinned to 
 
 [0008](0008-everything-in-containers.md) made the deployed artefact the one that was tested. Building in a container extends that backwards: the compiler is pinned too, so "works on my machine" stops being a claim anyone can make about the build.
 
-- Build stage: `eclipse-temurin:25-jdk-alpine` plus the checked-in wrapper. Docker Hub's `maven` image stopped at `4.0.0-rc-5` on 2026-09-22, when Apache had published `4.0.0-rc-6`, so taking the wrapper's word for the version instead removes a dependency on that image being republished, and keeps the Maven version in a file this repository owns.
-- Runtime stage: `eclipse-temurin:25.0.4_7-jre-alpine`, the pinned form of the base image [0008](0008-everything-in-containers.md) names.
+- Build stage: the `eclipse-temurin` JDK image the [`Dockerfile`](../../Dockerfile) pins, plus the checked-in wrapper. Docker Hub's `maven` image stopped at `4.0.0-rc-5` on 2026-09-22, when Apache had published `4.0.0-rc-6`, so taking the wrapper's word for the version instead removes a dependency on that image being republished, and keeps the Maven version in a file this repository owns.
+- Runtime stage: the `eclipse-temurin` JRE image the [`Dockerfile`](../../Dockerfile) pins, at the same version as the JDK, the pinned form of the base image [0008](0008-everything-in-containers.md) names.
 
 Both are pinned rather than floating, for the reason [0008](0008-everything-in-containers.md) gives: Dependabot reads a `FROM` line, and a tag that moves on its own is a change nobody reviewed.
 
