@@ -79,7 +79,7 @@
                                         <input type="hidden" name="avgift" value="${fee}">
                                         <button type="submit" class="button-secondary"
                                                 aria-label="${copy.text("register.markPaid.label." + kind, member.fullName())}">
-                                            ${copy.text("register.markPaid." + kind)}
+                                            @template.icon.badgeCheck() ${copy.text("register.markPaid." + kind)}
                                         </button>
                                     </form>
                                 @endfor

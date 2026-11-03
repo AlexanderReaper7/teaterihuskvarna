@@ -154,7 +154,9 @@ class MailingIT extends IntegrationTestSupport {
         mockMvc.perform(get(requireNonNull(locationOf(result))).with(asAdministrator()))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("Utkast")))
-                .andExpect(content().string(containsString("Alla medlemmar med konto")));
+                .andExpect(content().string(containsString("Alla medlemmar med konto")))
+                .andExpect(content().string(containsString("Skicka ett test till mig")))
+                .andExpect(content().string(not(containsString("Siffror från Brevo"))));
     }
 
     @Test
@@ -251,6 +253,10 @@ class MailingIT extends IntegrationTestSupport {
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("Skickat")))
                 .andExpect(content().string(containsString("20 september 2026 kl. 10:00")));
+        mockMvc.perform(get("/admin/utskick/" + id).with(asAdministrator()))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("Siffror från Brevo")))
+                .andExpect(content().string(not(containsString("Skicka ett test till mig"))));
     }
 
     /// @return the draft campaign's id in Brevo
