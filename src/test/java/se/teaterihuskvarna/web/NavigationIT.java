@@ -24,7 +24,8 @@ class NavigationIT extends IntegrationTestSupport {
     void aPublicPageMarksItsOwnLinkAndNoOther() throws Exception {
         String page = html("/kalender", null);
 
-        assertThat(page).contains("<a href=\"/kalender\" aria-current=\"page\">", "<a href=\"/nyheter\">");
+        assertThat(menu(page, "site-nav"))
+                .contains("<a href=\"/kalender\" aria-current=\"page\">", "<a href=\"/nyheter\">");
         assertThat(marks(page)).isEqualTo(1);
     }
 
@@ -32,7 +33,8 @@ class NavigationIT extends IntegrationTestSupport {
     void theMemberOverviewIsMarkedInBothMenus() throws Exception {
         String page = html("/medlem", member());
 
-        assertThat(page.split("<a href=\"/medlem\" aria-current=\"page\">", -1)).hasSize(3);
+        assertThat(menu(page, "site-nav")).contains("<a href=\"/medlem\" aria-current=\"page\">");
+        assertThat(menu(page, "section-nav")).contains("<a href=\"/medlem\" aria-current=\"page\">");
         assertThat(marks(page)).isEqualTo(2);
     }
 
@@ -40,9 +42,9 @@ class NavigationIT extends IntegrationTestSupport {
     void aMemberPageMarksItselfAndMinaSidorButNotTheOverview() throws Exception {
         String page = html("/medlem/handlingar", member());
 
-        assertThat(page)
+        assertThat(menu(page, "site-nav")).contains("<a href=\"/medlem\" aria-current=\"true\">");
+        assertThat(menu(page, "section-nav"))
                 .contains("<a href=\"/medlem/handlingar\" aria-current=\"page\">")
-                .contains("<a href=\"/medlem\" aria-current=\"true\">")
                 .contains("<a href=\"/medlem\">");
         assertThat(marks(page)).isEqualTo(2);
     }
@@ -53,7 +55,8 @@ class NavigationIT extends IntegrationTestSupport {
 
         String page = html("/admin/medlemmar/" + id, administrator());
 
-        assertThat(page).contains("<a href=\"/admin/medlemmar\" aria-current=\"true\">", "<a href=\"/admin\">");
+        assertThat(menu(page, "section-nav"))
+                .contains("<a href=\"/admin/medlemmar\" aria-current=\"true\">", "<a href=\"/admin\">");
         assertThat(marks(page)).isEqualTo(1);
     }
 
@@ -69,6 +72,19 @@ class NavigationIT extends IntegrationTestSupport {
 
     private static int marks(String page) {
         return page.split("aria-current=", -1).length - 1;
+    }
+
+    /// The header's menu is `site-nav`, the member's and administrators' own
+    /// is `section-nav`. Both have a link to `/medlem` on a member page, so an
+    /// assertion about that link has to say which menu it means.
+    ///
+    /// @param page the whole page
+    /// @param menuClass the menu's class
+    /// @return the menu's markup, up to its closing tag
+    private static String menu(String page, String menuClass) {
+        int start = page.indexOf("class=\"" + menuClass + "\"");
+        assertThat(start).as(menuClass).isNotNegative();
+        return page.substring(start, page.indexOf("</nav>", start));
     }
 
     private String html(String path, @Nullable RequestPostProcessor login) throws Exception {

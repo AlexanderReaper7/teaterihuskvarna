@@ -12,6 +12,11 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 /// it passes on. Rather than every page passing its path, the layouts ask here,
 /// and this reads the path from the request being rendered, which Spring's
 /// `DispatcherServlet` keeps in [RequestContextHolder] while a view renders.
+///
+/// That path is the address the browser asked for. A form that fails
+/// validation is shown again at the address it was sent to, which is not
+/// always the page's own: after a refused new administrator, sent to
+/// `/admin/administratorer`, the start page marks no menu link.
 public final class Navigation {
 
     private Navigation() {
