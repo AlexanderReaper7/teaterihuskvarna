@@ -1,8 +1,8 @@
 // Pages at a phone's width up to the user's own 2560 px view. Checks what a
 // person would see as broken: sideways scrolling, buttons touching each other,
 // buttons poking out of the box they sit in, words or phone numbers in a table
-// broken in two, a menu on two lines with room for one, and radio buttons or
-// checkboxes away from their text.
+// broken in two, a menu on two lines with room for one, a field and its button
+// of different heights, and radio buttons or checkboxes away from their text.
 import { expect, test, type Page } from "@playwright/test";
 import { linkLogin } from "../support/auth";
 import { text } from "../support/copy";
@@ -150,6 +150,19 @@ async function problems(page: Page): Promise<string[]> {
         found.push(`the section menu takes ${rows.size} lines though it needs ${needed.toFixed(0)} px of ${room.toFixed(0)}`);
       }
     }
+    // A field and the button on the same line beside it are the same height.
+    for (const button of visible) {
+      const r = button.getBoundingClientRect();
+      for (const field of button.parentElement!.querySelectorAll<HTMLElement>(
+        ":scope > input:not([type=hidden], [type=radio], [type=checkbox]), :scope > select")) {
+        const f = field.getBoundingClientRect();
+        if (field.getClientRects().length > 0 && f.top < r.bottom && r.top < f.bottom
+            && Math.abs(f.height - r.height) > 1) {
+          found.push(`a ${field.tagName.toLowerCase()} is ${f.height.toFixed(1)} px tall beside ${name(button)}`
+            + ` at ${r.height.toFixed(1)} px`);
+        }
+      }
+    }
     // A radio button or checkbox is at least 24 px square, the WCAG 2.2 target
     // size, and no wider than it looks: a stretched one draws its box in the
     // middle of a wide element, so the element's edge says nothing about where
@@ -197,6 +210,7 @@ for (const width of WIDTHS) {
     for (const path of [
       PATHS.member.login,
       PATHS.administrator.login,
+      "/kalender",
       "/bli-medlem",
       "/produktioner",
       "/styrelsen",
