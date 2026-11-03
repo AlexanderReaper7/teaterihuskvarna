@@ -60,10 +60,9 @@
         </ul>
         @if(household.ownedBy(ownMemberId))
             <p><a href="/medlem/hushall/ny">@template.icon.plus() ${copy.text("member.household.add")}</a></p>
+            <p>${copy.text("member.household.invitationNote")}</p>
         @endif
-        <p>${copy.text("member.household.invitationNote")}</p>
     @else
         <p>${copy.text("member.household.createNote")}</p>
     @endif
-    <p><a href="/medlem">${copy.text("member.back")}</a></p>
 `)
