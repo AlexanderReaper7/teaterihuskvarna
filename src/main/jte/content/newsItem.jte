@@ -1,12 +1,14 @@
 @import se.teaterihuskvarna.content.NewsItem
 @import se.teaterihuskvarna.content.Perspective
 @import se.teaterihuskvarna.web.Copy
+@import se.teaterihuskvarna.web.PageMetadata
 @param Copy copy
+@param PageMetadata metadata
 @param Perspective perspective
 @param NewsItem item
 !{String summary = item.summary();}
 !{String videoUrl = item.videoUrl();}
-@template.layout(copy = copy, title = item.title(), preview = perspective == Perspective.DRAFTS, content = @`
+@template.layout(metadata = metadata, copy = copy, title = item.title(), preview = perspective == Perspective.DRAFTS, content = @`
     <article>
         <h1>${item.title()}</h1>
         <p class="meta"><time datetime="${item.publishedAt().toString()}">${copy.date(item.publishedAt())}</time></p>

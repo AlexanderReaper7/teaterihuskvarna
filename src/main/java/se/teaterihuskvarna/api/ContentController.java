@@ -144,6 +144,12 @@ public class ContentController {
         return content.partners(previews.perspective(pass));
     }
 
+    /// @return the same published public paths as the XML sitemap
+    @GetMapping("/api/content/public-paths")
+    public List<String> publicPaths() {
+        return content.publicPaths();
+    }
+
     /// Sanity calls this when a document is published, changed or unpublished,
     /// with a body it signs: R008. Configured in Sanity's project settings,
     /// as `docs/decisions/0021-content-from-sanity.md` describes.

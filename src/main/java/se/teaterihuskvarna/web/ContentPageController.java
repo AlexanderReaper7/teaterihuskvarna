@@ -13,6 +13,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.server.ResponseStatusException;
 import se.teaterihuskvarna.content.ContentService;
 import se.teaterihuskvarna.content.Event;
+import se.teaterihuskvarna.content.NewsItem;
+import se.teaterihuskvarna.content.Page;
 import se.teaterihuskvarna.content.Perspective;
 import se.teaterihuskvarna.content.Previews;
 
@@ -28,10 +30,12 @@ public class ContentPageController {
 
     private final ContentService content;
     private final Previews previews;
+    private final PageMetadataFactory metadata;
 
-    ContentPageController(ContentService content, Previews previews) {
+    ContentPageController(ContentService content, Previews previews, PageMetadataFactory metadata) {
         this.content = content;
         this.previews = previews;
+        this.metadata = metadata;
     }
 
     /// @param pass the preview cookie, if any
@@ -47,6 +51,7 @@ public class ContentPageController {
     @GetMapping("/")
     public String home(@ModelAttribute("perspective") Perspective perspective, Model model) {
         Event next = content.nextEvent(perspective).orElse(null);
+        model.addAttribute("metadata", metadata.fixed("/", "home.title", "metadata.defaultDescription"));
         model.addAttribute("next", next);
         model.addAttribute("events", below(content.upcomingEvents(null, perspective), next).stream().limit(6).toList());
         model.addAttribute("news", content.news(perspective).stream().limit(3).toList());
@@ -62,6 +67,7 @@ public class ContentPageController {
     @GetMapping("/kalender")
     public String calendar(@RequestParam(name = "serie", required = false) @Nullable String serie,
             @ModelAttribute("perspective") Perspective perspective, Model model) {
+        model.addAttribute("metadata", metadata.fixed("/kalender", "calendar.title", "metadata.calendar"));
         String chosen = serie == null || serie.isBlank() ? null : serie;
         model.addAttribute("events", content.upcomingEvents(chosen, perspective));
         model.addAttribute("series", content.series(perspective));
@@ -76,7 +82,10 @@ public class ContentPageController {
     @GetMapping("/evenemang/{slug}")
     public String event(@PathVariable String slug, @ModelAttribute("perspective") Perspective perspective,
             Model model) {
-        model.addAttribute("event", content.event(slug, perspective).orElseThrow(ContentPageController::notFound));
+        Event event = content.event(slug, perspective).orElseThrow(ContentPageController::notFound);
+        model.addAttribute("event", event);
+        model.addAttribute("metadata", metadata.create("/evenemang/" + event.slug(), event.title(),
+                event.summary() == null ? event.descriptionHtml() : event.summary(), event.image(), false));
         return "content/event";
     }
 
@@ -85,6 +94,7 @@ public class ContentPageController {
     /// @return the news list: R003
     @GetMapping("/nyheter")
     public String news(@ModelAttribute("perspective") Perspective perspective, Model model) {
+        model.addAttribute("metadata", metadata.fixed("/nyheter", "news.title", "metadata.news"));
         model.addAttribute("news", content.news(perspective));
         return "content/news";
     }
@@ -96,7 +106,10 @@ public class ContentPageController {
     @GetMapping("/nyheter/{slug}")
     public String newsItem(@PathVariable String slug, @ModelAttribute("perspective") Perspective perspective,
             Model model) {
-        model.addAttribute("item", content.newsItem(slug, perspective).orElseThrow(ContentPageController::notFound));
+        NewsItem item = content.newsItem(slug, perspective).orElseThrow(ContentPageController::notFound);
+        model.addAttribute("item", item);
+        model.addAttribute("metadata", metadata.create("/nyheter/" + item.slug(), item.title(),
+                item.summary() == null ? item.bodyHtml() : item.summary(), item.image(), true));
         return "content/newsItem";
     }
 
@@ -111,7 +124,9 @@ public class ContentPageController {
     @GetMapping("/{slug:om-foreningen|styrelsen|produktioner|ludde-priser|kontakt}")
     public String page(@PathVariable String slug, @ModelAttribute("perspective") Perspective perspective,
             Model model) {
-        model.addAttribute("page", content.page(slug, perspective).orElseThrow(ContentPageController::notFound));
+        Page page = content.page(slug, perspective).orElseThrow(ContentPageController::notFound);
+        model.addAttribute("page", page);
+        model.addAttribute("metadata", metadata.create("/" + slug, page.title(), page.bodyHtml(), page.image(), false));
         switch (slug) {
             case "produktioner" -> model.addAttribute("productions", content.productions(perspective));
             case "styrelsen" -> model.addAttribute("board", content.board(perspective));
@@ -128,6 +143,7 @@ public class ContentPageController {
     /// @return the partner page: R004
     @GetMapping("/partners")
     public String partners(@ModelAttribute("perspective") Perspective perspective, Model model) {
+        model.addAttribute("metadata", metadata.fixed("/partners", "partners.title", "metadata.partners"));
         model.addAttribute("partners", content.partners(perspective));
         return "content/partners";
     }

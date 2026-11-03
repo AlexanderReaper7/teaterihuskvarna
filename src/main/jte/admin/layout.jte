@@ -4,7 +4,7 @@
 @param Copy copy
 @param String title
 @param Content content
-@template.layout(copy = copy, title = title, content = @`
+@template.layout(mainClass = "admin-content", copy = copy, title = title, content = @`
     <nav class="section-nav" aria-label="${copy.text("nav.admin.label")}">
         <ul>
             <li><a href="/admin" aria-current="${Navigation.exactly("/admin")}">@template.icon.layoutDashboard() ${copy.text("nav.overview")}</a></li>

@@ -25,10 +25,19 @@ public class MembershipApplicationPageController {
 
     private final MembershipApplicationService applications;
     private final AssociationSettings association;
+    private final PageMetadataFactory metadata;
 
-    MembershipApplicationPageController(MembershipApplicationService applications, AssociationSettings association) {
+    MembershipApplicationPageController(MembershipApplicationService applications, AssociationSettings association,
+            PageMetadataFactory metadata) {
         this.applications = applications;
         this.association = association;
+        this.metadata = metadata;
+    }
+
+    /// @return the application page's public search and sharing description
+    @ModelAttribute("metadata")
+    public PageMetadata metadata() {
+        return metadata.fixed("/bli-medlem", "application.heading", "metadata.membership");
     }
 
     /// @return the fee amounts, which the form states
