@@ -44,10 +44,10 @@ for (const width of [320, 2560]) {
       await page.getByRole("link", { name: "Lägg till en person" }).click();
       await accessible(page);
       await page.getByLabel("Namn", { exact: true }).fill("Olle Exempel");
-      await page.getByLabel("Ort", { exact: true }).fill("Huskvarna");
+      await page.getByLabel("Ort (frivilligt)", { exact: true }).fill("Huskvarna");
       await page.getByRole("button", { name: "Spara", exact: true }).click();
       await page.getByRole("link", { name: "Ändra uppgifter för Olle Exempel" }).click();
-      await expect(page.getByLabel("Ort", { exact: true })).toHaveValue("Huskvarna");
+      await expect(page.getByLabel("Ort (frivilligt)", { exact: true })).toHaveValue("Huskvarna");
       await page.getByLabel("Namn", { exact: true }).fill("Olle Nytt namn");
       await page.getByRole("button", { name: "Spara", exact: true }).click();
       await page.getByRole("navigation", { name: "Medlemsmeny" }).getByRole("link", { name: "Mina sidor" }).click();
@@ -59,7 +59,7 @@ for (const width of [320, 2560]) {
       await page.getByRole("link", { name: "Hantera hushållet" }).click();
       await page.getByRole("link", { name: "Ändra uppgifter för Maria Exempel" }).click();
       await page.getByLabel("Namn", { exact: true }).fill("Maria Nytt namn");
-      await page.getByLabel("Telefon", { exact: true }).fill("070-123");
+      await page.getByLabel("Telefon (frivilligt)", { exact: true }).fill("070-123");
       await page.getByRole("button", { name: "Spara", exact: true }).click();
       await page.getByRole("link", { name: "Ta bort Maria Nytt namn ur hushållet", exact: true }).click();
       await accessible(page);

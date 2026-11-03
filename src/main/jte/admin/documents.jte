@@ -70,7 +70,7 @@
     @endif
     <form method="post" action="/admin/handlingar" enctype="multipart/form-data">
         @template.tag.csrf(csrf = csrf)
-        @template.tag.field(name = "title", label = copy.text("adminDocuments.upload.title"), type = "text",
+        @template.tag.field(copy = copy, name = "title", label = copy.text("adminDocuments.upload.title"), type = "text",
                 autocomplete = "off", value = form.title(), error = errors.message("title"), required = true)
         <p>
             <label for="kind">${copy.text("adminDocuments.upload.kind")}</label>
@@ -84,7 +84,7 @@
                 <span id="kind-error" class="field-error">${kindError}</span>
             @endif
         </p>
-        @template.tag.field(name = "publishedOn", label = copy.text("adminDocuments.upload.publishedOn"), type = "date",
+        @template.tag.field(copy = copy, name = "publishedOn", label = copy.text("adminDocuments.upload.publishedOn"), type = "date",
                 autocomplete = "off", value = Objects.toString(form.publishedOn(), null),
                 error = errors.message("publishedOn"), required = true)
         <p>

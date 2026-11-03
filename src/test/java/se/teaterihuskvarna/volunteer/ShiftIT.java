@@ -267,6 +267,20 @@ class ShiftIT extends IntegrationTestSupport {
     }
 
     @Test
+    void theUpcomingShiftsHaveAHeadingAsThePastOnesDo() throws Exception {
+        String empty = mockMvc.perform(get("/admin/volontarpass").with(asAdministrator()))
+                .andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
+        long upcoming = insertShift(Instant.now().plus(Duration.ofDays(3)), 3);
+        String listed = mockMvc.perform(get("/admin/volontarpass").with(asAdministrator()))
+                .andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
+
+        assertThat(empty.replaceAll("\\s+", " "))
+                .containsSubsequence("<h2>Kommande pass</h2> <p>Inga kommande pass.</p>", "<h2>Tidigare pass</h2>");
+        assertThat(listed).containsSubsequence("<h2>Kommande pass</h2>", "/admin/volontarpass/" + upcoming,
+                "<h2>Lägg till ett pass</h2>", "<h2>Tidigare pass</h2>");
+    }
+
+    @Test
     void theAdministratorStartPageListsOnlyUpcomingShiftsWithFreePlaces() throws Exception {
         long full = insertShift(Instant.now().plus(Duration.ofDays(2)), 1);
         long open = insertShift(Instant.now().plus(Duration.ofDays(3)), 3);

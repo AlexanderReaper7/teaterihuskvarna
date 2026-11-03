@@ -57,10 +57,10 @@
         @if(audiences.segmentsUnavailable())
             <p role="alert">${copy.text("adminMailings.segmentsUnavailable")}</p>
         @endif
-        @template.tag.field(name = "subject", label = copy.text("adminMailings.form.subject"), type = "text",
+        @template.tag.field(copy = copy, name = "subject", label = copy.text("adminMailings.form.subject"), type = "text",
                 autocomplete = "off", value = form.subject(), error = errors.message("subject"), required = true)
         <p>
-            <label for="intro">${copy.text("adminMailings.form.intro")}</label>
+            <label for="intro">${copy.text("adminMailings.form.intro")} ${copy.text("form.optional")}</label>
             <textarea id="intro" name="intro" rows="8" aria-invalid="${introError == null ? null : "true"}"
                       aria-describedby="${introError == null ? "intro-hint" : "intro-hint intro-error"}">${form.intro()}</textarea>
             <span id="intro-hint">${copy.text("adminMailings.form.introHint")}</span>
