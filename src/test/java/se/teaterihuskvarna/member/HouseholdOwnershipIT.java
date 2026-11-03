@@ -78,6 +78,14 @@ class HouseholdOwnershipIT extends MemberRegisterSupport {
         assertThat(html("/medlem")).contains("Administratörerna sköter hushållet.").doesNotContain("(ägare)");
     }
 
+    @Test
+    void onlyTheOwnerIsToldHowAnAddedPersonGetsALogin() throws Exception {
+        String note = "Ska den nya personen kunna logga in";
+        assertThat(html(PAGE)).doesNotContain(note);
+        mockMvc.perform(get(PAGE).with(ownerLogin)).andExpect(status().isOk())
+                .andExpect(content().string(containsString(note)));
+    }
+
     private String html(String page) throws Exception {
         return mockMvc.perform(get(page).with(otherLogin)).andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8).replaceAll("\\s+", " ");
