@@ -240,6 +240,14 @@ body {
   font-weight: 700;
 }
 
+/* Links in a row stand apart by a gap rather than a character between them, so
+ * a row that wraps never ends a line with a separator. */
+.links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.5rem;
+}
+
 /* Content */
 
 main {

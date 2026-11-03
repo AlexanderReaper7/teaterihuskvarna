@@ -48,7 +48,7 @@
     <h2>${copy.text("admin.fees.heading", String.valueOf(fees.year()))}</h2>
     <p>${copy.text("admin.fees.count", fees.paid(), fees.paid() + fees.unpaid())}</p>
     @if(fees.unpaid() > 0)
-        <p><a href="/admin/medlemmar?avgift=obetald">${copy.text("admin.fees.unpaid", fees.unpaid())}</a></p>
+        <p><a href="/admin/medlemmar?avgift=obetald">@template.icon.contact() ${copy.text("admin.fees.unpaid", fees.unpaid())}</a></p>
     @endif
 
     <h2>${copy.text("admin.shifts.heading")}</h2>
@@ -57,7 +57,7 @@
     @else
         @template.tag.shiftTable(copy = copy, caption = copy.text("admin.shifts.caption"), shifts = shifts)
     @endif
-    <p><a href="/admin/volontarpass">${copy.text("admin.shifts.all")}</a></p>
+    <p><a href="/admin/volontarpass">@template.icon.handHelping() ${copy.text("admin.shifts.all")}</a></p>
 
     <h2>${copy.text("admin.offers.heading")}</h2>
     @if(offers.isEmpty())
@@ -65,7 +65,7 @@
     @else
         @template.tag.offerTable(copy = copy, caption = copy.text("admin.offers.caption"), offers = offers)
     @endif
-    <p><a href="/admin/erbjudanden">${copy.text("admin.offers.all")}</a></p>
+    <p><a href="/admin/erbjudanden">@template.icon.ticket() ${copy.text("admin.offers.all")}</a></p>
 
     <section aria-labelledby="webbplatsens-innehall">
         <h2 id="webbplatsens-innehall">${copy.text("admin.content.heading")}</h2>

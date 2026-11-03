@@ -182,7 +182,7 @@ public class MembershipApplicationService {
         // as unpaid here, so R005's "ej betald" is the status the member page
         // and the register show too.
         int year = ledger.currentYear();
-        FeeStatus fee = ledger.history(member, application.getEmail()).stream()
+        FeeStatus fee = ledger.history(member).stream()
                 .filter(status -> status.year() == year)
                 .findFirst()
                 .orElseThrow();
