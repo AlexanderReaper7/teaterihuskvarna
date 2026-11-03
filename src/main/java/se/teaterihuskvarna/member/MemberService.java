@@ -142,7 +142,7 @@ public class MemberService {
     public MemberFile find(long memberId) {
         Member member = members.findById(memberId).orElseThrow(NoSuchMember::new);
         Account account = accounts.findByMember(memberId).orElse(null);
-        List<FeeStatus> fees = ledger.history(member, account == null ? null : account.getEmail());
+        List<FeeStatus> fees = ledger.history(member);
         HouseholdDetails household = null;
         Household current = member.getHousehold();
         if (current != null) {
@@ -296,8 +296,7 @@ public class MemberService {
     }
 
     private MemberDetails details(Member member, @Nullable Account account) {
-        String email = account == null ? null : account.getEmail();
-        return MemberDetails.of(member, account, ledger.year(ledger.currentYear()).status(member, email));
+        return MemberDetails.of(member, account, ledger.thisYear(List.of(member)).getFirst());
     }
 
     private List<MemberDetails> detailsOf(List<Member> found) {
@@ -308,12 +307,11 @@ public class MemberService {
                 byMember.put(account.getMember().getId(), account);
             }
         }
-        FeeLedger.Payments year = ledger.year(ledger.currentYear());
+        List<FeeStatus> fees = ledger.thisYear(found);
         List<MemberDetails> details = new ArrayList<>();
-        for (Member member : found) {
-            Account account = byMember.get(member.getId());
-            String email = account == null ? null : account.getEmail();
-            details.add(MemberDetails.of(member, account, year.status(member, email)));
+        for (int i = 0; i < found.size(); i++) {
+            Member member = found.get(i);
+            details.add(MemberDetails.of(member, byMember.get(member.getId()), fees.get(i)));
         }
         return details;
     }
