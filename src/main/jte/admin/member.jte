@@ -36,7 +36,8 @@
     @endif
     <p>${copy.text("register.memberSince", copy.date(file.member().memberSince()))}</p>
 
-    <h2>${copy.text("fee.heading", String.valueOf(thisYear.year()))}</h2>
+    <h2>${copy.text("fee.heading", String.valueOf(thisYear.year()))}
+        @template.tag.feeBadge(copy = copy, paid = paidAt != null)</h2>
     @if(paidAt != null)
         <p>
             ${copy.text("fee.paid", copy.date(paidAt))}

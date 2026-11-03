@@ -246,7 +246,7 @@ for (const width of WIDTHS) {
       await expect(page.locator("[data-passkey-offer]")).toBeVisible();
       const found = await here(page, "/admin");
       await page.goto("/admin/medlemmar");
-      const unpaid = await page.getByRole("row").filter({ hasText: text("fee.notPaid") }).first()
+      const unpaid = await page.getByRole("row").filter({ hasText: text("fee.badge.unpaid") }).first()
         .getByRole("link").getAttribute("href");
       expect(unpaid).not.toBeNull();
       // An unpaid member's page has the radio buttons to record a payment.
