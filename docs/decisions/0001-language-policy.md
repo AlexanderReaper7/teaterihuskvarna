@@ -6,6 +6,8 @@ description: Which language each part of the system is written in.
 
 # 0001: Language policy
 
+Amended on 2026-11-01, as issue #115 asks. A guide for the association's own people is in Swedish.
+
 ## Decision
 
 Swedish is what a visitor or a member reads: Sanity content, mail bodies, form labels, validation messages.
@@ -13,6 +15,8 @@ Swedish is what a visitor or a member reads: Sanity content, mail bodies, form l
 Where that Swedish lives is a second question, and the answer is not "in the templates". Editable content lives in Sanity. Fixed copy such as form labels and validation messages lives in [`messages_sv.properties`](../../src/main/resources/messages_sv.properties). A template holds markup and message keys, nothing a reader sees. That keeps the copy somewhere a non-developer can be pointed at, and it means fixing a typo in a validation message does not mean touching a template. See [0004](0004-jte-for-templates.md), which is where this rule came from and which also replaced Thymeleaf with JTE.
 
 English is everything else: this [`docs/`](../) tree, code identifiers, comments, commit messages, README, decision records.
+
+A guide for the association's own people is the exception inside [`docs/`](../): [administrator-guide.md](../administrator-guide.md), and the editor guide #114 asks for. Its readers are board members and editors, not developers, and every step names a Swedish heading or button they see on the screen.
 
 ## Two exceptions, both quotations
 
