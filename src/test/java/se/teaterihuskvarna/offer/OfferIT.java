@@ -403,6 +403,19 @@ class OfferIT extends IntegrationTestSupport {
                 .andExpect(jsonPath("$[0].phone").value("070-111 22 33"));
     }
 
+    /// A `datetime-local` field drops a value with more than three decimals, and
+    /// the form would then send the times empty: #184.
+    @Test
+    void theEditFormGivesTheTimesToTheMinuteAsItsFieldsTakeThem() throws Exception {
+        long id = insertOffer("Verkstad", true, null, Instant.parse("2027-03-14T17:32:27.812329Z"),
+                Instant.parse("2027-03-10T10:05:59.500Z"));
+
+        mockMvc.perform(get("/admin/erbjudanden/" + id).with(asAdministrator()))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("value=\"2027-03-14T18:32\"")))
+                .andExpect(content().string(containsString("value=\"2027-03-10T11:05\"")));
+    }
+
     @Test
     void theAdministratorStartPageListsUpcomingOffersSoonestFirst() throws Exception {
         long later = insertOffer("Sommarläger", true, 10, IN_A_MONTH, null);
