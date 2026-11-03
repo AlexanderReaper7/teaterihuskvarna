@@ -65,5 +65,4 @@
     @else
         <p>${copy.text("member.household.createNote")}</p>
     @endif
-    <p><a href="/medlem">${copy.text("member.back")}</a></p>
 `)
