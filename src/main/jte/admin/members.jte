@@ -66,7 +66,7 @@
                     <td>${member.household()}</td>
                     <td>
                         @if(member.fee().paid())
-                            ${copy.date(member.fee().paidAt())}
+                            ${copy.text("fee.paidOn", copy.date(member.fee().paidAt()))}
                         @else
                             ${copy.text("fee.notPaid")}
                             <div class="buttons">
