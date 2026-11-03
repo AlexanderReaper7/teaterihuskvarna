@@ -14,7 +14,6 @@
 @param boolean stale
 @template.admin.layout(copy = copy, title = copy.text("household.heading"), content = @`
     <h1>${copy.text("household.heading")}</h1>
-    <p><a href="/admin/medlemmar">${copy.text("register.toList")}</a></p>
     @if(stale)
         <p role="alert">${copy.text("form.stale")}</p>
     @endif

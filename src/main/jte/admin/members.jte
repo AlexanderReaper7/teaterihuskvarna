@@ -15,17 +15,16 @@
 @param String notice
 @template.admin.layout(copy = copy, title = copy.text("register.heading"), content = @`
     <h1>${copy.text("register.heading")}</h1>
-    <p><a href="/admin">${copy.text("register.back")}</a></p>
     @if(error != null)
         <p role="alert">${error}</p>
     @endif
     @if(notice != null)
         <p role="status">${notice}</p>
     @endif
-    <p>
+    <p class="links">
         <a href="/admin/medlemmar/ny">@template.icon.plus() ${copy.text("register.add")}</a>
-        · <a href="/admin/hushall">@template.icon.house() ${copy.text("household.heading")}</a>
-        · <a href="/admin/medlemmar.csv" download>@template.icon.download() ${copy.text("register.export")}</a>
+        <a href="/admin/hushall">@template.icon.house() ${copy.text("household.heading")}</a>
+        <a href="/admin/medlemmar.csv" download>@template.icon.download() ${copy.text("register.export")}</a>
     </p>
     <form method="get" action="/admin/medlemmar" role="search">
         <label for="q">${copy.text("register.search")}</label>
@@ -80,7 +79,7 @@
                                         <input type="hidden" name="avgift" value="${fee}">
                                         <button type="submit" class="button-secondary"
                                                 aria-label="${copy.text("register.markPaid.label." + kind, member.fullName())}">
-                                            ${copy.text("register.markPaid." + kind)}
+                                            @template.icon.badgeCheck() ${copy.text("register.markPaid." + kind)}
                                         </button>
                                     </form>
                                 @endfor

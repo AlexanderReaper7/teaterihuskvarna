@@ -207,7 +207,7 @@ class MemberRegisterIT extends MemberRegisterSupport {
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("Ta bort Erik Lindqvist?")))
                 .andExpect(content().string(containsString(
-                        "anmälningarna till erbjudanden och de bokade volontärpassen tas bort")));
+                        "anmälningarna till erbjudanden och bokningarna av volontärpass tas bort")));
         assertThat(rowsIn("member")).isEqualTo(1);
 
         mockMvc.perform(delete("/api/admin/members/" + erik).with(asAdministrator()).with(csrf()))

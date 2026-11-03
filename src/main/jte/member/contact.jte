@@ -31,5 +31,4 @@
                 required = false)
         <button type="submit">@template.icon.save() ${copy.text("member.contact.submit")}</button>
     </form>
-    <p><a href="/medlem">${copy.text("member.back")}</a></p>
 `)
