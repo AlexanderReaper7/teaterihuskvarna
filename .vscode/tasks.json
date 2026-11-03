@@ -30,7 +30,7 @@
       "args": ["scripts/maven.sh", "verify"],
       "windows": {
         "command": "docker",
-        "args": ["run", "--rm", "--network", "host", "-e", "HOME=/cache", "-v", "teaterihuskvarna-cache:/cache", "-v", "${workspaceFolder}:/w", "-w", "/w", "-v", "/var/run/docker.sock:/var/run/docker.sock", "eclipse-temurin:25.0.4_7-jdk-alpine", "./mvnw", "-B", "-ntp", "verify"]
+        "args": ["run", "--rm", "--network", "host", "-e", "HOME=/cache", "-v", "teaterihuskvarna-cache:/cache", "-v", "${workspaceFolder}:/w", "-w", "/w", "-v", "/var/run/docker.sock:/var/run/docker.sock", "eclipse-temurin:25.0.4.1_1-jdk-alpine", "./mvnw", "-B", "-ntp", "verify"]
       },
       "options": {
         "cwd": "${workspaceFolder}"
@@ -65,7 +65,7 @@
       "args": ["scripts/maven.sh", "test"],
       "windows": {
         "command": "docker",
-        "args": ["run", "--rm", "--network", "host", "-e", "HOME=/cache", "-v", "teaterihuskvarna-cache:/cache", "-v", "${workspaceFolder}:/w", "-w", "/w", "-v", "/var/run/docker.sock:/var/run/docker.sock", "eclipse-temurin:25.0.4_7-jdk-alpine", "./mvnw", "-B", "-ntp", "test"]
+        "args": ["run", "--rm", "--network", "host", "-e", "HOME=/cache", "-v", "teaterihuskvarna-cache:/cache", "-v", "${workspaceFolder}:/w", "-w", "/w", "-v", "/var/run/docker.sock:/var/run/docker.sock", "eclipse-temurin:25.0.4.1_1-jdk-alpine", "./mvnw", "-B", "-ntp", "test"]
       },
       "options": {
         "cwd": "${workspaceFolder}"
@@ -97,7 +97,7 @@
       "args": ["scripts/maven.sh", "compile"],
       "windows": {
         "command": "docker",
-        "args": ["run", "--rm", "--network", "host", "-e", "HOME=/cache", "-v", "teaterihuskvarna-cache:/cache", "-v", "${workspaceFolder}:/w", "-w", "/w", "-v", "/var/run/docker.sock:/var/run/docker.sock", "eclipse-temurin:25.0.4_7-jdk-alpine", "./mvnw", "-B", "-ntp", "compile"]
+        "args": ["run", "--rm", "--network", "host", "-e", "HOME=/cache", "-v", "teaterihuskvarna-cache:/cache", "-v", "${workspaceFolder}:/w", "-w", "/w", "-v", "/var/run/docker.sock:/var/run/docker.sock", "eclipse-temurin:25.0.4.1_1-jdk-alpine", "./mvnw", "-B", "-ntp", "compile"]
       },
       "options": {
         "cwd": "${workspaceFolder}"
@@ -128,7 +128,7 @@
       "args": ["scripts/maven.sh", "checkstyle:check"],
       "windows": {
         "command": "docker",
-        "args": ["run", "--rm", "--network", "host", "-e", "HOME=/cache", "-v", "teaterihuskvarna-cache:/cache", "-v", "${workspaceFolder}:/w", "-w", "/w", "-v", "/var/run/docker.sock:/var/run/docker.sock", "eclipse-temurin:25.0.4_7-jdk-alpine", "./mvnw", "-B", "-ntp", "checkstyle:check"]
+        "args": ["run", "--rm", "--network", "host", "-e", "HOME=/cache", "-v", "teaterihuskvarna-cache:/cache", "-v", "${workspaceFolder}:/w", "-w", "/w", "-v", "/var/run/docker.sock:/var/run/docker.sock", "eclipse-temurin:25.0.4.1_1-jdk-alpine", "./mvnw", "-B", "-ntp", "checkstyle:check"]
       },
       "options": {
         "cwd": "${workspaceFolder}"
