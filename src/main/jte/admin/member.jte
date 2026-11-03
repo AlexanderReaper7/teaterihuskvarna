@@ -59,7 +59,7 @@
                 <label><input id="kind-individual" name="kind" type="radio" value="INDIVIDUAL" checked> ${copy.text("fee.kind.individual")}</label>
                 <label><input id="kind-household" name="kind" type="radio" value="HOUSEHOLD"> ${copy.text("fee.kind.household")}</label>
                 <p>
-                    <label for="kronor">${copy.text("fee.amount")}</label>
+                    <label for="kronor">${copy.text("fee.amount")} ${copy.text("form.optional")}</label>
                     <input id="kronor" name="kronor" type="text" inputmode="numeric" autocomplete="off">
                 </p>
                 <button type="submit">@template.icon.badgeCheck() ${copy.text("fee.mark.submit")}</button>
@@ -129,7 +129,8 @@
     @template.tag.errors(copy = copy, errors = errors)
     <form method="post" action="/admin/medlemmar/${id}">
         @template.tag.csrf(csrf = csrf)
-        @template.tag.memberFields(copy = copy, form = form, errors = errors, households = households)
+        @template.tag.memberFields(copy = copy, form = form, errors = errors, households = households,
+                hasAccount = file.member().email() != null)
         <button type="submit">@template.icon.save() ${copy.text("register.edit.submit")}</button>
     </form>
 
