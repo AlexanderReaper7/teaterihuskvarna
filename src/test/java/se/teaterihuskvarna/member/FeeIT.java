@@ -156,6 +156,11 @@ class FeeIT extends MemberRegisterSupport {
                 .contains("Erik Lindqvist", "Maria Lindqvist").doesNotContain("Johan Bergström");
         assertThat(page("/admin/medlemmar?avgift=obetald&q=lindqvist")).doesNotContain("Lindqvist</a>");
         assertThat(page("/admin/medlemmar?avgift=okänt")).contains("Johan Bergström", "Erik Lindqvist");
+        // The fee column and the member's page say the status with the same badge as /medlem (#110).
+        assertThat(unpaid).contains("<span class=\"badge badge-unpaid\">Ej betald</span>");
+        assertThat(page("/admin/medlemmar?avgift=betald")).contains("<span class=\"badge badge-paid\">Betald</span>",
+                "<th scope=\"col\">Markerad som betald</th>");
+        assertThat(page("/admin/medlemmar/" + johan)).contains("<span class=\"badge badge-unpaid\">Ej betald</span>");
 
         mockMvc.perform(get("/api/admin/members").param("fee", "UNPAID").with(asAdministrator()))
                 .andExpect(status().isOk())

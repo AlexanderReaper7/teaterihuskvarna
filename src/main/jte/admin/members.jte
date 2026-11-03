@@ -53,6 +53,7 @@
                 <th scope="col">${copy.text("member.phone")}</th>
                 <th scope="col">${copy.text("member.household")}</th>
                 <th scope="col">${copy.text("register.feeColumn")}</th>
+                <th scope="col">${copy.text("register.paidDateColumn")}</th>
             </tr>
         </thead>
         <tbody>
@@ -65,10 +66,8 @@
                     <td class="tel">${member.phone()}</td>
                     <td>${member.household()}</td>
                     <td>
-                        @if(member.fee().paid())
-                            ${copy.text("fee.paidOn", copy.date(member.fee().paidAt()))}
-                        @else
-                            ${copy.text("fee.notPaid")}
+                        @template.tag.feeBadge(copy = copy, paid = member.fee().paid())
+                        @if(!member.fee().paid())
                             <div class="buttons">
                                 @for(String kind : member.householdId() == null ? List.of("INDIVIDUAL") : List.of("INDIVIDUAL", "HOUSEHOLD"))
                                     <form method="post" action="/admin/medlemmar/${member.id()}/avgift">
@@ -86,6 +85,7 @@
                             </div>
                         @endif
                     </td>
+                    <td>@if(member.fee().paid())${copy.date(member.fee().paidAt())}@endif</td>
                 </tr>
             @endfor
         </tbody>
