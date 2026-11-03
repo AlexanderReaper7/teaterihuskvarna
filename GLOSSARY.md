@@ -66,6 +66,10 @@ A person with an administrator account, authorised to manage members, fees, regi
 
 The association's authoritative collection of members, contact details, household membership and annual fee records.
 
+### Street address | Gatuadress
+
+The street and number in a member's contact details, such as Storgatan 1. Postnummer and Ort are fields of their own. Every form, its error message and the register's export use the one name Gatuadress, the name the join form already had (#180).
+
 ### Household | Hushåll
 
 A grouping used to let one household fee cover several members. A household is not itself a member. The member owner can manage the household, and every member with an account can leave it. Removal from a household preserves the person's membership and account ([decisions/0025](docs/decisions/0025-member-register-in-the-application.md)).
