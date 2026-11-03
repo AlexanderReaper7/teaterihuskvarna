@@ -153,6 +153,12 @@ body {
   list-style: none;
 }
 
+/* A menu is not prose: it may use the whole column, and wraps only when the
+ * column is too narrow for it. */
+main > .section-nav {
+  max-width: none;
+}
+
 .section-nav {
   margin-bottom: 2rem;
 }
@@ -238,6 +244,14 @@ body {
   margin: 0 auto;
   padding: 3rem var(--gutter) 4rem;
   font-weight: 700;
+}
+
+/* Links in a row stand apart by a gap rather than a character between them, so
+ * a row that wraps never ends a line with a separator. */
+.links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.5rem;
 }
 
 /* Content */
@@ -437,6 +451,15 @@ input,
 button {
   border-radius: 0;
   font: inherit;
+}
+
+/* A one-line field is as tall as a button, one line of text, the button's
+ * padding and its border, so a field and the button beside it line up. A
+ * select needs it most: both browsers give it line-height: normal whatever the
+ * page says, which left it 8 to 10 px short of a button. */
+input:not([type="radio"], [type="checkbox"]),
+select {
+  min-height: calc(var(--line-height-body) * 1em + 1.25rem + 4px);
 }
 
 input {
@@ -710,6 +733,11 @@ select[aria-invalid="true"] {
  * squeezes its columns first, and a row's short button would break in two. */
 td button {
   padding: 0.25rem 0.75rem;
+  white-space: nowrap;
+}
+
+/* A phone number is read as one unit, so it keeps to one line. */
+.tel {
   white-space: nowrap;
 }
 

@@ -48,7 +48,7 @@
                     <tr>
                         <th scope="row">${volunteer.fullName()}</th>
                         <td>@if(email != null)${email}@endif</td>
-                        <td>@if(phone != null)${phone}@endif</td>
+                        <td class="tel">@if(phone != null)${phone}@endif</td>
                         <td>${copy.dateTime(volunteer.bookedAt())}</td>
                     </tr>
                 @endfor

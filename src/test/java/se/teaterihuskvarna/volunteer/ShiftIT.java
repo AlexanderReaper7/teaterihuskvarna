@@ -315,6 +315,18 @@ class ShiftIT extends IntegrationTestSupport {
     }
 
     @Test
+    void theDeletionWarningCountsTheBookings() throws Exception {
+        long id = insertShift(Instant.now().plus(Duration.ofDays(3)), 3);
+        assertThat(adminPage(id)).contains("Passet tas bort. Ingen har bokat det.");
+
+        insertBooking(id, memberOf(insertAccount("Anna Först", "anna@example.test")), Instant.now());
+        assertThat(adminPage(id)).contains("Passet och dess bokning tas bort. Volontären får inget meddelande.");
+
+        insertBooking(id, memberOf(insertAccount("Karin Holm", "karin@example.test")), Instant.now());
+        assertThat(adminPage(id)).contains("Passet och dess 2 bokningar tas bort. Volontärerna får inget meddelande.");
+    }
+
+    @Test
     void theCsvFileListsWhoBookedTheSameThroughBothAdapters() throws Exception {
         long id = insertShift(Instant.now().plus(Duration.ofDays(3)), 3);
         shifts.book(id, memberOf(insertAccount("=Karin Holm", "karin@example.test")));
@@ -360,6 +372,12 @@ class ShiftIT extends IntegrationTestSupport {
                 .andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
         assertThat(shiftsPage).contains("id=\"pass-" + booked + "\"")
                 .contains("href=\"/medlem\">Mina sidor</a>").doesNotContain("Översikt");
+    }
+
+    private String adminPage(long id) throws Exception {
+        return mockMvc.perform(get("/admin/volontarpass/" + id).with(asAdministrator()))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
     }
 
     private long insertShift(Instant startsAt, int places) {
