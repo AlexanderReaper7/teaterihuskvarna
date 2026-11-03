@@ -6,7 +6,6 @@
 @param List<DocumentSummary> documents
 @template.member.layout(copy = copy, title = copy.text("documents.heading"), content = @`
     <h1>${copy.text("documents.heading")}</h1>
-    <p><a href="/medlem">${copy.text("member.toOverview")}</a></p>
     @for(DocumentKind kind : DocumentKind.values())
         !{List<DocumentSummary> ofKind = documents.stream().filter(d -> d.kind() == kind).toList();}
         <h2>${copy.text("document.kind." + kind.name() + ".plural")}</h2>

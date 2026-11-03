@@ -17,7 +17,7 @@
         @template.tag.image(image = page.image(), kind = "hero")
         $unsafe{page.bodyHtml()}
         @if(!productions.isEmpty())
-            <div class="cards">
+            <div class="cards posters">
             @for(Production production : productions)
                 !{Integer first = production.firstYear();}
                 !{Integer last = production.lastYear();}

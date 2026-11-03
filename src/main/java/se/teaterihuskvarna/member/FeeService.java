@@ -44,8 +44,7 @@ public class FeeService {
         if (member.isEmpty()) {
             return null;
         }
-        // Only the year and paid date are used here, so no payment instruction (and no email) is needed.
-        for (FeeStatus status : ledger.history(member.get(), null)) {
+        for (FeeStatus status : ledger.history(member.get())) {
             if (status.paidAt() != null) {
                 return status.year();
             }
