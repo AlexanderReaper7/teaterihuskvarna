@@ -7,10 +7,12 @@
 @param MemberForm form
 @param FieldErrors errors
 @param List<HouseholdDetails> households
+@param boolean hasAccount
 @template.tag.field(copy = copy, name = "fullName", label = copy.text("member.name"), type = "text",
         autocomplete = "off", value = form.fullName(), error = errors.message("fullName"), required = true)
+<%-- A member with an account keeps an address: the service refuses a blank one. --%>
 @template.tag.field(copy = copy, name = "email", label = copy.text("register.form.email"), type = "email",
-        autocomplete = "off", value = form.email(), error = errors.message("email"), required = false)
+        autocomplete = "off", value = form.email(), error = errors.message("email"), required = hasAccount)
 @template.tag.field(copy = copy, name = "phone", label = copy.text("member.phone"), type = "tel",
         autocomplete = "off", value = form.phone(), error = errors.message("phone"), required = false)
 @template.tag.field(copy = copy, name = "address", label = copy.text("member.address"), type = "text",

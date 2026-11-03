@@ -14,9 +14,10 @@ test.beforeEach(async () => {
 const OPTIONAL = " (frivilligt)";
 
 /// Every field on the page that breaks the rule, as readable sentences. A
-/// text field is an input a person types into, or a textarea. One that is the
-/// only text field in its form, such as the register's search, is left out:
-/// a form of one field has nothing to tell apart.
+/// text field is an input a person types into, or a textarea. A form with no
+/// other control, such as the register's search, is left out: a form of one
+/// field has nothing to tell apart. Radio buttons and lists count as controls,
+/// so the fee form's amount beside its two kinds is checked.
 async function problems(page: Page): Promise<string[]> {
   return page.evaluate((optional) => {
     const found: string[] = [];
@@ -24,7 +25,7 @@ async function problems(page: Page): Promise<string[]> {
       const fields = [...form.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>(
         "input:not([type=hidden], [type=checkbox], [type=radio], [type=submit], [type=file]), textarea")]
         .filter((field) => field.labels && field.labels.length > 0);
-      if (fields.length < 2) {
+      if (form.querySelectorAll("input:not([type=hidden], [type=submit]), textarea, select").length < 2) {
         continue;
       }
       for (const field of fields) {
@@ -44,19 +45,26 @@ async function problems(page: Page): Promise<string[]> {
   }, OPTIONAL);
 }
 
-// Proves the check can fail, both ways, on the name and on the brackets.
+// Proves the check can fail, both ways, on the name and on the brackets, and
+// that only a form of one control is left out.
 test("the check reports an unmarked optional field, a marked required one, Adress and two brackets", async ({ page }) => {
   await page.setContent(`<main><form>
     <label for="a">Telefon</label><input id="a">
     <label for="b">Namn (frivilligt)</label><input id="b" required>
     <label for="c">Adress (frivilligt)</label><input id="c">
     <label for="d">När (datum och tid) (frivilligt)</label><input id="d">
+  </form><form>
+    <label><input type="radio" name="k"> Enskild</label>
+    <label for="e">Belopp</label><input id="e">
+  </form><form>
+    <label for="f">Sök</label><input id="f">
   </form></main>`);
   expect(await problems(page)).toEqual([
     '"Telefon" is optional',
     '"Namn (frivilligt)" is required',
     '"Adress (frivilligt)" is called Gatuadress elsewhere',
     '"När (datum och tid) (frivilligt)" has more than one pair of brackets',
+    '"Belopp" is optional',
   ]);
 });
 
