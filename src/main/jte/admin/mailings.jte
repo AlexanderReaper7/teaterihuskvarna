@@ -23,7 +23,6 @@
 !{String introError = errors.message("intro");}
 @template.admin.layout(copy = copy, title = copy.text("adminMailings.heading"), content = @`
     <h1>${copy.text("adminMailings.heading")}</h1>
-    <p><a href="/admin">${copy.text("admin.toOverview")}</a></p>
     @if(error != null)
         <p role="alert">${error}</p>
     @endif
@@ -76,7 +75,7 @@
             @endif
             @for(Event event : content.events())
                 <label><input type="checkbox" name="events" value="${event.slug()}"
-                              checked="${form.eventSlugs().contains(event.slug())}"> ${event.title()}, ${copy.dateTime(event.startsAt())}</label>
+                              checked="${form.eventSlugs().contains(event.slug())}"> ${event.title()} (${copy.dateTime(event.startsAt())})</label>
             @endfor
         </fieldset>
         <fieldset>
@@ -86,7 +85,7 @@
             @endif
             @for(NewsItem item : content.news())
                 <label><input type="checkbox" name="news" value="${item.slug()}"
-                              checked="${form.newsSlugs().contains(item.slug())}"> ${item.title()}, ${copy.date(item.publishedAt())}</label>
+                              checked="${form.newsSlugs().contains(item.slug())}"> ${item.title()} (${copy.date(item.publishedAt())})</label>
             @endfor
         </fieldset>
         <button type="submit">@template.icon.eye() ${copy.text("adminMailings.form.preview")}</button>

@@ -31,18 +31,7 @@
         <dd>@if(sentAt != null)${copy.dateTime(sentAt)}@else${copy.text("adminMailings.notSent")}@endif</dd>
     </dl>
 
-    <h2>${copy.text("adminMailings.stats")}</h2>
-    <table>
-        <caption>${copy.text("adminMailings.stats.caption", copy.dateTime(mailing.checkedAt()))}</caption>
-        <tbody>
-            <tr><th scope="row">${copy.text("adminMailings.stats.sent")}</th><td>${mailing.sent()}</td></tr>
-            <tr><th scope="row">${copy.text("adminMailings.stats.delivered")}</th><td>${mailing.delivered()}</td></tr>
-            <tr><th scope="row">${copy.text("adminMailings.log.opened")}</th><td>${mailing.uniqueViews()}</td></tr>
-            <tr><th scope="row">${copy.text("adminMailings.log.unsubscribed")}</th><td>${mailing.unsubscriptions()}</td></tr>
-            <tr><th scope="row">${copy.text("adminMailings.stats.hardBounces")}</th><td>${mailing.hardBounces()}</td></tr>
-        </tbody>
-    </table>
-
+    <%-- Until Brevo has sent it, every number would be zero, and the next step is the test. --%>
     @if(sentAt == null)
         <h2>${copy.text("adminMailings.test")}</h2>
         <p>${copy.text("adminMailings.test.explain", testAddress)}</p>
@@ -52,5 +41,17 @@
         </form>
         <h2>${copy.text("adminMailings.send")}</h2>
         <p>${copy.text("adminMailings.send.explain", mailing.brevoCampaignId())}</p>
+    @else
+        <h2>${copy.text("adminMailings.stats")}</h2>
+        <table>
+            <caption>${copy.text("adminMailings.stats.caption", copy.dateTime(mailing.checkedAt()))}</caption>
+            <tbody>
+                <tr><th scope="row">${copy.text("adminMailings.stats.sent")}</th><td>${mailing.sent()}</td></tr>
+                <tr><th scope="row">${copy.text("adminMailings.stats.delivered")}</th><td>${mailing.delivered()}</td></tr>
+                <tr><th scope="row">${copy.text("adminMailings.log.opened")}</th><td>${mailing.uniqueViews()}</td></tr>
+                <tr><th scope="row">${copy.text("adminMailings.log.unsubscribed")}</th><td>${mailing.unsubscriptions()}</td></tr>
+                <tr><th scope="row">${copy.text("adminMailings.stats.hardBounces")}</th><td>${mailing.hardBounces()}</td></tr>
+            </tbody>
+        </table>
     @endif
 `)

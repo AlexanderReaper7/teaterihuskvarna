@@ -21,7 +21,6 @@
 !{String timesError = errors.message("endsAfterStart");}
 @template.admin.layout(copy = copy, title = copy.text("adminShifts.heading"), content = @`
     <h1>${copy.text("adminShifts.heading")}</h1>
-    <p><a href="/admin">${copy.text("admin.toOverview")}</a></p>
     @if(error != null)
         <p role="alert">${error}</p>
     @endif

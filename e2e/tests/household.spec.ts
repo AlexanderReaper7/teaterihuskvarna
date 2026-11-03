@@ -50,7 +50,7 @@ for (const width of [320, 2560]) {
       await expect(page.getByLabel("Ort (frivilligt)", { exact: true })).toHaveValue("Huskvarna");
       await page.getByLabel("Namn", { exact: true }).fill("Olle Nytt namn");
       await page.getByRole("button", { name: "Spara", exact: true }).click();
-      await page.getByRole("link", { name: "Tillbaka till Mina sidor" }).click();
+      await page.getByRole("navigation", { name: "Medlemsmeny" }).getByRole("link", { name: "Mina sidor" }).click();
       await expect(page.getByLabel("E-postadress till Olle Nytt namn")).toBeVisible();
 
       const [own] = await sql<{ household_id: string }>("SELECT household_id FROM member WHERE id = $1", [ownId]);
@@ -100,8 +100,10 @@ for (const width of [320, 2560]) {
       await page.getByRole("link", { name: "Hantera hushållet" }).click();
       await page.getByRole("link", { name: "Lämna hushållet", exact: true }).click();
       await accessible(page);
+      await expect(page.getByRole("heading", { level: 1 })).toHaveText("Lämna hushållet?");
       await page.getByLabel("Ny ägare till hushållet").selectOption(otherId);
-      await page.getByRole("button", { name: "Ta bort ur hushållet", exact: true }).click();
+      await page.getByRole("button", { name: "Lämna hushållet", exact: true }).click();
+      await expect(page.getByRole("status")).toContainText("Du har lämnat hushållet.");
       await expect(page).toHaveURL("/medlem");
       const [stored] = await sql<{ owner_member_id: string }>(
         "SELECT owner_member_id FROM household WHERE id = $1", [household.id]);
@@ -146,7 +148,7 @@ for (const width of [320, 2560]) {
       await linkLogin(page, "member", email);
       await page.getByRole("link", { name: "Hantera hushållet" }).click();
       await page.getByRole("link", { name: "Lämna hushållet", exact: true }).click();
-      await page.getByRole("button", { name: "Ta bort ur hushållet", exact: true }).click();
+      await page.getByRole("button", { name: "Lämna hushållet", exact: true }).click();
       await expect(page).toHaveURL("/medlem");
       await page.getByRole("link", { name: "Skapa ett hushåll", exact: true }).click();
       await page.getByLabel("Namn, till exempel Familjen Lindqvist").fill("Eget hushåll");

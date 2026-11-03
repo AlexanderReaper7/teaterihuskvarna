@@ -308,7 +308,7 @@ class ShiftIT extends IntegrationTestSupport {
         insertBooking(open, memberOf(insertAccount("Bo Andra", "bo@example.test")), Instant.now());
         insertBooking(open, memberOf(insertAccount("Cia Tredje", "cia@example.test")), Instant.now());
         mockMvc.perform(get("/admin").with(asAdministrator()))
-                .andExpect(content().string(containsString("Inget kommande pass har lediga platser.")));
+                .andExpect(content().string(containsString("Inget kommande pass saknar volontärer.")));
     }
 
     @Test
@@ -326,6 +326,18 @@ class ShiftIT extends IntegrationTestSupport {
 
         assertThat(shifts.lastShift(karin)).isEqualTo(LocalDate.ofInstant(past, SWEDEN));
         assertThat(shifts.lastShift(nils)).isNull();
+    }
+
+    @Test
+    void theDeletionWarningCountsTheBookings() throws Exception {
+        long id = insertShift(Instant.now().plus(Duration.ofDays(3)), 3);
+        assertThat(adminPage(id)).contains("Passet tas bort. Ingen har bokat det.");
+
+        insertBooking(id, memberOf(insertAccount("Anna Först", "anna@example.test")), Instant.now());
+        assertThat(adminPage(id)).contains("Passet och dess bokning tas bort. Volontären får inget meddelande.");
+
+        insertBooking(id, memberOf(insertAccount("Karin Holm", "karin@example.test")), Instant.now());
+        assertThat(adminPage(id)).contains("Passet och dess 2 bokningar tas bort. Volontärerna får inget meddelande.");
     }
 
     @Test
@@ -373,7 +385,13 @@ class ShiftIT extends IntegrationTestSupport {
         String shiftsPage = mockMvc.perform(get("/medlem/volontar").with(member)).andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
         assertThat(shiftsPage).contains("id=\"pass-" + booked + "\"")
-                .contains("href=\"/medlem\">Mina sidor</a>").doesNotContain("Översikt");
+                .contains("href=\"/medlem\" aria-current=\"true\">Mina sidor</a>").doesNotContain("Översikt");
+    }
+
+    private String adminPage(long id) throws Exception {
+        return mockMvc.perform(get("/admin/volontarpass/" + id).with(asAdministrator()))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
     }
 
     private long insertShift(Instant startsAt, int places) {

@@ -23,6 +23,20 @@ async function violations(page: Page): Promise<string[]> {
     v.nodes.map((n) => `${v.id} (${v.impact}): ${n.target.join(" ")}: ${n.failureSummary ?? v.help}`));
 }
 
+/// A control's accessible name, from the first line of its ARIA snapshot, such
+/// as `- button "Spara"`. The line goes on after the name when the name is not
+/// the text, as in `- button "Ta bort Gunnar Wik": Ta bort`, and Playwright puts
+/// the role and name in single quotes when the name holds ": ", as YAML needs:
+/// `- 'button "Betald, enskild: Erik Lindqvist"': Betald, enskild`.
+function snapshotName(snapshot: string): string {
+  let line = snapshot.split("\n")[0].replace(/^- /, "");
+  const quoted = /^'((?:[^']|'')*)'/.exec(line);
+  if (quoted) {
+    line = quoted[1].replaceAll("''", "'");
+  }
+  return /^[a-z]+ "((?:[^"\\]|\\.)*)"/.exec(line)?.[1]?.replaceAll('\\"', '"') ?? "";
+}
+
 /// An icon is decoration beside a control's text: hidden from screen readers,
 /// so every visible link or button that carries one is still named by its own
 /// text, or by its aria-label where it has one.
@@ -37,7 +51,7 @@ async function iconProblems(page: Page): Promise<string[]> {
     }
     const text = (await control.innerText()).trim();
     const expected = (await control.getAttribute("aria-label")) ?? text;
-    const name = /^- [a-z]+ "(.*?)"/.exec(await control.ariaSnapshot())?.[1] ?? "";
+    const name = snapshotName(await control.ariaSnapshot());
     if (!text) {
       found.push("a control shows an icon and no text");
     } else if (name !== expected) {
