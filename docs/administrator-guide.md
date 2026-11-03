@@ -234,9 +234,7 @@ Skriv vad du gjorde, vad du väntade dig och vad som hände i stället, och ta g
 
 ## Verifiering
 
-En agent följde varje steg ovan den 1 november 2026 på den lokala utvecklingsmiljön, inloggad som den påhittade administratören Ada Admin, med ett skript som också tog bilderna. Skriptet kontrollerade att varje sida svarade som guiden säger, och från en påhittad medlems inloggning att medlemmarna ser det som guiden säger att de ser. Lösenordsnyckeln prövades med Chromiums låtsade autentiserare, inte med ett fingeravtryck eller en telefon.
-
-Knappen för att logga ut andra enheter heter "Logga ut på alla andra enheter" sedan #187. Guidens text och bilden av enheterna uppdaterades den 2 november 2026 på den lokala testmiljön med två webbläsare inloggade som den påhittade administratören Gunnar Wik.
+En agent följde varje steg ovan den 3 november 2026 på en lokal testmiljö med webbplatsen som den ser ut när guiden publiceras, inloggad som den påhittade administratören Ada Admin, med ett skript som också tog bilderna. Skriptet kontrollerade att varje sida svarade som guiden säger, och från en påhittad medlems inloggning att medlemmarna ser det som guiden säger att de ser. Lösenordsnyckeln prövades med Chromiums låtsade autentiserare, inte med ett fingeravtryck eller en telefon.
 
 Inte prövat:
 
