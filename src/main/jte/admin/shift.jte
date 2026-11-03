@@ -36,7 +36,7 @@
             <thead>
                 <tr>
                     <th scope="col">${copy.text("shift.csv.name")}</th>
-                    <th scope="col">${copy.text("shift.csv.email")}</th>
+                    <th scope="col">${copy.text("member.email")}</th>
                     <th scope="col">${copy.text("shift.csv.phone")}</th>
                     <th scope="col">${copy.text("shift.csv.bookedAt")}</th>
                 </tr>
@@ -48,7 +48,7 @@
                     <tr>
                         <th scope="row">${volunteer.fullName()}</th>
                         <td>@if(email != null)${email}@endif</td>
-                        <td>@if(phone != null)${phone}@endif</td>
+                        <td class="tel">@if(phone != null)${phone}@endif</td>
                         <td>${copy.dateTime(volunteer.bookedAt())}</td>
                     </tr>
                 @endfor

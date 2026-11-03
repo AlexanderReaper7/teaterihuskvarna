@@ -28,7 +28,7 @@
     @if(household == null || household.ownedBy(ownMemberId))
     <form method="post" action="${household == null ? "/medlem/hushall" : "/medlem/hushall/namn"}">
         @template.tag.csrf(csrf = csrf)
-        @template.tag.field(name = "name", label = copy.text("household.name"), type = "text",
+        @template.tag.field(copy = copy, name = "name", label = copy.text("household.name"), type = "text",
                 autocomplete = "off", value = form.name(), error = errors.message("name"), required = true)
         <button type="submit">@if(household == null)@template.icon.plus()@else@template.icon.save()@endif ${copy.text(household == null ? "household.create.submit" : "member.household.rename")}</button>
     </form>
@@ -60,10 +60,9 @@
         </ul>
         @if(household.ownedBy(ownMemberId))
             <p><a href="/medlem/hushall/ny">@template.icon.plus() ${copy.text("member.household.add")}</a></p>
+            <p>${copy.text("member.household.invitationNote")}</p>
         @endif
-        <p>${copy.text("member.household.invitationNote")}</p>
     @else
         <p>${copy.text("member.household.createNote")}</p>
     @endif
-    <p><a href="/medlem">${copy.text("member.back")}</a></p>
 `)

@@ -83,6 +83,18 @@ class MemberRegisterIT extends MemberRegisterSupport {
                 .andExpect(content().string(containsString("Gränna")));
     }
 
+    /// The edit form calls the address optional only when leaving it empty is allowed.
+    @Test
+    void theLoginAddressIsOptionalOnlyForAMemberWithoutAnAccount() throws Exception {
+        long erik = memberOf(insertAccount("Erik Lindqvist", ERIK));
+        long olle = insertMember("Olle Lindqvist");
+
+        mockMvc.perform(get("/admin/medlemmar/" + erik).with(asAdministrator()))
+                .andExpect(content().string(containsString("E-postadress för inloggning</label>")));
+        mockMvc.perform(get("/admin/medlemmar/" + olle).with(asAdministrator()))
+                .andExpect(content().string(containsString("E-postadress för inloggning (frivilligt)</label>")));
+    }
+
     @Test
     void addingWithAnAddressCreatesAnAccountAndWithoutOneDoesNot() throws Exception {
         MvcResult added = mockMvc.perform(post("/admin/medlemmar")
@@ -205,7 +217,9 @@ class MemberRegisterIT extends MemberRegisterSupport {
 
         mockMvc.perform(get("/admin/medlemmar/" + erik + "/ta-bort").with(asAdministrator()))
                 .andExpect(status().isOk())
-                .andExpect(content().string(containsString("Ta bort Erik Lindqvist?")));
+                .andExpect(content().string(containsString("Ta bort Erik Lindqvist?")))
+                .andExpect(content().string(containsString(
+                        "anmälningarna till erbjudanden och bokningarna av volontärpass tas bort")));
         assertThat(rowsIn("member")).isEqualTo(1);
 
         mockMvc.perform(delete("/api/admin/members/" + erik).with(asAdministrator()).with(csrf()))

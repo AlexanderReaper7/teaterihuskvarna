@@ -153,6 +153,12 @@ body {
   list-style: none;
 }
 
+/* A menu is not prose: it may use the whole column, and wraps only when the
+ * column is too narrow for it. */
+main > .section-nav {
+  max-width: none;
+}
+
 .section-nav {
   margin-bottom: 2rem;
 }
@@ -172,9 +178,18 @@ body {
   margin-bottom: 1.5rem;
 }
 
-/* The page or choice the visitor is on reads as text, not as a link. */
-[aria-current="page"] {
+/* The page or choice the visitor is on reads as text, not as a link. In a
+ * menu, so does the link to the section a page belongs to, such as
+ * "Erbjudanden" on an offer's page. */
+[aria-current="page"],
+nav [aria-current="true"] {
   color: var(--color-text);
+  text-decoration: none;
+}
+
+/* The header's menu keeps its light text on teal. */
+.site-nav [aria-current] {
+  color: var(--color-on-primary);
   text-decoration: none;
 }
 
@@ -240,6 +255,14 @@ body {
   font-weight: 700;
 }
 
+/* Links in a row stand apart by a gap rather than a character between them, so
+ * a row that wraps never ends a line with a separator. */
+.links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.5rem;
+}
+
 /* Content */
 
 main {
@@ -266,7 +289,6 @@ h1 {
   line-height: 1.1;
   text-transform: uppercase;
   overflow-wrap: break-word;
-  hyphens: auto;
 }
 
 h2 {
@@ -388,9 +410,13 @@ main > article > .hero {
   overflow-wrap: break-word;
 }
 
+/* A card's title looks the same whether the page makes it an h2 or, under a
+ * section's own h2 as on the start page, an h3. */
 .card h2,
 .card h3 {
-  margin-top: 0.75rem;
+  margin: 0.75rem 0 0.5rem;
+  font-size: 1.25rem;
+  line-height: 1.3;
 }
 
 /* Every picture in a list of cards has the same 4:3 box and shows whole
@@ -500,6 +526,15 @@ input,
 button {
   border-radius: 0;
   font: inherit;
+}
+
+/* A one-line field is as tall as a button, one line of text, the button's
+ * padding and its border, so a field and the button beside it line up. A
+ * select needs it most: both browsers give it line-height: normal whatever the
+ * page says, which left it 8 to 10 px short of a button. */
+input:not([type="radio"], [type="checkbox"]),
+select {
+  min-height: calc(var(--line-height-body) * 1em + 1.25rem + 4px);
 }
 
 input {
@@ -617,6 +652,24 @@ button:has(> .icon):not([hidden]) {
 
 .button-secondary:hover {
   border-color: var(--color-primary);
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+}
+
+/* The file chooser's button looks like the site's secondary button rather than
+ * the browser's grey one in the system font. */
+input[type="file"]::file-selector-button {
+  margin-right: 0.75rem;
+  padding: 0.25rem 1rem;
+  border: 2px solid var(--color-primary);
+  background: var(--color-white);
+  color: var(--color-primary);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+input[type="file"]::file-selector-button:hover {
   background: var(--color-primary);
   color: var(--color-on-primary);
 }
@@ -766,6 +819,11 @@ td button {
   white-space: nowrap;
 }
 
+/* A phone number is read as one unit, so it keeps to one line. */
+.tel {
+  white-space: nowrap;
+}
+
 /* Buttons grouped in a cell, such as the register's fee buttons, may wrap
  * between words. Unbroken, "Betald, enskild" holds the fee column so wide that
  * the register no longer fits a 320 px phone. */
@@ -776,6 +834,13 @@ td .buttons button {
 
 /* The old site's one working breakpoint. */
 @media (max-width: 767px) {
+  /* A long word in a heading may break with a hyphen only where the screen is
+   * too narrow for it. At 2560 px Firefox hyphenated "ADMINISTRA-TÖR" where
+   * Chromium moved the whole word down. */
+  h1 {
+    hyphens: auto;
+  }
+
   :root {
     --gutter: 1.25rem;
   }
