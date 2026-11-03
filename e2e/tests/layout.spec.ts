@@ -1,11 +1,11 @@
-// Every page, at a phone's width up to the user's own 2560 px view, but the
-// two that only a mailed login link opens: the link's page, which submits
-// itself, and the page saying to open it in the browser that asked. Checks what
-// a person would see as broken: sideways
-// scrolling, buttons touching each other, buttons poking out of the box they sit
-// in, words or phone numbers in a table broken in two, a menu on two lines with
-// room for one, a field and its button of different heights, and radio buttons
-// or checkboxes away from their text.
+// Every page, at a phone's width up to the user's own 2560 px view, but three.
+// /dev exists only under the dev profile. The other two only a mailed login
+// link opens: the link's page, which submits itself, and the page saying to
+// open it in the browser that asked. Checks what a person would see as broken:
+// sideways scrolling, buttons touching each other, buttons poking out of the
+// box they sit in, words or phone numbers in a table broken in two, a menu on
+// two lines with room for one, a field and its button of different heights,
+// and radio buttons or checkboxes away from their text.
 import { expect, test, type Page } from "@playwright/test";
 import { linkLogin } from "../support/auth";
 import { text } from "../support/copy";
