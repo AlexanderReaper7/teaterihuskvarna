@@ -7,6 +7,7 @@ import jakarta.validation.constraints.Size;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.time.temporal.ChronoUnit;
 import org.jspecify.annotations.Nullable;
 import org.springframework.format.annotation.DateTimeFormat;
 
@@ -68,9 +69,11 @@ public record OfferForm(
     }
 
     /// @param time a moment
-    /// @return the wall-clock time in Sweden at that moment, or null for null
+    /// @return the wall-clock time in Sweden at that moment to the minute, as the
+    ///         form's fields take it, or null for null. A `datetime-local` field
+    ///         drops a value with more than three decimals and is sent empty.
     static @Nullable LocalDateTime local(@Nullable Instant time) {
-        return time == null ? null : LocalDateTime.ofInstant(time, SWEDEN);
+        return time == null ? null : LocalDateTime.ofInstant(time, SWEDEN).truncatedTo(ChronoUnit.MINUTES);
     }
 
     private static @Nullable Instant instant(@Nullable LocalDateTime time) {
