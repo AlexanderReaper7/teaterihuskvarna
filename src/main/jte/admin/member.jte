@@ -1,6 +1,6 @@
 @import java.time.Instant
 @import java.util.List
-@import se.teaterihuskvarna.member.*
+@import se.teaterihuskvarna.member.FeeStatus
 @import se.teaterihuskvarna.member.HouseholdDetails
 @import se.teaterihuskvarna.member.HouseholdMember
 @import se.teaterihuskvarna.member.MemberFile
@@ -8,7 +8,6 @@
 @import se.teaterihuskvarna.web.Copy
 @import se.teaterihuskvarna.web.CsrfField
 @import se.teaterihuskvarna.web.FieldErrors
-@import se.teaterihuskvarna.member.MemberDetails
 @param Copy copy
 @param CsrfField csrf
 @param MemberFile file
@@ -56,18 +55,12 @@
     @if(!thisYear.paid() || thisYear.throughHousehold())
         <form method="post" action="/admin/medlemmar/${id}/avgift">
             @template.tag.csrf(csrf = csrf)
-            <fieldset class="radio">
+            <fieldset>
                 <legend>${copy.text("fee.mark")}</legend>
+                <label><input id="kind-individual" name="kind" type="radio" value="INDIVIDUAL" checked> ${copy.text("fee.kind.individual")}</label>
+                <label><input id="kind-household" name="kind" type="radio" value="HOUSEHOLD"> ${copy.text("fee.kind.household")}</label>
                 <p>
-                    <input  id="kind-individual" name="kind" type="radio" value="INDIVIDUAL" checked>
-                    <label for="kind-individual">${copy.text("fee.kind.individual")}</label>
-                </p>
-                <p>
-                    <input  id="kind-household" name="kind" type="radio" value="HOUSEHOLD">
-                    <label  for="kind-household">${copy.text("fee.kind.household")}</label>
-                </p>
-                <p>
-                    <label for="kronor">${copy.text("fee.amount")}</label>
+                    <label for="kronor">${copy.text("fee.amount")} ${copy.text("form.optional")}</label>
                     <input id="kronor" name="kronor" type="text" inputmode="numeric" autocomplete="off">
                 </p>
                 <button type="submit">@template.icon.badgeCheck() ${copy.text("fee.mark.submit")}</button>
@@ -137,7 +130,8 @@
     @template.tag.errors(copy = copy, errors = errors)
     <form method="post" action="/admin/medlemmar/${id}">
         @template.tag.csrf(csrf = csrf)
-        @template.tag.memberFields(copy = copy, form = form, errors = errors, households = households)
+        @template.tag.memberFields(copy = copy, form = form, errors = errors, households = households,
+                hasAccount = file.member().email() != null)
         <button type="submit">@template.icon.save() ${copy.text("register.edit.submit")}</button>
     </form>
 

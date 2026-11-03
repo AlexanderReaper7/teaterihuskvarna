@@ -4,9 +4,6 @@
 @import se.teaterihuskvarna.web.Copy
 @import se.teaterihuskvarna.web.CsrfField
 @import se.teaterihuskvarna.web.FieldErrors
-@import java.time.Instant
-@import se.teaterihuskvarna.member.MemberDetails
-@param MemberDetails member
 @param Copy copy
 @param CsrfField csrf
 @param MemberForm form
@@ -14,10 +11,7 @@
 @param List<HouseholdDetails> households
 @param String error
 @param boolean stale
-!{Instant paidAt = member.fee().paidAt();}
 @template.admin.layout(copy = copy, title = copy.text("register.add"), content = @`
-    <h2>${copy.text("fee.heading", String.valueOf(member.fee().year()))}
-        @template.tag.feeBadge(copy = copy, paid = paidAt != null)</h2>
     <h1>${copy.text("register.add")}</h1>
     <p><a href="/admin/medlemmar">${copy.text("register.toList")}</a></p>
     @if(stale)
@@ -30,7 +24,8 @@
     @template.tag.errors(copy = copy, errors = errors)
     <form method="post" action="/admin/medlemmar">
         @template.tag.csrf(csrf = csrf)
-        @template.tag.memberFields(copy = copy, form = form, errors = errors, households = households)
+        @template.tag.memberFields(copy = copy, form = form, errors = errors, households = households,
+                hasAccount = false)
         <button type="submit">@template.icon.plus() ${copy.text("register.add.submit")}</button>
     </form>
 `)

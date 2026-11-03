@@ -11,6 +11,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
@@ -235,6 +236,23 @@ class MemberHouseholdIT extends MemberRegisterSupport {
                 .andExpect(jsonPath("$.fee.paidAt").exists())
                 .andExpect(jsonPath("$.fee.throughHousehold").value(false));
         assertThat(rowsIn("fee")).isEqualTo(2);
+    }
+
+    @Test
+    void theConfirmationSaysLeaveToTheMemberLeavingAndRemoveForAnyoneElse() throws Exception {
+        long household = ownedHousehold("Familjen");
+        moveTo(ownMember, household);
+        long maria = memberOf(insertAccount("Maria Lindqvist", MARIA));
+        moveTo(maria, household);
+
+        String leave = mockMvc.perform(get(PAGE + "/medlemmar/" + ownMember + "/ta-bort").with(erik))
+                .andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
+        String remove = mockMvc.perform(get(PAGE + "/medlemmar/" + maria + "/ta-bort").with(erik))
+                .andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
+
+        assertThat(leave).contains("<h1>Lämna hushållet?</h1>", " Lämna hushållet</button>")
+                .doesNotContain("ur hushållet?", "inbjudan");
+        assertThat(remove).contains("<h1>Ta bort Maria Lindqvist ur hushållet?</h1>", " Ta bort ur hushållet</button>");
     }
 
     @Test

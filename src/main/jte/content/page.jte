@@ -5,19 +5,21 @@
 @import se.teaterihuskvarna.content.Perspective
 @import se.teaterihuskvarna.content.Production
 @import se.teaterihuskvarna.web.Copy
+@import se.teaterihuskvarna.web.PageMetadata
 @param Copy copy
+@param PageMetadata metadata
 @param Perspective perspective
 @param Page page
 @param List<Production> productions = List.of()
 @param List<BoardMember> board = List.of()
 @param List<LuddePrize> prizes = List.of()
-@template.layout(copy = copy, title = page.title(), preview = perspective == Perspective.DRAFTS, content = @`
+@template.layout(metadata = metadata, copy = copy, title = page.title(), preview = perspective == Perspective.DRAFTS, content = @`
     <article>
         <h1>${page.title()}</h1>
         @template.tag.image(image = page.image(), kind = "hero")
         $unsafe{page.bodyHtml()}
         @if(!productions.isEmpty())
-            <div class="cards">
+            <div class="cards posters">
             @for(Production production : productions)
                 !{Integer first = production.firstYear();}
                 !{Integer last = production.lastYear();}

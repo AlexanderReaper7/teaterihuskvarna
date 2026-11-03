@@ -86,6 +86,8 @@ class SecurityConfiguration {
     private static final String[] CONTENT_PAGES = {
         "/",
         "/kalender",
+        "/sitemap.xml",
+        "/robots.txt",
         "/evenemang/**",
         "/nyheter",
         "/nyheter/**",

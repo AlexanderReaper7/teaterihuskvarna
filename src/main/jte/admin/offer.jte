@@ -65,7 +65,7 @@
                     <tr>
                         <th scope="row">${registrant.fullName()}</th>
                         <td>@if(registrant.email() != null)${registrant.email()}@endif</td>
-                        <td>@if(registrant.phone() != null)${registrant.phone()}@endif</td>
+                        <td class="tel">@if(registrant.phone() != null)${registrant.phone()}@endif</td>
                         <td>${copy.dateTime(registrant.registeredAt())}</td>
                     </tr>
                 @endfor

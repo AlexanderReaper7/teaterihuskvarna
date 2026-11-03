@@ -2,10 +2,12 @@
 @import se.teaterihuskvarna.content.Partner
 @import se.teaterihuskvarna.content.Perspective
 @import se.teaterihuskvarna.web.Copy
+@import se.teaterihuskvarna.web.PageMetadata
 @param Copy copy
+@param PageMetadata metadata
 @param Perspective perspective
 @param List<Partner> partners
-@template.layout(copy = copy, title = copy.text("partners.title"), preview = perspective == Perspective.DRAFTS, content = @`
+@template.layout(metadata = metadata, copy = copy, title = copy.text("partners.title"), preview = perspective == Perspective.DRAFTS, content = @`
     <h1>${copy.text("partners.title")}</h1>
     @if(partners.isEmpty())
         <p>${copy.text("partners.empty")}</p>

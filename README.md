@@ -36,9 +36,15 @@ Start at [the public home](http://localhost:8000/). Its menu connects the calend
 Use the development index and [Mailpit](http://localhost:8000/mailpit/) to sign in with an invented account in the same browser that requested the link.
 
 - [Member overview](http://localhost:8000/medlem) connects contact details, fee status and payment instructions, household creation and management, invitations, offers and registrations, documents and volunteer bookings. The household owner can edit or remove people, including people with accounts. Members can leave; an owner first chooses a successor with an account, or administrators take over when none remains. Administrators can change the owner. Removal preserves membership and accounts.
-- [Administrator overview](http://localhost:8000/admin) connects the member register, household management, fee marking, CSV exports, offers and registrations, documents, volunteer shifts and mailings. It also manages administrator accounts and links to Sanity for editing public content and Brevo for recipient groups and campaigns. Sanity links use `SANITY_STUDIO_URL`; without a configured address the pages explain that the editor is not connected and link to [Sanity's project dashboard](https://www.sanity.io/manage).
+- [Administrator overview](http://localhost:8000/admin) connects the member register, household management, fee marking, CSV exports, offers and registrations, documents, volunteer shifts and mailings. It also manages administrator accounts and links to Sanity for editing public content and Brevo for recipient groups and campaigns. Sanity links use `SANITY_STUDIO_URL`; without a configured address the pages explain that the editor is not connected and link to [Sanity's project dashboard](https://www.sanity.io/manage). The administrators' own guide to these pages, in Swedish, is [docs/administrator-guide.md](docs/administrator-guide.md).
 
 Public content comes from the development Sanity dataset. Login and invitation mail goes to Mailpit. Brevo contact updates and campaign drafts use an in-memory fake by default, so the development stack can demonstrate preparing a mailing but does not send a real campaign. The [local stack](#the-local-stack) section describes the Sanity connection and switching to a real Brevo account.
+
+### Search and shared links
+
+Public pages include a description, canonical URL and [Open Graph](https://ogp.me/) metadata. Event and news pages use their title, summary and main image; other pages use their text or a fixed description. Canonical URLs and [the sitemap](http://localhost:8000/sitemap.xml) use `SITE_URL`, the configured address also used for login mail. They never use the request's Host header.
+
+The sitemap includes published public pages and articles. It excludes future news and account pages. The same paths are available at `/api/content/public-paths`. Draft previews and pages without public metadata have `noindex, nofollow`; [robots.txt](http://localhost:8000/robots.txt) points crawlers to the sitemap. These directions do not replace the application's access checks.
 
 ### Everyday commands
 

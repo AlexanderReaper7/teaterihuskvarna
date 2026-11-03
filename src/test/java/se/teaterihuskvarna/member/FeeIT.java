@@ -80,6 +80,29 @@ class FeeIT extends MemberRegisterSupport {
                 .andExpect(jsonPath("$.fee.payment.message").value(JOHAN_EMAIL));
     }
 
+    /// The register reads the listed members' accounts in one query, and each
+    /// payment instruction still names the member's own address (#91). A member
+    /// without an account gets no instruction. Olle is added before Nils so
+    /// that their member and account ids differ, and an address looked up by
+    /// the wrong id shows.
+    @Test
+    void eachMemberInTheRegisterIsToldToWriteTheirOwnAddress() throws Exception {
+        insertMember("Olle Utan Konto");
+        insertAccount("Nils Nyberg", "nils@example.test");
+        mockMvc.perform(get("/api/admin/members").with(asAdministrator()))
+                .andExpect(jsonPath("$.members.length()").value(5))
+                .andExpect(jsonPath("$.members[0].fullName").value("Erik Lindqvist"))
+                .andExpect(jsonPath("$.members[0].fee.payment.message").value(ERIK_EMAIL))
+                .andExpect(jsonPath("$.members[1].fullName").value("Johan Bergström"))
+                .andExpect(jsonPath("$.members[1].fee.payment.message").value(JOHAN_EMAIL))
+                .andExpect(jsonPath("$.members[2].fullName").value("Maria Lindqvist"))
+                .andExpect(jsonPath("$.members[2].fee.payment.message").value(MARIA_EMAIL))
+                .andExpect(jsonPath("$.members[3].fullName").value("Nils Nyberg"))
+                .andExpect(jsonPath("$.members[3].fee.payment.message").value("nils@example.test"))
+                .andExpect(jsonPath("$.members[4].fullName").value("Olle Utan Konto"))
+                .andExpect(jsonPath("$.members[4].fee.payment").doesNotExist());
+    }
+
     /// The badge by the heading on /medlem (#78) says the status in words, and
     /// follows the household rule. The span is matched whole because "Betald"
     /// is also the start of the paid date line.
@@ -133,6 +156,11 @@ class FeeIT extends MemberRegisterSupport {
                 .contains("Erik Lindqvist", "Maria Lindqvist").doesNotContain("Johan Bergström");
         assertThat(page("/admin/medlemmar?avgift=obetald&q=lindqvist")).doesNotContain("Lindqvist</a>");
         assertThat(page("/admin/medlemmar?avgift=okänt")).contains("Johan Bergström", "Erik Lindqvist");
+        // The fee column and the member's page say the status with the same badge as /medlem (#110).
+        assertThat(unpaid).contains("<span class=\"badge badge-unpaid\">Ej betald</span>");
+        assertThat(page("/admin/medlemmar?avgift=betald")).contains("<span class=\"badge badge-paid\">Betald</span>",
+                "<th scope=\"col\">Bokföringsdatum</th>");
+        assertThat(page("/admin/medlemmar/" + johan)).contains("<span class=\"badge badge-unpaid\">Ej betald</span>");
 
         mockMvc.perform(get("/api/admin/members").param("fee", "UNPAID").with(asAdministrator()))
                 .andExpect(status().isOk())
@@ -146,9 +174,10 @@ class FeeIT extends MemberRegisterSupport {
     void theStartPageCountsWhoHasPaidAndLinksToTheRest() throws Exception {
         insertFee(erik, "HOUSEHOLD");
 
-        assertThat(page("/admin").replaceAll("\\s+", " "))
+        // The link's icon is left out, so the text is compared on its own.
+        assertThat(page("/admin").replaceAll("(?s)<svg.*?</svg>", "").replaceAll("\\s+", " "))
                 .contains("Medlemsavgifter " + thisYear(), "2 av 3 medlemmar har betalat.")
-                .contains("<a href=\"/admin/medlemmar?avgift=obetald\">Visa den som inte har betalat</a>");
+                .contains("<a href=\"/admin/medlemmar?avgift=obetald\"> Visa den som inte har betalat</a>");
         mockMvc.perform(get("/api/admin/fees").with(asAdministrator()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.year").value(thisYear()))

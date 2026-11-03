@@ -221,6 +221,25 @@ public class ContentService {
         return partners;
     }
 
+    /// Only published, currently reachable public pages belong in discovery documents.
+    ///
+    /// @return public paths, without member pages, drafts or future news
+    public List<String> publicPaths() {
+        List<String> paths = new ArrayList<>(List.of("/", "/kalender", "/nyheter", "/partners", "/bli-medlem"));
+        for (String slug : PAGES) {
+            if (page(slug, Perspective.PUBLISHED).isPresent()) {
+                paths.add("/" + slug);
+            }
+        }
+        for (Event event : events(Perspective.PUBLISHED)) {
+            paths.add("/evenemang/" + event.slug());
+        }
+        for (NewsItem item : news(Perspective.PUBLISHED)) {
+            paths.add("/nyheter/" + item.slug());
+        }
+        return paths.stream().distinct().sorted().toList();
+    }
+
     /// Sanity's webhook, called when a document is published, changed or
     /// unpublished. Every copy expires, so the next visitor sees the change:
     /// R008. What changed does not matter; there are few enough documents to

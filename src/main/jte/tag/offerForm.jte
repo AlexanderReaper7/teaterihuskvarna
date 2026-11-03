@@ -16,25 +16,25 @@
 @template.tag.errors(copy = copy, errors = errors)
 <form method="post" action="${action}">
     @template.tag.csrf(csrf = csrf)
-    @template.tag.field(name = "title", label = copy.text("adminOffers.form.title"), type = "text",
+    @template.tag.field(copy = copy, name = "title", label = copy.text("adminOffers.form.title"), type = "text",
             autocomplete = "off", value = form.title(), error = errors.message("title"), required = true)
     <p>
-        <label for="description">${copy.text("adminOffers.form.description")}</label>
+        <label for="description">${copy.text("adminOffers.form.description")} ${copy.text("form.optional")}</label>
         <textarea id="description" name="description" rows="8"
                   aria-invalid="${descriptionInvalid}" aria-describedby="${descriptionDescribedBy}">${form.description()}</textarea>
         @if(descriptionError != null)
             <span id="description-error" class="field-error">${descriptionError}</span>
         @endif
     </p>
-    @template.tag.field(name = "startsAt", label = copy.text("adminOffers.form.startsAt"), type = "datetime-local",
+    @template.tag.field(copy = copy, name = "startsAt", label = copy.text("adminOffers.form.startsAt"), type = "datetime-local",
             autocomplete = "off", value = Objects.toString(form.startsAt(), null),
             error = errors.message("startsAt"), required = false)
-    @template.tag.field(name = "registrationClosesAt", label = copy.text("adminOffers.form.registrationClosesAt"),
+    @template.tag.field(copy = copy, name = "registrationClosesAt", label = copy.text("adminOffers.form.registrationClosesAt"),
             type = "datetime-local", autocomplete = "off",
             value = Objects.toString(form.registrationClosesAt(), null),
             error = errors.message("registrationClosesAt"), required = false)
     <p>${copy.text("adminOffers.form.closesHint")}</p>
-    @template.tag.field(name = "capacity", label = copy.text("adminOffers.form.capacity"), type = "number",
+    @template.tag.field(copy = copy, name = "capacity", label = copy.text("adminOffers.form.capacity"), type = "number",
             autocomplete = "off", value = Objects.toString(form.capacity(), null),
             error = errors.message("capacity"), required = false)
     <p>${copy.text("adminOffers.form.capacityHint")}</p>
