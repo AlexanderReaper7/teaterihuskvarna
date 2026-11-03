@@ -1,7 +1,7 @@
 // Every page, at a phone's width up to the user's own 2560 px view, but the
-// three that only a mailed link opens: the login link's page, which submits
-// itself, the page saying to open it in the browser that asked, and the welcome
-// page after joining. Checks what a person would see as broken: sideways
+// two that only a mailed login link opens: the link's page, which submits
+// itself, and the page saying to open it in the browser that asked. Checks what
+// a person would see as broken: sideways
 // scrolling, buttons touching each other, buttons poking out of the box they sit
 // in, words or phone numbers in a table broken in two, a menu on two lines with
 // room for one, a field and its button of different heights, and radio buttons
@@ -10,7 +10,8 @@ import { expect, test, type Page } from "@playwright/test";
 import { linkLogin } from "../support/auth";
 import { text } from "../support/copy";
 import { clearLinkRequests, resetAdministrators, sql } from "../support/db";
-import { ADMINISTRATORS } from "../support/site";
+import { clearMail, waitForMail } from "../support/mail";
+import { ADMINISTRATORS, freshAddress } from "../support/site";
 import { ADMIN, MEMBER, PUBLIC, details, householdPages, prepareAdministratorPages, saveMailingDraft, scan } from "../support/pages";
 
 test.beforeEach(async () => {
@@ -226,7 +227,22 @@ for (const width of WIDTHS) {
     test.use({ viewport: { width, height: 900 } });
 
     test("every public page has no layout problems", async ({ page }) => {
-      expect(await scan(page, PUBLIC, problems)).toEqual([]);
+      const found = await scan(page, PUBLIC, problems);
+      // The welcome page answers only the confirmation of a mailed link.
+      const email = freshAddress("layout");
+      await clearMail(email);
+      await page.goto("/bli-medlem");
+      await page.getByLabel(text("member.name"), { exact: true }).fill("Åsa Öberg");
+      await page.getByLabel(text("member.email"), { exact: true }).fill(email);
+      await page.getByRole("button", { name: text("application.submit") }).click();
+      await expect(page).toHaveURL("/bli-medlem/skickat");
+      await page.goto((await waitForMail(email)).link);
+      await page.getByRole("button", { name: text("application.confirm.submit") }).click();
+      await expect(page.getByRole("heading", { name: text("application.welcome.heading", "Åsa Öberg") }))
+        .toBeVisible();
+      await page.evaluate(() => document.fonts.ready);
+      found.push(...await here(page, "/bli-medlem/bekrafta, welcome"));
+      expect(found).toEqual([]);
     });
 
     // The passkey offer is on the first page after a login only.
