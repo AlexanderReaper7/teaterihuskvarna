@@ -153,7 +153,7 @@ Under **Anmälda** på erbjudandets sida står vilka som har anmält sig. **Ladd
 
 ## Volontärpass
 
-Ett volontärpass hör till ett evenemang, så evenemanget måste finnas i Sanity först.
+Ett volontärpass hör till ett evenemang. Formuläret visar bara evenemang som är publicerade i Sanity och äger rum i dag eller senare, så publicera evenemanget först.
 
 1. Tryck **Volontärpass** i administrationsmenyn.
 2. Välj evenemang och uppgift under **Lägg till ett pass**.

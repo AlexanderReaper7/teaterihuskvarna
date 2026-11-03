@@ -6,6 +6,8 @@ description: Which language each part of the system is written in.
 
 # 0001: Language policy
 
+Amended on 2026-11-01, as issue #115 asks. A guide for the association's own people is in Swedish.
+
 ## Decision
 
 Swedish is what a visitor or a member reads: Sanity content, mail bodies, form labels, validation messages.
