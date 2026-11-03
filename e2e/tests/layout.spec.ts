@@ -1,7 +1,8 @@
 // Pages at a phone's width up to the user's own 2560 px view. Checks what a
 // person would see as broken: sideways scrolling, buttons touching each other,
-// buttons poking out of the box they sit in, words in a table broken in two,
-// and radio buttons or checkboxes away from their text.
+// buttons poking out of the box they sit in, words or phone numbers in a table
+// broken in two, a menu on two lines with room for one, and radio buttons or
+// checkboxes away from their text.
 import { expect, test, type Page } from "@playwright/test";
 import { linkLogin } from "../support/auth";
 import { text } from "../support/copy";
@@ -117,6 +118,36 @@ async function problems(page: Page): Promise<string[]> {
             }
           }
         }
+      }
+    }
+    // A phone number in a table is read as one unit and keeps to one line,
+    // although its spaces would let it break.
+    for (const cell of document.querySelectorAll("td, th")) {
+      const number = (cell.textContent ?? "").trim();
+      if (cell.getClientRects().length === 0 || !/^\+?\d[\d -]{5,}\d$/.test(number)) {
+        continue;
+      }
+      const range = document.createRange();
+      range.selectNodeContents(cell);
+      const rows = new Set([...range.getClientRects()].filter((r) => r.width > 0.5).map((r) => Math.round(r.top)));
+      if (rows.size > 1) {
+        found.push(`the phone number ${JSON.stringify(number)} breaks over ${rows.size} lines`);
+      }
+    }
+    // A section menu wraps only when the column is too narrow for it.
+    for (const list of document.querySelectorAll(".section-nav ul")) {
+      const items = [...list.children].filter((item) => item.getClientRects().length > 0);
+      const rows = new Set(items.map((item) => Math.round(item.getBoundingClientRect().top)));
+      const column = list.closest("main");
+      if (!column || rows.size < 2) {
+        continue;
+      }
+      const style = getComputedStyle(column);
+      const room = column.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
+      const gap = parseFloat(getComputedStyle(list).columnGap) || 0;
+      const needed = items.reduce((sum, item) => sum + item.getBoundingClientRect().width, 0) + gap * (items.length - 1);
+      if (needed <= room) {
+        found.push(`the section menu takes ${rows.size} lines though it needs ${needed.toFixed(0)} px of ${room.toFixed(0)}`);
       }
     }
     // A radio button or checkbox is at least 24 px square, the WCAG 2.2 target

@@ -153,6 +153,12 @@ body {
   list-style: none;
 }
 
+/* A menu is not prose: it may use the whole column, and wraps only when the
+ * column is too narrow for it. */
+main > .section-nav {
+  max-width: none;
+}
+
 .section-nav {
   margin-bottom: 2rem;
 }
@@ -697,6 +703,11 @@ select[aria-invalid="true"] {
  * squeezes its columns first, and a row's short button would break in two. */
 td button {
   padding: 0.25rem 0.75rem;
+  white-space: nowrap;
+}
+
+/* A phone number is read as one unit, so it keeps to one line. */
+.tel {
   white-space: nowrap;
 }
 
