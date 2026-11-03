@@ -169,9 +169,10 @@ class FeeIT extends MemberRegisterSupport {
     void theStartPageCountsWhoHasPaidAndLinksToTheRest() throws Exception {
         insertFee(erik, "HOUSEHOLD");
 
-        assertThat(page("/admin").replaceAll("\\s+", " "))
+        // The link's icon is left out, so the text is compared on its own.
+        assertThat(page("/admin").replaceAll("(?s)<svg.*?</svg>", "").replaceAll("\\s+", " "))
                 .contains("Medlemsavgifter " + thisYear(), "2 av 3 medlemmar har betalat.")
-                .contains("<a href=\"/admin/medlemmar?avgift=obetald\">Visa den som inte har betalat</a>");
+                .contains("<a href=\"/admin/medlemmar?avgift=obetald\"> Visa den som inte har betalat</a>");
         mockMvc.perform(get("/api/admin/fees").with(asAdministrator()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.year").value(thisYear()))
