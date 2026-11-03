@@ -5,8 +5,8 @@ import { PATHS } from "./site";
 
 export const PUBLIC = ["/", "/kalender", "/evenemang/kulturnatten", "/nyheter", "/nyheter/ny-webbplats",
   "/om-foreningen", "/styrelsen", "/produktioner", "/ludde-priser", "/kontakt", "/partners", "/bli-medlem",
-  "/bli-medlem/skickat", "/bli-medlem/bekrafta?token=page-check", "/inbjudan", "/inbjudan?token=page-check",
-  PATHS.member.login, PATHS.member.sent, PATHS.administrator.login, PATHS.administrator.sent, "/finns-inte"];
+  "/bli-medlem/skickat", "/bli-medlem/bekrafta", "/bli-medlem/bekrafta?token=page-check", "/inbjudan",
+  "/inbjudan?token=page-check", PATHS.member.login, PATHS.member.sent, PATHS.administrator.login, PATHS.administrator.sent, "/finns-inte"];
 export const MEMBER = ["/medlem", "/medlem/kontaktuppgifter", "/medlem/erbjudanden", "/medlem/handlingar",
   "/medlem/volontar", "/medlem/hushall"];
 export const ADMIN = ["/admin", "/admin/medlemmar", "/admin/medlemmar/ny", "/admin/hushall", "/admin/erbjudanden",

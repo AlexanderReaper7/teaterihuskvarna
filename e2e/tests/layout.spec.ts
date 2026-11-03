@@ -1,8 +1,11 @@
-// Every page, at a phone's width up to the user's own 2560 px view. Checks what a
-// person would see as broken: sideways scrolling, buttons touching each other,
-// buttons poking out of the box they sit in, words or phone numbers in a table
-// broken in two, a menu on two lines with room for one, a field and its button
-// of different heights, and radio buttons or checkboxes away from their text.
+// Every page, at a phone's width up to the user's own 2560 px view, but the
+// three that only a mailed link opens: the login link's page, which submits
+// itself, the page saying to open it in the browser that asked, and the welcome
+// page after joining. Checks what a person would see as broken: sideways
+// scrolling, buttons touching each other, buttons poking out of the box they sit
+// in, words or phone numbers in a table broken in two, a menu on two lines with
+// room for one, a field and its button of different heights, and radio buttons
+// or checkboxes away from their text.
 import { expect, test, type Page } from "@playwright/test";
 import { linkLogin } from "../support/auth";
 import { text } from "../support/copy";
@@ -251,6 +254,13 @@ for (const width of WIDTHS) {
       const members = await details(page, "/admin/medlemmar", "/admin/medlemmar/");
       const offers = await details(page, "/admin/erbjudanden", "/admin/erbjudanden/");
       expect(offers).not.toEqual([]);
+      // The list is newest first, and the seeded offer with registrations, the
+      // only one with a table of who registered, is the oldest.
+      const [registered] = await sql<{ id: string }>("SELECT min(offer_id) AS id FROM offer_registration");
+      expect(registered.id, "an offer with registrations").not.toBeNull();
+      const withTable = `/admin/erbjudanden/${registered.id}`;
+      offers.push(withTable);
+      shown[withTable] = "tbody tr";
       await prepareAdministratorPages(page);
       found.push(...await here(page, "/admin/utskick/forhandsgranska"));
       await saveMailingDraft(page);
