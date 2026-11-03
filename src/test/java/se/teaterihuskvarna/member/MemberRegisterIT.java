@@ -317,7 +317,7 @@ class MemberRegisterIT extends MemberRegisterSupport {
             assertThat(body).startsWith((byte) 0xEF, (byte) 0xBB, (byte) 0xBF);
             String text = new String(body, 3, body.length - 3, StandardCharsets.UTF_8);
             String[] lines = text.split("\r\n");
-            assertThat(lines[0]).isEqualTo("Namn;E-post;Telefon;Adress;Postnummer;Ort;Hushåll;Betald "
+            assertThat(lines[0]).isEqualTo("Namn;E-post;Telefon;Gatuadress;Postnummer;Ort;Hushåll;Betald "
                     + thisYear() + ";Medlem sedan");
             assertThat(lines[1]).startsWith("\"'=HYPERLINK(\"\"http://evil.test\"\")\";" + ERIK + ";;;;")
                     .contains("\"Huskvarna; Sverige\"");

@@ -127,7 +127,7 @@ Blev det fel trycker du **Ångra betalningen** på medlemmens sida.
 1. Tryck **Ladda ner som CSV** i medlemsregistret.
 2. Öppna filen `medlemsregister.csv` i Excel eller ett annat kalkylprogram.
 
-Filen har en rad per medlem med namn, e-post, telefon, adress, postnummer, ort, hushåll, om årets avgift är betald och när personen blev medlem.
+Filen har en rad per medlem med namn, e-post, telefon, gatuadress, postnummer, ort, hushåll, om årets avgift är betald och när personen blev medlem.
 
 **Filen innehåller personuppgifter om alla medlemmar.** Spara den bara på en dator som du själv använder, och radera den när du är klar. Lägg den inte i en delad mapp eller i en molntjänst som inte är föreningens, och skicka den inte med e-post eller i en chatt. Behöver någon annan uppgifterna, låt dem logga in och ladda ner själva. Samma sak gäller listorna över anmälda och volontärer nedan.
 
