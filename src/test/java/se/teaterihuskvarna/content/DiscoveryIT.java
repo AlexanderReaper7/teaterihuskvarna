@@ -64,7 +64,8 @@ class DiscoveryIT extends IntegrationTestSupport {
     void theMembershipFormPrecedesTheBenefitsAndKeepsTheFeeVisible() throws Exception {
         String page = html("/bli-medlem");
         assertThat(page).contains("50 kr", "100 kr").doesNotContain("teaterverksamheten, Huskvarna");
-        assertThat(page.indexOf("id=\"fullName\"")).isLessThan(page.indexOf("<h2>Som medlem</h2>"));
+        int form = page.indexOf("id=\"fullName\"");
+        assertThat(form).isNotNegative().isLessThan(page.indexOf("<h2>Som medlem</h2>"));
     }
 
     private String html(String path) throws Exception {

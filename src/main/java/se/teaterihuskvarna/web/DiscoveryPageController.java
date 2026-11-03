@@ -26,7 +26,10 @@ public class DiscoveryPageController {
         StringBuilder xml = new StringBuilder("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
                 + "<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">\n");
         for (String path : content.publicPaths()) {
-            xml.append("<url><loc>").append(HtmlUtils.htmlEscape(mail.link(path, null))).append("</loc></url>\n");
+            // With an encoding, only the five characters XML reserves are escaped. Without one, an å in
+            // a slug typed into Sanity became &aring;, which XML does not define.
+            xml.append("<url><loc>").append(HtmlUtils.htmlEscape(mail.link(path, null), "UTF-8"))
+                    .append("</loc></url>\n");
         }
         return xml.append("</urlset>\n").toString();
     }
