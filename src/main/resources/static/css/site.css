@@ -408,11 +408,16 @@ main > article > .hero {
 
 .card img {
   width: 100%;
+}
+
+/* Only the card's own picture, its first child. A picture in the card's text
+ * sits in a figure and keeps its proportions. */
+.card > img {
   aspect-ratio: var(--picture-ratio);
   object-fit: contain;
 }
 
-.cards:has(img:not(.logo)) .card:not(:has(img))::before {
+.cards:has(> .card > img:not(.logo)) > .card:not(:has(> img))::before {
   content: "";
   display: block;
   aspect-ratio: var(--picture-ratio);

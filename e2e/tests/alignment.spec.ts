@@ -170,7 +170,9 @@ for (const width of [390, 2560]) {
 }
 
 // The fixture content has no pictures, so these pages get some: an upright
-// one, a square one and a wide one in turn, and none in the last card.
+// one, a square one and a wide one in turn. The last card gets none of its own,
+// only one in its text, as Portable Text writes a picture, and must still keep
+// the empty box.
 test.describe("cards with pictures of any proportions", () => {
   test.use({ viewport: { width: 1440, height: 900 } });
 
@@ -192,6 +194,10 @@ test.describe("cards with pictures of any proportions", () => {
             card.prepend(img);
             loads.push(img.decode());
           });
+          const inText = document.createElement("figure");
+          inText.innerHTML = `<img alt="" width="300" height="140" src="data:image/svg+xml,${encodeURIComponent(
+            '<svg xmlns="http://www.w3.org/2000/svg" width="300" height="140"><rect width="300" height="140" fill="teal"/></svg>')}">`;
+          cards[cards.length - 1]?.append(inText);
         }
         await Promise.all(loads);
         return loads.length;
