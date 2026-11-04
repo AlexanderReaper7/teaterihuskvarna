@@ -111,6 +111,11 @@ final class FakeBrevo implements Brevo {
         reaches.clear();
     }
 
+    /// @return how many campaigns were made
+    synchronized int campaignCount() {
+        return campaigns.size();
+    }
+
     /// @param campaignId a campaign
     /// @return what was handed over, or null
     synchronized @Nullable Campaign campaign(long campaignId) {

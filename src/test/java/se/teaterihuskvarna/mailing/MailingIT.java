@@ -237,6 +237,7 @@ class MailingIT extends IntegrationTestSupport {
         jdbc.sql("DELETE FROM account").update();
         fake.segments(List.of(new Brevo.Segment(9, "Ingen kvar")));
         fake.reach(9, new MailingReach(0, 0));
+        int campaigns = fake.campaignCount();
 
         for (String audience : List.of("LIST", "SEGMENT:9")) {
             mockMvc.perform(post("/admin/utskick/forhandsgranska").with(asAdministrator()).with(csrf())
@@ -256,6 +257,7 @@ class MailingIT extends IntegrationTestSupport {
                     .andExpect(jsonPath("$.title").value("Audience reaches no one"));
         }
         assertThat(rowsIn("mailing")).isZero();
+        assertThat(fake.campaignCount()).isEqualTo(campaigns);
     }
 
     @Test

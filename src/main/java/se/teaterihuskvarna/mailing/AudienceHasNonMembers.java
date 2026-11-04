@@ -3,8 +3,8 @@ package se.teaterihuskvarna.mailing;
 import java.io.Serial;
 
 /// A segment chosen for a mailing holds contacts that are not on the members'
-/// list, so the mailing would reach people who are not members. The adapters
-/// answer 409.
+/// list, so the mailing would reach people who are not members. The page
+/// shows the form again with the reason, and the API answers 409.
 public class AudienceHasNonMembers extends RuntimeException {
 
     @Serial

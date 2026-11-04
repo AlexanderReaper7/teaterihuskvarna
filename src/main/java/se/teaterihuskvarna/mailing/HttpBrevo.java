@@ -190,7 +190,9 @@ final class HttpBrevo implements Brevo {
 
     /// Reads every contact in the segment, or on the list, a thousand at a
     /// time, Brevo's largest page, and counts them by whether they are on the
-    /// members' list and have not unsubscribed.
+    /// members' list and have not unsubscribed. An account that unsubscribes
+    /// per list names those lists in `listUnsubscribed`, and a contact that
+    /// left the members' list that way is not counted as reached either.
     @Override
     public MailingReach reach(@Nullable Long segmentId) {
         long members = 0;
@@ -215,13 +217,10 @@ final class HttpBrevo implements Brevo {
                 throw new BrevoUnavailable("Brevo listed contacts without a contacts array");
             }
             for (JsonNode contact : page) {
-                boolean onList = false;
-                for (JsonNode id : contact.path("listIds")) {
-                    onList |= id.asLong() == listId;
-                }
-                if (!onList) {
+                if (!names(contact.path("listIds"), listId)) {
                     nonMembers++;
-                } else if (!contact.path("emailBlacklisted").asBoolean(false)) {
+                } else if (!contact.path("emailBlacklisted").asBoolean(false)
+                        && !names(contact.path("listUnsubscribed"), listId)) {
                     members++;
                 }
             }
@@ -316,6 +315,15 @@ final class HttpBrevo implements Brevo {
         attributes.put("LAST_SHIFT", lastShift == null ? null : lastShift.toString());
         attributes.put("OFFERS", contact.offers());
         return attributes;
+    }
+
+    private static boolean names(JsonNode ids, long id) {
+        for (JsonNode each : ids) {
+            if (each.asLong() == id) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static List<Segment> sorted(List<Segment> segments) {
