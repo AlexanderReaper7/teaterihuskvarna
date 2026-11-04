@@ -20,6 +20,7 @@ import se.teaterihuskvarna.login.NoSuchDevice;
 import se.teaterihuskvarna.login.NoSuchPasskey;
 import se.teaterihuskvarna.mailing.BrevoUnavailable;
 import se.teaterihuskvarna.mailing.AudienceHasNonMembers;
+import se.teaterihuskvarna.mailing.EmptyAudience;
 import se.teaterihuskvarna.mailing.EmptyMailing;
 import se.teaterihuskvarna.mailing.NoSuchMailing;
 import se.teaterihuskvarna.mailing.UnknownAudience;
@@ -264,6 +265,13 @@ public class ProblemResponses {
     @ExceptionHandler
     public ProblemDetail nonMembers(AudienceHasNonMembers exception) {
         return problem(HttpStatus.CONFLICT, "Audience has non-members", exception);
+    }
+
+    /// @param exception an audience in which no member can receive a mailing
+    /// @return 409
+    @ExceptionHandler
+    public ProblemDetail noRecipients(EmptyAudience exception) {
+        return problem(HttpStatus.CONFLICT, "Audience reaches no one", exception);
     }
 
     /// @param exception an event or news item that is not published
