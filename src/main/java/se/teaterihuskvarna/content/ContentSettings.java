@@ -27,7 +27,8 @@ import org.springframework.validation.annotation.Validated;
 /// @param fixture       the classpath file the `fixture` source reads
 /// @param studioUrl     the Studio's address, such as `https://teaterihuskvarna.sanity.studio`, from
 ///                      `SANITY_STUDIO_URL`. Public pages allow only it to show them in a frame, for
-///                      the Presentation preview. Null or blank allows no other site
+///                      the Presentation preview, and a preview's `data-sanity` attributes name it.
+///                      Null or blank allows no other site and writes no attributes
 @Validated
 @ConfigurationProperties("teaterihuskvarna.content")
 public record ContentSettings(

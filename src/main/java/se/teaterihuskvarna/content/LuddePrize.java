@@ -5,9 +5,16 @@ import org.jspecify.annotations.Nullable;
 /// A Ludde prize the association has awarded, from Sanity's `luddepris` type:
 /// R004, on the page Ludde-priser.
 ///
+/// @param id           the published document's id
 /// @param recipient    the person or group who received it
 /// @param year         the year it was awarded
 /// @param image        a picture, or null
 /// @param citationHtml the citation as HTML, escaped by [PortableText] and safe to print as it is
-public record LuddePrize(String recipient, int year, @Nullable Image image, String citationHtml) {
+public record LuddePrize(String id, String recipient, int year, @Nullable Image image, String citationHtml)
+        implements SanityDocument {
+
+    @Override
+    public String type() {
+        return "luddepris";
+    }
 }

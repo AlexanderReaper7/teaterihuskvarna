@@ -29,6 +29,7 @@
       "plats": "Folkets hus, Huskvarna",
       "ingress": "En komedi om en vanlig onsdag som går helt fel.",
       "serie": {
+        "_id": "serie-teatercafe",
         "title": "Teatercafé",
         "slug": {
           "current": "teatercafe"
@@ -143,6 +144,7 @@
       "plats": "Stora torget",
       "ingress": "Scener, sång och korta pjäser hela kvällen.",
       "serie": {
+        "_id": "serie-kulturnatt",
         "title": "Kulturnatt",
         "slug": {
           "current": "kulturnatt"

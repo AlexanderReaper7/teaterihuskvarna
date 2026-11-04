@@ -23,6 +23,18 @@ RUN apk add --no-cache git
 # of COPY --from pulling an image named git from Docker Hub.
 FROM scratch AS git
 
+# Sanity's visual-editing script, which connects a preview page to the Studio's
+# Presentation tool: docs/decisions/0021-content-from-sanity.md. It is React
+# and needs a bundler, so it is built here from visual-editing/ rather than
+# kept in the repository, and Dependabot raises its versions in
+# visual-editing/package.json like any other.
+FROM node:26.12.1-alpine AS visual-editing
+WORKDIR /visual-editing
+COPY visual-editing/package.json visual-editing/package-lock.json ./
+RUN npm ci --no-audit --no-fund
+COPY visual-editing/ ./
+RUN npm run build
+
 FROM jdk AS build
 WORKDIR /build
 
@@ -39,6 +51,10 @@ RUN ./mvnw -B -v
 # The cost is that editing any file, docs included, reruns the build below. The
 # build stage is discarded, so none of this reaches the runtime image.
 COPY . .
+# Into the static files the jar serves. .gitignore lists these paths, so the git
+# plugin does not count them as uncommitted changes.
+COPY --from=visual-editing /visual-editing/dist/visual-editing.js /visual-editing/dist/visual-editing.licenses.txt src/main/resources/static/js/
+COPY --from=visual-editing /visual-editing/dist/visual-editing.css src/main/resources/static/css/
 # BUILD_GIT_WORKTREE is the worktree's name under .git/worktrees, empty in the
 # main checkout; the post-checkout hook writes it to .env. The git plugin
 # resolves a worktree to the main checkout and runs git there, so GIT_DIR and

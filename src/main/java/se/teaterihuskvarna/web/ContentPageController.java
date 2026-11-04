@@ -12,6 +12,8 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.server.ResponseStatusException;
 import se.teaterihuskvarna.content.ContentService;
+import se.teaterihuskvarna.content.ContentSettings;
+import se.teaterihuskvarna.content.EditAttributes;
 import se.teaterihuskvarna.content.Event;
 import se.teaterihuskvarna.content.NewsItem;
 import se.teaterihuskvarna.content.Page;
@@ -22,6 +24,8 @@ import se.teaterihuskvarna.content.Previews;
 ///
 /// Every page shows drafts instead of published documents to an editor the
 /// Studio's Presentation tool sent here ([Previews]), and says so in a banner.
+/// Their elements then carry `data-sanity` attributes ([EditAttributes]), which
+/// let the tool open the field an element shows in the Studio's editor.
 ///
 /// The start page answers `/` in every profile. Developer tools have their own
 /// address, `/dev`, under the `dev` profile.
@@ -31,11 +35,14 @@ public class ContentPageController {
     private final ContentService content;
     private final Previews previews;
     private final PageMetadataFactory metadata;
+    private final ContentSettings settings;
 
-    ContentPageController(ContentService content, Previews previews, PageMetadataFactory metadata) {
+    ContentPageController(ContentService content, Previews previews, PageMetadataFactory metadata,
+            ContentSettings settings) {
         this.content = content;
         this.previews = previews;
         this.metadata = metadata;
+        this.settings = settings;
     }
 
     /// @param pass the preview cookie, if any
@@ -43,6 +50,13 @@ public class ContentPageController {
     @ModelAttribute("perspective")
     public Perspective perspective(@CookieValue(name = Previews.COOKIE, required = false) @Nullable String pass) {
         return previews.perspective(pass);
+    }
+
+    /// @param perspective published or drafts
+    /// @return the `data-sanity` attributes the templates write, which are all null outside a preview
+    @ModelAttribute("edit")
+    public EditAttributes edit(@ModelAttribute("perspective") Perspective perspective) {
+        return EditAttributes.of(perspective, settings.studioUrl());
     }
 
     /// @param perspective published or drafts
