@@ -55,4 +55,35 @@ Editors use the Studio deployed to Sanity hosting, with the `production` dataset
 
 ### Not done
 
-The old WordPress site's content is not migrated. Editors enter it in the Studio.
+The old WordPress site's content is imported into the `dev` dataset by [`studio/import/wordpress.ts`](../../studio/import/wordpress.ts). The `production` dataset does not hold it yet, which is part of #196.
+
+## Verification
+
+Written by an agent on 2026-11-04, for #195 and #59. The runs used the shared development stack on strix, application build 5932464, Sanity project `gk5ur3tb`, dataset `dev`. Sanity reached the stack through a Tailscale Funnel and the share password, with a webhook made in sanity.io/manage as [`studio/README.md`](../../studio/README.md) describes. [`scripts/measure-publish.py`](../../scripts/measure-publish.py) repeats the timing: it publishes a test news item dated 2000-01-01, polls the item's page every 0.1 s, and deletes the item at the end.
+
+### R008, publish to visible
+
+Without the webhook, a publish shows when the copy expires and the next request fetches again. The slowest case is therefore 45 s, plus one query to Sanity, plus the time Sanity takes to accept the publish. A query from strix to `api.sanity.io` took 0.19 to 0.22 s.
+
+| Case | Runs | From Sanity accepting the publish to the changed page |
+|---|---|---|
+| No webhook, copy refreshed 1 to 2 s before the publish | 6 | 43.6 to 44.5 s |
+| No webhook, copy about 14 s old | 1 | 31.1 s |
+| Webhook, copy refreshed 1.1 to 1.6 s before the publish | 6 | 0.7 to 1.4 s |
+| Webhook, published in Studio's editor | 1 | 3.6 s |
+
+Sanity took 0.6 to 1.2 s to accept each publish, so counted from the publish itself the slowest run took 45.3 s, inside R008's minute. Every webhook delivery in these runs returned 204. Deliveries after several quiet minutes took 1.2 to 2.6 s instead of about 0.5 s, which is most of the Studio run's 3.6 s.
+
+A fetch already running when the webhook arrives stores what it read, which can predate the publish, for another 45 s. The webhook usually clears the copy at once, but the guarantee is the `max-age` bound.
+
+These numbers replace the runs of 2026-10-12, which were made on localhost while the project had no webhook, and so measured the expiry.
+
+### R009, preview
+
+Done in Firefox, in the Studio at `/studio/`, signed in as a project administrator:
+
+- After the test item's ingress was changed in the editor, the Presentation tool showed the draft ingress under the preview banner. The same page outside the preview, read from the application and through the Funnel, showed the published ingress.
+- The banner's link "Avsluta förhandsgranskningen" (end preview) deleted the cookie. The same page in the same frame then showed the published ingress, without the banner.
+- Ending the preview deletes the cookie and does not revoke the pass. A copied cookie value keeps working until its hour runs out.
+
+Presentation also waits for a visual-editing connection the site does not offer. It shows a connection error over the preview, which takes every click until the editor presses the second "Fortsätt ändå" (continue anyway) button, and its list of documents on the page stays empty: #198.
