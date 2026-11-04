@@ -1,4 +1,5 @@
 @import java.util.List
+@import se.teaterihuskvarna.content.EditAttributes
 @import se.teaterihuskvarna.content.NewsItem
 @import se.teaterihuskvarna.content.Perspective
 @import se.teaterihuskvarna.web.Copy
@@ -6,6 +7,7 @@
 @param Copy copy
 @param PageMetadata metadata
 @param Perspective perspective
+@param EditAttributes edit
 @param List<NewsItem> news
 @template.layout(metadata = metadata, copy = copy, title = copy.text("news.title"), preview = perspective == Perspective.DRAFTS, content = @`
     <h1>${copy.text("news.title")}</h1>
@@ -14,7 +16,7 @@
     @else
         <div class="cards">
         @for(NewsItem item : news)
-            @template.tag.newsCard(copy = copy, item = item, level = 2)
+            @template.tag.newsCard(copy = copy, item = item, edit = edit, level = 2)
         @endfor
         </div>
     @endif

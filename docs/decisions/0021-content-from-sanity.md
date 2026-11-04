@@ -25,6 +25,8 @@ The Decision section is the user's. Everything under Agent notes is an agent's.
 
 - Preview-secret exchange allows 20 requests per minute per client IP across the Studio and REST entry points. Exhausting that allowance returns HTTP 429. Decided by the user on 2026-09-30.
 
+- Preview pages load Sanity's visual-editing script, built into the application image, and mark every field they show with a `data-sanity` attribute, Portable Text down to each block, so the Presentation tool opens a field from a click on the page. A preview page reloads when a draft is saved. Decided by the user on 2026-11-04.
+
 ## Agent notes
 
 Written by an agent on 2026-09-28. Everything below is a default the user has not reviewed.
@@ -40,7 +42,12 @@ Written by an agent on 2026-09-28. Everything below is a default the user has no
 - On 2026-09-30, the agent implemented the preview allowance in [`Previews`](../../src/main/java/se/teaterihuskvarna/content/Previews.java). A rolling minute counts attempts before querying Sanity, including invalid secrets and query failures. Blank secrets trigger no query and consume no allowance. The service keeps at most 20 timestamps per active IP in memory, expires old timestamps and removes idle IPs on the next exchange. Restarting the application resets the counts. Both adapters supply the client address through `getRemoteAddr()`, using the existing proxy configuration. Issued passes remain usable when an IP exhausts its allowance.
 - Centralized staff accounts and provider-access management are deferred to [issue #63](https://github.com/AlexanderReaper7/teaterihuskvarna/issues/63), which the user requested at COULD priority on 2026-09-30. Preview keeps the per-IP rate limit while that work remains deferred.
 - Content pages send `Content-Security-Policy: frame-ancestors 'self' <SANITY_STUDIO_URL>`, every other page `X-Frame-Options: DENY`.
-- The preview shows drafts, not click-to-edit overlays. Overlays need stega encoding, which has no Java library, as [0006](0006-sanity-for-now.md) found. The Presentation tool's locations still link each document to the pages that show it.
+- Click-to-edit, added on 2026-11-04 for #198. [`layout.jte`](../../src/main/jte/layout.jte) loads `/js/visual-editing.js` on a preview page only. The [`Dockerfile`](../../Dockerfile) builds it with esbuild from [`visual-editing/`](../../visual-editing/), whose [`main.js`](../../visual-editing/main.js) connects the page to Presentation. Presentation's address bar follows the frame, and its own navigation moves the frame only within the site's origin. A saved draft reloads the page 1 s after the last save, because the server renders every page and the script has no other way to show a change.
+- [`EditAttributes`](../../src/main/java/se/teaterihuskvarna/content/EditAttributes.java) writes each `data-sanity` value in the format of `createDataAttribute` from `@sanity/visual-editing-csm`, so the overlays need no stega encoding. A template marks each field, [`PortableText`](../../src/main/java/se/teaterihuskvarna/content/PortableText.java) each block by its `_key`, and a gallery each image by its `_key`. [`PreviewEditingIT`](../../src/test/java/se/teaterihuskvarna/content/PreviewEditingIT.java) fails when a template names a field that no schema in [`studio/schemaTypes/`](../../studio/schemaTypes/) declares.
+- The Studio address in the attribute loses any trailing slash. The overlays build the edit link with `createEditUrl` from `@sanity/client`, which throws on one, and that error unmounted the overlays and dropped Presentation's connection on the first hover.
+- A click on a marked element opens the field in the editor instead of following a link, and a click with Ctrl or Shift goes to the page. Holding Alt hides the overlays. Every other link, the banner's "Avsluta förhandsgranskningen" included, works as on the site. Paragraphs and gallery images get a drag handle, which the package offers for items of one array.
+- Presentation sends its refresh only while a draft or a published version exists after a change. Discarding a draft therefore leaves the old page in the frame until the editor presses "Uppdatera förhandsgranskning" (refresh preview).
+- The script is 872 KB, 288 KB with gzip, and only a preview page loads it. [`licenses.mjs`](../../visual-editing/licenses.mjs) writes the licences of the 43 packages in it to `/js/visual-editing.licenses.txt`, since the minified file keeps only comments marked `@license`.
 - Development reads the same Sanity `dev` dataset as Studio. Integration and browser tests explicitly read [`fixture.json`](../../src/main/resources/content/fixture.json), with dates relative to today, so tests remain independent of Sanity and get the same content every run.
 - On 2026-09-30, the agent imported 16 published documents into project `gk5ur3tb`, dataset `dev`: 2 series, 4 events, 3 news items, 5 pages and 2 partners. The import preserved fixture IDs and content, converted series into references and resolved relative dates against 2026-09-30 in Europe/Stockholm. These dates stay fixed in Sanity; editors change them in Studio. The import created documents without overwriting existing ones, and a query verified every imported field against the generated documents.
 - The start page is `/` in every profile. Developer tools use `/dev` under the dev profile, moved at the user's request on 2026-09-30 so development presents the public site at its normal address.
@@ -86,4 +93,15 @@ Done in Firefox, in the Studio at `/studio/`, signed in as a project administrat
 - The banner's link "Avsluta förhandsgranskningen" (end preview) deleted the cookie. The same page in the same frame then showed the published ingress, without the banner.
 - Ending the preview deletes the cookie and does not revoke the pass. A copied cookie value keeps working until its hour runs out.
 
-Presentation also waits for a visual-editing connection the site does not offer. It shows a connection error over the preview, which takes every click until the editor presses the second "Fortsätt ändå" (continue anyway) button, and its list of documents on the page stays empty: #198.
+### R009, click-to-edit
+
+Written by an agent on 2026-11-04, for #198. Done in Firefox on the same stack with the application built from branch `198-visual-editing`, in the Studio at `/studio/`, on `/nyheter` and `/nyheter/varens-kaffe-med-drommar`:
+
+- Presentation connected, and its list "Dokument på den här sidan" (documents on this page) showed the news items on the page.
+- Hovering a news title drew an outline and the document's title over it. A click opened "Vårens Kaffe med drömmar" in the editor with the Rubrik (title) field focused, and the frame stayed on its page.
+- A click on the second paragraph of the body opened Brödtext (body text) at block `wp-529-2`.
+- After " TEST" was typed at the end of the title, the frame showed the new title 3.7 s after the typing started, through a reload. Discarding the draft left the frame unchanged until "Uppdatera förhandsgranskning" was pressed. A query to the dataset afterwards found only the published document, last changed on 2026-11-02.
+- Clicks on the banner's end link and on a menu link reached the page uncancelled. A click on a news title was cancelled and opened the editor.
+- The first build wrote the Studio address with the trailing slash that [`compose.share.yaml`](../../compose.share.yaml) gives `SANITY_STUDIO_URL`. The first hover threw "baseUrl must not end with a slash", the overlays unmounted, and Presentation showed its connection error. After the fix above, the overlays and the connection held through every hover and click in the run.
+
+Not tested: dragging a paragraph or a gallery image, holding Alt, the Studio on Sanity hosting, and a phone-width frame.

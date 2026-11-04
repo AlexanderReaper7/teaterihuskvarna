@@ -27,7 +27,7 @@ final class SanityContentSource implements ContentSource {
     /// Resolves the references a page needs, so one query per type is enough.
     /// A type without an entry comes back as stored.
     private static final Map<String, String> PROJECTIONS = Map.of(
-            "evenemang", "{..., \"serie\": serie->{\"title\": title, \"slug\": slug}}");
+            "evenemang", "{..., \"serie\": serie->{_id, \"title\": title, \"slug\": slug}}");
 
     private static final Duration TIMEOUT = Duration.ofSeconds(5);
 

@@ -120,8 +120,9 @@ public class ContentService {
     public List<NewsItem> news(Perspective perspective) {
         Instant now = clock.instant();
         List<NewsItem> news = new ArrayList<>();
+        EditAttributes edit = edit(perspective);
         for (JsonNode document : cache.documents("nyhet", perspective)) {
-            NewsItem item = newsItem(document);
+            NewsItem item = newsItem(document, edit);
             if (item != null && (perspective == Perspective.DRAFTS || !item.publishedAt().isAfter(now))) {
                 news.add(item);
             }
@@ -141,11 +142,13 @@ public class ContentService {
     /// @param perspective published, or drafts for a preview
     /// @return the page, or empty if the editors have not written it
     public Optional<Page> page(String slug, Perspective perspective) {
+        EditAttributes edit = edit(perspective);
         for (JsonNode document : cache.documents("sida", perspective)) {
+            String id = id(document);
             String title = Json.text(document, "title");
-            if (slug.equals(Json.slug(document)) && title != null) {
-                return Optional.of(new Page(slug, title, images.of(document.get("headerbild")),
-                        portableText.html(document.get("innehall"))));
+            if (slug.equals(Json.slug(document)) && id != null && title != null) {
+                return Optional.of(new Page(id, slug, title, images.of(document.get("headerbild")),
+                        portableText.html(document.get("innehall"), edit.blocks(id, "sida", "innehall"))));
             }
         }
         return Optional.empty();
@@ -155,13 +158,16 @@ public class ContentService {
     /// @return every production, the latest year first and those without a year last
     public List<Production> productions(Perspective perspective) {
         List<Production> productions = new ArrayList<>();
+        EditAttributes edit = edit(perspective);
         for (JsonNode document : cache.documents("produktion", perspective)) {
+            String id = id(document);
             String title = Json.text(document, "title");
-            if (title != null) {
+            if (id != null && title != null) {
                 Integer first = Json.integer(document, "ar");
                 Integer last = Json.integer(document, "tillAr");
-                productions.add(new Production(title, first, first == null || first.equals(last) ? null : last,
-                        images.of(document.get("huvudbild")), portableText.html(document.get("beskrivning"))));
+                productions.add(new Production(id, title, first, first == null || first.equals(last) ? null : last,
+                        images.of(document.get("huvudbild")),
+                        portableText.html(document.get("beskrivning"), edit.blocks(id, "produktion", "beskrivning"))));
             }
         }
         productions.sort(Comparator.comparing(ContentService::latestYear,
@@ -177,10 +183,11 @@ public class ContentService {
         }
         List<Ordered> board = new ArrayList<>();
         for (JsonNode document : cache.documents("styrelseledamot", perspective)) {
+            String id = id(document);
             String name = Json.text(document, "namn");
             String role = Json.text(document, "roll");
-            if (name != null && role != null) {
-                board.add(new Ordered(Json.integer(document, "ordning"), new BoardMember(name, role,
+            if (id != null && name != null && role != null) {
+                board.add(new Ordered(Json.integer(document, "ordning"), new BoardMember(id, name, role,
                         images.of(document.get("bild")), Json.text(document, "ansvar"))));
             }
         }
@@ -193,12 +200,14 @@ public class ContentService {
     /// @return every Ludde prize, the latest year first
     public List<LuddePrize> luddePrizes(Perspective perspective) {
         List<LuddePrize> prizes = new ArrayList<>();
+        EditAttributes edit = edit(perspective);
         for (JsonNode document : cache.documents("luddepris", perspective)) {
+            String id = id(document);
             String recipient = Json.text(document, "mottagare");
             Integer year = Json.integer(document, "ar");
-            if (recipient != null && year != null) {
-                prizes.add(new LuddePrize(recipient, year, images.of(document.get("bild")),
-                        portableText.html(document.get("motivering"))));
+            if (id != null && recipient != null && year != null) {
+                prizes.add(new LuddePrize(id, recipient, year, images.of(document.get("bild")),
+                        portableText.html(document.get("motivering"), edit.blocks(id, "luddepris", "motivering"))));
             }
         }
         prizes.sort(Comparator.comparing(LuddePrize::year).reversed()
@@ -211,9 +220,10 @@ public class ContentService {
     public List<Partner> partners(Perspective perspective) {
         List<Partner> partners = new ArrayList<>();
         for (JsonNode document : cache.documents("partner", perspective)) {
+            String id = id(document);
             String name = Json.text(document, "namn");
-            if (name != null) {
-                partners.add(new Partner(name, images.of(document.get("logotyp")),
+            if (id != null && name != null) {
+                partners.add(new Partner(id, name, images.of(document.get("logotyp")),
                         webAddress(Json.text(document, "webbplats")), Json.text(document, "beskrivning")));
             }
         }
@@ -257,8 +267,9 @@ public class ContentService {
 
     private List<Event> events(Perspective perspective) {
         List<Event> events = new ArrayList<>();
+        EditAttributes edit = edit(perspective);
         for (JsonNode document : cache.documents("evenemang", perspective)) {
-            Event event = event(document);
+            Event event = event(document, edit);
             if (event != null) {
                 events.add(event);
             }
@@ -267,8 +278,8 @@ public class ContentService {
         return events;
     }
 
-    private @Nullable Event event(JsonNode document) {
-        String id = Json.text(document, "_id");
+    private @Nullable Event event(JsonNode document, EditAttributes edit) {
+        String id = id(document);
         String slug = Json.slug(document);
         String title = Json.text(document, "title");
         Instant startsAt = Json.instant(document, "datumTid");
@@ -282,24 +293,27 @@ public class ContentService {
                 gallery.add(image);
             }
         }
-        return new Event(publishedId(id), slug, title, series(document.get("serie")), startsAt,
+        return new Event(id, slug, title, series(document.get("serie")), startsAt,
                 Json.text(document, "plats"), Json.text(document, "ingress"), images.of(document.get("huvudbild")),
-                portableText.html(document.get("beskrivning")), List.copyOf(gallery),
+                portableText.html(document.get("beskrivning"), edit.blocks(id, "evenemang", "beskrivning")),
+                List.copyOf(gallery),
                 webAddress(Json.text(document, "biljettlank")));
     }
 
-    private @Nullable NewsItem newsItem(JsonNode document) {
+    private @Nullable NewsItem newsItem(JsonNode document, EditAttributes edit) {
+        String id = id(document);
         String slug = Json.slug(document);
         String title = Json.text(document, "title");
         Instant publishedAt = Json.instant(document, "publiceringsdatum");
         if (publishedAt == null) {
             publishedAt = Json.instant(document, "_createdAt");
         }
-        if (slug == null || title == null || publishedAt == null) {
+        if (id == null || slug == null || title == null || publishedAt == null) {
             return null;
         }
-        return new NewsItem(slug, title, publishedAt, Json.text(document, "ingress"),
-                images.of(document.get("huvudbild")), portableText.html(document.get("brodtext")),
+        return new NewsItem(id, slug, title, publishedAt, Json.text(document, "ingress"),
+                images.of(document.get("huvudbild")),
+                portableText.html(document.get("brodtext"), edit.blocks(id, "nyhet", "brodtext")),
                 webAddress(Json.text(document, "video")));
     }
 
@@ -312,15 +326,27 @@ public class ContentService {
         if (node == null) {
             return null;
         }
+        String id = id(node);
         String slug = Json.slug(node);
         String title = Json.text(node, "title");
-        return slug == null || title == null ? null : new Series(slug, title);
+        return id == null || slug == null || title == null ? null : new Series(id, slug, title);
     }
 
     /// Drafts come back with their published id under the drafts perspective,
     /// but a fixture or an older API version may give `drafts.<id>`.
-    private static String publishedId(String id) {
+    ///
+    /// @return the published document's id, or null when the document has none
+    private static @Nullable String id(JsonNode document) {
+        String id = Json.text(document, "_id");
+        if (id == null) {
+            return null;
+        }
         return id.startsWith("drafts.") ? id.substring("drafts.".length()) : id;
+    }
+
+    /// @return the `data-sanity` attributes for pages in this perspective
+    private EditAttributes edit(Perspective perspective) {
+        return EditAttributes.of(perspective, settings.studioUrl());
     }
 
     /// @return the address if it is http or https, which is all a link on the page may be, otherwise null
