@@ -29,3 +29,7 @@ Answer: pending.
 - [ ] **C29. Which official accounts does the association own, and on which address?** The plan says every account is registered to a role address the board owns, such as `webb@teaterihuskvarna.se`, never to a student or one board member. Today the repository and the Sanity project `gk5ur3tb` are under personal logins ([decisions/0002](../decisions/0002-accounts-under-a-personal-login.md)), and the Brevo checks so far ran in team members' own accounts. Deploying the editors' Studio to Sanity hosting (#196) needs the association's Sanity account to own the project, and the same holds for Brevo, the hosting provider and the domain. Does the role address exist, who creates each account, and by when? C3 asks which board members then get administrator access.
 
 Answer: pending.
+
+- [ ] **C30. How should removing an administrator be controlled (R026)?** Today the application refuses a removal while two or fewer administrators remain, and nobody can remove themselves ([the plan](../projektplan.md)). Issue #80 (R026: Admin removal requires additional control) proposes more: approval from several administrators, or a log that shows who removed whom and when. Is R026 a MUST, SHOULD or COULD? Is a log enough, or does a removal need approval, and from how many administrators? #80 also asks what "superrättigheter" (super permissions) means, since R011 has only two roles, member and administrator.
+
+Answer: pending.
