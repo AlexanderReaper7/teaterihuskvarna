@@ -136,14 +136,14 @@ The `dev` dataset contains 16 invented demo documents imported on 2026-09-30. Ev
 
 ### Sharing the dev stack
 
-A Tailscale Funnel shows the dev stack to people off the tailnet. [`compose.share.yaml`](compose.share.yaml) puts the site, Mailpit and Studio behind a password and points login links at the public address. The administration link opens Studio at `/studio/` on that address, and Studio previews the shared site. Add the shared origin to the Sanity project's CORS origins with credentials. Add the share file to `COMPOSE_FILE`, set `SHARE_URL` and `SHARE_BASIC_AUTH` as [`.env.example`](.env.example) describes, then:
+A Tailscale Funnel shows the dev stack to people off the tailnet. [`compose.share.yaml`](compose.share.yaml) puts the site, Mailpit and Studio behind a password and points login links at the public address. The administration link opens Studio at `/studio/` on that address, and Studio previews the shared site. Add the shared origin to the Sanity project's CORS origins with credentials. Add the share file to `COMPOSE_FILE`, set `SHARE_URL` and `SHARE_BASIC_AUTH` as [`.env.example`](.env.example) describes, and `SHARE_WEBHOOK_BASIC_AUTH` too if Sanity's publish webhook should reach the stack, then:
 
 ```sh
 docker compose up -d --build
 tailscale funnel --bg --https=8443 "$PROXY_HTTP_PORT"   # tailscale funnel --https=8443 off to close it
 ```
 
-Funnel publishes a machine name, never a Tailscale Service name, so the address is `https://<machine>.<tailnet>.ts.net:8443`. Port 8443 because 443 on the machine may already serve something tailnet-only. The dev index sends a login link for any seeded account, administrator included, which is why the password covers everything.
+Funnel publishes a machine name, never a Tailscale Service name, so the address is `https://<machine>.<tailnet>.ts.net:8443`. Funnel serves only ports 443, 8443 and 10000 ([Tailscale's Funnel page](https://tailscale.com/kb/1223/funnel)). The command accepts another port and prints "Available on the internet", but the public relay never connects to it. Take one of the three that `tailscale serve status` does not list, and put the same port in `SHARE_URL`. Changing the serve settings needs root once they serve a directory or a socket; an operator is not enough then. The dev index sends a login link for any seeded account, administrator included, which is why the password covers everything. The one exception is `/api/sanity/webhook`, which takes the webhook's own login instead; [`studio/README.md`](studio/README.md) describes the webhook.
 
 V1 was edited on 2026-09-23, before any deploy, to move the email address from
 `member` to `account`. A database volume created before that fails Flyway's

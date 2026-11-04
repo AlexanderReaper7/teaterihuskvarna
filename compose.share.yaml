@@ -19,6 +19,16 @@ services:
       # htpasswd lines. Compose does not interpolate a value it substituted, so
       # the $ in a bcrypt hash needs no doubling here, only single quotes in .env.
       traefik.http.middlewares.share-auth.basicauth.users: ${SHARE_BASIC_AUTH:?set SHARE_BASIC_AUTH in .env}
+      # Sanity's webhook logs in through a header stored in the Sanity project,
+      # so its login opens this one path and nothing else. The application
+      # checks the webhook's signature as well. Without SHARE_WEBHOOK_BASIC_AUTH
+      # the path takes the ordinary share login.
+      traefik.http.routers.sanity-webhook.rule: Path(`/api/sanity/webhook`)
+      traefik.http.routers.sanity-webhook.priority: "100"
+      traefik.http.routers.sanity-webhook.entrypoints: web
+      traefik.http.routers.sanity-webhook.service: app
+      traefik.http.routers.sanity-webhook.middlewares: share-webhook-auth
+      traefik.http.middlewares.share-webhook-auth.basicauth.users: ${SHARE_WEBHOOK_BASIC_AUTH:-${SHARE_BASIC_AUTH}}
 
   mail:
     labels:
