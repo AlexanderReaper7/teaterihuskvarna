@@ -42,4 +42,20 @@ Written by an agent on 2026-09-28. Everything below is a default the user has no
 - [`V13__brevo_contacts.sql`](../../src/main/resources/db/migration/V13__brevo_contacts.sql) queues every member with an account once, so the list starts complete, and drops the per-mailing list columns.
 - A mailing no longer knows how many it reaches when it is prepared. The log shows Brevo's count of mails sent instead.
 - The list is made once by hand in Brevo and named by `BREVO_LIST_ID`.
-- Not verified against a real account: that `emailBlacklisted: true` sent with a new address keeps the contact blocklisted, that an empty string clears a text attribute and `null` a date, that Brevo answers 400 for an attribute that exists, and that a date attribute takes `yyyy-MM-dd`. They follow Brevo's API reference as read on 2026-09-28. [`HttpBrevoTest`](../../src/test/java/se/teaterihuskvarna/mailing/HttpBrevoTest.java) checks only the requests the application sends.
+- Not verified against a real account: that `emailBlacklisted: true` sent with a new address keeps the contact blocklisted, that an empty string clears a text attribute and `null` a date, that Brevo answers 400 for an attribute that exists, and that a date attribute takes `yyyy-MM-dd`. They follow Brevo's API reference as read on 2026-09-28. [`HttpBrevoTest`](../../src/test/java/se/teaterihuskvarna/mailing/HttpBrevoTest.java) checks only the requests the application sends. The run under Verification covered none of them: the attributes did not exist yet, and it involved no shift and no changed address.
+
+## Verification
+
+Written by an agent on 2026-11-04, for #200. The application ran from build 88f09be with `BREVO_API=http`, the dev profile and fixture content, against the development Brevo account, which accepts calls only from the address it authorises. The members' list and the test list were made for the run. A Playwright script drove the pages and read Brevo's API after each step. No mail was sent, neither a test nor a campaign.
+
+| Step | What Brevo, or the page, showed |
+|---|---|
+| Two people joined through `/bli-medlem` and confirmed | Each was a contact on the members' list 0.2 to 1.5 s later, found by `ext_id` as the member's id, with `NAMN` their name, not blocklisted |
+| The first contact | The application had made `NAMN`, `PAID_YEAR` and `OFFERS` as text and `LAST_SHIFT` as a date |
+| The administrator marked one member's fee paid | `PAID_YEAR` was `2026` 1.3 s later |
+| The administrator deleted the other member | The contact was gone 0.1 s after the page answered |
+| Preview to every member | 1 member reached, the number of contacts on the list that were not blocklisted |
+| The draft | A campaign in status `draft` to the members' list and nothing else, from the verified sender, with the typed text and `{{ unsubscribe }}` in its HTML. The log showed it as Utkast |
+| The list's only contact blocklisted through Brevo's API | The preview said 0 members were reached, gave the reason, and offered no draft. Posting its form anyway showed the form again with the reason, and the API answered 409 `Audience reaches no one`. Brevo still held one campaign, and the application had logged one mailing |
+
+The outbox was empty at the end, so every contact change had succeeded, and the application logged no warning or error. Not covered: a segment, which Brevo's API cannot create, `listUnsubscribed`, which the development account does not use, and a send.
