@@ -1,6 +1,9 @@
 package se.teaterihuskvarna.content;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doReturn;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 
@@ -25,6 +28,9 @@ import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 import se.teaterihuskvarna.IntegrationTestSupport;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.node.ArrayNode;
+import tools.jackson.databind.node.ObjectNode;
 
 /// R009 with the Studio's Presentation tool: a preview page loads Sanity's
 /// visual-editing script and marks what each element shows with a
@@ -44,6 +50,13 @@ class PreviewEditingIT extends IntegrationTestSupport {
 
     private static final Pattern ATTRIBUTE = Pattern.compile("data-sanity=\"([^\"]*)\"");
     private static final Pattern FIELD = Pattern.compile("(?:name: '|imageField\\(')([A-Za-z]+)'");
+    private static final Pattern PICTURE = Pattern.compile("<img [^>]*>");
+
+    /// The picture field of each type. A preview of an event also gets a gallery.
+    private static final Map<String, String> PICTURE_FIELDS = Map.of("evenemang", "huvudbild", "nyhet", "huvudbild",
+            "sida", "headerbild", "produktion", "huvudbild", "styrelseledamot", "bild", "luddepris", "bild",
+            "partner", "logotyp");
+    private static final String PICTURE_REFERENCE = "image-Tb9Ew8CXIwaY6R1kjMvI0uRR-2000x3000-jpg";
 
     @MockitoSpyBean
     private ContentSource source;
@@ -81,6 +94,37 @@ class PreviewEditingIT extends IntegrationTestSupport {
         assertThat(page).contains("<h2 data-sanity=\"id=evenemang-mitt-i-veckan;type=evenemang;path=beskrivning:h;");
     }
 
+    /// The fixture has no pictures, because the browser tests would fetch them
+    /// from Sanity's CDN. This test gives every document of the preview its
+    /// type's picture field, so each place a template shows a picture is
+    /// checked.
+    @Test
+    void aPreviewMarksEveryPicture() throws Exception {
+        doAnswer(invocation -> ((List<?>) invocation.callRealMethod()).stream()
+                .map(document -> withPictures((JsonNode) document)).toList())
+                .when(source).documents(anyString(), eq(Perspective.DRAFTS));
+        String pass = pass();
+        Set<String> marked = new HashSet<>();
+        for (String path : PAGES) {
+            Matcher picture = PICTURE.matcher(html(path, pass));
+            while (picture.find()) {
+                String tag = picture.group();
+                if (!tag.contains("src=\"https://cdn.sanity.io/")) {
+                    continue;
+                }
+                List<Attribute> attributes = attributes(tag);
+                assertThat(attributes).as(path + " " + tag).hasSize(1);
+                Attribute attribute = attributes.get(0);
+                assertThat(schemaFields(attribute.type())).as(path + " " + attribute)
+                        .contains(attribute.path().split(":")[0]);
+                marked.add(attribute.type() + " " + attribute.path());
+            }
+        }
+        assertThat(marked).containsExactlyInAnyOrder("evenemang huvudbild", "evenemang bildgalleri:g1",
+                "evenemang bildgalleri:g2", "nyhet huvudbild", "sida headerbild", "produktion huvudbild",
+                "styrelseledamot bild", "luddepris bild", "partner logotyp");
+    }
+
     @Test
     void aVisitorsPageLoadsNoEditingAndNamesNoFields() throws Exception {
         for (String path : PAGES) {
@@ -102,6 +146,27 @@ class PreviewEditingIT extends IntegrationTestSupport {
         MvcResult result = mockMvc.perform(request).andReturn();
         assertThat(result.getResponse().getStatus()).as(path).isEqualTo(200);
         return result.getResponse().getContentAsString(StandardCharsets.UTF_8);
+    }
+
+    private static JsonNode withPictures(JsonNode document) {
+        String field = PICTURE_FIELDS.get(Json.text(document, "_type"));
+        if (field == null || !(document.deepCopy() instanceof ObjectNode copy)) {
+            return document;
+        }
+        picture(copy.putObject(field));
+        if ("evenemang".equals(Json.text(document, "_type"))) {
+            ArrayNode gallery = copy.putArray("bildgalleri");
+            for (String key : List.of("g1", "g2")) {
+                picture(gallery.addObject()).put("_key", key);
+            }
+        }
+        return copy;
+    }
+
+    private static ObjectNode picture(ObjectNode image) {
+        image.put("_type", "image");
+        image.putObject("asset").put("_ref", PICTURE_REFERENCE);
+        return image;
     }
 
     /// One `data-sanity` value, split the way the overlays split it.
