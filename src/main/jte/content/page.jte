@@ -28,8 +28,10 @@
                 <article class="card">
                     @template.tag.image(image = production.image(), source = edit.field(production, "huvudbild"))
                     <h2 data-sanity="${edit.field(production, "title")}">${production.title()}</h2>
-                    @if(first != null)
-                        <p class="meta" data-sanity="${edit.field(production, "ar")}">@if(last != null)${copy.text("productions.years", String.valueOf(first), String.valueOf(last))}@else${String.valueOf(first)}@endif</p>
+                    @if(first != null && last != null)
+                        <p class="meta"><span data-sanity="${edit.field(production, "ar")}">${String.valueOf(first)}</span>${copy.text("productions.years.between")}<span data-sanity="${edit.field(production, "tillAr")}">${String.valueOf(last)}</span></p>
+                    @elseif(first != null)
+                        <p class="meta" data-sanity="${edit.field(production, "ar")}">${String.valueOf(first)}</p>
                     @endif
                     $unsafe{production.bodyHtml()}
                 </article>

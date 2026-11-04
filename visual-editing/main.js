@@ -26,19 +26,17 @@ enableVisualEditing({
         return
       }
       // Another frame in the Studio can post to this one too. Following
-      // only a path on this site keeps a javascript: address out.
+      // only an address on this site keeps a javascript: address out. The
+      // whole address is followed, not its path: a path such as
+      // //other.example/ names another host.
       const target = new URL(update.url, window.location.href)
-      if (target.origin !== window.location.origin) {
-        return
-      }
-      const path = target.pathname + target.search + target.hash
-      if (path === here()) {
+      if (target.origin !== window.location.origin || target.href === window.location.href) {
         return
       }
       if (update.type === 'replace') {
-        window.location.replace(path)
+        window.location.replace(target.href)
       } else {
-        window.location.assign(path)
+        window.location.assign(target.href)
       }
     },
   },

@@ -126,6 +126,14 @@ class PreviewEditingIT extends IntegrationTestSupport {
     }
 
     @Test
+    void eachYearOfAProductionOpensItsOwnField() throws Exception {
+        String page = html("/produktioner", pass());
+
+        assertThat(page).contains("<span data-sanity=\"id=produktion-tusen;type=produktion;path=ar;",
+                "<span data-sanity=\"id=produktion-tusen;type=produktion;path=tillAr;");
+    }
+
+    @Test
     void aVisitorsPageLoadsNoEditingAndNamesNoFields() throws Exception {
         for (String path : PAGES) {
             String page = html(path, null);
