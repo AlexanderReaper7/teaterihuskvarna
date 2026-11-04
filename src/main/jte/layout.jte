@@ -35,6 +35,11 @@
     <script src="/js/forms.js" defer></script>
     <script src="/js/menu.js" defer></script>
     <script src="/js/tables.js" defer></script>
+    @if(preview)
+        <%-- Connects the page to the Studio's Presentation tool, built into the image from visual-editing/. --%>
+        <link rel="stylesheet" href="/css/visual-editing.css">
+        <script type="module" src="/js/visual-editing.js"></script>
+    @endif
 </head>
 <body>
 <a class="skip-link" href="#innehall">${copy.text("site.skip")}</a>
