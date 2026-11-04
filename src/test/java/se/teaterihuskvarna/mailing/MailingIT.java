@@ -36,7 +36,8 @@ import se.teaterihuskvarna.login.SignedIn;
 /// - Preparing makes a draft to the members' list or to a Brevo segment, and
 ///   logs it.
 /// - The audiences are the list and Brevo's segments, and a segment holding
-///   anyone not on the members' list is refused.
+///   anyone not on the members' list is refused, as is an audience that
+///   reaches no member.
 /// - A test goes to the signed-in administrator.
 /// - The log shows what Brevo last reported.
 class MailingIT extends IntegrationTestSupport {
@@ -50,6 +51,8 @@ class MailingIT extends IntegrationTestSupport {
     void fake() {
         fake = (FakeBrevo) brevo;
         fake.segments(List.of());
+        // The fake's list is every member with an account.
+        insertAccount("Maja Medlem", "maja@example.test");
     }
 
     @Test
@@ -172,6 +175,7 @@ class MailingIT extends IntegrationTestSupport {
     @Test
     void aSegmentMadeInBrevoIsAnAudience() throws Exception {
         fake.segments(List.of(new Brevo.Segment(7, "Betalat 2026")));
+        fake.reach(7, new MailingReach(3, 0));
 
         mockMvc.perform(get("/api/admin/mailings/audiences").with(asAdministrator()))
                 .andExpect(jsonPath("$.segmentsUnavailable").value(false))
@@ -223,6 +227,37 @@ class MailingIT extends IntegrationTestSupport {
                         .content("{\"subject\": \"Hej\", \"intro\": \"Hej\", \"audience\": \"SEGMENT:8\"}"))
                 .andExpect(status().isConflict());
         assertThat(rowsIn("mailing")).isZero();
+    }
+
+    /// An audience in which no member can receive the mail, because it is
+    /// empty or everyone in it has unsubscribed, makes no draft and says why
+    /// instead of asking to try again: #200.
+    @Test
+    void anAudienceThatReachesNoMemberMakesNoDraft() throws Exception {
+        jdbc.sql("DELETE FROM account").update();
+        fake.segments(List.of(new Brevo.Segment(9, "Ingen kvar")));
+        fake.reach(9, new MailingReach(0, 0));
+        int campaigns = fake.campaignCount();
+
+        for (String audience : List.of("LIST", "SEGMENT:9")) {
+            mockMvc.perform(post("/admin/utskick/forhandsgranska").with(asAdministrator()).with(csrf())
+                            .param("audience", audience).param("subject", "Hej").param("intro", "Hej"))
+                    .andExpect(content().string(containsString("<dd>0 medlemmar</dd>")))
+                    .andExpect(content().string(containsString("Utskicket skulle nå 0 medlemmar.")))
+                    .andExpect(content().string(not(containsString("formaction=\"/admin/utskick\""))));
+            mockMvc.perform(post("/admin/utskick").with(asAdministrator()).with(csrf())
+                            .param("audience", audience).param("subject", "Hej").param("intro", "Hej"))
+                    .andExpect(status().isOk())
+                    .andExpect(content().string(containsString("Utskicket skulle nå 0 medlemmar.")))
+                    .andExpect(content().string(not(containsString("Försök igen om en stund"))));
+            mockMvc.perform(post("/api/admin/mailings").with(asAdministrator()).with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"subject\": \"Hej\", \"intro\": \"Hej\", \"audience\": \"" + audience + "\"}"))
+                    .andExpect(status().isConflict())
+                    .andExpect(jsonPath("$.title").value("Audience reaches no one"));
+        }
+        assertThat(rowsIn("mailing")).isZero();
+        assertThat(fake.campaignCount()).isEqualTo(campaigns);
     }
 
     @Test

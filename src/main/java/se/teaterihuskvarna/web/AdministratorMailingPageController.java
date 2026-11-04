@@ -16,6 +16,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import se.teaterihuskvarna.login.SignedIn;
 import se.teaterihuskvarna.mailing.AudienceHasNonMembers;
 import se.teaterihuskvarna.mailing.BrevoUnavailable;
+import se.teaterihuskvarna.mailing.EmptyAudience;
 import se.teaterihuskvarna.mailing.EmptyMailing;
 import se.teaterihuskvarna.mailing.MailingDetails;
 import se.teaterihuskvarna.mailing.MailingForm;
@@ -107,7 +108,8 @@ public class AdministratorMailingPageController {
             prepared = mailings.prepare(form, signedIn.id());
         } catch (ConstraintViolationException e) {
             return page(form, FieldErrors.of(e), model);
-        } catch (EmptyMailing | UnknownContent | UnknownAudience | AudienceHasNonMembers | BrevoUnavailable e) {
+        } catch (EmptyMailing | UnknownContent | UnknownAudience | AudienceHasNonMembers | EmptyAudience
+                | BrevoUnavailable e) {
             model.addAttribute("error", message(e));
             return page(form, FieldErrors.none(), model);
         }
@@ -161,6 +163,7 @@ public class AdministratorMailingPageController {
             case EmptyMailing _ -> "adminMailings.error.empty";
             case UnknownContent _ -> "adminMailings.error.content";
             case UnknownAudience _ -> "adminMailings.error.audience";
+            case EmptyAudience _ -> "adminMailings.error.noRecipients";
             default -> "adminMailings.error.brevo";
         };
         return copy.text(key);

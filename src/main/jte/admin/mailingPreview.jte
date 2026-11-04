@@ -21,6 +21,8 @@
     </dl>
     @if(reach != null && reach.nonMembers() > 0)
         <p role="alert">${copy.text("adminMailings.error.nonMembers", reach.nonMembers())}</p>
+    @elseif(reach != null && reach.members() == 0)
+        <p role="alert">${copy.text("adminMailings.error.noRecipients")}</p>
     @endif
     <p>${copy.text("adminMailings.preview.unsubscribe")}</p>
     <iframe title="${copy.text("adminMailings.preview.frame")}" sandbox srcdoc="${html}"
@@ -38,7 +40,7 @@
             <input type="hidden" name="news" value="${slug}">
         @endfor
         <div class="buttons">
-            @if(reach == null || reach.nonMembers() == 0)
+            @if(reach == null || (reach.nonMembers() == 0 && reach.members() > 0))
                 <button type="submit" formaction="/admin/utskick">@template.icon.plus() ${copy.text("adminMailings.preview.prepare")}</button>
             @endif
             <button type="submit" formaction="/admin/utskick/andra" class="button-secondary">@template.icon.pencil() ${copy.text("adminMailings.preview.change")}</button>

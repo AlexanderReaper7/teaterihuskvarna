@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 import org.jspecify.annotations.Nullable;
+import org.springframework.jdbc.core.simple.JdbcClient;
 
 /// Keeps every call in memory and sends nothing, for development and the
 /// tests. A campaign reports `draft` until [#markSent] is called, the way a
@@ -13,6 +14,7 @@ import org.jspecify.annotations.Nullable;
 /// segments until a test gives it some with [#segments(List)].
 final class FakeBrevo implements Brevo {
 
+    private final JdbcClient jdbc;
     private final AtomicLong ids = new AtomicLong(100);
     private final Map<Long, Contact> contacts = new LinkedHashMap<>();
     private final Map<Long, Campaign> campaigns = new LinkedHashMap<>();
@@ -20,6 +22,11 @@ final class FakeBrevo implements Brevo {
     private final List<String> tests = new ArrayList<>();
     private List<Segment> segments = List.of();
     private final Map<Long, MailingReach> reaches = new LinkedHashMap<>();
+
+    /// @param jdbc the database, whose accounts are the members' list
+    FakeBrevo(JdbcClient jdbc) {
+        this.jdbc = jdbc;
+    }
 
     @Override
     public synchronized void saveContact(Contact contact) {
@@ -36,14 +43,21 @@ final class FakeBrevo implements Brevo {
         return segments;
     }
 
-    /// The list reaches every contact the fake holds; a segment reaches what a
-    /// test set with [#reach(long, MailingReach)], or nobody.
+    /// The list reaches every member with an account, as the real list does
+    /// once [BrevoContacts] has caught up. The contacts the fake was handed
+    /// would undercount it: the development seed and the browser tests write
+    /// accounts with SQL, which hands the fake nothing, and the fake forgets
+    /// its contacts on a restart while the database keeps its accounts. A
+    /// segment reaches what a test set with [#reach(long, MailingReach)], or
+    /// nobody.
     @Override
-    public synchronized MailingReach reach(@Nullable Long segmentId) {
+    public MailingReach reach(@Nullable Long segmentId) {
         if (segmentId == null) {
-            return new MailingReach(contacts.size(), 0);
+            return new MailingReach(jdbc.sql("SELECT count(*) FROM account").query(Long.class).single(), 0);
         }
-        return reaches.getOrDefault(segmentId, new MailingReach(0, 0));
+        synchronized (this) {
+            return reaches.getOrDefault(segmentId, new MailingReach(0, 0));
+        }
     }
 
     @Override
@@ -95,6 +109,11 @@ final class FakeBrevo implements Brevo {
     synchronized void segments(List<Segment> given) {
         segments = List.copyOf(given);
         reaches.clear();
+    }
+
+    /// @return how many campaigns were made
+    synchronized int campaignCount() {
+        return campaigns.size();
     }
 
     /// @param campaignId a campaign
