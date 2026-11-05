@@ -110,6 +110,40 @@ Du kan kasta alla ändringar du har gjort sedan sidan senast publicerades.
    ![Frågan Discard changes med knapparna Cancel och Discard changes](img/editor-guide/sida-kasta.png)
 
 ## Lägg till eller ändra en partner
+Partnerna visas på sidan `/partners` på webbplatsen.
+
+### Lägg till en ny partner
+
+1. Klicka på **Partner** i listan **Content** till vänster. De partners som finns visas i mittenkolumnen.
+2. Klicka på plustecknet (**+**) högst upp i den mittersta kolumnen. Ett nytt, tomt formulär öppnas till höger.
+
+   ![Ett nytt, tomt partnerformulär i Sanity Studio](img/editor-guide/partner-ny.png)
+   Formuläret kan också visas över hela fönstret.
+
+3. Fyll i fälten uppifrån och ned.
+
+   | Fält | Vad du gör |
+   |------|------------|
+   | **Namn** | Skriv partnerns namn. |
+   | **Logotyp** | Dra en bild hit eller klistra in den. Du kan också klicka på **Upload** för att välja en bild från datorn, eller **Select** för att välja en bild som redan finns. |
+   | **Alternativ text** | Beskriv bilden för den som inte ser den, till exempel "Logotyp för Exempelpartner". |
+   | **Webbplats** | Skriv partnerns hela webbadress. Den måste börja med `https://` eller `http://`. |
+   | **Beskrivning** | Skriv en kort text om partnern. |
+
+   Du måste bara fylla i **Namn** för att kunna publicera.
+
+   ![En ifylld partner med den aktiva knappen Publish längst ned till höger](img/editor-guide/partner-publicera.png)
+
+4. Klicka på knappen **Publish** längst ned till höger.
+5. Kontrollera att fliken **Published** nu är markerad högst upp. Partnern syns på webbplatsen inom en minut.
+
+### Ändra en partner som redan finns
+
+1. Klicka på **Partner** i listan **Content** till vänster.
+2. Klicka på partnern i mittenkolumnen. Formuläret öppnas till höger.
+3. Ändra det du vill, till exempel **Webbplats** eller **Beskrivning**.
+4. Klicka på knappen **Publish** längst ned till höger.
+5. Kontrollera att fliken **Published** är markerad. Ändringen syns på webbplatsen inom en minut.
 
 ## Förhandsgranska ett utkast
 
