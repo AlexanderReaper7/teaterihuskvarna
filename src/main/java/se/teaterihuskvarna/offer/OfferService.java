@@ -3,6 +3,7 @@ package se.teaterihuskvarna.offer;
 import jakarta.validation.Valid;
 import java.time.Instant;
 import java.time.format.DateTimeFormatter;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -33,6 +34,10 @@ import se.teaterihuskvarna.member.MemberChanged;
 @Transactional(readOnly = true)
 public class OfferService {
 
+    /// Offers without a start time last, as they have no date to sort by.
+    private static final Comparator<OfferDetails> SOONEST_FIRST =
+            Comparator.comparing(OfferDetails::startsAt, Comparator.nullsLast(Comparator.naturalOrder()));
+
     private static final DateTimeFormatter CSV_TIME = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")
             .withZone(OfferForm.SWEDEN);
 
@@ -59,6 +64,20 @@ public class OfferService {
         return open.stream()
                 .map(offer -> memberOffer(offer, counts.getOrDefault(offer.getId(), 0L),
                         mine.contains(offer.getId()), now))
+                .toList();
+    }
+
+    /// Includes an offer whose registration has closed, which [#openOffers]
+    /// leaves out, so the member still sees what they are going to.
+    ///
+    /// @param memberId the member asking
+    /// @return the published offers the member is registered for that have not started, soonest first
+    public List<MemberOffer> registeredOffers(long memberId) {
+        Instant now = Instant.now();
+        List<Offer> mine = offers.findUpcomingRegisteredBy(memberId, now);
+        Map<Long, Long> counts = counts(mine);
+        return mine.stream()
+                .map(offer -> memberOffer(offer, counts.getOrDefault(offer.getId(), 0L), true, now))
                 .toList();
     }
 
@@ -135,6 +154,13 @@ public class OfferService {
         return all.stream()
                 .map(offer -> OfferDetails.of(offer, counts.getOrDefault(offer.getId(), 0L), now))
                 .toList();
+    }
+
+    /// @return the offers that have not started, published or not, the soonest first and those without a start
+    ///         time last, as the administrators' start page lists them
+    public List<OfferDetails> upcoming() {
+        Instant now = Instant.now();
+        return list().stream().filter(offer -> notStarted(offer, now)).sorted(SOONEST_FIRST).toList();
     }
 
     /// @param id the offer
@@ -256,5 +282,10 @@ public class OfferService {
 
     private String text(String key) {
         return messages.getMessage(key, null, Swedish.LOCALE);
+    }
+
+    private static boolean notStarted(OfferDetails offer, Instant now) {
+        Instant startsAt = offer.startsAt();
+        return startsAt == null || startsAt.isAfter(now);
     }
 }

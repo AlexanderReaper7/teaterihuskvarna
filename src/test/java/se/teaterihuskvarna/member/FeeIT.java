@@ -1,6 +1,7 @@
 package se.teaterihuskvarna.member;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.not;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
@@ -12,12 +13,14 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
+import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
 
 /// Proves the fee rules (R013, R019): what a member sees for this year, how an
@@ -77,6 +80,29 @@ class FeeIT extends MemberRegisterSupport {
                 .andExpect(jsonPath("$.fee.payment.message").value(JOHAN_EMAIL));
     }
 
+    /// The register reads the listed members' accounts in one query, and each
+    /// payment instruction still names the member's own address (#91). A member
+    /// without an account gets no instruction. Olle is added before Nils so
+    /// that their member and account ids differ, and an address looked up by
+    /// the wrong id shows.
+    @Test
+    void eachMemberInTheRegisterIsToldToWriteTheirOwnAddress() throws Exception {
+        insertMember("Olle Utan Konto");
+        insertAccount("Nils Nyberg", "nils@example.test");
+        mockMvc.perform(get("/api/admin/members").with(asAdministrator()))
+                .andExpect(jsonPath("$.members.length()").value(5))
+                .andExpect(jsonPath("$.members[0].fullName").value("Erik Lindqvist"))
+                .andExpect(jsonPath("$.members[0].fee.payment.message").value(ERIK_EMAIL))
+                .andExpect(jsonPath("$.members[1].fullName").value("Johan Bergström"))
+                .andExpect(jsonPath("$.members[1].fee.payment.message").value(JOHAN_EMAIL))
+                .andExpect(jsonPath("$.members[2].fullName").value("Maria Lindqvist"))
+                .andExpect(jsonPath("$.members[2].fee.payment.message").value(MARIA_EMAIL))
+                .andExpect(jsonPath("$.members[3].fullName").value("Nils Nyberg"))
+                .andExpect(jsonPath("$.members[3].fee.payment.message").value("nils@example.test"))
+                .andExpect(jsonPath("$.members[4].fullName").value("Olle Utan Konto"))
+                .andExpect(jsonPath("$.members[4].fee.payment").doesNotExist());
+    }
+
     /// The badge by the heading on /medlem (#78) says the status in words, and
     /// follows the household rule. The span is matched whole because "Betald"
     /// is also the start of the paid date line.
@@ -117,6 +143,74 @@ class FeeIT extends MemberRegisterSupport {
         mockMvc.perform(get("/medlem").with(asMember(johanAccount, JOHAN_EMAIL)))
                 .andExpect(content().string(containsString("Betald ")))
                 .andExpect(content().string(not(containsString("123-4567"))));
+    }
+
+    @Test
+    void theRegisterListsWhoHasAndHasNotPaidThisYear() throws Exception {
+        insertFee(erik, "HOUSEHOLD");
+
+        String unpaid = page("/admin/medlemmar?avgift=obetald");
+        assertThat(unpaid).contains("Johan Bergström").doesNotContain("Erik Lindqvist", "Maria Lindqvist")
+                .contains("aria-current=\"page\">Har inte betalat " + thisYear() + "<");
+        assertThat(page("/admin/medlemmar?avgift=betald"))
+                .contains("Erik Lindqvist", "Maria Lindqvist").doesNotContain("Johan Bergström");
+        assertThat(page("/admin/medlemmar?avgift=obetald&q=lindqvist")).doesNotContain("Lindqvist</a>");
+        assertThat(page("/admin/medlemmar?avgift=okänt")).contains("Johan Bergström", "Erik Lindqvist");
+        // The fee column and the member's page say the status with the same badge as /medlem (#110).
+        assertThat(unpaid).contains("<span class=\"badge badge-unpaid\">Ej betald</span>");
+        assertThat(page("/admin/medlemmar?avgift=betald")).contains("<span class=\"badge badge-paid\">Betald</span>",
+                "<th scope=\"col\">Markerad som betald</th>");
+        assertThat(page("/admin/medlemmar/" + johan)).contains("<span class=\"badge badge-unpaid\">Ej betald</span>");
+
+        mockMvc.perform(get("/api/admin/members").param("fee", "UNPAID").with(asAdministrator()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.members[*].fullName", containsInAnyOrder("Johan Bergström")));
+        mockMvc.perform(get("/api/admin/members").param("fee", "PAID").with(asAdministrator()))
+                .andExpect(jsonPath("$.members[*].fullName",
+                        containsInAnyOrder("Erik Lindqvist", "Maria Lindqvist")));
+    }
+
+    @Test
+    void theStartPageCountsWhoHasPaidAndLinksToTheRest() throws Exception {
+        insertFee(erik, "HOUSEHOLD");
+
+        // The link's icon is left out, so the text is compared on its own.
+        assertThat(page("/admin").replaceAll("(?s)<svg.*?</svg>", "").replaceAll("\\s+", " "))
+                .contains("Medlemsavgifter " + thisYear(), "2 av 3 medlemmar har betalat.")
+                .contains("<a href=\"/admin/medlemmar?avgift=obetald\"> Visa den som inte har betalat</a>");
+        mockMvc.perform(get("/api/admin/fees").with(asAdministrator()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.year").value(thisYear()))
+                .andExpect(jsonPath("$.paid").value(2))
+                .andExpect(jsonPath("$.unpaid").value(1));
+
+        insertFee(johan, "INDIVIDUAL");
+        assertThat(page("/admin")).contains("3 av 3 medlemmar har betalat.").doesNotContain("inte har betalat");
+    }
+
+    @Test
+    void aButtonInTheRegisterMarksAFeeAndGoesBackToTheSameList() throws Exception {
+        String register = page("/admin/medlemmar?avgift=obetald");
+        assertThat(register)
+                .contains("Betald, enskild: Johan Bergström")
+                .doesNotContain("Betald, hushåll: Johan Bergström")
+                .contains("Betald, hushåll: Erik Lindqvist och alla i hushållet");
+
+        String back = "/admin/medlemmar?q=Bergstr%C3%B6m&avgift=obetald";
+        MvcResult first = markFromRegister(johan);
+        assertRedirect(first, back);
+        assertThat(first.getFlashMap().get("notice")).isEqualTo("Avgiften för Johan Bergström är markerad som betald.");
+        MvcResult again = markFromRegister(johan);
+        assertRedirect(again, back);
+        assertThat(again.getFlashMap().get("error")).isEqualTo("Medlemmen har redan en betalning i år.");
+        assertThat(feeOf(johan)).containsEntry("kind", "INDIVIDUAL").containsEntry("amount_ore", 5000);
+        assertThat(page("/admin/medlemmar?avgift=obetald")).doesNotContain("Johan Bergström");
+    }
+
+    @Test
+    void aSearchKeepsAPlusAndBracesInTheFilterLinksAndAfterMarkingAFee() throws Exception {
+        assertSearchSurvives(johan, "a+b", "a%2Bb");
+        assertSearchSurvives(maria, "{a}", "%7Ba%7D");
     }
 
     @Test
@@ -287,6 +381,36 @@ class FeeIT extends MemberRegisterSupport {
                         .with(csrf()))
                 .andReturn(), "/admin/logga-in");
         assertThat(rowsIn("fee")).isZero();
+    }
+
+    /// A `+` read back as a space, or braces read as a URI template in the
+    /// redirect, would change or break the search the administrator came from.
+    private void assertSearchSurvives(long member, String query, String encoded) throws Exception {
+        String register = mockMvc.perform(get("/admin/medlemmar").param("q", query).with(asAdministrator()))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
+        assertThat(register).as(query).contains("href=\"/admin/medlemmar?q=" + encoded + "&amp;avgift=obetald\"");
+        assertRedirect(markFromRegister(member, query), "/admin/medlemmar?q=" + encoded + "&avgift=obetald");
+    }
+
+    private MvcResult markFromRegister(long member) throws Exception {
+        return markFromRegister(member, "Bergström");
+    }
+
+    private MvcResult markFromRegister(long member, String query) throws Exception {
+        return mockMvc.perform(post("/admin/medlemmar/" + member + "/avgift")
+                        .param("kind", "INDIVIDUAL")
+                        .param("tillbaka", "lista")
+                        .param("q", query)
+                        .param("avgift", "obetald")
+                        .with(asAdministrator())
+                        .with(csrf()))
+                .andReturn();
+    }
+
+    private String page(String path) throws Exception {
+        return mockMvc.perform(get(path).with(asAdministrator())).andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
     }
 
     private Map<String, @Nullable Object> feeOf(long member) {

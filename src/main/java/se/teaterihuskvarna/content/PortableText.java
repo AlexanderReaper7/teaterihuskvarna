@@ -9,6 +9,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.function.Function;
 import org.jspecify.annotations.Nullable;
 import org.springframework.web.util.HtmlUtils;
 import tools.jackson.databind.JsonNode;
@@ -55,6 +56,14 @@ final class PortableText {
     /// @param blocks a Portable Text array, or a missing or null node for none
     /// @return the HTML, empty when there is nothing to show
     String html(@Nullable JsonNode blocks) {
+        return html(blocks, key -> null);
+    }
+
+    /// @param blocks a Portable Text array, or a missing or null node for none
+    /// @param source the `data-sanity` value for the block with a given `_key`, or null for none, as
+    ///               [EditAttributes] gives it in a preview
+    /// @return the HTML, empty when there is nothing to show
+    String html(@Nullable JsonNode blocks, Function<@Nullable String, @Nullable String> source) {
         if (blocks == null || !blocks.isArray()) {
             return "";
         }
@@ -64,13 +73,13 @@ final class PortableText {
         for (JsonNode block : blocks) {
             String listItem = Json.text(block, "listItem");
             if ("block".equals(Json.text(block, "_type")) && listItem != null) {
-                listItem(out, lists, levels, block, listItem);
+                listItem(out, lists, levels, block, listItem, source);
                 continue;
             }
             closeLists(out, lists, levels, 0);
             switch (String.valueOf(Json.text(block, "_type"))) {
-                case "block" -> block(out, block);
-                case "image" -> image(out, block);
+                case "block" -> block(out, block, source);
+                case "image" -> image(out, block, source);
                 default -> {
                     // A type the schema does not offer: left out.
                 }
@@ -106,7 +115,7 @@ final class PortableText {
     }
 
     private void listItem(StringBuilder out, Deque<String> lists, Deque<Integer> levels, JsonNode block,
-            String listItem) {
+            String listItem, Function<@Nullable String, @Nullable String> source) {
         String tag = "number".equals(listItem) ? "ol" : "ul";
         int level = Math.max(1, block.path("level").asInt(1));
         while (!levels.isEmpty() && (top(levels) > level || top(levels) == level && !tag.equals(lists.peek()))) {
@@ -120,7 +129,7 @@ final class PortableText {
             lists.push(tag);
             levels.push(level);
         }
-        out.append("<li>");
+        out.append("<li").append(attribute(block, source)).append('>');
         inline(out, block);
     }
 
@@ -135,7 +144,7 @@ final class PortableText {
         }
     }
 
-    private void block(StringBuilder out, JsonNode block) {
+    private void block(StringBuilder out, JsonNode block, Function<@Nullable String, @Nullable String> source) {
         StringBuilder inner = new StringBuilder();
         inline(inner, block);
         if (inner.isEmpty()) {
@@ -143,7 +152,8 @@ final class PortableText {
         }
         String style = Json.text(block, "style");
         String tag = BLOCK_TAGS.getOrDefault(style == null ? "normal" : style, "p");
-        out.append('<').append(tag).append('>').append(inner).append("</").append(tag).append('>');
+        out.append('<').append(tag).append(attribute(block, source)).append('>')
+                .append(inner).append("</").append(tag).append('>');
     }
 
     /// Writes a block's spans with their marks. A mark that runs over several
@@ -246,16 +256,22 @@ final class PortableText {
         return LINK_SCHEMES.contains(scheme) ? trimmed : null;
     }
 
-    private void image(StringBuilder out, JsonNode block) {
+    private void image(StringBuilder out, JsonNode block, Function<@Nullable String, @Nullable String> source) {
         Image image = images.of(block);
         if (image == null) {
             return;
         }
-        out.append("<figure><img src=\"").append(escape(image.url()))
+        out.append("<figure").append(attribute(block, source)).append("><img src=\"").append(escape(image.url()))
                 .append("\" alt=\"").append(escape(image.alt()))
                 .append("\" width=\"").append(image.width())
                 .append("\" height=\"").append(image.height())
                 .append("\" loading=\"lazy\"></figure>");
+    }
+
+    /// @return ` data-sanity="…"` for the block, or nothing when `source` gives null
+    private static String attribute(JsonNode block, Function<@Nullable String, @Nullable String> source) {
+        String value = source.apply(Json.text(block, "_key"));
+        return value == null ? "" : " data-sanity=\"" + escape(value) + "\"";
     }
 
     /// Escapes only what HTML needs, `<>&"'`, and leaves å, ä and ö as they

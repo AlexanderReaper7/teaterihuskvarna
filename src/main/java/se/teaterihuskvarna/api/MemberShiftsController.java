@@ -39,6 +39,13 @@ public class MemberShiftsController {
     }
 
     /// @param signedIn the logged-in account
+    /// @return the shifts this member has a place on that have not started, as the member's start page lists them
+    @GetMapping("/api/member/shifts/booked")
+    public List<MemberShift> booked(@AuthenticationPrincipal SignedIn signedIn) {
+        return shifts.booked(memberId(signedIn));
+    }
+
+    /// @param signedIn the logged-in account
     /// @param id       the shift
     /// @return 201 when a place was taken, 200 when the member already had one
     @PostMapping("/api/member/shifts/{id}/booking")

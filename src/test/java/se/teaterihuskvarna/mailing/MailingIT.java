@@ -36,7 +36,8 @@ import se.teaterihuskvarna.login.SignedIn;
 /// - Preparing makes a draft to the members' list or to a Brevo segment, and
 ///   logs it.
 /// - The audiences are the list and Brevo's segments, and a segment holding
-///   anyone not on the members' list is refused.
+///   anyone not on the members' list is refused, as is an audience that
+///   reaches no member.
 /// - A test goes to the signed-in administrator.
 /// - The log shows what Brevo last reported.
 class MailingIT extends IntegrationTestSupport {
@@ -50,6 +51,8 @@ class MailingIT extends IntegrationTestSupport {
     void fake() {
         fake = (FakeBrevo) brevo;
         fake.segments(List.of());
+        // The fake's list is every member with an account.
+        insertAccount("Maja Medlem", "maja@example.test");
     }
 
     @Test
@@ -79,6 +82,16 @@ class MailingIT extends IntegrationTestSupport {
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("href=\"https://studio.example.test/studio/\"")))
                 .andExpect(content().string(containsString("href=\"https://app.brevo.com/contact/segment\"")));
+    }
+
+    @Test
+    void eachEventAndNewsItemToChooseGivesItsDateInBrackets() throws Exception {
+        // A title often ends in its own punctuation, which a comma after it doubled.
+        mockMvc.perform(get("/admin/utskick").with(asAdministrator()))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("Ny webbplats (")))
+                .andExpect(content().string(containsString("Kulturnatten på torget (")))
+                .andExpect(content().string(not(containsString("Ny webbplats,"))));
     }
 
     @Test
@@ -154,12 +167,15 @@ class MailingIT extends IntegrationTestSupport {
         mockMvc.perform(get(requireNonNull(locationOf(result))).with(asAdministrator()))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("Utkast")))
-                .andExpect(content().string(containsString("Alla medlemmar med konto")));
+                .andExpect(content().string(containsString("Alla medlemmar med konto")))
+                .andExpect(content().string(containsString("Skicka ett test till mig")))
+                .andExpect(content().string(not(containsString("Siffror från Brevo"))));
     }
 
     @Test
     void aSegmentMadeInBrevoIsAnAudience() throws Exception {
         fake.segments(List.of(new Brevo.Segment(7, "Betalat 2026")));
+        fake.reach(7, new MailingReach(3, 0));
 
         mockMvc.perform(get("/api/admin/mailings/audiences").with(asAdministrator()))
                 .andExpect(jsonPath("$.segmentsUnavailable").value(false))
@@ -213,6 +229,37 @@ class MailingIT extends IntegrationTestSupport {
         assertThat(rowsIn("mailing")).isZero();
     }
 
+    /// An audience in which no member can receive the mail, because it is
+    /// empty or everyone in it has unsubscribed, makes no draft and says why
+    /// instead of asking to try again: #200.
+    @Test
+    void anAudienceThatReachesNoMemberMakesNoDraft() throws Exception {
+        jdbc.sql("DELETE FROM account").update();
+        fake.segments(List.of(new Brevo.Segment(9, "Ingen kvar")));
+        fake.reach(9, new MailingReach(0, 0));
+        int campaigns = fake.campaignCount();
+
+        for (String audience : List.of("LIST", "SEGMENT:9")) {
+            mockMvc.perform(post("/admin/utskick/forhandsgranska").with(asAdministrator()).with(csrf())
+                            .param("audience", audience).param("subject", "Hej").param("intro", "Hej"))
+                    .andExpect(content().string(containsString("<dd>0 medlemmar</dd>")))
+                    .andExpect(content().string(containsString("Utskicket skulle nå 0 medlemmar.")))
+                    .andExpect(content().string(not(containsString("formaction=\"/admin/utskick\""))));
+            mockMvc.perform(post("/admin/utskick").with(asAdministrator()).with(csrf())
+                            .param("audience", audience).param("subject", "Hej").param("intro", "Hej"))
+                    .andExpect(status().isOk())
+                    .andExpect(content().string(containsString("Utskicket skulle nå 0 medlemmar.")))
+                    .andExpect(content().string(not(containsString("Försök igen om en stund"))));
+            mockMvc.perform(post("/api/admin/mailings").with(asAdministrator()).with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"subject\": \"Hej\", \"intro\": \"Hej\", \"audience\": \"" + audience + "\"}"))
+                    .andExpect(status().isConflict())
+                    .andExpect(jsonPath("$.title").value("Audience reaches no one"));
+        }
+        assertThat(rowsIn("mailing")).isZero();
+        assertThat(fake.campaignCount()).isEqualTo(campaigns);
+    }
+
     @Test
     void aTestGoesToTheSignedInAdministrator() throws Exception {
         prepare("LIST");
@@ -251,6 +298,10 @@ class MailingIT extends IntegrationTestSupport {
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("Skickat")))
                 .andExpect(content().string(containsString("20 september 2026 kl. 10:00")));
+        mockMvc.perform(get("/admin/utskick/" + id).with(asAdministrator()))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("Siffror från Brevo")))
+                .andExpect(content().string(not(containsString("Skicka ett test till mig"))));
     }
 
     /// @return the draft campaign's id in Brevo

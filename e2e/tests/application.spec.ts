@@ -13,14 +13,14 @@ type Applicant = { fullName: string; email: string; phone?: string; address?: st
 
 async function apply(page: Page, applicant: Applicant): Promise<void> {
   await page.goto("/bli-medlem");
-  await page.getByLabel(text("application.form.fullName"), { exact: true }).fill(applicant.fullName);
-  await page.getByLabel(text("application.form.email"), { exact: true }).fill(applicant.email);
+  await page.getByLabel(text("member.name"), { exact: true }).fill(applicant.fullName);
+  await page.getByLabel(text("member.email"), { exact: true }).fill(applicant.email);
   for (const [key, value] of [
     ["phone", applicant.phone], ["address", applicant.address],
     ["postalCode", applicant.postalCode], ["city", applicant.city],
   ] as const) {
     if (value !== undefined) {
-      await page.getByLabel(text(`application.form.${key}`), { exact: true }).fill(value);
+      await page.getByLabel(`${text(`member.${key}`)} ${text("form.optional")}`, { exact: true }).fill(value);
     }
   }
   await page.getByRole("button", { name: text("application.submit") }).click();

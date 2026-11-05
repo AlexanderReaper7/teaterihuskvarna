@@ -14,7 +14,6 @@
 @param boolean stale
 @template.admin.layout(copy = copy, title = copy.text("household.heading"), content = @`
     <h1>${copy.text("household.heading")}</h1>
-    <p><a href="/admin/medlemmar">${copy.text("register.toList")}</a></p>
     @if(stale)
         <p role="alert">${copy.text("form.stale")}</p>
     @endif
@@ -38,7 +37,7 @@
                     @endif
                 @endfor
             </select>
-            <button type="submit">${copy.text("household.owner.save")}</button>
+            <button type="submit">@template.icon.save() ${copy.text("household.owner.save")}</button>
         </form>
         @if(household.members().isEmpty())
             <p>${copy.text("household.empty")}</p>
@@ -60,8 +59,8 @@
     @template.tag.errors(copy = copy, errors = errors)
     <form method="post" action="/admin/hushall">
         @template.tag.csrf(csrf = csrf)
-        @template.tag.field(name = "name", label = copy.text("household.name"), type = "text",
+        @template.tag.field(copy = copy, name = "name", label = copy.text("household.name"), type = "text",
                 autocomplete = "off", value = form.name(), error = errors.message("name"), required = true)
-        <button type="submit">${copy.text("household.create.submit")}</button>
+        <button type="submit">@template.icon.plus() ${copy.text("household.create.submit")}</button>
     </form>
 `)

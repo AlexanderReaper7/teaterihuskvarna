@@ -153,17 +153,44 @@ body {
   list-style: none;
 }
 
+/* A menu is not prose: it may use the whole column, and wraps only when the
+ * column is too narrow for it. */
+main > .section-nav {
+  max-width: none;
+}
+
 .section-nav {
   margin-bottom: 2rem;
 }
 
-.section-nav ul {
+.section-nav ul,
+.choices ul {
   display: flex;
   flex-wrap: wrap;
   gap: 0.75rem 1.25rem;
   margin: 0;
   padding: 0;
   list-style: none;
+}
+
+/* Links that choose what a page lists, such as the register's fee filter. */
+.choices {
+  margin-bottom: 1.5rem;
+}
+
+/* The page or choice the visitor is on reads as text, not as a link. In a
+ * menu, so does the link to the section a page belongs to, such as
+ * "Erbjudanden" on an offer's page. */
+[aria-current="page"],
+nav [aria-current="true"] {
+  color: var(--color-text);
+  text-decoration: none;
+}
+
+/* The header's menu keeps its light text on teal. */
+.site-nav [aria-current] {
+  color: var(--color-on-primary);
+  text-decoration: none;
 }
 
 /* The menu button, shown only on a narrow screen and only by menu.js. Without
@@ -196,8 +223,13 @@ body {
   z-index: 1;
 }
 
-.preview-banner {
+/* The banner is role="status" as well. The role in the selector outranks the
+ * message box rule under Messages, whose panel colour behind this white text
+ * gave 1.08:1. */
+.preview-banner[role="status"] {
+  margin: 0;
   padding: 0.5rem var(--gutter);
+  border: 0;
   background: var(--color-dark);
   color: var(--color-white);
   text-align: center;
@@ -228,6 +260,14 @@ body {
   font-weight: 700;
 }
 
+/* Links in a row stand apart by a gap rather than a character between them, so
+ * a row that wraps never ends a line with a separator. */
+.links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.5rem;
+}
+
 /* Content */
 
 main {
@@ -242,7 +282,17 @@ main > * {
   max-width: var(--width-text);
 }
 
-main > table {
+main > table,
+main > .table-scroll {
+  max-width: none;
+}
+
+/* Registers and booking tables need more room than public articles. */
+main.admin-content {
+  max-width: 96rem;
+}
+
+main.admin-content > :is(.table-scroll, .section-nav) {
   max-width: none;
 }
 
@@ -253,7 +303,6 @@ h1 {
   line-height: 1.1;
   text-transform: uppercase;
   overflow-wrap: break-word;
-  hyphens: auto;
 }
 
 h2 {
@@ -295,6 +344,19 @@ dd {
   margin: 0 0 1rem;
 }
 
+/* Short facts with short names, such as contact details: each name beside its
+ * value instead of above it. */
+dl.details {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 0.25rem 1.5rem;
+}
+
+dl.details dd {
+  margin: 0;
+  overflow-wrap: break-word;
+}
+
 /* Content from Sanity */
 
 .meta {
@@ -332,6 +394,23 @@ main > article {
   max-width: none;
 }
 
+/* An article keeps its text to the measure every other page has, and only its
+ * main picture, its cards and its gallery take the whole column. Without this
+ * a page from Sanity ran about 130 characters a line at 2560 px. */
+main > article > * {
+  max-width: var(--width-text);
+}
+
+main > article > :is(.cards, .gallery) {
+  max-width: none;
+}
+
+/* The main picture's HTML width is the 1200 px Sanity is asked for, so the
+ * column, not the picture, sets how wide it may be. */
+main > article > .hero {
+  max-width: 100%;
+}
+
 .cards {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(18rem, 1fr));
@@ -342,20 +421,52 @@ main > article {
 .card {
   padding: 1rem;
   background: var(--color-panel);
+  overflow-wrap: break-word;
 }
 
+/* A card's title looks the same whether the page makes it an h2 or, under a
+ * section's own h2 as on the start page, an h3. */
 .card h2,
 .card h3 {
-  margin-top: 0.75rem;
+  margin: 0.75rem 0 0.5rem;
+  font-size: 1.25rem;
+  line-height: 1.3;
+}
+
+/* Every picture in a list of cards has the same 4:3 box and shows whole
+ * inside it, so the titles in a row line up whatever the pictures' own
+ * proportions. A card without a picture keeps an empty box of the same size
+ * when another card in the list has one. Productions are posters, upright, so
+ * their list uses an upright box. */
+.cards {
+  --picture-ratio: 4 / 3;
+}
+
+.cards.posters {
+  --picture-ratio: 3 / 4;
 }
 
 .card img {
   width: 100%;
 }
 
+/* Only the card's own picture, its first child. A picture in the card's text
+ * sits in a figure and keeps its proportions. */
+.card > img {
+  aspect-ratio: var(--picture-ratio);
+  object-fit: contain;
+}
+
+.cards:has(> .card > img:not(.logo)) > .card:not(:has(> img))::before {
+  content: "";
+  display: block;
+  aspect-ratio: var(--picture-ratio);
+}
+
 .card img.logo {
   width: auto;
   max-height: 6rem;
+  aspect-ratio: auto;
 }
 
 .gallery {
@@ -392,6 +503,27 @@ form {
   margin: 0 0 1.5rem;
 }
 
+/* A one-line field followed by its button, as in the register's search: the
+ * two share a line when there is room, and keep a gap when a narrow screen
+ * puts the button below. As inline boxes they had none, so the button's border
+ * met the field's. The label and anything else has a line of its own, and the
+ * label's own margin gives way to the gap. */
+:has(> :is(input:not([type="hidden"], [type="radio"], [type="checkbox"]), select) ~ button) {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+:has(> :is(input:not([type="hidden"], [type="radio"], [type="checkbox"]), select) ~ button)
+  > :not(input, select, button) {
+  flex-basis: 100%;
+}
+
+:has(> :is(input:not([type="hidden"], [type="radio"], [type="checkbox"]), select) ~ button) > label {
+  margin-bottom: -0.25rem;
+}
+
 /* The passkey section ends in a bare button rather than a form, so it keeps
  * the gap a form would leave before whatever follows. */
 [data-passkeys] {
@@ -410,6 +542,15 @@ button {
   font: inherit;
 }
 
+/* A one-line field is as tall as a button, one line of text, the button's
+ * padding and its border, so a field and the button beside it line up. A
+ * select needs it most: both browsers give it line-height: normal whatever the
+ * page says, which left it 8 to 10 px short of a button. */
+input:not([type="radio"], [type="checkbox"]),
+select {
+  min-height: calc(var(--line-height-body) * 1em + 1.25rem + 4px);
+}
+
 input {
   width: 100%;
   max-width: 28rem;
@@ -421,6 +562,41 @@ input {
 
 input[aria-invalid="true"] {
   border-color: var(--color-error);
+}
+
+/* A radio button or checkbox goes inside its label, before the text, and the
+ * label lays them out on one line, so the whole line takes the click. The box
+ * is 24 px, the minimum target size in WCAG 2.2. Without this the input rule
+ * above stretched the box to 28rem and pushed the text below it. */
+label:has(> input:is([type="radio"], [type="checkbox"])) {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+  font-weight: 400;
+}
+
+input:is([type="radio"], [type="checkbox"]) {
+  flex: none;
+  width: 1.5rem;
+  height: 1.5rem;
+  margin: 0;
+  padding: 0;
+  accent-color: var(--color-primary);
+}
+
+/* A group of fields: the legend looks like a label, without the browser's box. */
+fieldset {
+  min-width: 0;
+  margin: 0 0 1.5rem;
+  padding: 0;
+  border: 0;
+}
+
+legend {
+  margin-bottom: 0.5rem;
+  padding: 0;
+  font-weight: 700;
 }
 
 .field-error {
@@ -453,6 +629,33 @@ button:hover {
   color: var(--color-primary);
 }
 
+/* A Lucide icon before a menu link's or an action's text, from
+ * scripts/lucide-icons.py. It draws in the text's colour, so a button's hover
+ * colour reaches it. The link or button becomes a flex box, which drops the
+ * space after the icon, so a link's underline starts at its first letter. A
+ * display set here would beat the hidden attribute, which passkey.js and
+ * session.js use to hide buttons, so a hidden one is left alone. */
+.icon {
+  width: 1.25em;
+  height: 1.25em;
+  flex: none;
+}
+
+a:has(> .icon):not([hidden]),
+button:has(> .icon):not([hidden]) {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.35em;
+}
+
+/* The words set the baseline, so a link or button with an icon lines up with
+ * the text and fields beside it as one without would. An inline-flex box takes
+ * its baseline from its first item that has one, and the icon's is its bottom
+ * edge, which put the words 4 px high. Centred, the icon has none. */
+:is(a, button) > .icon {
+  align-self: center;
+}
+
 /* Buttons side by side. Without it the only gap is the space between the
  * tags, and none at all once a narrow screen wraps them onto two lines. */
 .buttons {
@@ -463,6 +666,24 @@ button:hover {
 
 .button-secondary:hover {
   border-color: var(--color-primary);
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+}
+
+/* The file chooser's button looks like the site's secondary button rather than
+ * the browser's grey one in the system font. */
+input[type="file"]::file-selector-button {
+  margin-right: 0.75rem;
+  padding: 0.25rem 1rem;
+  border: 2px solid var(--color-primary);
+  background: var(--color-white);
+  color: var(--color-primary);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+input[type="file"]::file-selector-button:hover {
   background: var(--color-primary);
   color: var(--color-on-primary);
 }
@@ -521,15 +742,20 @@ caption {
   text-align: left;
 }
 
+/* break-word rather than anywhere: a column is never narrower than its longest
+ * word, so the table wraps at spaces instead of inside words, and only a word
+ * wider than the column itself, such as a long email address, breaks. */
 th,
 td {
   padding: 0.5rem 0.75rem;
   text-align: left;
   vertical-align: middle;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
 }
 
-th {
+/* The line under the column headings. A row's heading cell is a th too and
+ * takes no line. */
+thead th {
   border-bottom: 2px solid var(--color-primary);
 }
 
@@ -539,6 +765,17 @@ tbody tr:nth-child(even) {
 
 td form {
   margin: 0;
+}
+
+/* tables.js puts each table in this box, which scrolls sideways when the table
+ * is wider than the page, so the page itself never does. */
+.table-scroll {
+  margin: 0 0 2rem;
+  overflow-x: auto;
+}
+
+.table-scroll > table {
+  margin-bottom: 0;
 }
 /*=== badge paid & unpaid member status */
 .badge{
@@ -596,8 +833,28 @@ td button {
   white-space: nowrap;
 }
 
+/* A phone number is read as one unit, so it keeps to one line. */
+.tel {
+  white-space: nowrap;
+}
+
+/* Buttons grouped in a cell, such as the register's fee buttons, may wrap
+ * between words. Unbroken, "Betald, enskild" holds the fee column so wide that
+ * the register no longer fits a 320 px phone. */
+td .buttons button {
+  white-space: normal;
+  overflow-wrap: normal;
+}
+
 /* The old site's one working breakpoint. */
 @media (max-width: 767px) {
+  /* A long word in a heading may break with a hyphen only where the screen is
+   * too narrow for it. At 2560 px Firefox hyphenated "ADMINISTRA-TÖR" where
+   * Chromium moved the whole word down. */
+  h1 {
+    hyphens: auto;
+  }
+
   :root {
     --gutter: 1.25rem;
   }
@@ -679,5 +936,56 @@ td button {
   th,
   td {
     padding: 0.5rem;
+  }
+
+  /* Without tables.js a table stays a table, and may break words anywhere
+   * rather than scroll the page sideways. */
+  table:not(.stackable) :is(th, td) {
+    overflow-wrap: anywhere;
+  }
+
+  /* With it, every row is a block. The first cell is the block's title, and
+   * each other cell starts with its column's heading, which tables.js copied
+   * into data-label. The heading row stays for a screen reader only, and the
+   * "/ ''" keeps a screen reader from reading the copied heading twice. */
+  table.stackable,
+  table.stackable :is(caption, tbody, tr, th, td) {
+    display: block;
+  }
+
+  table.stackable thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  table.stackable tbody tr {
+    padding: 0.75rem;
+  }
+
+  table.stackable tbody :is(th, td) {
+    padding: 0;
+  }
+
+  table.stackable tbody tr > :first-child {
+    font-weight: 700;
+  }
+
+  table.stackable td[data-label]::before {
+    content: attr(data-label) ": ";
+    content: attr(data-label) ": " / "";
+    font-weight: 700;
+  }
+
+  table.stackable td[data-blank],
+  table.stackable td:has(> form)::before {
+    display: none;
+  }
+
+  table.stackable td:has(> form) {
+    margin-top: 0.5rem;
   }
 }

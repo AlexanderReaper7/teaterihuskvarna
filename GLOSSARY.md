@@ -66,6 +66,10 @@ A person with an administrator account, authorised to manage members, fees, regi
 
 The association's authoritative collection of members, contact details, household membership and annual fee records.
 
+### Street address | Gatuadress
+
+The street and number in a member's contact details, such as Storgatan 1. Postnummer and Ort are fields of their own. Every form, its error message and the register's export use the one name Gatuadress, the name the join form already had (#180).
+
 ### Household | Hushåll
 
 A grouping used to let one household fee cover several members. A household is not itself a member. The member owner can manage the household, and every member with an account can leave it. Removal from a household preserves the person's membership and account ([decisions/0025](docs/decisions/0025-member-register-in-the-application.md)).
@@ -127,6 +131,18 @@ The site as it looks with an editor's unpublished drafts, shown inside Sanity's 
 ### Fixed page | Sida
 
 One of the pages R004 names, such as Styrelsen, written in Sanity as a `sida` document whose slug is the page's address.
+
+### Production | Produktion
+
+A play or programme the association has staged or arranged, with the year it opened and, for one that ran several seasons, the last year. A `produktion` document in Sanity, listed newest first on `/produktioner` under that page's own text.
+
+### Board member | Styrelseledamot
+
+A person on the association's board, with a role such as Ordförande or Kassör. A `styrelseledamot` document in Sanity, listed on `/styrelsen` by its order number. It holds no contact details, because Sanity's datasets answer anonymous queries.
+
+### Ludde prize | Luddepriset
+
+The prize the association gives for a notable cultural contribution in the municipality, named after Ludde in Bara tusen korta år. A `luddepris` document in Sanity is one year's recipient, listed newest first on `/ludde-priser`.
 
 ### Offer | Erbjudande
 

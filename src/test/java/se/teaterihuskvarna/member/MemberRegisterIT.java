@@ -71,6 +71,31 @@ class MemberRegisterIT extends MemberRegisterSupport {
     }
 
     @Test
+    void theRegisterLeavesTheCityToTheMemberPage() throws Exception {
+        long erik = memberOf(insertAccount("Erik Lindqvist", ERIK));
+        jdbc.sql("UPDATE member SET city = 'Gränna' WHERE id = ?").param(erik).update();
+
+        mockMvc.perform(get("/admin/medlemmar").with(asAdministrator()))
+                .andExpect(content().string(containsString("Erik Lindqvist")))
+                .andExpect(content().string(not(containsString("Gränna"))))
+                .andExpect(content().string(not(containsString(">Ort</th>"))));
+        mockMvc.perform(get("/admin/medlemmar/" + erik).with(asAdministrator()))
+                .andExpect(content().string(containsString("Gränna")));
+    }
+
+    /// The edit form calls the address optional only when leaving it empty is allowed.
+    @Test
+    void theLoginAddressIsOptionalOnlyForAMemberWithoutAnAccount() throws Exception {
+        long erik = memberOf(insertAccount("Erik Lindqvist", ERIK));
+        long olle = insertMember("Olle Lindqvist");
+
+        mockMvc.perform(get("/admin/medlemmar/" + erik).with(asAdministrator()))
+                .andExpect(content().string(containsString("E-postadress för inloggning</label>")));
+        mockMvc.perform(get("/admin/medlemmar/" + olle).with(asAdministrator()))
+                .andExpect(content().string(containsString("E-postadress för inloggning (frivilligt)</label>")));
+    }
+
+    @Test
     void addingWithAnAddressCreatesAnAccountAndWithoutOneDoesNot() throws Exception {
         MvcResult added = mockMvc.perform(post("/admin/medlemmar")
                         .param("fullName", "Erik Lindqvist")
@@ -192,7 +217,9 @@ class MemberRegisterIT extends MemberRegisterSupport {
 
         mockMvc.perform(get("/admin/medlemmar/" + erik + "/ta-bort").with(asAdministrator()))
                 .andExpect(status().isOk())
-                .andExpect(content().string(containsString("Ta bort Erik Lindqvist?")));
+                .andExpect(content().string(containsString("Ta bort Erik Lindqvist?")))
+                .andExpect(content().string(containsString(
+                        "anmälningarna till erbjudanden och bokningarna av volontärpass tas bort")));
         assertThat(rowsIn("member")).isEqualTo(1);
 
         mockMvc.perform(delete("/api/admin/members/" + erik).with(asAdministrator()).with(csrf()))
@@ -290,7 +317,7 @@ class MemberRegisterIT extends MemberRegisterSupport {
             assertThat(body).startsWith((byte) 0xEF, (byte) 0xBB, (byte) 0xBF);
             String text = new String(body, 3, body.length - 3, StandardCharsets.UTF_8);
             String[] lines = text.split("\r\n");
-            assertThat(lines[0]).isEqualTo("Namn;E-post;Telefon;Adress;Postnummer;Ort;Hushåll;Betald "
+            assertThat(lines[0]).isEqualTo("Namn;E-post;Telefon;Gatuadress;Postnummer;Ort;Hushåll;Betald "
                     + thisYear() + ";Medlem sedan");
             assertThat(lines[1]).startsWith("\"'=HYPERLINK(\"\"http://evil.test\"\")\";" + ERIK + ";;;;")
                     .contains("\"Huskvarna; Sverige\"");

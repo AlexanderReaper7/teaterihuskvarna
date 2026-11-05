@@ -12,7 +12,11 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.server.ResponseStatusException;
 import se.teaterihuskvarna.content.ContentService;
+import se.teaterihuskvarna.content.ContentSettings;
+import se.teaterihuskvarna.content.EditAttributes;
 import se.teaterihuskvarna.content.Event;
+import se.teaterihuskvarna.content.NewsItem;
+import se.teaterihuskvarna.content.Page;
 import se.teaterihuskvarna.content.Perspective;
 import se.teaterihuskvarna.content.Previews;
 
@@ -20,6 +24,8 @@ import se.teaterihuskvarna.content.Previews;
 ///
 /// Every page shows drafts instead of published documents to an editor the
 /// Studio's Presentation tool sent here ([Previews]), and says so in a banner.
+/// Their elements then carry `data-sanity` attributes ([EditAttributes]), which
+/// let the tool open the field an element shows in the Studio's editor.
 ///
 /// The start page answers `/` in every profile. Developer tools have their own
 /// address, `/dev`, under the `dev` profile.
@@ -28,10 +34,15 @@ public class ContentPageController {
 
     private final ContentService content;
     private final Previews previews;
+    private final PageMetadataFactory metadata;
+    private final ContentSettings settings;
 
-    ContentPageController(ContentService content, Previews previews) {
+    ContentPageController(ContentService content, Previews previews, PageMetadataFactory metadata,
+            ContentSettings settings) {
         this.content = content;
         this.previews = previews;
+        this.metadata = metadata;
+        this.settings = settings;
     }
 
     /// @param pass the preview cookie, if any
@@ -42,11 +53,19 @@ public class ContentPageController {
     }
 
     /// @param perspective published or drafts
+    /// @return the `data-sanity` attributes the templates write, which are all null outside a preview
+    @ModelAttribute("edit")
+    public EditAttributes edit(@ModelAttribute("perspective") Perspective perspective) {
+        return EditAttributes.of(perspective, settings.studioUrl());
+    }
+
+    /// @param perspective published or drafts
     /// @param model       receives the next event, the rest of the upcoming events and the latest news
     /// @return the start page
     @GetMapping("/")
     public String home(@ModelAttribute("perspective") Perspective perspective, Model model) {
         Event next = content.nextEvent(perspective).orElse(null);
+        model.addAttribute("metadata", metadata.fixed("/", "home.title", "metadata.defaultDescription"));
         model.addAttribute("next", next);
         model.addAttribute("events", below(content.upcomingEvents(null, perspective), next).stream().limit(6).toList());
         model.addAttribute("news", content.news(perspective).stream().limit(3).toList());
@@ -62,6 +81,7 @@ public class ContentPageController {
     @GetMapping("/kalender")
     public String calendar(@RequestParam(name = "serie", required = false) @Nullable String serie,
             @ModelAttribute("perspective") Perspective perspective, Model model) {
+        model.addAttribute("metadata", metadata.fixed("/kalender", "calendar.title", "metadata.calendar"));
         String chosen = serie == null || serie.isBlank() ? null : serie;
         model.addAttribute("events", content.upcomingEvents(chosen, perspective));
         model.addAttribute("series", content.series(perspective));
@@ -76,7 +96,10 @@ public class ContentPageController {
     @GetMapping("/evenemang/{slug}")
     public String event(@PathVariable String slug, @ModelAttribute("perspective") Perspective perspective,
             Model model) {
-        model.addAttribute("event", content.event(slug, perspective).orElseThrow(ContentPageController::notFound));
+        Event event = content.event(slug, perspective).orElseThrow(ContentPageController::notFound);
+        model.addAttribute("event", event);
+        model.addAttribute("metadata", metadata.create("/evenemang/" + event.slug(), event.title(),
+                event.summary() == null ? event.descriptionHtml() : event.summary(), event.image(), false));
         return "content/event";
     }
 
@@ -85,6 +108,7 @@ public class ContentPageController {
     /// @return the news list: R003
     @GetMapping("/nyheter")
     public String news(@ModelAttribute("perspective") Perspective perspective, Model model) {
+        model.addAttribute("metadata", metadata.fixed("/nyheter", "news.title", "metadata.news"));
         model.addAttribute("news", content.news(perspective));
         return "content/news";
     }
@@ -96,21 +120,35 @@ public class ContentPageController {
     @GetMapping("/nyheter/{slug}")
     public String newsItem(@PathVariable String slug, @ModelAttribute("perspective") Perspective perspective,
             Model model) {
-        model.addAttribute("item", content.newsItem(slug, perspective).orElseThrow(ContentPageController::notFound));
+        NewsItem item = content.newsItem(slug, perspective).orElseThrow(ContentPageController::notFound);
+        model.addAttribute("item", item);
+        model.addAttribute("metadata", metadata.create("/nyheter/" + item.slug(), item.title(),
+                item.summary() == null ? item.bodyHtml() : item.summary(), item.image(), true));
         return "content/newsItem";
     }
 
     /// One of [ContentService#PAGES]: R004. The pattern keeps this mapping
-    /// from answering for any other one-segment path.
+    /// from answering for any other one-segment path. Produktioner, Styrelsen
+    /// and Ludde-priser list their documents below the page's own text.
     ///
     /// @param slug        the page's slug
     /// @param perspective published or drafts
-    /// @param model       receives the page
+    /// @param model       receives the page, and the list the page shows, if any
     /// @return the page, or 404 if the editors have not written it
     @GetMapping("/{slug:om-foreningen|styrelsen|produktioner|ludde-priser|kontakt}")
     public String page(@PathVariable String slug, @ModelAttribute("perspective") Perspective perspective,
             Model model) {
-        model.addAttribute("page", content.page(slug, perspective).orElseThrow(ContentPageController::notFound));
+        Page page = content.page(slug, perspective).orElseThrow(ContentPageController::notFound);
+        model.addAttribute("page", page);
+        model.addAttribute("metadata", metadata.create("/" + slug, page.title(), page.bodyHtml(), page.image(), false));
+        switch (slug) {
+            case "produktioner" -> model.addAttribute("productions", content.productions(perspective));
+            case "styrelsen" -> model.addAttribute("board", content.board(perspective));
+            case "ludde-priser" -> model.addAttribute("prizes", content.luddePrizes(perspective));
+            default -> {
+                // The other pages are text only.
+            }
+        }
         return "content/page";
     }
 
@@ -119,6 +157,7 @@ public class ContentPageController {
     /// @return the partner page: R004
     @GetMapping("/partners")
     public String partners(@ModelAttribute("perspective") Perspective perspective, Model model) {
+        model.addAttribute("metadata", metadata.fixed("/partners", "partners.title", "metadata.partners"));
         model.addAttribute("partners", content.partners(perspective));
         return "content/partners";
     }

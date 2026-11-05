@@ -12,13 +12,16 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import se.teaterihuskvarna.content.BoardMember;
 import se.teaterihuskvarna.content.ContentService;
 import se.teaterihuskvarna.content.Event;
+import se.teaterihuskvarna.content.LuddePrize;
 import se.teaterihuskvarna.content.NewsItem;
 import se.teaterihuskvarna.content.Page;
 import se.teaterihuskvarna.content.Partner;
 import se.teaterihuskvarna.content.PreviewPass;
 import se.teaterihuskvarna.content.Previews;
+import se.teaterihuskvarna.content.Production;
 import se.teaterihuskvarna.content.Series;
 
 /// The public content, as the public pages show it, and Sanity's webhook.
@@ -114,10 +117,37 @@ public class ContentController {
     }
 
     /// @param pass a pass from [#preview], or none
+    /// @return every production, the latest year first
+    @GetMapping("/api/content/productions")
+    public List<Production> productions(@RequestHeader(name = PASS, required = false) @Nullable String pass) {
+        return content.productions(previews.perspective(pass));
+    }
+
+    /// @param pass a pass from [#preview], or none
+    /// @return the board, in the editors' order
+    @GetMapping("/api/content/board")
+    public List<BoardMember> board(@RequestHeader(name = PASS, required = false) @Nullable String pass) {
+        return content.board(previews.perspective(pass));
+    }
+
+    /// @param pass a pass from [#preview], or none
+    /// @return every Ludde prize, the latest year first
+    @GetMapping("/api/content/ludde-prizes")
+    public List<LuddePrize> luddePrizes(@RequestHeader(name = PASS, required = false) @Nullable String pass) {
+        return content.luddePrizes(previews.perspective(pass));
+    }
+
+    /// @param pass a pass from [#preview], or none
     /// @return every partner, by name
     @GetMapping("/api/content/partners")
     public List<Partner> partners(@RequestHeader(name = PASS, required = false) @Nullable String pass) {
         return content.partners(previews.perspective(pass));
+    }
+
+    /// @return the same published public paths as the XML sitemap
+    @GetMapping("/api/content/public-paths")
+    public List<String> publicPaths() {
+        return content.publicPaths();
     }
 
     /// Sanity calls this when a document is published, changed or unpublished,

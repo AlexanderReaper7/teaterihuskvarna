@@ -1,6 +1,7 @@
 package se.teaterihuskvarna.volunteer;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.containsString;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
@@ -33,6 +34,7 @@ import org.springframework.test.web.servlet.request.RequestPostProcessor;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 import se.teaterihuskvarna.IntegrationTestSupport;
+import se.teaterihuskvarna.Swedish;
 import se.teaterihuskvarna.content.ContentService;
 import se.teaterihuskvarna.login.LoginKind;
 import se.teaterihuskvarna.login.Mailer;
@@ -193,8 +195,11 @@ class ShiftIT extends IntegrationTestSupport {
         long tomorrow = insertShift(tomorrowEvening, 3);
         long later = insertShift(tomorrowEvening.plus(Duration.ofDays(2)), 3);
         long karin = memberOf(insertAccount("Karin Holm", "karin@example.test"));
-        shifts.book(tomorrow, karin);
-        shifts.book(later, karin);
+        // Booked at noon, before the day's last run. A booking after it is
+        // reminded at once, so on the real clock this failed from 21:00.
+        LocalDateTime noon = LocalDate.now(SWEDEN).atTime(12, 0);
+        book(noon, tomorrow, karin);
+        book(noon, later, karin);
 
         assertThat(shifts.sendReminders()).isOne();
         SimpleMailMessage mail = awaitMail();
@@ -262,6 +267,51 @@ class ShiftIT extends IntegrationTestSupport {
     }
 
     @Test
+    void theUpcomingShiftsHaveAHeadingAsThePastOnesDo() throws Exception {
+        String empty = mockMvc.perform(get("/admin/volontarpass").with(asAdministrator()))
+                .andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
+        long upcoming = insertShift(Instant.now().plus(Duration.ofDays(3)), 3);
+        String listed = mockMvc.perform(get("/admin/volontarpass").with(asAdministrator()))
+                .andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
+
+        assertThat(empty.replaceAll("\\s+", " "))
+                .containsSubsequence("<h2>Kommande pass</h2> <p>Inga kommande pass.</p>", "<h2>Tidigare pass</h2>");
+        assertThat(listed).containsSubsequence("<h2>Kommande pass</h2>", "/admin/volontarpass/" + upcoming,
+                "<h2>Lägg till ett pass</h2>", "<h2>Tidigare pass</h2>");
+    }
+
+    @Test
+    void theAdministratorStartPageListsOnlyUpcomingShiftsWithFreePlaces() throws Exception {
+        long full = insertShift(Instant.now().plus(Duration.ofDays(2)), 1);
+        long open = insertShift(Instant.now().plus(Duration.ofDays(3)), 3);
+        long past = insertShift(Instant.now().minus(Duration.ofDays(2)), 3);
+        // Started earlier today: the shift list starts at midnight, so only the
+        // start time keeps this one off.
+        Instant midnight = LocalDate.now(SWEDEN).atStartOfDay(SWEDEN).toInstant();
+        Instant anHourAgo = Instant.now().minus(Duration.ofHours(1));
+        long startedToday = insertShift(anHourAgo.isAfter(midnight) ? anHourAgo : midnight, 3);
+        long anna = memberOf(insertAccount("Anna Först", "anna@example.test"));
+        insertBooking(full, anna, Instant.now());
+        insertBooking(open, anna, Instant.now());
+
+        String page = mockMvc.perform(get("/admin").with(asAdministrator())).andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
+        assertThat(page).contains("/admin/volontarpass/" + open + "\"", "1 av 3")
+                .doesNotContain("/admin/volontarpass/" + full + "\"")
+                .doesNotContain("/admin/volontarpass/" + past + "\"")
+                .doesNotContain("/admin/volontarpass/" + startedToday + "\"");
+        mockMvc.perform(get("/api/admin/shifts/needing-volunteers").with(asAdministrator()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].id").value(open));
+
+        insertBooking(open, memberOf(insertAccount("Bo Andra", "bo@example.test")), Instant.now());
+        insertBooking(open, memberOf(insertAccount("Cia Tredje", "cia@example.test")), Instant.now());
+        mockMvc.perform(get("/admin").with(asAdministrator()))
+                .andExpect(content().string(containsString("Inget kommande pass saknar volontärer.")));
+    }
+
+    @Test
     void theLastShiftIsTheLatestThatHasStarted() {
         Instant past = Instant.now().minus(Duration.ofDays(20));
         long earlier = insertShift(past.minus(Duration.ofDays(30)), 3);
@@ -276,6 +326,18 @@ class ShiftIT extends IntegrationTestSupport {
 
         assertThat(shifts.lastShift(karin)).isEqualTo(LocalDate.ofInstant(past, SWEDEN));
         assertThat(shifts.lastShift(nils)).isNull();
+    }
+
+    @Test
+    void theDeletionWarningCountsTheBookings() throws Exception {
+        long id = insertShift(Instant.now().plus(Duration.ofDays(3)), 3);
+        assertThat(adminPage(id)).contains("Passet tas bort. Ingen har bokat det.");
+
+        insertBooking(id, memberOf(insertAccount("Anna Först", "anna@example.test")), Instant.now());
+        assertThat(adminPage(id)).contains("Passet och dess bokning tas bort. Volontären får inget meddelande.");
+
+        insertBooking(id, memberOf(insertAccount("Karin Holm", "karin@example.test")), Instant.now());
+        assertThat(adminPage(id)).contains("Passet och dess 2 bokningar tas bort. Volontärerna får inget meddelande.");
     }
 
     @Test
@@ -297,6 +359,39 @@ class ShiftIT extends IntegrationTestSupport {
         List<String> lines = new String(bytes, StandardCharsets.UTF_8).substring(1).lines().toList();
         assertThat(lines.get(0)).isEqualTo("Namn;E-post;Telefon;Bokat");
         assertThat(lines.get(1)).startsWith("'=Karin Holm;karin@example.test;");
+    }
+
+    @Test
+    void theStartPageListsOnlyTheShiftsTheMemberBooked() throws Exception {
+        long booked = insertShift(Instant.now().plus(Duration.ofDays(3)), 2);
+        insertShift(Instant.now().plus(Duration.ofDays(5)), 2);
+        long account = insertAccount("Karin Holm", "karin@example.test");
+        RequestPostProcessor member = asMember(account);
+        String none = messages.getMessage("member.shifts.none", null, Swedish.LOCALE);
+
+        String before = mockMvc.perform(get("/medlem").with(member)).andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
+        assertThat(before).contains(none).doesNotContain("Kulturnatten på torget");
+
+        insertBooking(booked, memberOf(account), Instant.now());
+        String after = mockMvc.perform(get("/medlem").with(member)).andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
+        assertThat(after).doesNotContain(none).contains("href=\"/medlem/volontar#pass-" + booked + "\"");
+        assertThat(after.split("Kulturnatten på torget", -1)).hasSize(2);
+        mockMvc.perform(get("/api/member/shifts/booked").with(member))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[*].id", contains((int) booked)));
+
+        String shiftsPage = mockMvc.perform(get("/medlem/volontar").with(member)).andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
+        assertThat(shiftsPage).contains("id=\"pass-" + booked + "\"")
+                .contains("href=\"/medlem\" aria-current=\"true\">Mina sidor</a>").doesNotContain("Översikt");
+    }
+
+    private String adminPage(long id) throws Exception {
+        return mockMvc.perform(get("/admin/volontarpass/" + id).with(asAdministrator()))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
     }
 
     private long insertShift(Instant startsAt, int places) {

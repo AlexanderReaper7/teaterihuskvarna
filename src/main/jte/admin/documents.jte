@@ -21,7 +21,6 @@
 !{String fileDescribedBy = fileError == null ? null : "file-error";}
 @template.admin.layout(copy = copy, title = copy.text("adminDocuments.heading"), content = @`
     <h1>${copy.text("adminDocuments.heading")}</h1>
-    <p><a href="/admin">${copy.text("admin.toOverview")}</a></p>
     @if(error != null)
         <p role="alert">${error}</p>
     @endif
@@ -54,7 +53,7 @@
                                 @template.tag.csrf(csrf = csrf)
                                 <button type="submit" class="button-secondary"
                                         aria-label="${removeLabel}">
-                                    ${copy.text("adminDocuments.remove")}
+                                    @template.icon.trash2() ${copy.text("adminDocuments.remove")}
                                 </button>
                             </form>
                         </td>
@@ -71,7 +70,7 @@
     @endif
     <form method="post" action="/admin/handlingar" enctype="multipart/form-data">
         @template.tag.csrf(csrf = csrf)
-        @template.tag.field(name = "title", label = copy.text("adminDocuments.upload.title"), type = "text",
+        @template.tag.field(copy = copy, name = "title", label = copy.text("adminDocuments.upload.title"), type = "text",
                 autocomplete = "off", value = form.title(), error = errors.message("title"), required = true)
         <p>
             <label for="kind">${copy.text("adminDocuments.upload.kind")}</label>
@@ -85,7 +84,7 @@
                 <span id="kind-error" class="field-error">${kindError}</span>
             @endif
         </p>
-        @template.tag.field(name = "publishedOn", label = copy.text("adminDocuments.upload.publishedOn"), type = "date",
+        @template.tag.field(copy = copy, name = "publishedOn", label = copy.text("adminDocuments.upload.publishedOn"), type = "date",
                 autocomplete = "off", value = Objects.toString(form.publishedOn(), null),
                 error = errors.message("publishedOn"), required = true)
         <p>
@@ -97,6 +96,6 @@
             @endif
         </p>
         <p>${copy.text("adminDocuments.upload.limit")}</p>
-        <button type="submit">${copy.text("adminDocuments.upload.submit")}</button>
+        <button type="submit">@template.icon.upload() ${copy.text("adminDocuments.upload.submit")}</button>
     </form>
 `)

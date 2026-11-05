@@ -37,12 +37,12 @@
     @elseif(offer.registered())
         <form method="post" action="/medlem/erbjudanden/${offer.id()}/avanmal">
             @template.tag.csrf(csrf = csrf)
-            <button type="submit" class="button-secondary">${copy.text("offers.cancel")}</button>
+            <button type="submit" class="button-secondary">@template.icon.x() ${copy.text("offers.cancel")}</button>
         </form>
     @elseif(offer.canRegister())
         <form method="post" action="/medlem/erbjudanden/${offer.id()}/anmal">
             @template.tag.csrf(csrf = csrf)
-            <button type="submit">${copy.text("offers.register")}</button>
+            <button type="submit">@template.icon.check() ${copy.text("offers.register")}</button>
         </form>
     @else
         <p>${copy.text("offers.full")}</p>

@@ -3,14 +3,16 @@
 # can see the runtime in a FROM line.
 #
 # The build stage is a plain JDK plus the checked-in wrapper rather than a maven
-# image, because Docker Hub's maven image stops at 4.0.0-rc-5 and this project
-# pins 4.0.0-rc-6: docs/decisions/0011-maven-and-the-build-in-a-container.md.
+# image, so the Maven version is the one in .mvn/wrapper/maven-wrapper.properties
+# and never waits for Docker Hub to publish it. On 2026-09-22 Docker Hub's maven
+# image was a release candidate behind Apache:
+# docs/decisions/0011-maven-and-the-build-in-a-container.md.
 
 # The JDK with git. scripts/maven.sh builds this stage alone and runs Maven in
 # it. The git plugin runs git itself, so that untracked files count as
 # uncommitted changes (see the plugin's comment in pom.xml) and so that a git
 # worktree records its own commit rather than the main checkout's.
-FROM eclipse-temurin:25.0.4_7-jdk-alpine AS jdk
+FROM eclipse-temurin:25.0.4.1_1-jdk-alpine AS jdk
 RUN apk add --no-cache git
 
 # The repository's git directory, supplied as a named build context:
@@ -20,6 +22,18 @@ RUN apk add --no-cache git
 # given: the git plugin then finds no repository and the build fails, instead
 # of COPY --from pulling an image named git from Docker Hub.
 FROM scratch AS git
+
+# Sanity's visual-editing script, which connects a preview page to the Studio's
+# Presentation tool: docs/decisions/0021-content-from-sanity.md. It is React
+# and needs a bundler, so it is built here from visual-editing/ rather than
+# kept in the repository, and Dependabot raises its versions in
+# visual-editing/package.json like any other.
+FROM node:26.12.1-alpine AS visual-editing
+WORKDIR /visual-editing
+COPY visual-editing/package.json visual-editing/package-lock.json ./
+RUN npm ci --no-audit --no-fund
+COPY visual-editing/ ./
+RUN npm run build
 
 FROM jdk AS build
 WORKDIR /build
@@ -37,6 +51,10 @@ RUN ./mvnw -B -v
 # The cost is that editing any file, docs included, reruns the build below. The
 # build stage is discarded, so none of this reaches the runtime image.
 COPY . .
+# Into the static files the jar serves. .gitignore lists these paths, so the git
+# plugin does not count them as uncommitted changes.
+COPY --from=visual-editing /visual-editing/dist/visual-editing.js /visual-editing/dist/visual-editing.licenses.txt src/main/resources/static/js/
+COPY --from=visual-editing /visual-editing/dist/visual-editing.css src/main/resources/static/css/
 # BUILD_GIT_WORKTREE is the worktree's name under .git/worktrees, empty in the
 # main checkout; the post-checkout hook writes it to .env. The git plugin
 # resolves a worktree to the main checkout and runs git there, so GIT_DIR and
@@ -54,7 +72,7 @@ RUN --mount=type=cache,id=teaterihuskvarna-m2,target=/root/.m2/repository \
     GIT_DIR="/git${BUILD_GIT_WORKTREE:+/worktrees/$BUILD_GIT_WORKTREE}" GIT_WORK_TREE=/build \
     ./mvnw -B -ntp -Dmaven.gitcommitid.nativegit=true package
 
-FROM eclipse-temurin:25.0.4_7-jre-alpine AS runtime
+FROM eclipse-temurin:25.0.4.1_1-jre-alpine AS runtime
 WORKDIR /app
 
 # Alpine's security fixes, which reach its repository days or weeks before

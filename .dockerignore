@@ -10,3 +10,8 @@ e2e/node_modules/
 e2e/test-results/
 e2e/playwright-report/
 backups/
+visual-editing/node_modules/
+visual-editing/dist/
+src/main/resources/static/js/visual-editing.js
+src/main/resources/static/js/visual-editing.licenses.txt
+src/main/resources/static/css/visual-editing.css

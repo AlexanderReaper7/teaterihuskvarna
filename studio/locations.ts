@@ -28,6 +28,15 @@ export const locations: DocumentLocationResolvers = {
       locations: [{title: doc?.title || 'Sida', href: `/${doc?.slug}`}],
     }),
   }),
+  produktion: defineLocations({
+    locations: [{title: 'Produktioner', href: '/produktioner'}],
+  }),
+  styrelseledamot: defineLocations({
+    locations: [{title: 'Styrelsen', href: '/styrelsen'}],
+  }),
+  luddepris: defineLocations({
+    locations: [{title: 'Ludde-priser', href: '/ludde-priser'}],
+  }),
   partner: defineLocations({
     locations: [{title: 'Partners', href: '/partners'}],
   }),

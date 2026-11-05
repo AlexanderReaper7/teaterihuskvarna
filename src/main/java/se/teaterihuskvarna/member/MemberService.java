@@ -109,17 +109,31 @@ public class MemberService {
     }
 
     /// Searches the register by name, account address, phone and city, as a
-    /// case insensitive substring of any of them. A blank query lists everyone.
+    /// case insensitive substring of any of them, and keeps the members whose
+    /// fee this year the filter admits. A blank query lists everyone.
+    ///
+    /// The fee status is computed, not stored, so a filtered search reads every
+    /// match before it counts to [#SEARCH_LIMIT].
     ///
     /// @param query what the administrator typed, or null
+    /// @param fee   which members to keep, by this year's fee
     /// @return the first [#SEARCH_LIMIT] matches by name, and whether there were more
-    public MemberList search(@Nullable String query) {
+    public MemberList search(@Nullable String query, FeeFilter fee) {
         String typed = query == null ? "" : query.strip().toLowerCase(Swedish.LOCALE);
         String pattern = "%" + typed.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%";
-        List<Member> found = members.search(pattern, Limit.of(SEARCH_LIMIT + 1));
+        Limit limit = fee == FeeFilter.ALL ? Limit.of(SEARCH_LIMIT + 1) : Limit.unlimited();
+        List<MemberDetails> found = detailsOf(members.search(pattern, limit)).stream()
+                .filter(member -> fee.admits(member.fee()))
+                .toList();
         boolean more = found.size() > SEARCH_LIMIT;
-        List<Member> shown = more ? found.subList(0, SEARCH_LIMIT) : found;
-        return new MemberList(detailsOf(shown), more);
+        return new MemberList(more ? found.subList(0, SEARCH_LIMIT) : found, more);
+    }
+
+    /// @return how many members have and have not paid this year's fee
+    public FeeCount feeCount() {
+        List<MemberDetails> all = detailsOf(members.findAll());
+        long paid = all.stream().filter(member -> member.fee().paid()).count();
+        return new FeeCount(ledger.currentYear(), paid, all.size() - paid);
     }
 
     /// @param memberId a member
@@ -128,7 +142,7 @@ public class MemberService {
     public MemberFile find(long memberId) {
         Member member = members.findById(memberId).orElseThrow(NoSuchMember::new);
         Account account = accounts.findByMember(memberId).orElse(null);
-        List<FeeStatus> fees = ledger.history(member, account == null ? null : account.getEmail());
+        List<FeeStatus> fees = ledger.history(member);
         HouseholdDetails household = null;
         Household current = member.getHousehold();
         if (current != null) {
@@ -282,8 +296,7 @@ public class MemberService {
     }
 
     private MemberDetails details(Member member, @Nullable Account account) {
-        String email = account == null ? null : account.getEmail();
-        return MemberDetails.of(member, account, ledger.year(ledger.currentYear()).status(member, email));
+        return MemberDetails.of(member, account, ledger.thisYear(List.of(member)).getFirst());
     }
 
     private List<MemberDetails> detailsOf(List<Member> found) {
@@ -294,12 +307,11 @@ public class MemberService {
                 byMember.put(account.getMember().getId(), account);
             }
         }
-        FeeLedger.Payments year = ledger.year(ledger.currentYear());
+        List<FeeStatus> fees = ledger.thisYear(found);
         List<MemberDetails> details = new ArrayList<>();
-        for (Member member : found) {
-            Account account = byMember.get(member.getId());
-            String email = account == null ? null : account.getEmail();
-            details.add(MemberDetails.of(member, account, year.status(member, email)));
+        for (int i = 0; i < found.size(); i++) {
+            Member member = found.get(i);
+            details.add(MemberDetails.of(member, byMember.get(member.getId()), fees.get(i)));
         }
         return details;
     }

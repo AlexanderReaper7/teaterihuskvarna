@@ -9,16 +9,19 @@
 @param List<HouseholdMember> successors
 @param String error = null
 @param boolean stale
-@template.member.layout(copy = copy, title = copy.text("member.household.removeHeading", fullName), content = @`
-    <h1>${copy.text("member.household.removeHeading", fullName)}</h1>
+@param boolean leaving
+!{String heading = leaving ? copy.text("member.household.leaveHeading")
+        : copy.text("member.household.removeHeading", fullName);}
+@template.member.layout(copy = copy, title = heading, content = @`
+    <h1>${heading}</h1>
     @if(stale)
         <p role="alert">${copy.text("form.stale")}</p>
     @endif
     @if(error != null)
         <p role="alert">${error}</p>
     @endif
-    <p>${copy.text("member.household.removeNote")}</p>
-    <p>${copy.text("member.household.removeFeeNote")}</p>
+    <p>${copy.text(leaving ? "member.household.leaveNote" : "member.household.removeNote")}</p>
+    <p>${copy.text(leaving ? "member.household.leaveFeeNote" : "member.household.removeFeeNote")}</p>
     <form method="post" action="/medlem/hushall/medlemmar/${memberId}/ta-bort">
         @template.tag.csrf(csrf = csrf)
         @if(!successors.isEmpty())
@@ -30,7 +33,11 @@
                 @endfor
             </select>
         @endif
-        <button type="submit">${copy.text("member.household.removeSubmit")}</button>
+        @if(leaving)
+            <button type="submit">@template.icon.doorOpen() ${copy.text("member.household.leave")}</button>
+        @else
+            <button type="submit">@template.icon.trash2() ${copy.text("member.household.removeSubmit")}</button>
+        @endif
     </form>
     <p><a href="/medlem/hushall">${copy.text("member.household.back")}</a></p>
 `)

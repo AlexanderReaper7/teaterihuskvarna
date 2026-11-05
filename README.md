@@ -36,9 +36,15 @@ Start at [the public home](http://localhost:8000/). Its menu connects the calend
 Use the development index and [Mailpit](http://localhost:8000/mailpit/) to sign in with an invented account in the same browser that requested the link.
 
 - [Member overview](http://localhost:8000/medlem) connects contact details, fee status and payment instructions, household creation and management, invitations, offers and registrations, documents and volunteer bookings. The household owner can edit or remove people, including people with accounts. Members can leave; an owner first chooses a successor with an account, or administrators take over when none remains. Administrators can change the owner. Removal preserves membership and accounts.
-- [Administrator overview](http://localhost:8000/admin) connects the member register, household management, fee marking, CSV exports, offers and registrations, documents, volunteer shifts and mailings. It also manages administrator accounts and links to Sanity for editing public content and Brevo for recipient groups and campaigns. Sanity links use `SANITY_STUDIO_URL`; without a configured address the pages explain that the editor is not connected and link to [Sanity's project dashboard](https://www.sanity.io/manage).
+- [Administrator overview](http://localhost:8000/admin) connects the member register, household management, fee marking, CSV exports, offers and registrations, documents, volunteer shifts and mailings. It also manages administrator accounts and links to Sanity for editing public content and Brevo for recipient groups and campaigns. Sanity links use `SANITY_STUDIO_URL`; without a configured address the pages explain that the editor is not connected and link to [Sanity's project dashboard](https://www.sanity.io/manage). The administrators' own guide to these pages, in Swedish, is [docs/administrator-guide.md](docs/administrator-guide.md).
 
 Public content comes from the development Sanity dataset. Login and invitation mail goes to Mailpit. Brevo contact updates and campaign drafts use an in-memory fake by default, so the development stack can demonstrate preparing a mailing but does not send a real campaign. The [local stack](#the-local-stack) section describes the Sanity connection and switching to a real Brevo account.
+
+### Search and shared links
+
+Public pages include a description, canonical URL and [Open Graph](https://ogp.me/) metadata. Event and news pages use their title, summary and main image; other pages use their text or a fixed description. Canonical URLs and [the sitemap](http://localhost:8000/sitemap.xml) use `SITE_URL`, the configured address also used for login mail. They never use the request's Host header.
+
+The sitemap includes published public pages and articles. It excludes future news and account pages. The same paths are available at `/api/content/public-paths`. Draft previews and pages without public metadata have `noindex, nofollow`; [robots.txt](http://localhost:8000/robots.txt) points crawlers to the sitemap. These directions do not replace the application's access checks.
 
 ### Everyday commands
 
@@ -130,14 +136,14 @@ The `dev` dataset contains 16 invented demo documents imported on 2026-09-30. Ev
 
 ### Sharing the dev stack
 
-A Tailscale Funnel shows the dev stack to people off the tailnet. [`compose.share.yaml`](compose.share.yaml) puts the site, Mailpit and Studio behind a password and points login links at the public address. The administration link opens Studio at `/studio/` on that address, and Studio previews the shared site. Add the shared origin to the Sanity project's CORS origins with credentials. Add the share file to `COMPOSE_FILE`, set `SHARE_URL` and `SHARE_BASIC_AUTH` as [`.env.example`](.env.example) describes, then:
+A Tailscale Funnel shows the dev stack to people off the tailnet. [`compose.share.yaml`](compose.share.yaml) puts the site, Mailpit and Studio behind a password and points login links at the public address. The administration link opens Studio at `/studio/` on that address, and Studio previews the shared site. Add the shared origin to the Sanity project's CORS origins with credentials. Add the share file to `COMPOSE_FILE`, set `SHARE_URL` and `SHARE_BASIC_AUTH` as [`.env.example`](.env.example) describes, and `SHARE_WEBHOOK_BASIC_AUTH` too if Sanity's publish webhook should reach the stack, then:
 
 ```sh
 docker compose up -d --build
 tailscale funnel --bg --https=8443 "$PROXY_HTTP_PORT"   # tailscale funnel --https=8443 off to close it
 ```
 
-Funnel publishes a machine name, never a Tailscale Service name, so the address is `https://<machine>.<tailnet>.ts.net:8443`. Port 8443 because 443 on the machine may already serve something tailnet-only. The dev index sends a login link for any seeded account, administrator included, which is why the password covers everything.
+Funnel publishes a machine name, never a Tailscale Service name, so the address is `https://<machine>.<tailnet>.ts.net:8443`. Funnel serves only ports 443, 8443 and 10000 ([Tailscale's Funnel page](https://tailscale.com/kb/1223/funnel)). The command accepts another port and prints "Available on the internet", but the public relay never connects to it. Take one of the three that `tailscale serve status` does not list, and put the same port in `SHARE_URL`. Changing the serve settings needs root once they serve a directory or a socket; an operator is not enough then. The dev index sends a login link for any seeded account, administrator included, which is why the password covers everything. The one exception is `/api/sanity/webhook`, which takes the webhook's own login instead; [`studio/README.md`](studio/README.md) describes the webhook.
 
 V1 was edited on 2026-09-23, before any deploy, to move the email address from
 `member` to `account`. A database volume created before that fails Flyway's

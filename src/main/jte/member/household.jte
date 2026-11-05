@@ -28,39 +28,41 @@
     @if(household == null || household.ownedBy(ownMemberId))
     <form method="post" action="${household == null ? "/medlem/hushall" : "/medlem/hushall/namn"}">
         @template.tag.csrf(csrf = csrf)
-        @template.tag.field(name = "name", label = copy.text("household.name"), type = "text",
+        @template.tag.field(copy = copy, name = "name", label = copy.text("household.name"), type = "text",
                 autocomplete = "off", value = form.name(), error = errors.message("name"), required = true)
-        <button type="submit">${copy.text(household == null ? "household.create.submit" : "member.household.rename")}</button>
+        <button type="submit">@if(household == null)@template.icon.plus()@else@template.icon.save()@endif ${copy.text(household == null ? "household.create.submit" : "member.household.rename")}</button>
     </form>
     @else
         <p>${household.name()}</p>
     @endif
     @if(household != null)
         <h2>${copy.text("member.household.members")}</h2>
-        <p>${copy.text("member.household.permissions")}</p>
+        <p>${copy.text(household.ownerMemberId() == null ? "member.household.adminPermissions" : "member.household.permissions")}</p>
         <ul>
             @for(HouseholdMember member : household.members())
                 <li>
                     ${member.fullName()}
+                    @if(member.id().equals(household.ownerMemberId()))
+                        ${copy.text("household.isOwner")}
+                    @endif
                     @if(member.hasAccount())
                         ${copy.text("household.hasAccount")}
                     @endif
                     @if(household.ownedBy(ownMemberId))
-                        <a href="/medlem/hushall/medlemmar/${member.id()}">${copy.text("member.household.edit", member.fullName())}</a>
+                        <a href="/medlem/hushall/medlemmar/${member.id()}">@template.icon.pencil() ${copy.text("member.household.edit", member.fullName())}</a>
                     @endif
                     @if(household.ownedBy(ownMemberId) || member.id().equals(ownMemberId))
-                    <a href="/medlem/hushall/medlemmar/${member.id()}/ta-bort">${copy.text(member.id().equals(ownMemberId)
+                    <a href="/medlem/hushall/medlemmar/${member.id()}/ta-bort">@if(member.id().equals(ownMemberId))@template.icon.doorOpen()@else@template.icon.trash2()@endif ${copy.text(member.id().equals(ownMemberId)
                             ? "member.household.leave" : "member.household.remove", member.fullName())}</a>
                     @endif
                 </li>
             @endfor
         </ul>
         @if(household.ownedBy(ownMemberId))
-            <p><a href="/medlem/hushall/ny">${copy.text("member.household.add")}</a></p>
+            <p><a href="/medlem/hushall/ny">@template.icon.plus() ${copy.text("member.household.add")}</a></p>
+            <p>${copy.text("member.household.invitationNote")}</p>
         @endif
-        <p>${copy.text("member.household.invitationNote")}</p>
     @else
         <p>${copy.text("member.household.createNote")}</p>
     @endif
-    <p><a href="/medlem">${copy.text("member.back")}</a></p>
 `)

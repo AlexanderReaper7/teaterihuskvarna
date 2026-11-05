@@ -30,13 +30,13 @@
     @if(volunteers.isEmpty())
         <p>${copy.text("adminShifts.noVolunteers")}</p>
     @else
-        <p><a href="/admin/volontarpass/${shift.id()}/bokningar.csv">${copy.text("adminShifts.csv")}</a></p>
+        <p><a href="/admin/volontarpass/${shift.id()}/bokningar.csv">@template.icon.download() ${copy.text("adminShifts.csv")}</a></p>
         <table>
             <caption>${copy.text("adminShifts.volunteersCaption", title)}</caption>
             <thead>
                 <tr>
                     <th scope="col">${copy.text("shift.csv.name")}</th>
-                    <th scope="col">${copy.text("shift.csv.email")}</th>
+                    <th scope="col">${copy.text("member.email")}</th>
                     <th scope="col">${copy.text("shift.csv.phone")}</th>
                     <th scope="col">${copy.text("shift.csv.bookedAt")}</th>
                 </tr>
@@ -48,7 +48,7 @@
                     <tr>
                         <th scope="row">${volunteer.fullName()}</th>
                         <td>@if(email != null)${email}@endif</td>
-                        <td>@if(phone != null)${phone}@endif</td>
+                        <td class="tel">@if(phone != null)${phone}@endif</td>
                         <td>${copy.dateTime(volunteer.bookedAt())}</td>
                     </tr>
                 @endfor
@@ -60,6 +60,6 @@
     <p>${copy.text("adminShifts.deleteWarning", shift.booked())}</p>
     <form method="post" action="/admin/volontarpass/${shift.id()}/ta-bort">
         @template.tag.csrf(csrf = csrf)
-        <button type="submit" class="button-secondary">${copy.text("adminShifts.delete")}</button>
+        <button type="submit" class="button-secondary">@template.icon.trash2() ${copy.text("adminShifts.delete")}</button>
     </form>
 `)

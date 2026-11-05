@@ -87,6 +87,12 @@ public class ShiftService {
                 .toList();
     }
 
+    /// @param memberId the member asking
+    /// @return the shifts the member has a place on that have not started, earliest first
+    public List<MemberShift> booked(long memberId) {
+        return upcoming(memberId).stream().filter(MemberShift::booked).toList();
+    }
+
     /// Takes a place. The shift row stays locked from the read until the
     /// commit, so a second booking for the same shift waits and then counts
     /// the first one.
@@ -149,6 +155,16 @@ public class ShiftService {
     /// @return every shift from the start of today in Sweden on, earliest first
     public List<ShiftDetails> list() {
         return details(shifts.findStartingFrom(startOfToday()));
+    }
+
+    /// The shifts an administrator still has to find volunteers for, which
+    /// the administrators' start page lists.
+    ///
+    /// @return the shifts that have not started and have places left, earliest first
+    public List<ShiftDetails> needingVolunteers() {
+        return details(shifts.findStartingFrom(clock.instant())).stream()
+                .filter(shift -> shift.booked() < shift.places())
+                .toList();
     }
 
     /// The shifts [#list] no longer shows, so their bookings can still be
