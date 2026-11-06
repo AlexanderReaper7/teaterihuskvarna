@@ -11,7 +11,8 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 /// Keeps every call in memory and sends nothing, for development and the
 /// tests. A campaign reports `draft` until [#markSent] is called, the way a
 /// real one does until an administrator sends it in Brevo. It has no
-/// segments until a test gives it some with [#segments(List)].
+/// segments until a test gives it some with [#segments(List)]. A test can
+/// make it refuse every campaign call with [#refuseCampaigns(boolean)].
 final class FakeBrevo implements Brevo {
 
     private final JdbcClient jdbc;
@@ -22,6 +23,7 @@ final class FakeBrevo implements Brevo {
     private final List<String> tests = new ArrayList<>();
     private List<Segment> segments = List.of();
     private final Map<Long, MailingReach> reaches = new LinkedHashMap<>();
+    private boolean refusing;
 
     /// @param jdbc the database, whose accounts are the members' list
     FakeBrevo(JdbcClient jdbc) {
@@ -62,6 +64,7 @@ final class FakeBrevo implements Brevo {
 
     @Override
     public synchronized long createDraft(Campaign campaign) {
+        refuseIfAsked();
         Long segment = campaign.segmentId();
         if (segment != null && segments.stream().noneMatch(s -> s.id() == segment)) {
             throw new BrevoUnavailable("no segment " + segment);
@@ -74,6 +77,7 @@ final class FakeBrevo implements Brevo {
 
     @Override
     public synchronized void sendTest(long campaignId, String email) {
+        refuseIfAsked();
         if (!campaigns.containsKey(campaignId)) {
             throw new BrevoUnavailable("no campaign " + campaignId);
         }
@@ -82,6 +86,7 @@ final class FakeBrevo implements Brevo {
 
     @Override
     public synchronized CampaignReport report(long campaignId) {
+        refuseIfAsked();
         CampaignReport report = reports.get(campaignId);
         if (report == null) {
             throw new BrevoUnavailable("no campaign " + campaignId);
@@ -131,5 +136,17 @@ final class FakeBrevo implements Brevo {
     /// @param report     what it reports from now on
     synchronized void markSent(long campaignId, CampaignReport report) {
         reports.put(campaignId, report);
+    }
+
+    /// @param refuse whether making a draft, sending a test and reading a
+    ///               report fail from now on, as when Brevo cannot be reached
+    synchronized void refuseCampaigns(boolean refuse) {
+        refusing = refuse;
+    }
+
+    private void refuseIfAsked() {
+        if (refusing) {
+            throw new BrevoUnavailable("refusing campaign calls");
+        }
     }
 }

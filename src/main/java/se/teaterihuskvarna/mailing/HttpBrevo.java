@@ -26,7 +26,8 @@ final class HttpBrevo implements Brevo {
     /// Every status Brevo's documentation lists for a campaign, each with a
     /// Swedish name in `adminMailings.status.*`. Another one is treated as no
     /// answer, so the log keeps the last known status and the warning names it.
-    private static final Set<String> STATUSES = Set.of("draft", "sent", "archive", "queued", "suspended",
+    /// Package private so `MailingIT` can render each one.
+    static final Set<String> STATUSES = Set.of("draft", "sent", "archive", "queued", "suspended",
             "in_process", "in_review", "cancelling", "cancelled");
 
     /// The contact attributes [Contact] fills, and their Brevo types. PAID_YEAR
