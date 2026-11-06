@@ -9,6 +9,7 @@ Website and member register for the Teater i Huskvarna association. What the sys
 - Git.
 - Docker Desktop on Windows or macOS, or Docker Engine with the compose plugin on Linux. Docker Desktop has to be running before any `docker` command works.
 - VS Code if you want it. It is optional, and the [VS Code](#vs-code) section covers what [`.vscode/`](.vscode/) sets up.
+- Python 3 (py on Windows) and `mmdc`, only if you want to run [`docs/check.py`](docs/check.py).
 
 Nothing else. Java and Maven are not installed on your machine: the build runs inside a container with a pinned JDK 25 and the checked-in Maven wrapper ([`mvnw`](mvnw)), per [decisions/0011](docs/decisions/0011-maven-and-the-build-in-a-container.md). Every command in this section works in PowerShell and in a POSIX shell. The multi-line commands further down are written for a POSIX shell, so on Windows use the VS Code tasks for those, or Git Bash, which `sh e2e/run.sh` needs too.
 
@@ -24,8 +25,10 @@ Nothing else. Java and Maven are not installed on your machine: the build runs i
 
 Nobody has a password. The development index offers immediate login for any listed member or administrator. This shortcut exists only under the `dev` profile. Normal login uses an email link, and locally every mail goes to Mailpit instead of a real inbox.
 
-1. On [http://localhost:8000/dev](http://localhost:8000/dev), pick a member or administrator and press `Log in now` to open that account's page immediately.
-2. To test normal login instead, press `Send link`, open [Mailpit](http://localhost:8000/mailpit/), then open the newest mail and follow its link.
+1. On [http://localhost:8000/dev](http://localhost:8000/dev), which is the development index, pick a seeded member or administrator. `Log in now` opens that account's page immediately. `Send link` tests the normal email flow: the application mails that address a login link.
+2. For the email flow, open [Mailpit](http://localhost:8000/mailpit/), and open the newest mail. It gives you two ways in:
+    - **The Link.** Follow it in the same browser that requested it. It works for one hour and only in that browser.
+    - **The code.** If you read the email on another device, copy the six-digit code from it and enter it on the page that says "TITTA I DIN E-POST".
 
 The seeded people are invented, under `.test` addresses that cannot reach anyone. Karin Holmberg has both a member account and an administrator account on the same address, which is the case the two login pages (`/logga-in` and `/admin/logga-in`) exist for.
 
@@ -97,6 +100,8 @@ A clone made before [`f9df7d5`](https://github.com/AlexanderReaper7/teaterihuskv
 - **`address already in use` or `port is already allocated` on 8000.** Another program has the port. Set `PROXY_HTTP_PORT=8001` in `.env`, run `docker compose up -d` again and use [http://localhost:8001/](http://localhost:8001/).
 - **`Cannot connect to the Docker daemon`, or on Windows `error during connect`.** Docker is not running. Start Docker Desktop and wait until it says it is running.
 - **The build fails at `checkstyle`, `spotbugs` or `pmd`.** The code breaks one of the static analysis rules, and the message names the file and line. See [Static analysis](#static-analysis).
+- **The app cannot connect to the database after you changed `POSTGRES_PASSWORD` in `.env`.** The database reads the password only its volume is created. `docker compose down -v` deletes the volume, and the next start builds it again with the new password. A database client on the host uses the same password.
+- **On Windows.** [`docs/check.py`](docs/check.py) currently fails with `FileNotFoundError` when it starts `mmdc`, because npm installs `mmdc` as `mmdc.cmd`. Until that is fixed in the script, run a local copy with `shutil.which("mmdc")` instead of the plain "mmdc" string, and keep it out of git with `.git/info/exclude`.
 - **Anything else.** Read the end of `docker compose logs app`. The first `ERROR` line usually names the problem.
 
 ## The local stack
@@ -113,8 +118,8 @@ Mailpit, which catches every mail the application sends, and Sanity Studio at [h
 
 A database client on the host, such as VS Code, connects to PostgreSQL at `127.0.0.1`, port 5432 unless `POSTGRES_HOST_PORT` sets another, with the database, user and password from `POSTGRES_DB`, `POSTGRES_USER` and `POSTGRES_PASSWORD` in `.env`. The port is bound to loopback only, so nothing else on the network reaches it. The application itself still connects to `db:5432` inside the stack.
 
-Under the `dev` profile, [http://localhost:8000/dev](http://localhost:8000/dev) is the development index. It lists every route, has a button per seeded member and
-administrator that mails that address a login link, and shows the schema
+Under the `dev` profile, [http://localhost:8000/dev](http://localhost:8000/dev) is the development index. It lists every route, has two buttons per seeded member and
+administrator: `log in now`, which logs in at once, and `Send link`, which mails that address a login link, and shows the schema
 version, the commit the jar was built from, whether it was built with
 uncommitted changes, and who is logged in. Open the link in Mailpit's UI at
 [http://localhost:8000/mailpit/](http://localhost:8000/mailpit/), which Traefik routes to Mailpit. The same data is JSON under `/api/development/`, which
