@@ -189,6 +189,27 @@ class HttpBrevoTest {
         assertThat(brevo.reach(null)).isEqualTo(new MailingReach(1, 0));
     }
 
+    /// The list in the live check on #60, whose only contact had unsubscribed.
+    @Test
+    void aListWhoseOnlyContactUnsubscribedReachesNoOne() {
+        server.expect(requestTo(API + "/contacts?listIds=7&limit=1000&offset=0"))
+                .andRespond(withSuccess("{\"contacts\":[{\"id\":1,\"listIds\":[7],\"emailBlacklisted\":true}]}",
+                        MediaType.APPLICATION_JSON));
+
+        assertThat(brevo.reach(null)).isEqualTo(new MailingReach(0, 0));
+    }
+
+    /// Only an account that unsubscribes per list gives `listUnsubscribed`.
+    @Test
+    void aMemberWhoLeftTheMembersListIsNotReached() {
+        server.expect(requestTo(API + "/contacts?listIds=7&limit=1000&offset=0"))
+                .andRespond(withSuccess("""
+                        {"contacts":[{"id":1,"listIds":[7],"listUnsubscribed":[7]},
+                          {"id":2,"listIds":[7],"listUnsubscribed":[9]}]}""", MediaType.APPLICATION_JSON));
+
+        assertThat(brevo.reach(null)).isEqualTo(new MailingReach(1, 0));
+    }
+
     @Test
     void aDraftGoesToTheListOrToASegmentFromTheSender() {
         server.expect(requestTo(API + "/emailCampaigns"))

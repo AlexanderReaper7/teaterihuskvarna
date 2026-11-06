@@ -45,6 +45,28 @@ class PortableTextTest {
         assertThat(html).isEqualTo("<ul><li>a<ul><li>b</li></ul></li><li>c</li></ul><p>slut</p>");
     }
 
+    /// In a preview, a click on a paragraph opens that paragraph in the Studio,
+    /// so every block carries its own key. The value is escaped like any text.
+    @Test
+    void aPreviewMarksEachBlockWithItsKey() {
+        JsonNode blocks = MAPPER.readTree("["
+                + "{\"_type\":\"block\",\"_key\":\"p\",\"style\":\"normal\",\"children\":"
+                + "[{\"_type\":\"span\",\"text\":\"a\",\"marks\":[]}]},"
+                + "{\"_type\":\"block\",\"_key\":\"l\",\"style\":\"normal\",\"listItem\":\"bullet\",\"level\":1,"
+                + "\"children\":[{\"_type\":\"span\",\"text\":\"b\",\"marks\":[]}]},"
+                + "{\"_type\":\"image\",\"_key\":\"i\",\"alt\":\"c\","
+                + "\"asset\":{\"_ref\":\"image-abc-10x20-png\"}}]");
+
+        String html = portableText.html(blocks, key -> "k=\"" + key + "\"");
+
+        assertThat(html).isEqualTo("<p data-sanity=\"k=&quot;p&quot;\">a</p>"
+                + "<ul><li data-sanity=\"k=&quot;l&quot;\">b</li></ul>"
+                + "<figure data-sanity=\"k=&quot;i&quot;\"><img src=\"https://cdn.sanity.io/images/proj/prod/"
+                + "abc-10x20.png?w=10&amp;auto=format\" alt=\"c\" width=\"10\" height=\"20\""
+                + " loading=\"lazy\"></figure>");
+        assertThat(portableText.html(blocks)).doesNotContain("data-sanity");
+    }
+
     @Test
     void nothingRendersAsNothing() {
         assertThat(portableText.html(null)).isEmpty();

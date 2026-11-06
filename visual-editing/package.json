@@ -1,0 +1,18 @@
+{
+  "name": "teaterihuskvarna-visual-editing",
+  "private": true,
+  "description": "Sanity's visual-editing script for preview pages, bundled into the application image: docs/decisions/0021",
+  "type": "module",
+  "scripts": {
+    "build": "esbuild main.js --bundle --minify --format=esm --target=es2022 --legal-comments=eof --define:process.env.NODE_ENV='\"production\"' --outfile=dist/visual-editing.js --metafile=dist/meta.json && node licenses.mjs"
+  },
+  "dependencies": {
+    "@sanity/visual-editing": "6.2.0",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "styled-components": "6.6.0"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.2"
+  }
+}

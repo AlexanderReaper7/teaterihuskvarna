@@ -1,4 +1,5 @@
 @import java.util.List
+@import se.teaterihuskvarna.content.EditAttributes
 @import se.teaterihuskvarna.content.Event
 @import se.teaterihuskvarna.content.Perspective
 @import se.teaterihuskvarna.content.Series
@@ -7,6 +8,7 @@
 @param Copy copy
 @param PageMetadata metadata
 @param Perspective perspective
+@param EditAttributes edit
 @param List<Event> events
 @param List<Series> series
 @param String chosen
@@ -29,7 +31,7 @@
     @else
         <div class="cards">
         @for(Event event : events)
-            @template.tag.eventCard(copy = copy, event = event, level = 2)
+            @template.tag.eventCard(copy = copy, event = event, edit = edit, level = 2)
         @endfor
         </div>
     @endif

@@ -60,7 +60,7 @@ updates:
         update-types: [minor, patch]
 
   - package-ecosystem: npm
-    directories: [/e2e, /studio]
+    directories: [/e2e, /studio, /visual-editing]
     schedule: { interval: weekly, day: monday }
     cooldown: { default-days: 7 }
     labels: [dependencies, no-issue]

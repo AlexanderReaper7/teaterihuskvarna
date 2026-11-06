@@ -66,7 +66,8 @@ class ContentIT extends IntegrationTestSupport {
     @Test
     void theListPagesShowTheirDocumentsInOrderAndSkipIncompleteOnes() throws Exception {
         String productions = html("/produktioner");
-        assertThat(productions).contains("Panik på kliniken", "Bara tusen korta år", "1994–1997", "Läs nyhetsbrevet",
+        assertThat(productions).contains("Panik på kliniken", "Bara tusen korta år",
+                "<span>1994</span>–<span>1997</span>", "Läs nyhetsbrevet",
                 "Sommarens fars i Huskvarna.");
         assertThat(productions.indexOf("Panik på kliniken")).isLessThan(productions.indexOf("Bara tusen korta år"));
         assertThat(productions.indexOf("Bara tusen korta år")).isLessThan(productions.indexOf("Läs nyhetsbrevet"));

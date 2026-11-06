@@ -4,3 +4,8 @@ __pycache__/
 .claude/worktrees/
 
 backups/
+
+# Built into the image from visual-editing/: Dockerfile.
+src/main/resources/static/js/visual-editing.js
+src/main/resources/static/js/visual-editing.licenses.txt
+src/main/resources/static/css/visual-editing.css

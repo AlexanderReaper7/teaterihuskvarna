@@ -130,11 +130,13 @@ public class MailingService {
         return brevo.reach(segmentId(audience));
     }
 
-    /// R022: makes the draft campaign in Brevo, and logs the mailing. A
-    /// segment is checked first: one holding a contact that is not on the
-    /// members' list is refused, so an administrator cannot send a member
-    /// mailing to others by building a segment the wrong way. Brevo can
-    /// change between the check and the send; the check is at preparing.
+    /// R022: makes the draft campaign in Brevo, and logs the mailing. The
+    /// audience is counted in Brevo first. A segment holding a contact that is
+    /// not on the members' list is refused, so an administrator cannot send a
+    /// member mailing to others by building a segment the wrong way. An
+    /// audience that reaches no member is refused too, because Brevo makes no
+    /// draft to it. Brevo can change between the check and the send; the
+    /// check is at preparing.
     ///
     /// @param form            the subject, words, audience and content
     /// @param administratorId who prepares it
@@ -143,17 +145,19 @@ public class MailingService {
     /// @throws UnknownContent if an event or news item is not published
     /// @throws UnknownAudience if the audience is not one [#audiences] offers
     /// @throws AudienceHasNonMembers if the segment holds a contact that is not a member
+    /// @throws EmptyAudience if no member in the audience can receive the mailing
     /// @throws BrevoUnavailable if Brevo refuses or cannot be reached
     /// @throws jakarta.validation.ConstraintViolationException if the form breaks a constraint
     public MailingDetails prepare(@Valid MailingForm form, long administratorId) {
         String html = html(form);
         String audienceName = audienceName(form.audience());
         Long segment = segmentId(form.audience());
-        if (segment != null) {
-            long nonMembers = brevo.reach(segment).nonMembers();
-            if (nonMembers > 0) {
-                throw new AudienceHasNonMembers(nonMembers);
-            }
+        MailingReach reach = brevo.reach(segment);
+        if (reach.nonMembers() > 0) {
+            throw new AudienceHasNonMembers(reach.nonMembers());
+        }
+        if (reach.members() == 0) {
+            throw new EmptyAudience("no member in audience " + form.audience() + " can receive a mailing");
         }
         Instant now = clock.instant();
         String name = text("mailing.brevoName", LIST_DATE.format(now), form.subject().strip());

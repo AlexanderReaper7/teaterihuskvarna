@@ -73,7 +73,7 @@ The ids come from WordPress, as `wp-<id>`, and the three fixed pages and Jönkö
 
 ## Dependency overrides
 
-`overrides` in [`package.json`](package.json) raise four packages that Sanity's CLI pulls in at versions with known vulnerabilities. Upstream still pinned all four on 2026-10-26, so neither `npm update` nor Dependabot could raise them:
+`overrides` in [`package.json`](package.json) raise five packages that Sanity's CLI and ESLint pull in at versions with known vulnerabilities. Upstream still pinned the first four on 2026-10-26, and every parent of `minimatch` asked for `^10` on 2026-11-04, so neither `npm update` nor Dependabot could raise them:
 
 | Package | Pulled in by | Pinned upstream | Override |
 |---|---|---|---|
@@ -81,5 +81,6 @@ The ids come from WordPress, as `wp-<id>`, and the three fixed pages and Jönkö
 | `smol-toml` | `@vercel/frameworks` 3.29.0 | 1.5.2 | `^1.9.1` |
 | `uuid` | `typeid-js` 1.2.0 | `^10.0.0` | `^11.1.1` |
 | `undici` | `@module-federation/dts-plugin` 2.9.2 | 7.29.1 | `^7.30.1` |
+| `minimatch` | `eslint` 10.13.0, `@eslint/config-array` 0.23.5, `@oclif/core` 4.14.0, `@typescript-eslint/typescript-estree` 8.72.0, `eslint-plugin-jsx-a11y-x` 0.2.0 | `^10.2.2` to `^10.2.5` | `^11.0.4` |
 
-Each override stays inside the major version the parent package uses: js-yaml 3 still has `safeLoad`, which `@vercel/frameworks` calls. Dependabot does not remove an override, so when one of the parents raises its own version, delete that entry and run `npm install` and `npm audit`.
+js-yaml 3 still has `safeLoad`, which `@vercel/frameworks` calls. Two overrides cross a major version, `uuid` from the `^10` that `typeid-js` asks for to 11, and `minimatch` from 10 to 11. `minimatch` 11 is the only fix for [GHSA-g3hv-75wg-m249](https://github.com/advisories/GHSA-g3hv-75wg-m249), which has no 10.x release. Version 11 removes `makeRe()`, `Minimatch#regexp` and the `AST` class, and the five parents call only `minimatch()`, `new Minimatch()`, `match()` and `pattern`. `npm run lint`, `npm run typecheck` and `sanity build` passed with it on 2026-11-04. Dependabot does not remove an override. Delete an entry only once every package that pulls it in asks for a fixed version itself, which for `minimatch` means all five, since a single parent still on `^10` brings a vulnerable copy back. Check with `npm ls <package> --all` after deleting, then run `npm install` and `npm audit`.

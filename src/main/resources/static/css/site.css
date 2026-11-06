@@ -223,8 +223,13 @@ nav [aria-current="true"] {
   z-index: 1;
 }
 
-.preview-banner {
+/* The banner is role="status" as well. The role in the selector outranks the
+ * message box rule under Messages, whose panel colour behind this white text
+ * gave 1.08:1. */
+.preview-banner[role="status"] {
+  margin: 0;
   padding: 0.5rem var(--gutter);
+  border: 0;
   background: var(--color-dark);
   color: var(--color-white);
   text-align: center;
