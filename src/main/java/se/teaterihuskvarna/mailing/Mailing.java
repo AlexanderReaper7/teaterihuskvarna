@@ -10,13 +10,18 @@ import java.time.Duration;
 import java.time.Instant;
 import org.jspecify.annotations.Nullable;
 
-/// A mailing prepared in Brevo, and what Brevo last said about it.
+/// A mailing prepared in Brevo, and what Brevo last said about it. It is
+/// saved in status `creating` before Brevo is asked for the draft, and gets
+/// its campaign once Brevo answers or the campaign is found by its name.
 ///
 /// Column lengths mirror `V10__mailings.sql` and `V13__brevo_contacts.sql` by hand, because `ddl-auto: validate`
 /// does not compare them: `docs/decisions/0012-jpa-over-a-schema-flyway-owns.md`.
 @Entity
 @Table(name = "mailing")
 public class Mailing {
+
+    /// The status of a mailing whose campaign Brevo has not confirmed yet.
+    static final String CREATING = "creating";
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -31,8 +36,8 @@ public class Mailing {
     @Column(name = "audience_name", nullable = false, length = 300)
     private String audienceName;
 
-    @Column(name = "brevo_campaign_id", nullable = false)
-    private long brevoCampaignId;
+    @Column(name = "brevo_campaign_id")
+    private @Nullable Long brevoCampaignId;
 
     @Column(name = "created_by")
     private @Nullable Long createdBy;
@@ -68,20 +73,20 @@ public class Mailing {
         // for JPA
     }
 
+    /// An attempt, waiting for its campaign.
+    ///
     /// @param subject      the subject line
     /// @param audience     the audience, `LIST` or `SEGMENT:<id>`
     /// @param audienceName the audience as the form showed it
-    /// @param campaignId   Brevo's draft campaign
     /// @param createdBy    the administrator who prepared it
     /// @param now          the moment it was prepared
-    Mailing(String subject, String audience, String audienceName, long campaignId, long createdBy, Instant now) {
+    Mailing(String subject, String audience, String audienceName, long createdBy, Instant now) {
         this.subject = subject;
         this.audience = audience;
         this.audienceName = audienceName;
-        this.brevoCampaignId = campaignId;
         this.createdBy = createdBy;
         this.createdAt = now;
-        this.status = "draft";
+        this.status = CREATING;
         this.checkedAt = now;
     }
 
@@ -106,7 +111,8 @@ public class Mailing {
         return audienceName;
     }
 
-    public long getBrevoCampaignId() {
+    /// @return Brevo's campaign, or null while the mailing is [#creating]
+    public @Nullable Long getBrevoCampaignId() {
         return brevoCampaignId;
     }
 
@@ -148,6 +154,19 @@ public class Mailing {
 
     public Instant getCheckedAt() {
         return checkedAt;
+    }
+
+    /// @return whether the mailing still waits to learn its campaign
+    boolean creating() {
+        return CREATING.equals(status);
+    }
+
+    /// @param campaignId Brevo's draft campaign, made for this mailing
+    /// @param now        when the application learnt it
+    void created(long campaignId, Instant now) {
+        this.brevoCampaignId = campaignId;
+        this.status = "draft";
+        this.checkedAt = now;
     }
 
     /// Brevo stops changing a campaign once it is sent or cancelled, apart

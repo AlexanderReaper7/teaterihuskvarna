@@ -16,6 +16,8 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import se.teaterihuskvarna.login.SignedIn;
 import se.teaterihuskvarna.mailing.AudienceHasNonMembers;
 import se.teaterihuskvarna.mailing.BrevoUnavailable;
+import se.teaterihuskvarna.mailing.DraftUnanswered;
+import se.teaterihuskvarna.mailing.EarlierAttemptPending;
 import se.teaterihuskvarna.mailing.EmptyAudience;
 import se.teaterihuskvarna.mailing.EmptyMailing;
 import se.teaterihuskvarna.mailing.MailingDetails;
@@ -109,7 +111,7 @@ public class AdministratorMailingPageController {
         } catch (ConstraintViolationException e) {
             return page(form, FieldErrors.of(e), model);
         } catch (EmptyMailing | UnknownContent | UnknownAudience | AudienceHasNonMembers | EmptyAudience
-                | BrevoUnavailable e) {
+                | EarlierAttemptPending | BrevoUnavailable e) {
             model.addAttribute("error", message(e));
             return page(form, FieldErrors.none(), model);
         }
@@ -141,7 +143,7 @@ public class AdministratorMailingPageController {
             mailings.sendTest(id, signedIn.email());
             redirected.addFlashAttribute("notice", copy.text("adminMailings.testSent", signedIn.email()));
         } catch (BrevoUnavailable e) {
-            redirected.addFlashAttribute("error", copy.text("adminMailings.error.brevo"));
+            redirected.addFlashAttribute("error", message(e));
         }
         return "redirect:" + LIST + "/" + id;
     }
@@ -164,6 +166,8 @@ public class AdministratorMailingPageController {
             case UnknownContent _ -> "adminMailings.error.content";
             case UnknownAudience _ -> "adminMailings.error.audience";
             case EmptyAudience _ -> "adminMailings.error.noRecipients";
+            case EarlierAttemptPending _ -> "adminMailings.error.pending";
+            case DraftUnanswered _ -> "adminMailings.error.unanswered";
             default -> "adminMailings.error.brevo";
         };
         return copy.text(key);
