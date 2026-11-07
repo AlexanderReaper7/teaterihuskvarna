@@ -36,10 +36,23 @@ interface Brevo {
     /// @throws BrevoUnavailable if Brevo refuses or cannot be reached
     MailingReach reach(@Nullable Long segmentId);
 
+    /// Brevo can make the campaign and still fail to answer, as when the
+    /// answer takes longer than the timeout. So only [BrevoRefused] proves
+    /// that no campaign was made, and [#campaignsNamed] finds one that was.
+    ///
     /// @param campaign the subject, the HTML and who it goes to
     /// @return the draft campaign's id
-    /// @throws BrevoUnavailable if Brevo refuses or cannot be reached
+    /// @throws BrevoRefused if Brevo answered with an error, and made nothing
+    /// @throws BrevoUnavailable if Brevo cannot be reached, or the answer is lost
     long createDraft(Campaign campaign);
+
+    /// Looks among the hundred newest campaigns, the most Brevo lists at a
+    /// time. A campaign this looks for is one an attempt minutes earlier made.
+    ///
+    /// @param name a campaign's whole name
+    /// @return the ids of the campaigns with exactly that name, newest first
+    /// @throws BrevoUnavailable if Brevo refuses, cannot be reached, or answers without the list
+    List<Long> campaignsNamed(String name);
 
     /// Sends the campaign to one address only. Brevo sends a test only to an
     /// existing contact on some list, so the address joins the test list first.

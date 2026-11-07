@@ -22,6 +22,10 @@ final class FakeBrevo implements Brevo {
     private final List<String> tests = new ArrayList<>();
     private List<Segment> segments = List.of();
     private final Map<Long, MailingReach> reaches = new LinkedHashMap<>();
+    private DraftAnswer draftAnswer = DraftAnswer.ANSWER;
+    private boolean listingLate;
+    private boolean refusingLists;
+    private boolean refusingCounts;
 
     /// @param jdbc the database, whose accounts are the members' list
     FakeBrevo(JdbcClient jdbc) {
@@ -52,6 +56,11 @@ final class FakeBrevo implements Brevo {
     /// nobody.
     @Override
     public MailingReach reach(@Nullable Long segmentId) {
+        synchronized (this) {
+            if (refusingCounts) {
+                throw new BrevoRefused("refusing to count");
+            }
+        }
         if (segmentId == null) {
             return new MailingReach(jdbc.sql("SELECT count(*) FROM account").query(Long.class).single(), 0);
         }
@@ -64,12 +73,38 @@ final class FakeBrevo implements Brevo {
     public synchronized long createDraft(Campaign campaign) {
         Long segment = campaign.segmentId();
         if (segment != null && segments.stream().noneMatch(s -> s.id() == segment)) {
-            throw new BrevoUnavailable("no segment " + segment);
+            throw new BrevoRefused("no segment " + segment);
+        }
+        if (draftAnswer == DraftAnswer.REFUSE) {
+            throw new BrevoRefused("refusing the draft");
+        }
+        if (draftAnswer == DraftAnswer.TIME_OUT) {
+            throw new BrevoUnavailable("timed out before making the draft");
         }
         long id = ids.incrementAndGet();
         campaigns.put(id, campaign);
         reports.put(id, new CampaignReport("draft", null, 0, 0, 0, 0, 0));
+        if (draftAnswer == DraftAnswer.LOSE) {
+            throw new BrevoUnavailable("made campaign " + id + " but lost the answer");
+        }
         return id;
+    }
+
+    @Override
+    public synchronized List<Long> campaignsNamed(String name) {
+        if (refusingLists) {
+            throw new BrevoRefused("refusing to list campaigns");
+        }
+        if (listingLate) {
+            return List.of();
+        }
+        List<Long> named = new ArrayList<>();
+        for (Map.Entry<Long, Campaign> made : campaigns.entrySet()) {
+            if (made.getValue().name().equals(name)) {
+                named.addFirst(made.getKey());
+            }
+        }
+        return named;
     }
 
     @Override
@@ -109,6 +144,52 @@ final class FakeBrevo implements Brevo {
     synchronized void segments(List<Segment> given) {
         segments = List.copyOf(given);
         reaches.clear();
+    }
+
+    /// How [#createDraft] answers.
+    enum DraftAnswer {
+        /// Makes the campaign and answers with its id.
+        ANSWER,
+        /// Makes the campaign and fails, as when Brevo's answer outlasts the timeout.
+        LOSE,
+        /// Makes nothing and fails, as when the request times out before Brevo acts.
+        TIME_OUT,
+        /// Makes nothing and answers with an error.
+        REFUSE
+    }
+
+    /// @param answer how [#createDraft] answers from now on
+    synchronized void answerDrafts(DraftAnswer answer) {
+        draftAnswer = answer;
+    }
+
+    /// @param late whether [#campaignsNamed] finds nothing from now on, as
+    ///             when Brevo has not finished making a campaign it was asked for
+    synchronized void listCampaignsLate(boolean late) {
+        listingLate = late;
+    }
+
+    /// @param refuse whether [#campaignsNamed] fails from now on
+    synchronized void refuseCampaignLists(boolean refuse) {
+        refusingLists = refuse;
+    }
+
+    /// @param refuse whether [#reach] fails from now on
+    synchronized void refuseCounts(boolean refuse) {
+        refusingCounts = refuse;
+    }
+
+    /// Forgets every campaign, as a test that starts from an empty log needs:
+    /// a campaign an earlier test made would look like one this test lost.
+    synchronized void forgetCampaigns() {
+        campaigns.clear();
+        reports.clear();
+        tests.clear();
+    }
+
+    /// @return every campaign's id, oldest first
+    synchronized List<Long> campaignIds() {
+        return List.copyOf(campaigns.keySet());
     }
 
     /// @return how many campaigns were made

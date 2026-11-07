@@ -18,11 +18,16 @@ import java.sql.Timestamp;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
 import se.teaterihuskvarna.IntegrationTestSupport;
 import se.teaterihuskvarna.login.LoginKind;
@@ -34,12 +39,16 @@ import se.teaterihuskvarna.login.SignedIn;
 /// - The preview is the mail with the chosen content and Brevo's unsubscribe
 ///   placeholder, and touches nothing in Brevo.
 /// - Preparing makes a draft to the members' list or to a Brevo segment, and
-///   logs it.
+///   logs it. A mailing whose draft Brevo did not answer for waits as
+///   `creating`, finds its draft by name, stops another mailing until then,
+///   and is deleted if Brevo never made it. Every failure is logged with its
+///   cause.
 /// - The audiences are the list and Brevo's segments, and a segment holding
 ///   anyone not on the members' list is refused, as is an audience that
 ///   reaches no member.
 /// - A test goes to the signed-in administrator.
 /// - The log shows what Brevo last reported.
+@ExtendWith(OutputCaptureExtension.class)
 class MailingIT extends IntegrationTestSupport {
 
     @Autowired
@@ -51,8 +60,17 @@ class MailingIT extends IntegrationTestSupport {
     void fake() {
         fake = (FakeBrevo) brevo;
         fake.segments(List.of());
+        fake.forgetCampaigns();
         // The fake's list is every member with an account.
         insertAccount("Maja Medlem", "maja@example.test");
+    }
+
+    @AfterEach
+    void answerAgain() {
+        fake.answerDrafts(FakeBrevo.DraftAnswer.ANSWER);
+        fake.listCampaignsLate(false);
+        fake.refuseCampaignLists(false);
+        fake.refuseCounts(false);
     }
 
     @Test
@@ -170,6 +188,150 @@ class MailingIT extends IntegrationTestSupport {
                 .andExpect(content().string(containsString("Alla medlemmar med konto")))
                 .andExpect(content().string(containsString("Skicka ett test till mig")))
                 .andExpect(content().string(not(containsString("Siffror från Brevo"))));
+    }
+
+    @Test
+    void aDraftIsNamedWithTheMailingsNumber() throws Exception {
+        long campaignId = prepare("LIST");
+        long id = jdbc.sql("SELECT id FROM mailing").query(Long.class).single();
+
+        assertThat(requireNonNull(fake.campaign(campaignId)).name()).startsWith("Utskick 20").endsWith(" Hej #" + id);
+    }
+
+    @Test
+    void aDraftWhoseAnswerIsLostIsFoundAtOnce(CapturedOutput output) throws Exception {
+        fake.answerDrafts(FakeBrevo.DraftAnswer.LOSE);
+
+        mockMvc.perform(prepareOnThePage("Hej"))
+                .andExpect(flash().attribute("notice", "Utkastet finns i Brevo."));
+
+        assertThat(fake.campaignCount()).isOne();
+        assertThat(jdbc.sql("SELECT status FROM mailing").query(String.class).single()).isEqualTo("draft");
+        long campaignId = jdbc.sql("SELECT brevo_campaign_id FROM mailing").query(Long.class).single();
+        assertThat(fake.campaign(campaignId)).isNotNull();
+        assertThat(output).contains("but made campaign " + campaignId).contains("but lost the answer");
+    }
+
+    @Test
+    void aMailingBrevoDidNotAnswerForWaitsAndStopsAnother(CapturedOutput output) throws Exception {
+        long id = unanswered();
+        assertThat(output).contains("Brevo did not answer whether it made the draft for mailing " + id)
+                .contains("but lost the answer");
+
+        mockMvc.perform(get("/admin/utskick").with(asAdministrator()))
+                .andExpect(content().string(containsString("Väntar på Brevo")));
+        mockMvc.perform(get("/admin/utskick/" + id).with(asAdministrator()))
+                .andExpect(content().string(containsString("Brevo har inte bekräftat utkastet än.")))
+                .andExpect(content().string(not(containsString("Skicka ett test till mig"))));
+        mockMvc.perform(post("/admin/utskick/" + id + "/testa").with(asAdministrator()).with(csrf()))
+                .andExpect(flash().attribute("error", containsString("kan ändå ha skapat utkastet")));
+
+        fake.answerDrafts(FakeBrevo.DraftAnswer.ANSWER);
+        mockMvc.perform(prepareOnThePage("Något annat"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("Ett tidigare utskick väntar fortfarande på Brevo")));
+        mockMvc.perform(post("/api/admin/mailings").with(asAdministrator()).with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"subject\": \"Hej\", \"intro\": \"Hej\", \"audience\": \"LIST\"}"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.title").value("Earlier mailing pending"));
+
+        assertThat(fake.campaignCount()).isOne();
+        assertThat(rowsIn("mailing")).isOne();
+    }
+
+    @Test
+    void theLogFindsTheDraftOnceBrevoShowsIt() throws Exception {
+        long id = unanswered();
+        long made = fake.campaignIds().getFirst();
+        fake.listCampaignsLate(false);
+
+        mockMvc.perform(get("/api/admin/mailings").with(asAdministrator()))
+                .andExpect(jsonPath("$[0].id").value(id))
+                .andExpect(jsonPath("$[0].status").value("draft"))
+                .andExpect(jsonPath("$[0].brevoCampaignId").value(made));
+
+        fake.answerDrafts(FakeBrevo.DraftAnswer.ANSWER);
+        prepare("LIST");
+        assertThat(fake.campaignCount()).isEqualTo(2);
+    }
+
+    @Test
+    void aMailingBrevoNeverMadeIsGoneAfterFiveMinutes(CapturedOutput output) throws Exception {
+        fake.answerDrafts(FakeBrevo.DraftAnswer.TIME_OUT);
+        mockMvc.perform(prepareOnThePage("Hej"))
+                .andExpect(content().string(containsString("kan ändå ha skapat utkastet")));
+        long id = jdbc.sql("SELECT id FROM mailing").query(Long.class).single();
+        assertThat(fake.campaignCount()).isZero();
+
+        jdbc.sql("UPDATE mailing SET created_at = ?")
+                .param(Timestamp.from(Instant.now().minus(MailingService.UNANSWERED).minusSeconds(1))).update();
+        mockMvc.perform(get("/admin/utskick").with(asAdministrator()))
+                .andExpect(content().string(not(containsString("Väntar på Brevo"))));
+
+        assertThat(rowsIn("mailing")).isZero();
+        assertThat(output).contains("Brevo never made the draft for mailing " + id);
+        fake.answerDrafts(FakeBrevo.DraftAnswer.ANSWER);
+        prepare("LIST");
+    }
+
+    @Test
+    void aDraftBrevoRefusesLeavesNoMailing(CapturedOutput output) throws Exception {
+        fake.answerDrafts(FakeBrevo.DraftAnswer.REFUSE);
+
+        mockMvc.perform(prepareOnThePage("Hej"))
+                .andExpect(content().string(containsString("Brevo svarade inte som väntat. Försök igen om en stund.")));
+
+        assertThat(rowsIn("mailing")).isZero();
+        assertThat(output).contains("Brevo refused the draft for mailing").contains("refusing the draft");
+        fake.answerDrafts(FakeBrevo.DraftAnswer.ANSWER);
+        prepare("LIST");
+    }
+
+    @Test
+    void aLostAnswerWhoseLookupFailsTooLogsBoth(CapturedOutput output) throws Exception {
+        fake.answerDrafts(FakeBrevo.DraftAnswer.LOSE);
+        fake.refuseCampaignLists(true);
+
+        mockMvc.perform(prepareOnThePage("Hej"))
+                .andExpect(content().string(containsString("kan ändå ha skapat utkastet")));
+
+        assertThat(jdbc.sql("SELECT status FROM mailing").query(String.class).single()).isEqualTo("creating");
+        assertThat(output).contains("but lost the answer").contains("Suppressed")
+                .contains("refusing to list campaigns");
+    }
+
+    @Test
+    void preparingTheSameMailAgainOnPurposeMakesASecondDraft() throws Exception {
+        long first = prepare("LIST");
+        long second = prepare("LIST");
+
+        assertThat(second).isNotEqualTo(first);
+        assertThat(fake.campaignCount()).isEqualTo(2);
+        assertThat(rowsIn("mailing")).isEqualTo(2);
+    }
+
+    @Test
+    void aTestBrevoRefusesIsLogged(CapturedOutput output) throws Exception {
+        prepare("LIST");
+        jdbc.sql("UPDATE mailing SET brevo_campaign_id = 999999").update();
+        long mailing = jdbc.sql("SELECT id FROM mailing").query(Long.class).single();
+
+        mockMvc.perform(post("/admin/utskick/" + mailing + "/testa").with(asAdministrator()).with(csrf()))
+                .andExpect(flash().attribute("error", "Brevo svarade inte som väntat. Försök igen om en stund."));
+
+        assertThat(output).contains("Could not send a test of mailing " + mailing).contains("no campaign 999999");
+    }
+
+    @Test
+    void aCountBrevoRefusesIsLogged(CapturedOutput output) throws Exception {
+        fake.refuseCounts(true);
+
+        mockMvc.perform(post("/admin/utskick/forhandsgranska").with(asAdministrator()).with(csrf())
+                        .param("audience", "LIST").param("subject", "Hej").param("intro", "Hej"))
+                .andExpect(content().string(containsString("Brevo svarade inte, så antalet är okänt.")));
+
+        assertThat(output).contains("Could not ask Brevo who audience LIST reaches").contains("refusing to count");
     }
 
     @Test
@@ -302,6 +464,27 @@ class MailingIT extends IntegrationTestSupport {
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("Siffror från Brevo")))
                 .andExpect(content().string(not(containsString("Skicka ett test till mig"))));
+    }
+
+    /// Prepares a mailing whose draft Brevo makes without answering, and
+    /// does not show yet.
+    ///
+    /// @return the mailing, still `creating`
+    private long unanswered() throws Exception {
+        fake.answerDrafts(FakeBrevo.DraftAnswer.LOSE);
+        fake.listCampaignsLate(true);
+        mockMvc.perform(prepareOnThePage("Hej"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("Brevo svarade inte, men kan ändå ha skapat utkastet.")));
+        assertThat(fake.campaignCount()).isOne();
+        assertThat(jdbc.sql("SELECT status FROM mailing").query(String.class).single()).isEqualTo("creating");
+        assertThat(jdbc.sql("SELECT brevo_campaign_id FROM mailing").query(Long.class).list()).containsOnlyNulls();
+        return jdbc.sql("SELECT id FROM mailing").query(Long.class).single();
+    }
+
+    private MockHttpServletRequestBuilder prepareOnThePage(String intro) {
+        return post("/admin/utskick").with(asAdministrator()).with(csrf())
+                .param("audience", "LIST").param("subject", "Hej").param("intro", intro);
     }
 
     /// @return the draft campaign's id in Brevo

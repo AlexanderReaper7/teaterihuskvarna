@@ -8,9 +8,11 @@ import org.jspecify.annotations.Nullable;
 /// @param id              the mailing
 /// @param subject         the subject line
 /// @param audienceName    who it was for, in Swedish
-/// @param brevoCampaignId the campaign in Brevo, where the administrator sends it
+/// @param brevoCampaignId the campaign in Brevo, where the administrator sends it,
+///                        or null while the status is `creating`
 /// @param createdAt       when it was prepared
-/// @param status          Brevo's status when last asked, such as `draft` or `sent`
+/// @param status          Brevo's status when last asked, such as `draft` or `sent`,
+///                        or `creating` until Brevo's campaign is known
 /// @param sentAt          when Brevo sent it, or null
 /// @param sent            mails sent
 /// @param delivered       mails delivered
@@ -18,7 +20,7 @@ import org.jspecify.annotations.Nullable;
 /// @param unsubscriptions recipients who unsubscribed from it
 /// @param hardBounces     addresses that do not exist
 /// @param checkedAt       when Brevo was last asked
-public record MailingDetails(long id, String subject, String audienceName, long brevoCampaignId,
+public record MailingDetails(long id, String subject, String audienceName, @Nullable Long brevoCampaignId,
         Instant createdAt, String status, @Nullable Instant sentAt, int sent, int delivered, int uniqueViews,
         int unsubscriptions, int hardBounces, Instant checkedAt) {
 
