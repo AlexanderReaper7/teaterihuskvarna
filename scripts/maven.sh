@@ -8,8 +8,6 @@
 # Maven's repository and the wrapper's download live in the named volume
 # teaterihuskvarna-cache, shared by every checkout on the machine. Maven 4 locks
 # it per artifact with file locks, so parallel builds can share it.
-# TEATERIHUSKVARNA_CACHE, an absolute path, puts them in that host directory
-# instead, which CI saves between runs with actions/cache.
 #
 # The wrapper's own Maven download, in /cache/.m2/wrapper, is not locked. Two
 # builds on an empty volume at the same moment both install it and delete each
@@ -25,7 +23,7 @@ cd "$(dirname "$0")/.."
 # hit after the first time.
 image=teaterihuskvarna-jdk
 docker build -q --target jdk -t "$image" - < Dockerfile > /dev/null
-cache="${TEATERIHUSKVARNA_CACHE:-teaterihuskvarna-cache}"
+cache=teaterihuskvarna-cache
 user=
 
 # The git plugin runs git itself (-Dmaven.gitcommitid.nativegit), so untracked

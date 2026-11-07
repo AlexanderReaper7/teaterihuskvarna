@@ -28,25 +28,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7.0.1
-      # Maven's downloads from the last run. With TEATERIHUSKVARNA_CACHE set,
-      # scripts/maven.sh keeps them in that directory instead of a docker
-      # volume, which a runner throws away. A pom.xml or wrapper change starts
-      # from the newest older cache and saves a new one when the job succeeds.
-      - uses: actions/cache@v6.1.0
-        with:
-          path: ${{ runner.temp }}/maven-cache/.m2
-          key: maven-${{ hashFiles('pom.xml', '.mvn/wrapper/maven-wrapper.properties') }}
-          restore-keys: maven-
       - name: Tests and static analysis
         run: sh scripts/maven.sh verify
-        env:
-          TEATERIHUSKVARNA_CACHE: ${{ runner.temp }}/maven-cache
       - name: Pinned Temurin versions agree
         run: sh scripts/check-pins.sh
       - name: Prove nullability compiler enforcement
         run: sh scripts/check-nullability.sh
-        env:
-          TEATERIHUSKVARNA_CACHE: ${{ runner.temp }}/maven-cache
 
   # Beside test rather than after it: the two share nothing, and waiting added
   # the image build's minute to every run. Whatever later publishes the image
