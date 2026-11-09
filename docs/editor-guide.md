@@ -147,6 +147,17 @@ Partnerna visas på sidan `/partners` på webbplatsen.
 
 ## Förhandsgranska ett utkast
 
+### Utkast och publicerat
+
+När du skapar eller ändrar något sparas det först som ett **utkast**. Besökare på webbplatsen ser inte utkast. De ser bara det som är **publicerat**.
+
+- Överst i formuläret finns två flikar: **Publicerad** och **Utkast**.
+- I listan betyder en grön prick att det finns en publicerad version. En orange ring betyder att det finns ändringar som inte är publicerade.
+- Längst ned till vänster står "Redigerad för ... sen" för ändringar som inte är publicerade och "Senast publicerad för ... sen" för det som är publicerat.
+- Är fliken **Publicerad** grå har dokumentet aldrig publicerats. Då syns det inte på webbplatsen.
+
+   ![Ett utkast som aldrig har publicerats, med fliken Utkast markerad och en orange ring i listan. De två andra evenemangen har både orange ring och grön prick.](img/editor-guide/utkast-flikar.png)
+
 ## Avpublicera, ta bort och ångra
 
 ### Se vad du har ändrat
