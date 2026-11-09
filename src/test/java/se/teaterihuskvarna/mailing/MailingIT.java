@@ -17,7 +17,10 @@ import com.jayway.jsonpath.JsonPath;
 import java.sql.Timestamp;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -39,7 +42,9 @@ import se.teaterihuskvarna.login.SignedIn;
 ///   anyone not on the members' list is refused, as is an audience that
 ///   reaches no member.
 /// - A test goes to the signed-in administrator.
-/// - The log shows what Brevo last reported.
+/// - The log shows what Brevo last reported, keeps it when Brevo cannot be
+///   reached, and stops asking about a mailing Brevo no longer changes.
+/// - Brevo refusing a draft logs no mailing, and refusing a test says so.
 class MailingIT extends IntegrationTestSupport {
 
     @Autowired
@@ -53,6 +58,12 @@ class MailingIT extends IntegrationTestSupport {
         fake.segments(List.of());
         // The fake's list is every member with an account.
         insertAccount("Maja Medlem", "maja@example.test");
+    }
+
+    /// The fake outlives the test, and every other IT shares it.
+    @AfterEach
+    void answerAgain() {
+        fake.refuseCampaigns(false);
     }
 
     @Test
@@ -302,6 +313,130 @@ class MailingIT extends IntegrationTestSupport {
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("Siffror från Brevo")))
                 .andExpect(content().string(not(containsString("Skicka ett test till mig"))));
+    }
+
+    /// A mailing is saved only once its campaign exists in Brevo.
+    @Test
+    void aDraftBrevoRefusesLogsNoMailing() throws Exception {
+        fake.refuseCampaigns(true);
+
+        mockMvc.perform(post("/admin/utskick").with(asAdministrator()).with(csrf())
+                        .param("audience", "LIST").param("subject", "Hej").param("intro", "Hej"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("Brevo svarade inte som väntat.")));
+        mockMvc.perform(post("/api/admin/mailings").with(asAdministrator()).with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"subject\": \"Hej\", \"intro\": \"Hej\", \"audience\": \"LIST\"}"))
+                .andExpect(status().isBadGateway());
+
+        assertThat(rowsIn("mailing")).isZero();
+    }
+
+    @Test
+    void aTestBrevoRefusesSaysSo() throws Exception {
+        long id = mailingOf(prepare("LIST"));
+        int tests = fake.tests().size();
+        fake.refuseCampaigns(true);
+
+        mockMvc.perform(post("/admin/utskick/" + id + "/testa").with(asAdministrator()).with(csrf()))
+                .andExpect(flash().attribute("error", "Brevo svarade inte som väntat. Försök igen om en stund."))
+                .andExpect(flash().attributeCount(1));
+        mockMvc.perform(post("/api/admin/mailings/" + id + "/test").with(asAdministrator()).with(csrf()))
+                .andExpect(status().isBadGateway());
+
+        assertThat(fake.tests()).hasSize(tests);
+    }
+
+    @Test
+    void theLogKeepsBrevosLastAnswerWhenBrevoCannotBeReached() throws Exception {
+        long campaignId = prepare("LIST");
+        long id = mailingOf(campaignId);
+        // Sent yesterday, so its numbers can still change.
+        Instant sentAt = Instant.now().minus(Duration.ofDays(1));
+        fake.markSent(campaignId, new CampaignReport("sent", sentAt, 4, 4, 3, 0, 0));
+        lastAskedAnHourAgo();
+        mockMvc.perform(get("/api/admin/mailings/" + id).with(asAdministrator()))
+                .andExpect(jsonPath("$.uniqueViews").value(3));
+
+        fake.markSent(campaignId, new CampaignReport("sent", sentAt, 4, 4, 4, 0, 0));
+        fake.refuseCampaigns(true);
+        lastAskedAnHourAgo();
+
+        mockMvc.perform(get("/api/admin/mailings").with(asAdministrator()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].status").value("sent"))
+                .andExpect(jsonPath("$[0].uniqueViews").value(3));
+        mockMvc.perform(get("/admin/utskick").with(asAdministrator()))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("Skickat")));
+        mockMvc.perform(get("/admin/utskick/" + id).with(asAdministrator()))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("Siffror från Brevo")));
+
+        fake.refuseCampaigns(false);
+        mockMvc.perform(get("/api/admin/mailings/" + id).with(asAdministrator()))
+                .andExpect(jsonPath("$.uniqueViews").value(4));
+    }
+
+    /// Brevo stops changing a campaign once it is cancelled, or a week after
+    /// it was sent, so the log stops asking. A week is the boundary: a mailing
+    /// sent six days ago still gets its new numbers.
+    @Test
+    void aMailingSentOverAWeekAgoOrCancelledIsNotAskedAgain() throws Exception {
+        Instant now = Instant.now();
+        long sixDays = prepare("LIST");
+        long eightDays = prepare("LIST");
+        long cancelled = prepare("LIST");
+        fake.markSent(sixDays, new CampaignReport("sent", now.minus(Duration.ofDays(6)), 1, 1, 1, 0, 0));
+        fake.markSent(eightDays, new CampaignReport("sent", now.minus(Duration.ofDays(8)), 1, 1, 1, 0, 0));
+        fake.markSent(cancelled, new CampaignReport("cancelled", null, 0, 0, 0, 0, 0));
+        lastAskedAnHourAgo();
+        mockMvc.perform(get("/api/admin/mailings").with(asAdministrator())).andExpect(status().isOk());
+
+        fake.markSent(sixDays, new CampaignReport("sent", now.minus(Duration.ofDays(6)), 1, 1, 5, 0, 0));
+        fake.markSent(eightDays, new CampaignReport("sent", now.minus(Duration.ofDays(8)), 1, 1, 5, 0, 0));
+        fake.markSent(cancelled, new CampaignReport("draft", null, 0, 0, 0, 0, 0));
+        lastAskedAnHourAgo();
+
+        mockMvc.perform(get("/api/admin/mailings/" + mailingOf(sixDays)).with(asAdministrator()))
+                .andExpect(jsonPath("$.uniqueViews").value(5));
+        mockMvc.perform(get("/api/admin/mailings/" + mailingOf(eightDays)).with(asAdministrator()))
+                .andExpect(jsonPath("$.uniqueViews").value(1));
+        mockMvc.perform(get("/api/admin/mailings/" + mailingOf(cancelled)).with(asAdministrator()))
+                .andExpect(jsonPath("$.status").value("cancelled"));
+    }
+
+    /// [HttpBrevo] accepts only the statuses it knows, and each needs a
+    /// Swedish name, or the log page fails for a mailing in that status.
+    @Test
+    void everyStatusBrevoReportsHasASwedishName() throws Exception {
+        // One mailing each: once archived or cancelled, a mailing is not asked again.
+        Map<String, Long> mailingByStatus = new LinkedHashMap<>();
+        for (String status : HttpBrevo.STATUSES) {
+            long campaignId = prepare("LIST");
+            fake.markSent(campaignId, new CampaignReport(status, null, 0, 0, 0, 0, 0));
+            mailingByStatus.put(status, mailingOf(campaignId));
+        }
+        lastAskedAnHourAgo();
+
+        mockMvc.perform(get("/admin/utskick").with(asAdministrator()))
+                .andExpect(status().isOk());
+        for (Map.Entry<String, Long> mailing : mailingByStatus.entrySet()) {
+            mockMvc.perform(get("/admin/utskick/" + mailing.getValue()).with(asAdministrator()))
+                    .andExpect(status().isOk());
+            assertThat(jdbc.sql("SELECT status FROM mailing WHERE id = ?").param(mailing.getValue())
+                    .query(String.class).single()).isEqualTo(mailing.getKey());
+        }
+    }
+
+    private long mailingOf(long campaignId) {
+        return jdbc.sql("SELECT id FROM mailing WHERE brevo_campaign_id = ?").param(campaignId).query(Long.class)
+                .single();
+    }
+
+    private void lastAskedAnHourAgo() {
+        jdbc.sql("UPDATE mailing SET checked_at = ?").param(Timestamp.from(Instant.now().minus(Duration.ofHours(1))))
+                .update();
     }
 
     /// @return the draft campaign's id in Brevo
