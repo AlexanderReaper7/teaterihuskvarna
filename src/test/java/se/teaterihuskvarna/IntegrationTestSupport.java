@@ -2,9 +2,9 @@ package se.teaterihuskvarna;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.after;
 import static org.mockito.Mockito.clearInvocations;
-import static org.mockito.Mockito.timeout;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.concurrent.locks.LockSupport;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
@@ -60,17 +61,13 @@ import se.teaterihuskvarna.login.LoginKind;
 /// from `teaterihuskvarna.first-administrator.*`, and the cleanup keeps it.
 @SpringBootTest
 @AutoConfigureMockMvc
-@Import(PostgresTestConfiguration.class)
+@Import({PostgresTestConfiguration.class, BackgroundTasks.class})
 public abstract class IntegrationTestSupport {
 
     /// How long a test waits for a mail. [se.teaterihuskvarna.login.Mailer] sends
     /// on a background thread after the commit, so the mail can arrive after the
     /// response has.
     protected static final long MAIL_WAIT_MILLIS = 5000;
-
-    /// How long a test watches for a mail that must not arrive, or for a second
-    /// one after the expected one.
-    protected static final long QUIET_MILLIS = 1000;
 
     /// The mail sender, mocked so nothing leaves the test. Spring resets it after
     /// each test.
@@ -82,6 +79,9 @@ public abstract class IntegrationTestSupport {
 
     @Autowired
     protected JdbcClient jdbc;
+
+    @Autowired
+    private BackgroundTasks backgroundTasks;
 
     @Value("${teaterihuskvarna.first-administrator.email}")
     protected String firstAdministratorEmail;
@@ -173,15 +173,16 @@ public abstract class IntegrationTestSupport {
         return jdbc.sql("SELECT COUNT(*) FROM " + table).query(Long.class).single();
     }
 
-    /// Waits for exactly `count` mails in total since the test started, or since
-    /// the last [#forgetMails], then watches a while longer for one too many.
+    /// Waits until the mail the test caused so far has gone out, then requires
+    /// exactly `count` mails in total since the test started, or since the last
+    /// [#forgetMails].
     ///
     /// @param count how many mails must go out
     /// @return the mails, in the order they were sent
     protected List<SimpleMailMessage> awaitMails(int count) {
-        verify(mailSender, timeout(MAIL_WAIT_MILLIS).times(count)).send(any(SimpleMailMessage.class));
+        awaitMailSettled();
         ArgumentCaptor<SimpleMailMessage> sent = ArgumentCaptor.forClass(SimpleMailMessage.class);
-        verify(mailSender, after(QUIET_MILLIS).times(count)).send(sent.capture());
+        verify(mailSender, times(count)).send(sent.capture());
         return sent.getAllValues();
     }
 
@@ -190,9 +191,39 @@ public abstract class IntegrationTestSupport {
         return awaitMails(1).getFirst();
     }
 
-    /// Fails if a mail goes out within [#QUIET_MILLIS].
+    /// Waits until the mail the test caused so far has gone out, and fails if there was any.
     protected void assertNoMail() {
-        verify(mailSender, after(QUIET_MILLIS).never()).send(any(SimpleMailMessage.class));
+        awaitMailSettled();
+        verify(mailSender, never()).send(any(SimpleMailMessage.class));
+    }
+
+    /// Waits, at most [#MAIL_WAIT_MILLIS], until no mail is on its way: no task
+    /// is left on the executor [se.teaterihuskvarna.login.Background] uses, and
+    /// no mail in the outbox is due. A mail leaves the outbox in the transaction
+    /// that hands it to the sender, so a due row is one not sent yet. A mail
+    /// that failed is not due until its retry, and does not count.
+    ///
+    /// The count is read before the outbox, never after. A task commits its
+    /// outbox row before it ends, so every row a finished task wrote is visible
+    /// to the query that follows. In the other order, a task could write its
+    /// row just after the query and end just before the count.
+    private void awaitMailSettled() {
+        assertThat(backgroundTasks.counting())
+                .as("BackgroundTasks counts the tasks on applicationTaskExecutor")
+                .isTrue();
+        long deadline = System.nanoTime() + MAIL_WAIT_MILLIS * 1_000_000;
+        while (backgroundTasks.pending() > 0 || mailsDue() > 0) {
+            assertThat(System.nanoTime() - deadline)
+                    .as("background tasks or mail still pending after %d ms", MAIL_WAIT_MILLIS)
+                    .isNegative();
+            LockSupport.parkNanos(5_000_000);
+        }
+    }
+
+    private long mailsDue() {
+        return jdbc.sql("SELECT COUNT(*) FROM outbox WHERE kind = 'mail' AND next_attempt_at <= now()")
+                .query(Long.class)
+                .single();
     }
 
     /// Makes the mail helpers count from now.
