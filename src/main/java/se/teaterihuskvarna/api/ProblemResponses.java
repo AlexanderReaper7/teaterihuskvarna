@@ -19,6 +19,7 @@ import se.teaterihuskvarna.document.NotAPdf;
 import se.teaterihuskvarna.login.NoSuchDevice;
 import se.teaterihuskvarna.login.NoSuchPasskey;
 import se.teaterihuskvarna.mailing.BrevoUnavailable;
+import se.teaterihuskvarna.mailing.EarlierAttemptPending;
 import se.teaterihuskvarna.mailing.AudienceHasNonMembers;
 import se.teaterihuskvarna.mailing.EmptyAudience;
 import se.teaterihuskvarna.mailing.EmptyMailing;
@@ -272,6 +273,13 @@ public class ProblemResponses {
     @ExceptionHandler
     public ProblemDetail noRecipients(EmptyAudience exception) {
         return problem(HttpStatus.CONFLICT, "Audience reaches no one", exception);
+    }
+
+    /// @param exception a mailing prepared while an earlier one still waits for Brevo's draft
+    /// @return 409
+    @ExceptionHandler
+    public ProblemDetail attemptPending(EarlierAttemptPending exception) {
+        return problem(HttpStatus.CONFLICT, "Earlier mailing pending", exception);
     }
 
     /// @param exception an event or news item that is not published

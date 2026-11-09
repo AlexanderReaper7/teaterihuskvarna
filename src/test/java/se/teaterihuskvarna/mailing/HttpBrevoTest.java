@@ -227,9 +227,59 @@ class HttpBrevoTest {
                 .andRespond(withStatus(HttpStatus.CREATED)
                         .contentType(MediaType.APPLICATION_JSON).body("{\"id\":301}"));
 
-        assertThat(brevo.createDraft(new Brevo.Campaign("Utskick", "Höst", "<p>Hej</p>", null))).isEqualTo(300);
-        assertThat(brevo.createDraft(new Brevo.Campaign("Utskick", "Höst", "<p>Hej</p>", 12L))).isEqualTo(301);
+        assertThat(brevo.createDraft(new Brevo.Campaign("Utskick", "Höst", "<p>Hej</p>", null)))
+                .isEqualTo(300);
+        assertThat(brevo.createDraft(new Brevo.Campaign("Utskick", "Höst", "<p>Hej</p>", 12L)))
+                .isEqualTo(301);
         server.verify();
+    }
+
+    @Test
+    void findsTheNewestCampaignsWithExactlyTheName() {
+        server.expect(requestTo(API + "/emailCampaigns?limit=100&offset=0&sort=desc&excludeHtmlContent=true"))
+                .andExpect(method(HttpMethod.GET))
+                .andRespond(withSuccess("""
+                        {"count":4,"campaigns":[{"id":304,"name":"Utskick 2026-11-06 Höst #12"},
+                          {"id":303,"name":"Utskick 2026-11-06 Höst #120"},
+                          {"id":302,"name":"utskick 2026-11-06 höst #12"},
+                          {"id":301,"name":"Utskick 2026-11-06 Höst #12"}]}""", MediaType.APPLICATION_JSON));
+
+        assertThat(brevo.campaignsNamed("Utskick 2026-11-06 Höst #12")).containsExactly(304L, 301L);
+        server.verify();
+    }
+
+    @Test
+    void anAccountWithoutCampaignsHasNoneNamed() {
+        server.expect(requestTo(API + "/emailCampaigns?limit=100&offset=0&sort=desc&excludeHtmlContent=true"))
+                .andRespond(withSuccess("{\"campaigns\":[],\"count\":0}", MediaType.APPLICATION_JSON));
+
+        assertThat(brevo.campaignsNamed("Utskick 2026-11-06 Höst #12")).isEmpty();
+    }
+
+    @Test
+    void campaignsWithoutTheListAreNoAnswer() {
+        for (String body : List.of("{}", "{\"count\":0}", "{\"campaigns\":{\"id\":304}}")) {
+            server.reset();
+            server.expect(requestTo(API + "/emailCampaigns?limit=100&offset=0&sort=desc&excludeHtmlContent=true"))
+                    .andRespond(withSuccess(body, MediaType.APPLICATION_JSON));
+
+            assertThatThrownBy(() -> brevo.campaignsNamed("Utskick")).as(body)
+                    .isInstanceOf(BrevoUnavailable.class);
+        }
+    }
+
+    @Test
+    void aDraftBrevoAnswersWithAnErrorIsRefusedAndOneItFailsOnIsUnknown() {
+        Brevo.Campaign campaign = new Brevo.Campaign("Utskick", "Höst", "<p>Hej</p>", null);
+        server.expect(requestTo(API + "/emailCampaigns"))
+                .andRespond(withBadRequest().contentType(MediaType.APPLICATION_JSON)
+                        .body("{\"code\":\"invalid_parameter\"}"));
+        assertThatThrownBy(() -> brevo.createDraft(campaign)).isInstanceOf(BrevoRefused.class);
+
+        server.reset();
+        server.expect(requestTo(API + "/emailCampaigns")).andRespond(withStatus(HttpStatus.BAD_GATEWAY));
+        assertThatThrownBy(() -> brevo.createDraft(campaign)).isInstanceOf(BrevoUnavailable.class)
+                .isNotInstanceOf(BrevoRefused.class);
     }
 
     @Test
