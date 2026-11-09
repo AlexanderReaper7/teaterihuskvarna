@@ -35,9 +35,11 @@ jobs:
       - name: Prove nullability compiler enforcement
         run: sh scripts/check-nullability.sh
 
+  # Beside test rather than after it: the two share nothing, and waiting added
+  # the image build's minute to every run. Whatever later publishes the image
+  # has to need both.
   image:
     runs-on: ubuntu-latest
-    needs: test
     steps:
       - uses: actions/checkout@v7.0.1
       - name: Build the image
