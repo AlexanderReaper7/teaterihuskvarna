@@ -49,7 +49,7 @@ Innan du kan logga in måste du ha blivit inbjuden till Sanity-projektet. Be en 
 
    ![Ett ifyllt evenemang med den aktiva knappen Publish längst ned till höger.](img/editor-guide/evenemang-publicera.png)
 
-5. Kontrollera att fliken **Published** nu är markerad högst upp. Då är evenemanget publicerat och syns på webbplatsen inom en minut.
+5. Kontrollera att fliken **Publicerad** nu är markerad högst upp. Då är evenemanget publicerat och syns på webbplatsen inom en minut.
 
 ## Skapa och publicera en nyhet
 1. Klicka på **Nyhet** i listan **Content** till vänster.
@@ -75,7 +75,7 @@ Innan du kan logga in måste du ha blivit inbjuden till Sanity-projektet. Be en 
    Om ett obligatoriskt fält är tomt går det inte att publicera. Fältet får en röd ram och ett rött utropstecken. Fyll i fältet och klicka på **Publish** igen.
 
 4. Klicka på knappen **Publish** längst ned till höger.
-5. Kontrollera att fliken **Published** nu är markerad högst upp. Då är nyheten publicerad och syns på webbplatsen inom en minut.
+5. Kontrollera att fliken **Publicerad** nu är markerad högst upp. Då är nyheten publicerad och syns på webbplatsen inom en minut.
 
 ## Redigera en fast sida
 De fasta sidorna är **Om föreningen**, **Styrelsen**, **Produktioner**, **Ludde-priser** och **Kontakt**. Du ändrar texten på dem, men skapar inga nya sidor.
@@ -85,20 +85,20 @@ De fasta sidorna är **Om föreningen**, **Styrelsen**, **Produktioner**, **Ludd
    ![Listan över de fem fasta sidorna i Sanity Studio](img/editor-guide/sida-lista.png)
 
 2. Klicka på den sida du vill ändra. Formuläret öppnas till höger.
-   3. Ändra det du vill i formuläret. Det är längre än fönstret, så **rulla nedåt** för att se alla fält.
+3. Ändra det du vill i formuläret. Det är längre än fönstret, så **rulla nedåt** för att se alla fält.
 
-      | Fält | Vad du gör |
-      |------|------------|
-      | **Rubrik** | Ändra inte. Webbplatsen använder den för att hitta rätt sida. |
-      | **Vilken sida** | Ändra inte. Det finns bara fem sidor, och adressen måste vara en av dem. |
-      | **Bild överst** | Dra en bild hit eller klistra in den. Du kan också klicka på **Upload** för att välja en bild från datorn, eller **Select** för att välja en bild som redan finns. |
-      | **Alternativ text** | Beskriv bilden för den som inte ser den, till exempel "Tre skådespelare på scenen". |
-      | **Innehåll** | Skriv eller ändra sidans text. Verktygsraden ovanför texten har bland annat fet stil, kursiv, punktlista, numrerad lista och länk. |
+   | Fält | Vad du gör |
+   |------|------------|
+   | **Rubrik** | Ändra inte. Webbplatsen använder den för att hitta rätt sida. |
+   | **Vilken sida** | Ändra inte. Det finns bara fem sidor, och adressen måste vara en av dem. |
+   | **Bild överst** | Dra en bild hit eller klistra in den. Du kan också klicka på **Upload** för att välja en bild från datorn, eller **Select** för att välja en bild som redan finns. |
+   | **Alternativ text** | Beskriv bilden för den som inte ser den, till exempel "Tre skådespelare på scenen". |
+   | **Innehåll** | Skriv eller ändra sidans text. Verktygsraden ovanför texten har bland annat fet stil, kursiv, punktlista, numrerad lista och länk. |
 
-            ![Sidan Om föreningen där texten har ändrats och knappen Publish är aktiv](img/editor-guide/sida-redigera.png)
+   ![Sidan Om föreningen där texten har ändrats och knappen Publish är aktiv](img/editor-guide/sida-redigera.png)
 
 4. Klicka på knappen **Publish** längst ned till höger när du är nöjd.
-5. Kontrollera att fliken **Published** är markerad högst upp. Ändringen syns på webbplatsen inom en minut.
+5. Kontrollera att fliken **Publicerad** är markerad högst upp. Ändringen syns på webbplatsen inom en minut.
 
 ### Om du ångrar dig innan du har publicerat
 Du kan kasta alla ändringar du har gjort sedan sidan senast publicerades.
@@ -135,7 +135,7 @@ Partnerna visas på sidan `/partners` på webbplatsen.
    ![En ifylld partner med den aktiva knappen Publish längst ned till höger](img/editor-guide/partner-publicera.png)
 
 4. Klicka på knappen **Publish** längst ned till höger.
-5. Kontrollera att fliken **Published** nu är markerad högst upp. Partnern syns på webbplatsen inom en minut.
+5. Kontrollera att fliken **Publicerad** nu är markerad högst upp. Partnern syns på webbplatsen inom en minut.
 
 ### Ändra en partner som redan finns
 
@@ -143,11 +143,44 @@ Partnerna visas på sidan `/partners` på webbplatsen.
 2. Klicka på partnern i mittenkolumnen. Formuläret öppnas till höger.
 3. Ändra det du vill, till exempel **Webbplats** eller **Beskrivning**.
 4. Klicka på knappen **Publish** längst ned till höger.
-5. Kontrollera att fliken **Published** är markerad. Ändringen syns på webbplatsen inom en minut.
+5. Kontrollera att fliken **Publicerad** är markerad. Ändringen syns på webbplatsen inom en minut.
 
 ## Förhandsgranska ett utkast
 
 ## Avpublicera, ta bort och ångra
+
+### Se vad du har ändrat
+
+Klicka på de tre prickarna (**...**) högst upp i formuläret och välj **Granska ändringar**. Där ser du vad du har ändrat sedan senaste publiceringen.
+
+### Ångra ändringar innan du har publicerat
+
+1. Klicka på de tre prickarna (**...**) bredvid knappen **Publicera**. Menyn visar **Kassera ändringar** bara när du har ändringar som inte är publicerade.
+2. Välj **Kassera ändringar**.
+3. En ruta frågar "Är du säker på att du vill kassera alla ändringar sedan senast publicerat?" Klicka på **Kassera ändringar** för att bekräfta, eller **Avbryt**.
+
+   ![Rutan Kassera ändringar med knapparna Avbryt och Kassera ändringar](img/editor-guide/kassera-andringar.png)
+
+### Ta bort något
+
+Det finns inget val för att bara avpublicera. Vill du ta bort något från webbplatsen raderar du det:
+
+1. Öppna det du vill ta bort.
+2. Klicka på de tre prickarna (**...**) bredvid knappen **Publicera** och välj **Radera**.
+3. En ruta frågar "Är du säker på att du vill ta bort detta dokument?" och visar dokumentet med dess status, till exempel **Publicerad**. Klicka på **Ta bort dokument** för att bekräfta, eller **Avbryt**.
+
+   ![Rutan Radera dokument med knapparna Avbryt och Ta bort dokument](img/editor-guide/radera-dokument.png)
+
+### Om du har publicerat något fel
+
+Du kan se tidigare versioner och skriva tillbaka den text du vill ha.
+
+1. Klicka på de tre prickarna (**...**) högst upp i formuläret och välj **Granska ändringar**.
+2. Klicka på fliken **Historik**. Där ser du en lista över när dokumentet skapades, ändrades och publicerades.
+3. Klicka på en **Publicerad**-rad. Formuläret visar nu den versionen, och en gul list längst ned säger "Revision från" och datumet.
+4. Läs texten du vill ha tillbaka. Klicka på **X** uppe till höger i panelen för att stänga historiken.
+5. Skriv in den gamla texten i fältet i formuläret.
+6. Klicka på **Publicera**. Ändringen syns på webbplatsen inom en minut.
 
 ## Bilder
 
