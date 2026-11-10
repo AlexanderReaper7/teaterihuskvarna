@@ -5,10 +5,15 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
 
+import jakarta.mail.SendFailedException;
 import java.time.Duration;
+import java.util.Map;
 import java.util.function.BooleanSupplier;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.mail.MailSendException;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.transaction.PlatformTransactionManager;
@@ -23,7 +28,12 @@ import se.teaterihuskvarna.login.Mailer;
 ///   rolls back.
 /// - A mail the relay refuses stays in the table and goes out on a retry.
 /// - A mail that keeps failing is tried every six hours until it goes out.
+/// - A failed attempt is logged with the classes of what failed and never
+///   with a message, since the relay's message names the recipient.
+@ExtendWith(OutputCaptureExtension.class)
 class OutboxIT extends IntegrationTestSupport {
+
+    private static final String REFUSED = "refused-recipient@example.test";
 
     @Autowired
     private Mailer mailer;
@@ -68,10 +78,33 @@ class OutboxIT extends IntegrationTestSupport {
         awaitEmpty();
     }
 
+    /// The relay's answer as Spring hands it on: the reason per message, with
+    /// the address in its text, and in the text of the exception around it.
+    @Test
+    void aRefusedRecipientStaysOutOfTheLog(CapturedOutput output) {
+        SendFailedException reason = new SendFailedException("Invalid Addresses: 550 5.1.1 <" + REFUSED + ">");
+        MailSendException refusal = new MailSendException(Map.of(new SimpleMailMessage(), reason));
+        assertThat(refusal.getMessage()).contains(REFUSED);
+        doThrow(refusal).when(mailSender).send(any(SimpleMailMessage.class));
+
+        mailer.send(new Email(REFUSED), "Hej", "Text");
+        awaitAttempts(1);
+
+        long id = jdbc.sql("SELECT id FROM outbox").query(Long.class).single();
+        assertThat(output)
+                .contains("Outbox row " + id + " of kind mail failed, attempt 1")
+                .contains(MailSendException.class.getName())
+                .contains(SendFailedException.class.getName())
+                .contains("at se.teaterihuskvarna.login.MailDelivery.handle(")
+                .doesNotContain(REFUSED)
+                .doesNotContain("Invalid Addresses");
+    }
+
     /// Retried until it is sent, as the user decided: never deleted unsent.
     @Test
-    void aMailThatKeepsFailingIsNeverGivenUp() {
-        doThrow(new MailSendException("relay down")).when(mailSender).send(any(SimpleMailMessage.class));
+    void aMailThatKeepsFailingIsNeverGivenUp(CapturedOutput output) {
+        doThrow(new MailSendException("relay refused " + REFUSED)).when(mailSender)
+                .send(any(SimpleMailMessage.class));
 
         mailer.send(new Email("karin@example.test"), "Hej", "Text");
         awaitAttempts(1);
@@ -82,6 +115,10 @@ class OutboxIT extends IntegrationTestSupport {
         }
         assertThat(jdbc.sql("SELECT next_attempt_at > now() + interval '5 hours' FROM outbox")
                 .query(Boolean.class).single()).isTrue();
+        assertThat(output)
+                .contains("of kind mail has failed " + Outbox.MAX_ATTEMPTS + " times; still trying every PT6H")
+                .contains(MailSendException.class.getName())
+                .doesNotContain(REFUSED);
 
         doNothing().when(mailSender).send(any(SimpleMailMessage.class));
         forgetMails();

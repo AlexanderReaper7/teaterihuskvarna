@@ -21,6 +21,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.support.TransactionTemplate;
+import se.teaterihuskvarna.WithoutMessage;
 
 /// Work for another system, stored in the transaction that causes it and done
 /// after the commit. `docs/decisions/0026-outbox-and-brevo-contacts.md`.
@@ -174,13 +175,19 @@ public final class Outbox {
         });
     }
 
+    /// The log gets the row's id, kind and attempt, and what failed as
+    /// [WithoutMessage] gives it: class names and stack frames. A handler's
+    /// exception is never logged as it is, because its message can name a
+    /// person, as a relay's refusal names the recipient. The frames stay
+    /// because, with the message gone, they are what tells a handler's own
+    /// fault from the other system's.
     private void failed(long id, Row row, RuntimeException e) {
         int attempts = row.attempts() + 1;
         if (attempts == MAX_ATTEMPTS) {
             LOG.error("Outbox row {} of kind {} has failed {} times; still trying every {}", id, row.kind(),
-                    attempts, LONGEST_WAIT, e);
+                    attempts, LONGEST_WAIT, WithoutMessage.of(e));
         } else {
-            LOG.warn("Outbox row {} of kind {} failed, attempt {}", id, row.kind(), attempts, e);
+            LOG.warn("Outbox row {} of kind {} failed, attempt {}", id, row.kind(), attempts, WithoutMessage.of(e));
         }
         jdbc.sql("""
                 UPDATE outbox SET attempts = ?, next_attempt_at = now() + make_interval(secs => ?), last_error = ?
