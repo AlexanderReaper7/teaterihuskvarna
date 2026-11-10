@@ -2,7 +2,6 @@
 @import se.teaterihuskvarna.administrator.AdministratorDetails
 @import se.teaterihuskvarna.administrator.NewAdministrator
 @import se.teaterihuskvarna.login.DeviceDetails
-@import se.teaterihuskvarna.login.LoginStatus
 @import se.teaterihuskvarna.login.PasskeyDetails
 @import se.teaterihuskvarna.login.PasskeyUrls
 @import se.teaterihuskvarna.login.SignedIn
@@ -29,7 +28,6 @@
 @param PasskeyUrls passkeyUrls
 @param boolean offerPasskey = false
 @param List<DeviceDetails> devices
-@param LoginStatus loginStatus
 @param DeviceUrls deviceUrls
 @template.admin.layout(copy = copy, title = copy.text("admin.heading"), content = @`
     <h1>${copy.text("admin.heading")}</h1>
@@ -126,6 +124,5 @@
 
     @template.tag.passkeys(copy = copy, csrf = csrf, passkeys = passkeys, urls = passkeyUrls)
     @template.tag.devices(copy = copy, csrf = csrf, devices = devices, urls = deviceUrls)
-    @template.tag.loginCountdown(copy = copy, status = loginStatus, urls = deviceUrls)
     <script src="/js/passkey.js" defer></script>
 `)

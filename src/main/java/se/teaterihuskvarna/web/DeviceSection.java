@@ -8,9 +8,9 @@ import se.teaterihuskvarna.login.DeviceService;
 import se.teaterihuskvarna.login.NoSuchDevice;
 import se.teaterihuskvarna.login.SignedIn;
 
-/// The logged-in devices section of `/medlem` and `/admin`, and the countdown
-/// before the login ends, which differ between the two pages only in whose
-/// devices they list and where the forms post.
+/// The logged-in devices section of `/medlem` and `/admin`, which differ
+/// between the two pages only in whose devices they list and where the forms
+/// post.
 @Component
 class DeviceSection {
 
@@ -22,12 +22,11 @@ class DeviceSection {
         this.copy = copy;
     }
 
-    /// @param model    receives `devices`, `loginStatus` and `deviceUrls`
+    /// @param model    receives `devices` and `deviceUrls`
     /// @param signedIn whose devices to list
     /// @param session  the asking request's session, which the list marks
     void addTo(Model model, SignedIn signedIn, HttpSession session) {
         model.addAttribute("devices", devices.list(signedIn, session));
-        model.addAttribute("loginStatus", devices.status(session));
         model.addAttribute("deviceUrls", DeviceUrls.of(signedIn.kind()));
     }
 

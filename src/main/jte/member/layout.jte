@@ -16,4 +16,5 @@
         </ul>
     </nav>
     ${content}
+    @template.tag.loginCountdown(copy = copy)
 `)
