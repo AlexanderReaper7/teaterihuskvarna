@@ -43,7 +43,7 @@ Innan du kan logga in måste du ha blivit inbjuden till Sanity-projektet. Be en 
 
    Du måste fylla i **Titel**, **Adress** och **Datum och tid** för att kunna publicera.
 
-   Om ett obligatoriskt fält är tomt går det inte att publicera. Fältet får en röd ram och ett rött utropstecken. Fyll i fältet och klicka på **Publish** igen.
+   Om ett obligatoriskt fält är tomt går det inte att publicera. Fältet får en röd ram och ett rött utropstecken, och över knappen **Publicera** står "Det finns valideringsfel som måste åtgärdas innan detta dokument kan publiceras". Fyll i fältet och klicka på **Publicera** igen.
 
 4. Klicka på knappen **Publish** längst ned till höger.
 
@@ -72,7 +72,7 @@ Innan du kan logga in måste du ha blivit inbjuden till Sanity-projektet. Be en 
 
    Du måste fylla i **Rubrik** och **Adress** för att kunna publicera.
 
-   Om ett obligatoriskt fält är tomt går det inte att publicera. Fältet får en röd ram och ett rött utropstecken. Fyll i fältet och klicka på **Publish** igen.
+   Om ett obligatoriskt fält är tomt går det inte att publicera. Fältet får en röd ram och ett rött utropstecken, och över knappen **Publicera** står "Det finns valideringsfel som måste åtgärdas innan detta dokument kan publiceras". Fyll i fältet och klicka på **Publicera** igen.
 
 4. Klicka på knappen **Publish** längst ned till höger.
 5. Kontrollera att fliken **Publicerad** nu är markerad högst upp. Då är nyheten publicerad och syns på webbplatsen inom en minut.
@@ -194,6 +194,11 @@ Du kan se tidigare versioner och skriva tillbaka den text du vill ha.
 6. Klicka på **Publicera**. Ändringen syns på webbplatsen inom en minut.
 
 ## Bilder
+
+- Ladda **aldrig** upp foton av personer utan deras tillstånd. Det gäller även bilder från repetitioner och föreställningar.
+- Fyll i **Alternativ text** för varje bild. Den beskriver bilden för den som inte ser den, till exempel "Tre skådespelare på scenen". Har bilden ingen alternativ text får fältet en röd ram och du kan inte publicera. Fyll i fältet och klicka sedan på **Publicera** igen.
+- Du kan dra en bild till bildfältet, klistra in den, klicka på **Ladda upp** för att välja en fil från datorn, eller klicka på **Välj** för att använda en bild som redan finns i Studio.
+- Välj en bild i rimlig storlek.
 
 ## Hur lång tid tar det innan ändringen syns?
 
