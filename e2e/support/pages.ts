@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { expect, type Page } from "@playwright/test";
 import { sql } from "./db";
 import { text } from "./copy";
@@ -5,8 +6,8 @@ import { PATHS } from "./site";
 
 export const PUBLIC = ["/", "/kalender", "/evenemang/kulturnatten", "/nyheter", "/nyheter/ny-webbplats",
   "/om-foreningen", "/styrelsen", "/produktioner", "/ludde-priser", "/kontakt", "/partners", "/bli-medlem",
-  "/bli-medlem/skickat", "/bli-medlem/bekrafta", "/bli-medlem/bekrafta?token=page-check", "/inbjudan",
-  "/inbjudan?token=page-check", PATHS.member.login, PATHS.member.sent, PATHS.administrator.login, PATHS.administrator.sent, "/finns-inte"];
+  "/bli-medlem/skickat", "/bli-medlem/bekrafta", "/inbjudan", PATHS.member.login, PATHS.member.sent,
+  PATHS.administrator.login, PATHS.administrator.sent, "/finns-inte"];
 export const MEMBER = ["/medlem", "/medlem/kontaktuppgifter", "/medlem/erbjudanden", "/medlem/handlingar",
   "/medlem/volontar", "/medlem/hushall"];
 export const ADMIN = ["/admin", "/admin/medlemmar", "/admin/medlemmar/ny", "/admin/hushall", "/admin/erbjudanden",
@@ -43,6 +44,27 @@ export async function details(page: Page, list: string, prefix: string): Promise
   const paths = [...new Set(hrefs)].slice(0, 2);
   expect(paths, `detail pages on ${list}`).not.toEqual([]);
   return paths;
+}
+
+/// The two pages a mailed link opens, with their buttons. A page shows its
+/// button only while the link would work, so an application and an invitation
+/// that nobody answers exist under a token written here, even in a standalone
+/// run. `shown` is the button, for `scan` to see: without it a scan would pass
+/// on the page that says the link does not work, which PUBLIC has already.
+export async function linkPages(): Promise<{ paths: string[]; shown: Record<string, string> }> {
+  const token = "page-check";
+  const hash = createHash("sha256").update(token).digest("hex");
+  await sql(`INSERT INTO membership_application (full_name, email, token_hash, created_at, expires_at)
+    VALUES ('Ansökan Sidtest', 'page-applicant@example.test', $1, now(), now() + interval '10 years')
+    ON CONFLICT ((LOWER(email))) DO NOTHING`, [hash]);
+  await sql(`INSERT INTO member (full_name, created_at)
+    SELECT 'Inbjuden Sidtest', now() WHERE NOT EXISTS (SELECT 1 FROM member WHERE full_name = 'Inbjuden Sidtest')`);
+  await sql(`INSERT INTO invitation (member_id, email, token_hash, created_at, expires_at)
+    SELECT id, 'page-invited@example.test', $1, now(), now() + interval '10 years'
+    FROM member WHERE full_name = 'Inbjuden Sidtest'
+    ON CONFLICT (member_id) DO NOTHING`, [hash]);
+  const paths = [`/bli-medlem/bekrafta?token=${token}`, `/inbjudan?token=${token}`];
+  return { paths, shown: Object.fromEntries(paths.map((path) => [path, 'main form button[type="submit"]'])) };
 }
 
 /// Own test records make owner-only forms reachable without changing seeded households.

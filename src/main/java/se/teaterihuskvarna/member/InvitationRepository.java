@@ -51,6 +51,13 @@ interface InvitationRepository extends JpaRepository<Invitation, Long> {
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     Optional<Invitation> findByTokenHash(String tokenHash);
 
+    /// Reads an invitation by its token and locks nothing, for a look that
+    /// leaves the link as it was. [#findByTokenHash] is the one to accept with.
+    ///
+    /// @param tokenHash the hash of the token from the link
+    /// @return the invitation, or empty
+    Optional<Invitation> readByTokenHash(String tokenHash);
+
     /// @param memberIds members
     /// @return the open invitations for those members, expired ones included
     List<Invitation> findByMemberIdIn(Collection<Long> memberIds);

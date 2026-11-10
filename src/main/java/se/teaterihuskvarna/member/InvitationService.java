@@ -91,6 +91,21 @@ public class InvitationService {
         send(invited, request);
     }
 
+    /// What the page behind an invitation link should show. A lookup and
+    /// nothing more: mail scanners open every link, so opening one must not
+    /// spend it.
+    ///
+    /// @param token the token from the link
+    /// @return what [#accept] would answer now in place of creating the account, or empty if it would
+    ///         create it
+    public Optional<InvitationOutcome> refusal(@Nullable String token) {
+        if (token == null || token.isBlank()) {
+            return Optional.of(InvitationOutcome.INVALID);
+        }
+        Optional<Invitation> found = invitations.readByTokenHash(Tokens.hash(token));
+        return found.isEmpty() ? Optional.of(InvitationOutcome.INVALID) : refusalOf(found.get());
+    }
+
     /// Uses an invitation link. The invitation is deleted whatever the outcome,
     /// so a link works once at most.
     ///
@@ -107,18 +122,28 @@ public class InvitationService {
         }
         Invitation invitation = found.get();
         invitations.delete(invitation);
-        if (!invitation.getExpiresAt().isAfter(clock.instant())) {
-            return InvitationOutcome.INVALID;
+        Optional<InvitationOutcome> refusal = refusalOf(invitation);
+        if (refusal.isPresent()) {
+            return refusal.get();
         }
-        Optional<Member> member = members.findById(invitation.getMemberId().value());
-        if (member.isEmpty() || accounts.findByMember(invitation.getMemberId().value()).isPresent()) {
-            return InvitationOutcome.INVALID;
+        Member member = members.findById(invitation.getMemberId().value()).orElseThrow();
+        accounts.save(new Account(member, new Email(invitation.getEmail()), clock.instant()));
+        return InvitationOutcome.ACCEPTED;
+    }
+
+    /// @return why the invitation cannot become an account now, or empty if it can: it has expired, its
+    ///         member is gone or has an account already, or another account has its address
+    private Optional<InvitationOutcome> refusalOf(Invitation invitation) {
+        long member = invitation.getMemberId().value();
+        if (!invitation.getExpiresAt().isAfter(clock.instant())
+                || members.findById(member).isEmpty()
+                || accounts.findByMember(member).isPresent()) {
+            return Optional.of(InvitationOutcome.INVALID);
         }
         if (accounts.findByEmailIgnoreCase(invitation.getEmail()).isPresent()) {
-            return InvitationOutcome.EMAIL_TAKEN;
+            return Optional.of(InvitationOutcome.EMAIL_TAKEN);
         }
-        accounts.save(new Account(member.get(), new Email(invitation.getEmail()), clock.instant()));
-        return InvitationOutcome.ACCEPTED;
+        return Optional.empty();
     }
 
     private void send(Member member, InvitationRequest request) {

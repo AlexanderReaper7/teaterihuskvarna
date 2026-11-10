@@ -1,6 +1,7 @@
 package se.teaterihuskvarna.web;
 
 import gg.jte.generated.precompiled.Templates;
+import java.util.Optional;
 import org.jspecify.annotations.Nullable;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -26,17 +27,20 @@ public class InvitationPageController {
     }
 
     /// A GET does not accept, for the reason the login link page gives: a mail
-    /// scanner following the link would otherwise use it up.
+    /// scanner following the link would otherwise use it up. It does look, so
+    /// a link that is used or expired says so here, and the button is shown
+    /// only while pressing it would create the account.
     ///
     /// @param token    the token from the mailed link, for the button to post
     /// @param csrf     the hidden field of the page's form
     /// @param feedback what the request before left for this page
-    /// @return the page with the accept button, or the result page for a missing token
+    /// @return the page with the accept button, or the result page when the link would create nothing
     @GetMapping("/inbjudan")
     public View invitation(@RequestParam(required = false) @Nullable String token, CsrfField csrf,
             Feedback feedback) {
-        if (token == null || token.isBlank()) {
-            return HtmlPage.of(templates.invitationResult(copy, InvitationOutcome.INVALID));
+        Optional<InvitationOutcome> refusal = invitations.refusal(token);
+        if (token == null || refusal.isPresent()) {
+            return HtmlPage.of(templates.invitationResult(copy, refusal.orElse(InvitationOutcome.INVALID)));
         }
         return HtmlPage.of(templates.invitationConfirm(copy, csrf, feedback, token));
     }

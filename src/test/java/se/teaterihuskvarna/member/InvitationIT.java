@@ -2,6 +2,7 @@ package se.teaterihuskvarna.member;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.not;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -10,18 +11,21 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.test.web.servlet.ResultActions;
+import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
 
 /// Proves the invitation rules (R019): an administrator, or a household member
 /// with an account, invites a member without one; the mailed link works once,
 /// for a limited time, and creates the account without logging anyone in; an
-/// address another account has is refused.
+/// address another account has is refused; a link that would create nothing
+/// says so when it is opened, and looking at a link uses nothing up.
 ///
 /// Erik has an account, Olle is in his household without one, and Ingrid is in
 /// no household and has no account.
@@ -120,6 +124,45 @@ class InvitationIT extends MemberRegisterSupport {
         mockMvc.perform(post(PATH).param("token", token).with(csrf()))
                 .andExpect(content().string(containsString("Länken fungerar inte")));
         assertThat(accountOf(olle)).isZero();
+    }
+
+    /// The page used to show its button for any token at all, so a link that
+    /// was used or expired asked the person to press a button that could only
+    /// answer that the link does not work.
+    @Test
+    void aLinkThatWouldCreateNoAccountSaysSoWhenItIsOpened() throws Exception {
+        open("not-a-token", "Länken fungerar inte");
+        opening("not-a-token").andExpect(status().isNotFound());
+        opening(null).andExpect(status().isNotFound());
+
+        adminInvites(olle, OLLE_EMAIL);
+        String token = tokenIn(awaitMail(), PATH);
+        opening(token).andExpect(status().isNoContent());
+        jdbc.sql("UPDATE invitation SET expires_at = now() - interval '1 second'").update();
+        open(token, "Länken fungerar inte");
+        opening(token).andExpect(status().isNotFound());
+        assertThat(rowsIn("invitation")).as("a look deletes nothing").isEqualTo(1);
+
+        forgetMails();
+        adminInvites(olle, OLLE_EMAIL);
+        String used = tokenIn(awaitMail(), PATH);
+        opening(used).andExpect(status().isNoContent());
+        accept(used).andExpect(status().isNoContent());
+        open(used, "Länken fungerar inte");
+        opening(used).andExpect(status().isNotFound());
+    }
+
+    /// The address was free when the invitation went out and taken before the
+    /// link was opened. The invitation stays, as opening uses nothing up.
+    @Test
+    void aLinkWhoseAddressWasTakenMeanwhileSaysSoWhenItIsOpened() throws Exception {
+        adminInvites(ingrid, "ingrid@example.test");
+        String token = tokenIn(awaitMail(), PATH);
+        insertAccount("Någon annan", "Ingrid@example.test");
+
+        open(token, "Adressen används redan");
+        opening(token).andExpect(status().isConflict());
+        assertThat(rowsIn("invitation")).isEqualTo(1);
     }
 
     /// Sending again replaces the invitation, so the older link stops working.
@@ -263,6 +306,19 @@ class InvitationIT extends MemberRegisterSupport {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"token\": \"" + token + "\"}")
                 .with(csrf()));
+    }
+
+    /// Opens the link's page, which must say `heading` and have no form with the token in it to press.
+    private void open(String token, String heading) throws Exception {
+        mockMvc.perform(get(PATH).param("token", token))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString(heading)))
+                .andExpect(content().string(not(containsString(token))));
+    }
+
+    private ResultActions opening(@Nullable String token) throws Exception {
+        MockHttpServletRequestBuilder look = get("/api/invitations/acceptance");
+        return mockMvc.perform(token == null ? look : look.param("token", token));
     }
 
     private long accountOf(long member) {

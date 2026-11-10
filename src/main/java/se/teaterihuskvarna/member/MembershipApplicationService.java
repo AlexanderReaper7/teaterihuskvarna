@@ -148,6 +148,17 @@ public class MembershipApplicationService {
                 MailLife.untilSent());
     }
 
+    /// What the page behind a confirmation link should show. A lookup and
+    /// nothing more: mail scanners open every link, so opening one must not
+    /// spend it.
+    ///
+    /// @param token the token from the link
+    /// @return whether [#confirm] would make a member of the application now
+    public boolean confirmable(@Nullable String token) {
+        return token != null && !token.isBlank()
+                && applications.readByTokenHash(Tokens.hash(token)).filter(this::usable).isPresent();
+    }
+
     /// Follows a confirmation link. The application is deleted whatever the
     /// outcome, so a link works once at most.
     ///
@@ -168,13 +179,7 @@ public class MembershipApplicationService {
         }
         MembershipApplication application = found.get();
         applications.delete(application);
-
-        if (!application.getExpiresAt().isAfter(clock.instant())) {
-            return Optional.empty();
-        }
-        // An invitation, or another application confirmed first, may have given
-        // this address an account since the mail went out.
-        if (accounts.findByEmailIgnoreCase(application.getEmail()).isPresent()) {
+        if (!usable(application)) {
             return Optional.empty();
         }
 
@@ -193,6 +198,15 @@ public class MembershipApplicationService {
                 .orElseThrow();
         return Optional.of(new Welcome(member.getFullName(), application.getEmail(), association.bankgiro(),
                 association.feeIndividualOre(), association.feeHouseholdOre(), fee));
+    }
+
+    /// An application can become a member until it expires, and as long as no
+    /// account has its address. An invitation, or another application
+    /// confirmed first, may have given the address an account since the mail
+    /// went out.
+    private boolean usable(MembershipApplication application) {
+        return application.getExpiresAt().isAfter(clock.instant())
+                && accounts.findByEmailIgnoreCase(application.getEmail()).isEmpty();
     }
 
     private static @Nullable String blankToNull(@Nullable String value) {

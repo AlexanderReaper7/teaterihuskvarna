@@ -7,7 +7,7 @@ import { expect, test, type Page } from "@playwright/test";
 import { linkLogin } from "../support/auth";
 import { clearLinkRequests, resetAdministrators } from "../support/db";
 import { ADMINISTRATORS } from "../support/site";
-import { ADMIN, MEMBER, PUBLIC, confirmations, details, householdPages, prepareAdministratorPages, saveMailingDraft, scan } from "../support/pages";
+import { ADMIN, MEMBER, PUBLIC, confirmations, details, householdPages, linkPages, prepareAdministratorPages, saveMailingDraft, scan } from "../support/pages";
 
 test.beforeEach(async () => {
   await resetAdministrators();
@@ -125,7 +125,8 @@ for (const width of WIDTHS) {
     test.use({ viewport: { width, height: 900 } });
 
     test("every public page lines up", async ({ page }) => {
-      expect(await scan(page, PUBLIC, misalignments)).toEqual([]);
+      const links = await linkPages();
+      expect(await scan(page, [...PUBLIC, ...links.paths], misalignments, links.shown)).toEqual([]);
     });
 
     test("every member page lines up", async ({ page }) => {
