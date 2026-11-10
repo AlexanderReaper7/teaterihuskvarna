@@ -23,7 +23,7 @@ Nothing else. Java and Maven are not installed on your machine: the build runs i
 
 ### Logging in
 
-Nobody has a password. The development index offers immediate login for any listed member or administrator. This shortcut exists only under the `dev` profile. Normal login uses an email link, and locally every mail goes to Mailpit instead of a real inbox.
+Nobody has a password. The development index offers immediate login for any listed member or administrator. This shortcut exists only under the `dev` profile, and the application refuses to start under that profile when `SITE_URL` is set, which production does and no development stack does. Normal login uses an email link, and locally every mail goes to Mailpit instead of a real inbox.
 
 1. On [http://localhost:8000/dev](http://localhost:8000/dev), which is the development index, pick a seeded member or administrator. `Log in now` opens that account's page immediately. `Send link` tests the normal email flow: the application mails that address a login link.
 2. For the email flow, open [Mailpit](http://localhost:8000/mailpit/), and open the newest mail. It gives you two ways in:
@@ -102,6 +102,7 @@ A clone made before [`f9df7d5`](https://github.com/AlexanderReaper7/teaterihuskv
 - **The build fails at `checkstyle`, `spotbugs` or `pmd`.** The code breaks one of the static analysis rules, and the message names the file and line. See [Static analysis](#static-analysis).
 - **The app cannot connect to the database after you changed `POSTGRES_PASSWORD` in `.env`.** The database reads the password only its volume is created. `docker compose down -v` deletes the volume, and the next start builds it again with the new password. A database client on the host uses the same password.
 - **On Windows.** [`docs/check.py`](docs/check.py) currently fails with `FileNotFoundError` when it starts `mmdc`, because npm installs `mmdc` as `mmdc.cmd`. Until that is fixed in the script, run a local copy with `shutil.which("mmdc")` instead of the plain "mmdc" string, and keep it out of git with `.git/info/exclude`.
+- **The app container keeps restarting, and its log says `The dev profile is active and SITE_URL is set`.** `.env` sets `SITE_URL`, which only production does. Leave it empty locally: the `dev` profile builds its own address from `PROXY_HTTP_PORT`, and a shared stack takes `SHARE_URL`. On the production host the fix is the opposite one, and the message names the lines to remove.
 - **Anything else.** Read the end of `docker compose logs app`. The first `ERROR` line usually names the problem.
 
 ## The local stack

@@ -1,5 +1,7 @@
 # Local development only. This profile also runs DevSeed, which fills the
 # register with invented members, so it must never be active in production.
+# RealSiteGuard refuses to start under it when SITE_URL is set, which only
+# production does: the site address below never reads SITE_URL.
 # Member and mail settings are invented; public content comes from Sanity.
 #
 # Mail always goes to Mailpit under this profile, whatever .env says. The same
