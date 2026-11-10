@@ -166,7 +166,11 @@ def check_mermaid(require):
     if not blocks:
         return 0
 
-    if shutil.which("mmdc") is None:
+    # Resolved once, to a full path. npm on Windows installs mmdc as mmdc.cmd,
+    # which shutil.which finds through PATHEXT and subprocess.run does not find
+    # by the bare name.
+    mmdc = shutil.which("mmdc")
+    if mmdc is None:
         note = f"{len(blocks)} mermaid diagram(s) not checked: mmdc is not on PATH"
         if require:
             problems.append(note + " (--require-mermaid was passed)")
@@ -183,7 +187,7 @@ def check_mermaid(require):
             source = tmp / f"{n}.mmd"
             source.write_text(src, encoding="utf-8")
             done = subprocess.run(
-                ["mmdc", "-i", str(source), "-o", str(tmp / f"{n}.svg"),
+                [mmdc, "-i", str(source), "-o", str(tmp / f"{n}.svg"),
                  "-p", str(config), "-q"],
                 capture_output=True, text=True,
             )
@@ -421,6 +425,11 @@ def unlinked(md, files, dirs):
     fenced = False
     body_start = 0
     if lines and lines[0] == "---":
+        if "---" not in lines[1:]:
+            # Front matter without its closing line, which front_matter()
+            # reports for this file. Where the body starts is unknown, so
+            # nothing in the file is read as a body.
+            return lines, found, ambiguous
         body_start = lines.index("---", 1) + 1
     for i, line in enumerate(lines):
         if i < body_start:
