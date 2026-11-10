@@ -46,8 +46,10 @@ teaterihuskvarna:
     mailpit-url: /mailpit/
   login:
     # The development index sends links with one click, and the defaults of 5
-    # per address and 20 per client an hour would refuse them silently after a
-    # morning's testing. Set these back to 5 and 20 to see the limit at work.
+    # per address from one client, 10 per address and 20 per client an hour
+    # would refuse them silently after a morning's testing. Set these back to
+    # 5, 10 and 20 to see the limits at work.
+    requests-per-address-and-client: 50
     requests-per-address: 50
     requests-per-client: 200
   mail:

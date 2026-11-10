@@ -273,7 +273,7 @@ class MembershipApplicationIT extends IntegrationTestSupport {
     /// and would answer "is this address a member?" without end.
     @Test
     void applicationsOverTheAddressLimitGetTheSameResponseButNoMail() throws Exception {
-        int limit = login.requestsPerAddress();
+        int limit = login.requestsPerAddressAndClient();
 
         MvcResult first = apply("Karin Karlsson", KARIN);
         for (int application = 1; application < limit + 2; application++) {
@@ -302,7 +302,7 @@ class MembershipApplicationIT extends IntegrationTestSupport {
     /// for a login link use up what the form allows the same address.
     @Test
     void theFormSharesTheLoginPagesLimit() throws Exception {
-        for (int request = 0; request < login.requestsPerAddress(); request++) {
+        for (int request = 0; request < login.requestsPerAddressAndClient(); request++) {
             requestLink(LoginKind.MEMBER, KARIN);
         }
 

@@ -8,6 +8,8 @@ description: How members and administrators log in.
 
 Amended by an agent on 2026-11-10. Deleting a member removes an account, so the member chain runs the active-login check too.
 
+Amended by the user on 2026-11-10. Each client IP address has its own allowance of link requests per address, under "What each limit counts".
+
 ## Decision
 
 Members and administrators log in with Spring Security 7.1.1's one-time-token login. The flow is Spring's: the filter that takes an address and generates a token, the filter that takes a token and logs in, the session, CSRF and the access rules. This project supplies the parts that Spring's defaults get wrong for it: a token store that keeps hashes, a lookup that says nothing about unknown addresses, a rate limit, mail sent after the response, and a cookie that makes a link work only in the browser that asked for it. They live in `se.teaterihuskvarna.login`.
@@ -63,11 +65,13 @@ This design uses both: a link bound to the browser, and a code for every other c
 
 A code allows five tries (`HashedTokenService.CODE_TRIES`), and a wrong code does not spend the link. The tries are counted in the `UPDATE` that finds the rows, so guesses sent at once cannot get more than five between them. `LoginIT.codeGuessesSentAtOnceStillStopAtFive` sends 20 at once. It was checked to fail when the count moved to a separate statement, with a 50 ms pause added between the two statements to widen the race.
 
-An attacker who guesses from their own browser can ask for 5 links an hour to a victim's address (`requests-per-address`), with 5 tries each: 25 guesses an hour against a million codes. That is 1 in 40 000 per hour, about 1.8% over 30 days and about 20% over a year of guessing without pause. The victim gets 120 mails a day meanwhile, so the attack is loud. Eight digits would bring the year down to about 0.2%. The user kept six digits on 2026-09-23 with these numbers in front of them.
+An attacker who guesses from their own browser can ask for 5 links an hour to a victim's address (`requests-per-address-and-client`), with 5 tries each: 25 guesses an hour against a million codes. That is 1 in 40 000 per hour, about 1.8% over 30 days and about 20% over a year of guessing without pause. The victim gets 120 mails a day meanwhile, so the attack is loud. Eight digits would bring the year down to about 0.2%. The user kept six digits on 2026-09-23 with these numbers in front of them.
+
+Since 2026-11-10 those numbers hold for an attacker on one IP address. One who asks from two or more gets 10 links an hour, the address's total (`requests-per-address`): 50 guesses an hour, which is 1 in 20 000 per hour, about 3.5% over 30 days and about 35% over a year of guessing without pause, with 240 mails a day to the victim. The user chose the allowance per IP address that day, and has not seen these numbers beside the six digits.
 
 ### Limits
 
-- **The code's timing.** The code is checked on the request thread, and the `UPDATE` finds a row only if this browser asked for a link to a known address. A browser that asked about an unknown address gets the same redirect, a fraction of a millisecond sooner. The difference was not measured. Each sample costs a link request, which the rate limit caps at five an hour per address, and the difference sits under the noise of an internet round trip.
+- **The code's timing.** The code is checked on the request thread, and the `UPDATE` finds a row only if this browser asked for a link to a known address. A browser that asked about an unknown address gets the same redirect, a fraction of a millisecond sooner. The difference was not measured. Each sample costs a link request, which the rate limit caps at five an hour per address for one client and ten for all clients, and the difference sits under the noise of an internet round trip.
 - **Cookies set from a sibling host.** A page on another host under the same domain, such as an old WordPress site on `www.` while the application runs elsewhere, can set a `login-browser` cookie for the parent domain with the same path. It could plant the attacker's value in the victim's browser and bring the attack back. The `__Host-` name prefix stops that, but it requires `Path=/` and `Secure`, so the cookie would go with every request on the site and not at all over plain HTTP in development. The cookie uses the login page's path instead, the way the passkey offer cookie does in [0016](0016-passkeys-beside-links.md). Whether any sibling host will exist depends on the open question about the WordPress site in [open-questions.md](../open-questions.md).
 - **Consent.** The cookie is set when the person asks to log in, is needed to log in, and lasts as long as a link, one hour. Article 29 Working Party Opinion 04/2012 lists authentication cookies among those exempt from consent. The privacy text should still name it.
 - **The REST adapter.** An API client has to keep the cookie from the request for a link to the POST that logs in, as a browser does.
@@ -141,20 +145,23 @@ Spring's request cache is off in both chains since 2026-09-23. It saves a refuse
 
 ## The rate limit answers like a success
 
-A filter in front of the token filter counts link requests per address and per client IP address in `link_request` (`LinkRequestLimiter`). Over a limit, it answers with the same redirect a successful request gets and sends nothing. A distinct error would tell a caller the address had been asked for recently, which is itself a hint that it exists.
+A filter in front of the token filter counts link requests per address, per client IP address and per pair of the two in `link_request` (`LinkRequestLimiter`). Over a limit, it answers with the same redirect a successful request gets and sends nothing. A distinct error would tell a caller the address had been asked for recently, which is itself a hint that it exists.
 
 The client IP address is the one Traefik forwards: `server.forward-headers-strategy: native` in [`src/main/resources/application.yaml`](../../src/main/resources/application.yaml), with the reasoning beside it.
 
-### Agent notes: what each limit counts
+### What each limit counts
 
-Written by an agent on 2026-11-10, after finding C4 of the review of that day. A default the user has not reviewed.
+The user chose on 2026-11-10 to give each client IP address its own allowance per address: "i think doing it by IP is a good idea". The choice closes what the first fix for finding C4 of the review of that day left open: whoever sent 5 requests an hour with another person's address held that address at its limit, and its owner could get no link. The agent had recommended a cookie that marks a browser that has logged in before, and the third choice was to leave it and act on the log line. The rest of this section is an agent's, written the same day, and a default the user has not reviewed.
 
-- An address counts the requests that were let through for it, 5 an hour by default. A client counts every request it made, refused ones too, 20 an hour by default, so a client that keeps asking stays over its limit instead of getting a new allowance each hour.
-- A refused request is stored with an empty address, so it counts against its client and against no address. Counted against the address, as it was until 2026-11-10, it let a client over its own limit fill any address's count by posting that address, and it kept a person who tried again while over the address limit over it for as long as they tried.
-- Each refusal is logged at WARN with the limit that refused it, as in `Refused a request for mail: over the limit of 5 per address in PT1H`, so an address held at its limit shows in the log. The line holds neither the address nor the client IP address.
+- One client's allowance for one address is 5 requests an hour by default (`requests-per-address-and-client`). It counts the requests that were let through for that address from that client. Whoever uses it up with another person's address has used up their own allowance, and the owner still has theirs.
+- An address's total is 10 an hour by default (`requests-per-address`), counted over every client. Without a total, clients on many IP addresses could send one address mail without end. The agent chose 10 because it is the lowest total that leaves the owner a whole allowance beside one other client's. Each further 5 makes holding the address at its total take one more IP address, and gives a guesser 25 more tries an hour at the code ("How strong the code is").
+- A client counts every request it made, for any address and refused ones too, 20 an hour by default (`requests-per-client`), so a client that keeps asking stays over its limit instead of getting a new allowance each hour.
+- A client is an IPv4 address, or the /64 network of an IPv6 address, written as `2001:db8:1:2::/64`, and that is what `link_request.client_address` holds. A connection that has one IPv6 address has every address in its /64, so counted by the whole address it would be a new client with each request.
+- A refused request is stored with an empty address, so it counts against its client and against no address. Counted against the address, as it was until 2026-11-10, it let a client over its own limit fill any address's count by posting that address, and it kept a person who tried again while over the limit over it for as long as they tried.
+- Each refusal is logged at WARN with the limit that refused it, as in `Refused a request for mail: over the limit of 5 per address from one client in PT1H`, so an address held at its total shows in the log as `10 per address`. The line holds neither the address nor the client IP address.
 - The membership application form goes through the same limiter with the same counts, so requests on the login page use up what the form allows the same address, and the other way round.
-- `LinkRequestLimiterIT` proves the counting and the log lines, and `MembershipApplicationIT` that the form is limited.
-- Left open: whoever sends 5 requests an hour that are let through, with another person's address, still holds that address at its limit. That person cannot get a link of their own meanwhile, and gets 5 mails an hour they cannot use, because a link works only in the browser that asked for it. A member with a passkey ([0016](0016-passkeys-beside-links.md)) logs in without mail and is not affected. Nothing remembers a browser once its login has ended, so the limiter cannot tell the address's owner from anyone else. Closing this needs a decision by the user.
+- `LinkRequestLimiterIT` proves the counting, the IPv6 network and the log lines, `LoginIT` that requests sent at once stop at the allowance and at the total, and `MembershipApplicationIT` that the form is limited.
+- Left open: clients on two or more IP addresses can together hold another person's address at its total. That person cannot get a link meanwhile, and gets 10 mails an hour they cannot use, because a link works only in the browser that asked for it. So can someone on the owner's own IP address, such as the same home network, who uses the allowance the owner would have used. A member with a passkey ([0016](0016-passkeys-beside-links.md)) logs in without mail and is not affected.
 
 ## Rejected
 
