@@ -2,8 +2,8 @@ package se.teaterihuskvarna.login;
 
 import java.net.Inet6Address;
 import java.net.InetAddress;
+import java.time.Clock;
 import java.time.OffsetDateTime;
-import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
 import org.slf4j.Logger;
@@ -72,10 +72,12 @@ public class LinkRequestLimiter {
 
     private final JdbcClient jdbc;
     private final LoginSettings settings;
+    private final Clock clock;
 
-    LinkRequestLimiter(JdbcClient jdbc, LoginSettings settings) {
+    LinkRequestLimiter(JdbcClient jdbc, LoginSettings settings, Clock clock) {
         this.jdbc = jdbc;
         this.settings = settings;
+        this.clock = clock;
     }
 
     /// Records one request for mail and says whether to send it.
@@ -87,7 +89,7 @@ public class LinkRequestLimiter {
     public boolean tryAcquire(String email, String clientAddress) {
         String address = cut(new Email(email).value(), EMAIL_WIDTH);
         String client = client(clientAddress);
-        OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
+        OffsetDateTime now = OffsetDateTime.now(clock);
         OffsetDateTime since = now.minus(settings.requestWindow());
         // Without the locks, requests sent at once all count before any of them
         // inserts, so all of them pass. With them, each waits for the one

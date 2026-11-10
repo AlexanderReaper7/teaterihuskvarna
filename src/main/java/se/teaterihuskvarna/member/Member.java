@@ -41,15 +41,17 @@ public class Member {
     private @Nullable ContactDetails contact;
 
     @Column(name = "created_at", nullable = false)
-    private Instant createdAt = Instant.now();
+    private Instant createdAt;
 
     protected Member() {
         // for JPA
     }
 
-    /// @param fullName the member's name as the association writes it
-    public Member(String fullName) {
+    /// @param fullName  the member's name as the association writes it
+    /// @param createdAt when the person becomes a member
+    public Member(String fullName, Instant createdAt) {
         this.fullName = fullName;
+        this.createdAt = createdAt;
     }
 
     /// @return the ID assigned by Hibernate

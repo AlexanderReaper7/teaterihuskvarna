@@ -2,8 +2,8 @@ package se.teaterihuskvarna.login;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
+import java.time.Clock;
 import java.time.OffsetDateTime;
-import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
 import org.jspecify.annotations.Nullable;
@@ -38,9 +38,10 @@ public class LoginLinks {
     private final MessageSource messages;
     private final LoginSettings settings;
     private final MailSettings mail;
+    private final Clock clock;
 
     LoginLinks(List<LoginDirectory> directories, JdbcClient jdbc, Mailer mailer, Background background,
-            MessageSource messages, LoginSettings settings, MailSettings mail) {
+            MessageSource messages, LoginSettings settings, MailSettings mail, Clock clock) {
         this.directories = List.copyOf(directories);
         this.background = background;
         this.jdbc = jdbc;
@@ -48,6 +49,7 @@ public class LoginLinks {
         this.messages = messages;
         this.settings = settings;
         this.mail = mail;
+        this.clock = clock;
     }
 
     /// Mails a login link and code if the address belongs to a login of this
@@ -98,7 +100,7 @@ public class LoginLinks {
         }
         String token = Tokens.newToken();
         String code = Tokens.newCode();
-        OffsetDateTime expires = OffsetDateTime.now(ZoneOffset.UTC).plus(settings.linkLifetime());
+        OffsetDateTime expires = OffsetDateTime.now(clock).plus(settings.linkLifetime());
         jdbc.sql("""
                         INSERT INTO one_time_token (token_hash, kind, email, expires_at, browser_hash, code_hash)
                         VALUES (?, ?, ?, ?, ?, ?)""")

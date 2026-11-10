@@ -1,6 +1,7 @@
 package se.teaterihuskvarna.member;
 
 import jakarta.validation.Valid;
+import java.time.Clock;
 import java.time.Instant;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -57,6 +58,7 @@ public class MemberService {
     private final Sessions sessions;
     private final MessageSource messages;
     private final ApplicationEventPublisher events;
+    private final Clock clock;
 
     MemberService(
             MemberRepository members,
@@ -67,7 +69,8 @@ public class MemberService {
             PasskeyService passkeys,
             Sessions sessions,
             MessageSource messages,
-            ApplicationEventPublisher events) {
+            ApplicationEventPublisher events,
+            Clock clock) {
         this.members = members;
         this.accounts = accounts;
         this.households = households;
@@ -77,6 +80,7 @@ public class MemberService {
         this.sessions = sessions;
         this.messages = messages;
         this.events = events;
+        this.clock = clock;
     }
 
     /// Looks up the member a logged-in account belongs to. The id comes from
@@ -168,7 +172,7 @@ public class MemberService {
     /// @throws NoSuchHousehold if the chosen household does not exist
     @Transactional
     public MemberDetails add(@Valid MemberForm form) {
-        Member member = new Member(form.fullName().strip());
+        Member member = new Member(form.fullName().strip(), clock.instant());
         member.setContact(form.contact());
         member.setHousehold(household(form.householdId()));
         members.save(member);
@@ -176,7 +180,7 @@ public class MemberService {
         Account account = null;
         if (email != null) {
             refuseTaken(new Email(email), null);
-            account = accounts.save(new Account(member, new Email(email)));
+            account = accounts.save(new Account(member, new Email(email), clock.instant()));
         }
         flush();
         events.publishEvent(new MemberChanged(member.getId()));
@@ -221,7 +225,7 @@ public class MemberService {
             Email address = new Email(email);
             refuseTaken(address, account);
             if (account == null) {
-                account = accounts.save(new Account(member, address));
+                account = accounts.save(new Account(member, address, clock.instant()));
                 invitations.deleteByMember(memberId);
             } else {
                 account.setEmail(address);

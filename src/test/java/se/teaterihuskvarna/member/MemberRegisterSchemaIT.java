@@ -3,6 +3,7 @@ package se.teaterihuskvarna.member;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import org.jspecify.annotations.Nullable;
@@ -50,7 +51,7 @@ class MemberRegisterSchemaIT extends IntegrationTestSupport {
 
     @Test
     void aMemberSurvivesARoundTripThroughJpa() {
-        Member saved = members.save(new Member("Karin Karlsson"));
+        Member saved = members.save(new Member("Karin Karlsson", Instant.now()));
 
         Optional<Member> found = members.findById(saved.getId());
 

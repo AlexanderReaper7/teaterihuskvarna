@@ -1,5 +1,6 @@
 package se.teaterihuskvarna.login;
 
+import java.time.Clock;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.List;
@@ -117,11 +118,13 @@ class SecurityConfiguration {
 
     /// The largest upload request, from `spring.servlet.multipart.max-request-size`.
     private final long largestRequest;
+    private final Clock clock;
 
     SecurityConfiguration(LoginLinks links, LinkRequestLimiter limiter, JdbcClient jdbc, LoginSettings settings,
             List<LoginDirectory> directories, WebAuthnRelyingPartyOperations relyingParty,
             UserCredentialRepository passkeys, MessageSource messages, ContentSettings content,
-            MultipartProperties multipart, ObjectProvider<DevelopmentLogin> development) {
+            MultipartProperties multipart, ObjectProvider<DevelopmentLogin> development, Clock clock) {
+        this.clock = clock;
         this.content = content;
         this.development = development;
         this.largestRequest = multipart.getMaxRequestSize().toBytes();
@@ -298,7 +301,7 @@ class SecurityConfiguration {
     /// which differ between the two chains only by kind.
     private void login(HttpSecurity http, LoginKind kind, Duration sessionLifetime) {
         LoginUrls urls = LoginUrls.of(kind);
-        HashedTokenService tokens = new HashedTokenService(kind, links, jdbc);
+        HashedTokenService tokens = new HashedTokenService(kind, links, jdbc, clock);
         LoginDirectory directory = Directories.of(kind, directories);
         DirectoryUserDetails users = new DirectoryUserDetails(directory);
         http.oneTimeTokenLogin(login -> login
@@ -313,11 +316,12 @@ class SecurityConfiguration {
                 .generateRequestResolver(emailField(settings.linkLifetime()))
                 .tokenGenerationSuccessHandler(new RedirectOneTimeTokenGenerationSuccessHandler(urls.sent()))
                 .authenticationConverter(BoundLogin::from)
-                .authenticationSuccessHandler(LoginSuccessHandler.byLink(sessionLifetime, devices, urls.success()))
+                .authenticationSuccessHandler(
+                        LoginSuccessHandler.byLink(clock, sessionLifetime, devices, urls.success()))
                 .authenticationFailureHandler(failure(urls)));
-        http.with(new PasskeyLogin(kind, relyingParty, passkeys, directory, sessionLifetime, devices),
+        http.with(new PasskeyLogin(kind, relyingParty, passkeys, directory, sessionLifetime, devices, clock),
                 Customizer.withDefaults());
-        http.addFilterBefore(new LoginExpiryFilter(), AuthorizationFilter.class);
+        http.addFilterBefore(new LoginExpiryFilter(clock), AuthorizationFilter.class);
         http.addFilterBefore(new LinkRequestLimitFilter(limiter, urls), GenerateOneTimeTokenFilter.class);
         http.addFilterBefore(new LoginBrowserFilter(urls, settings.linkLifetime()), LinkRequestLimitFilter.class);
         http.logout(logout -> logout

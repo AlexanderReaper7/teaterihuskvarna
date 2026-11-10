@@ -518,7 +518,7 @@ class FeeIT extends MemberRegisterSupport {
     void aFeeMarkedJustAfterMidnightInSwedenIsForTheNewYear() {
         insertFee(johan, "INDIVIDUAL", 2026);
         FeeService stopped = new FeeService(feeRepository, memberRepository, ledgerAt(AFTER_MIDNIGHT_IN_SWEDEN),
-                association, events);
+                association, events, Clock.fixed(AFTER_MIDNIGHT_IN_SWEDEN, ZoneOffset.UTC));
         TransactionTemplate transaction = new TransactionTemplate(transactions);
 
         transaction.executeWithoutResult(status -> stopped.markPaid(johan, new FeeMark(FeeKind.INDIVIDUAL, null),

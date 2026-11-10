@@ -36,7 +36,7 @@ public class Administrator {
     private String fullName;
 
     @Column(name = "created_at", nullable = false)
-    private Instant createdAt = Instant.now();
+    private Instant createdAt;
 
     @Column(name = "created_by")
     private @Nullable Long createdBy;
@@ -54,10 +54,12 @@ public class Administrator {
     /// @param email     the address, unique case insensitively across every row
     /// @param fullName  the name to greet them by
     /// @param createdBy the administrator who added this one, or null for the first administrator
-    public Administrator(Email email, String fullName, @Nullable Long createdBy) {
+    /// @param createdAt when they were added
+    public Administrator(Email email, String fullName, @Nullable Long createdBy, Instant createdAt) {
         this.email = email.value();
         this.fullName = fullName;
         this.createdBy = createdBy;
+        this.createdAt = createdAt;
     }
 
     /// @return the ID assigned by Hibernate
@@ -99,8 +101,9 @@ public class Administrator {
     }
 
     /// @param by the administrator doing the removing
-    public void remove(long by) {
-        this.removedAt = Instant.now();
+    /// @param at when they are removed
+    public void remove(long by, Instant at) {
+        this.removedAt = at;
         this.removedBy = by;
     }
 
@@ -110,9 +113,10 @@ public class Administrator {
     ///
     /// @param newFullName the name given when re-adding, which may differ from the old one
     /// @param by          the administrator doing the adding
-    public void reactivate(String newFullName, long by) {
+    /// @param at          when they are added again
+    public void reactivate(String newFullName, long by, Instant at) {
         this.fullName = newFullName;
-        this.createdAt = Instant.now();
+        this.createdAt = at;
         this.createdBy = by;
         this.removedAt = null;
         this.removedBy = null;
