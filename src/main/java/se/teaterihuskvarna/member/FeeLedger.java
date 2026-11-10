@@ -12,7 +12,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.TreeSet;
 import org.jspecify.annotations.Nullable;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
 
 /// Computes fee statuses, the rule [FeeStatus] states, from the `fee` table,
@@ -30,18 +29,13 @@ class FeeLedger {
 
     private final FeeRepository fees;
     private final AccountRepository accounts;
-    private final MemberRepository members;
     private final AssociationSettings association;
-    private final ApplicationEventPublisher events;
     private final Clock clock;
 
-    FeeLedger(FeeRepository fees, AccountRepository accounts, MemberRepository members,
-            AssociationSettings association, ApplicationEventPublisher events, Clock clock) {
+    FeeLedger(FeeRepository fees, AccountRepository accounts, AssociationSettings association, Clock clock) {
         this.fees = fees;
         this.accounts = accounts;
-        this.members = members;
         this.association = association;
-        this.events = events;
         this.clock = clock;
     }
 
@@ -55,14 +49,14 @@ class FeeLedger {
 
     /// Puts a stored member in a household. A household fee the member paid for
     /// this year while in no household names none, and now names this one, so
-    /// it covers everyone in it. The contact of each other member of the
-    /// household is told that their paid year may have changed.
+    /// it covers everyone in it. The database queues the Brevo contact of
+    /// everyone in the household when the fee row changes
+    /// (`V17__brevo_contact_queue.sql`), so nothing here tells them.
     ///
     /// This is the only way in for a stored member: nothing else may call
     /// [Member#enter], and `HouseholdRulesTest` fails the build if something
-    /// does. The caller publishes the member's own [MemberChanged] itself. A
-    /// payment that already names a household stays with that household, and
-    /// a payment for another year is left as it is.
+    /// does. A payment that already names a household stays with that
+    /// household, and a payment for another year is left as it is.
     ///
     /// @param member    the member
     /// @param household the household the member gains
@@ -73,11 +67,6 @@ class FeeLedger {
             return;
         }
         own.get().coverHousehold(household.getId());
-        for (Member other : members.findByHousehold(household.getId())) {
-            if (!other.getId().equals(member.getId())) {
-                events.publishEvent(new MemberChanged(other.getId()));
-            }
-        }
     }
 
     /// This year's status of each of some members, with the year's payments and

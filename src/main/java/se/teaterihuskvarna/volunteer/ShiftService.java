@@ -16,7 +16,6 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 import org.jspecify.annotations.Nullable;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.MessageSource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,7 +29,6 @@ import se.teaterihuskvarna.export.CsvFile;
 import se.teaterihuskvarna.login.Email;
 import se.teaterihuskvarna.login.MailLife;
 import se.teaterihuskvarna.login.Mailer;
-import se.teaterihuskvarna.member.MemberChanged;
 
 /// Volunteer shifts at performances: R016 booking, R017 the reminder, R020 the
 /// list and export. `docs/decisions/0024-volunteer-shifts.md`.
@@ -64,17 +62,15 @@ public class ShiftService {
     private final Mailer mailer;
     private final MessageSource messages;
     private final Clock clock;
-    private final ApplicationEventPublisher events;
 
     ShiftService(ShiftRepository shifts, BookingRepository bookings, ContentService content, Mailer mailer,
-            MessageSource messages, Clock clock, ApplicationEventPublisher events) {
+            MessageSource messages, Clock clock) {
         this.shifts = shifts;
         this.bookings = bookings;
         this.content = content;
         this.mailer = mailer;
         this.messages = messages;
         this.clock = clock;
-        this.events = events;
     }
 
     /// @param memberId the member asking
@@ -209,13 +205,7 @@ public class ShiftService {
     /// @throws NoSuchShift if no shift has the id
     @Transactional
     public void delete(long id) {
-        Shift shift = shifts.findById(id).orElseThrow(() -> new NoSuchShift("no shift " + id));
-        if (!shift.getStartsAt().isAfter(clock.instant())) {
-            for (Volunteer volunteer : bookings.findVolunteers(id)) {
-                events.publishEvent(new MemberChanged(volunteer.memberId()));
-            }
-        }
-        shifts.delete(shift);
+        shifts.delete(shifts.findById(id).orElseThrow(() -> new NoSuchShift("no shift " + id)));
     }
 
     /// @param id the shift
@@ -256,20 +246,17 @@ public class ShiftService {
         return start == null ? null : LocalDate.ofInstant(start, SWEDEN);
     }
 
-    /// Tells the contacts of the members booked on each shift that has
-    /// started since the last run, since their LAST_SHIFT changes with the
-    /// start and not with anything written. Each shift is reported once.
+    /// Marks each shift that has started since the last run. A member's
+    /// LAST_SHIFT changes when a shift starts, with nothing written, and the
+    /// database queues a Brevo contact only when a row changes
+    /// (`V17__brevo_contact_queue.sql`). This mark is that change: it queues
+    /// everyone booked on the shift. Each shift is marked once.
     ///
-    /// @return how many shifts were reported
+    /// @return how many shifts were marked
     @Transactional
     public int reportStartedShifts() {
         List<Shift> started = shifts.findStartedUnreported(clock.instant());
-        for (Shift shift : started) {
-            for (Volunteer volunteer : bookings.findVolunteers(shift.getId())) {
-                events.publishEvent(new MemberChanged(volunteer.memberId()));
-            }
-            shift.startReported();
-        }
+        started.forEach(Shift::startReported);
         return started.size();
     }
 

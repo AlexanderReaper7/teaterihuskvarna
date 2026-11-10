@@ -25,7 +25,6 @@ import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
@@ -70,8 +69,6 @@ class FeeIT extends MemberRegisterSupport {
     @Autowired
     private AssociationSettings association;
 
-    @Autowired
-    private ApplicationEventPublisher events;
 
     @Autowired
     private PlatformTransactionManager transactions;
@@ -518,7 +515,7 @@ class FeeIT extends MemberRegisterSupport {
     void aFeeMarkedJustAfterMidnightInSwedenIsForTheNewYear() {
         insertFee(johan, "INDIVIDUAL", 2026);
         FeeService stopped = new FeeService(feeRepository, memberRepository, ledgerAt(AFTER_MIDNIGHT_IN_SWEDEN),
-                association, events, Clock.fixed(AFTER_MIDNIGHT_IN_SWEDEN, ZoneOffset.UTC));
+                association, Clock.fixed(AFTER_MIDNIGHT_IN_SWEDEN, ZoneOffset.UTC));
         TransactionTemplate transaction = new TransactionTemplate(transactions);
 
         transaction.executeWithoutResult(status -> stopped.markPaid(johan, new FeeMark(FeeKind.INDIVIDUAL, null),
@@ -637,8 +634,7 @@ class FeeIT extends MemberRegisterSupport {
     /// A ledger whose clock is stopped at `time`. The clock is in UTC, as the
     /// application's is, so the ledger has to find the year in Sweden itself.
     private FeeLedger ledgerAt(Instant time) {
-        return new FeeLedger(feeRepository, accountRepository, memberRepository, association, events,
-                Clock.fixed(time, ZoneOffset.UTC));
+        return new FeeLedger(feeRepository, accountRepository, association, Clock.fixed(time, ZoneOffset.UTC));
     }
 
     private List<@Nullable Integer> yearsPaidBy(long member) {

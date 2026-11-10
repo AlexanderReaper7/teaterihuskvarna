@@ -26,7 +26,6 @@ import java.util.List;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.MessageSource;
 import org.springframework.http.MediaType;
 import org.springframework.mail.SimpleMailMessage;
@@ -80,8 +79,6 @@ class ShiftIT extends IntegrationTestSupport {
     @Autowired
     private MessageSource messages;
 
-    @Autowired
-    private ApplicationEventPublisher events;
 
     @Autowired
     private PlatformTransactionManager transactions;
@@ -555,7 +552,7 @@ class ShiftIT extends IntegrationTestSupport {
 
     private ShiftService stoppedAt(LocalDateTime time) {
         return new ShiftService(shiftRepository, bookingRepository, content, mailer, messages,
-                Clock.fixed(time.atZone(SWEDEN).toInstant(), SWEDEN), events);
+                Clock.fixed(time.atZone(SWEDEN).toInstant(), SWEDEN));
     }
 
     private void insertBooking(long shiftId, long memberId, Instant createdAt) {

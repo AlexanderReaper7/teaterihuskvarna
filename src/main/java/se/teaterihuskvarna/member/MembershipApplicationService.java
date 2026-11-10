@@ -5,7 +5,6 @@ import java.time.Clock;
 import java.time.Instant;
 import java.util.Optional;
 import org.jspecify.annotations.Nullable;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.MessageSource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -47,7 +46,6 @@ public class MembershipApplicationService {
     private final LoginSettings login;
     private final MailSettings mail;
     private final AssociationSettings association;
-    private final ApplicationEventPublisher events;
     private final FeeLedger ledger;
     private final Clock clock;
 
@@ -62,7 +60,6 @@ public class MembershipApplicationService {
             LoginSettings login,
             MailSettings mail,
             AssociationSettings association,
-            ApplicationEventPublisher events,
             FeeLedger ledger,
             Clock clock) {
         this.applications = applications;
@@ -75,7 +72,6 @@ public class MembershipApplicationService {
         this.login = login;
         this.mail = mail;
         this.association = association;
-        this.events = events;
         this.ledger = ledger;
         this.clock = clock;
     }
@@ -186,7 +182,6 @@ public class MembershipApplicationService {
         member.setContact(application.getContact());
         members.save(member);
         accounts.save(new Account(member, new Email(application.getEmail()), clock.instant()));
-        events.publishEvent(new MemberChanged(member.getId()));
 
         // Read from the ledger like every other fee status rather than written
         // as unpaid here, so R005's "ej betald" is the status the member page

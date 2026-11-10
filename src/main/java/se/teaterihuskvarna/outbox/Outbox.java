@@ -51,6 +51,11 @@ import se.teaterihuskvarna.WithoutMessage;
 ///
 /// An attempt locks its row with `SKIP LOCKED`, so the immediate attempt and
 /// the job never do the same row at once, and neither do two instances.
+///
+/// The database writes rows too, with no Java code running: a trigger queues
+/// a member's Brevo contact (`V17__brevo_contact_queue.sql`). Nothing here
+/// added such a row, so nothing here tries it after the commit.
+/// [OutboxNotifications] hears of it from PostgreSQL and calls [#dispatchDue].
 @Component
 public final class Outbox {
 
@@ -126,16 +131,21 @@ public final class Outbox {
         workers.values().forEach(ThreadPoolTaskExecutor::shutdown);
     }
 
-    /// Deletes every row past its `not_after`, then hands every due row to its
-    /// kind's thread, the longest waiting first, up to a batch per kind, so
-    /// rows of one kind stuck behind a slow Brevo never crowd a retried mail
-    /// out of the batch. The scheduler's thread
-    /// only reads ids, so neither the mail nor Spring's other scheduled jobs
-    /// wait on Brevo. A row already waiting for its thread is not handed over
-    /// twice.
+    /// Deletes every row past its `not_after`, then hands over every due row:
+    /// [#dispatchDue].
     @Scheduled(fixedDelayString = "PT1M")
     public void retry() {
         deleteExpired();
+        dispatchDue();
+    }
+
+    /// Hands every due row to its kind's thread, the longest waiting first, up
+    /// to a batch per kind, so rows of one kind stuck behind a slow Brevo
+    /// never crowd a retried mail out of the batch. The calling thread only
+    /// reads ids, so neither the mail nor Spring's other scheduled jobs wait
+    /// on Brevo. A row already waiting for its thread is not handed over
+    /// twice.
+    void dispatchDue() {
         List<Entry> due = jdbc.sql("""
                 SELECT id, kind FROM (
                     SELECT id, kind, next_attempt_at,
