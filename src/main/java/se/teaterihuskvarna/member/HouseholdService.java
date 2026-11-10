@@ -13,7 +13,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import org.jspecify.annotations.Nullable;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.validation.annotation.Validated;
@@ -31,19 +30,17 @@ public class HouseholdService {
     private final AccountRepository accounts;
     private final InvitationRepository invitations;
     private final FeeLedger ledger;
-    private final ApplicationEventPublisher events;
     private final EntityManager entityManager;
     private final Clock clock;
 
     HouseholdService(HouseholdRepository households, MemberRepository members, AccountRepository accounts,
-            InvitationRepository invitations, FeeLedger ledger, ApplicationEventPublisher events,
+            InvitationRepository invitations, FeeLedger ledger,
             EntityManager entityManager, Clock clock) {
         this.households = households;
         this.members = members;
         this.accounts = accounts;
         this.invitations = invitations;
         this.ledger = ledger;
-        this.events = events;
         this.entityManager = entityManager;
         this.clock = clock;
     }
@@ -96,7 +93,6 @@ public class HouseholdService {
         Household household = households.save(new Household(form.name().strip(), clock.instant()));
         household.setOwnerMemberId(member.getId());
         ledger.join(member, household);
-        events.publishEvent(new MemberChanged(member.getId()));
         return ownDetails(household);
     }
 
@@ -124,7 +120,6 @@ public class HouseholdService {
         member.setContact(form.contact());
         member.startIn(household);
         members.save(member);
-        events.publishEvent(new MemberChanged(member.getId()));
         return member.getId();
     }
 
@@ -151,7 +146,6 @@ public class HouseholdService {
         Member member = householdMember(accountId, memberId);
         member.setFullName(form.fullName().strip());
         member.setContact(form.contact());
-        events.publishEvent(new MemberChanged(memberId));
         return contact(member);
     }
 
@@ -184,7 +178,6 @@ public class HouseholdService {
             throw new HouseholdOwnerRequired();
         }
         member.leaveHousehold();
-        events.publishEvent(new MemberChanged(memberId));
     }
 
     /// Administrators assign a member owner or take over management.

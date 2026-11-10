@@ -10,7 +10,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.MessageSource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,7 +17,6 @@ import org.springframework.validation.annotation.Validated;
 import se.teaterihuskvarna.Swedish;
 import se.teaterihuskvarna.export.Csv;
 import se.teaterihuskvarna.export.CsvFile;
-import se.teaterihuskvarna.member.MemberChanged;
 
 /// Offers and registrations, R014 and R020.
 ///
@@ -45,15 +43,13 @@ public class OfferService {
     private final OfferRepository offers;
     private final OfferRegistrationRepository registrations;
     private final MessageSource messages;
-    private final ApplicationEventPublisher events;
     private final Clock clock;
 
     OfferService(OfferRepository offers, OfferRegistrationRepository registrations, MessageSource messages,
-            ApplicationEventPublisher events, Clock clock) {
+            Clock clock) {
         this.offers = offers;
         this.registrations = registrations;
         this.messages = messages;
-        this.events = events;
         this.clock = clock;
     }
 
@@ -125,7 +121,6 @@ public class OfferService {
             throw new OfferFull();
         }
         registrations.save(new OfferRegistration(offerId, memberId, clock.instant()));
-        events.publishEvent(new MemberChanged(memberId));
         return RegistrationOutcome.REGISTERED;
     }
 
@@ -142,11 +137,7 @@ public class OfferService {
         if (!offer.isOpenAt(clock.instant())) {
             throw new RegistrationClosed();
         }
-        boolean cancelled = registrations.deleteRegistration(offerId, memberId) > 0;
-        if (cancelled) {
-            events.publishEvent(new MemberChanged(memberId));
-        }
-        return cancelled;
+        return registrations.deleteRegistration(offerId, memberId) > 0;
     }
 
     /// @return every offer, published or not, newest first
@@ -214,11 +205,7 @@ public class OfferService {
     /// @throws NoSuchOffer if no offer has the id
     @Transactional
     public void delete(long id) {
-        Offer offer = offers.findById(id).orElseThrow(NoSuchOffer::new);
-        for (Registrant registrant : registrations.findRegistrants(id)) {
-            events.publishEvent(new MemberChanged(registrant.memberId()));
-        }
-        offers.delete(offer);
+        offers.delete(offers.findById(id).orElseThrow(NoSuchOffer::new));
     }
 
     /// For the member's Brevo contact.

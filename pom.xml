@@ -120,10 +120,11 @@
       <artifactId>flyway-database-postgresql</artifactId>
       <version>${flyway.version}</version>
     </dependency>
+    <!-- Compile scope, not runtime, for one class: OutboxNotifications reads
+         PostgreSQL's notifications, which JDBC has no interface for. -->
     <dependency>
       <groupId>org.postgresql</groupId>
       <artifactId>postgresql</artifactId>
-      <scope>runtime</scope>
     </dependency>
 
     <dependency>

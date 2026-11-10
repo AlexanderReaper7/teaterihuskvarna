@@ -5,7 +5,6 @@ import java.time.Clock;
 import java.util.Objects;
 import java.util.Optional;
 import org.jspecify.annotations.Nullable;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,16 +22,14 @@ public class FeeService {
     private final MemberRepository members;
     private final FeeLedger ledger;
     private final AssociationSettings association;
-    private final ApplicationEventPublisher events;
     private final Clock clock;
 
     FeeService(FeeRepository fees, MemberRepository members, FeeLedger ledger, AssociationSettings association,
-            ApplicationEventPublisher events, Clock clock) {
+            Clock clock) {
         this.fees = fees;
         this.members = members;
         this.ledger = ledger;
         this.association = association;
-        this.events = events;
         this.clock = clock;
     }
 
@@ -80,7 +77,6 @@ public class FeeService {
             Household household = member.getHousehold();
             Long householdId = kind == FeeKind.HOUSEHOLD && household != null ? household.getId() : null;
             fees.saveAndFlush(new Fee(memberId, year, kind, amount, clock.instant(), administratorId, householdId));
-            covered(memberId, householdId);
         } catch (DataIntegrityViolationException e) {
             // Two marks at once: fee_member_id_year_key refused the second.
             throw new FeeAlreadyMarked();
@@ -96,19 +92,5 @@ public class FeeService {
     public void undo(long memberId) {
         Fee fee = fees.findByMemberIdAndYear(memberId, ledger.currentYear()).orElseThrow(NoSuchFee::new);
         fees.delete(fee);
-        covered(memberId, fee.getHouseholdId());
-    }
-
-    /// Tells the payer's contact, and each contact in the household a
-    /// household fee covers, that the paid year may have changed.
-    private void covered(long memberId, @Nullable Long householdId) {
-        events.publishEvent(new MemberChanged(memberId));
-        if (householdId != null) {
-            for (Member member : members.findByHousehold(householdId)) {
-                if (member.getId() != memberId) {
-                    events.publishEvent(new MemberChanged(member.getId()));
-                }
-            }
-        }
     }
 }

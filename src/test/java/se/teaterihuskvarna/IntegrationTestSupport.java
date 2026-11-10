@@ -49,6 +49,8 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 import se.teaterihuskvarna.login.LoginBrowser;
 import se.teaterihuskvarna.login.LoginKind;
 
@@ -90,6 +92,9 @@ public abstract class IntegrationTestSupport {
     @Autowired
     private BackgroundTasks backgroundTasks;
 
+    @Autowired
+    private PlatformTransactionManager transactionManager;
+
     @Value("${teaterihuskvarna.first-administrator.email}")
     protected String firstAdministratorEmail;
 
@@ -104,6 +109,11 @@ public abstract class IntegrationTestSupport {
     /// the foreign keys. Passkeys have none, so they go first by choice.
     /// `EmptiedTablesIT` fails when the database has a table that is not here,
     /// so a new table cannot leak rows from one test into the next.
+    ///
+    /// The outbox goes last. Deleting a member queues their Brevo contact, as
+    /// every write to the register does (`V17__brevo_contact_queue.sql`), and
+    /// those rows are deleted with the rest, in the same transaction, so no
+    /// test starts with work left by the one before it.
     public static final List<String> EMPTIED = List.of(
             "spring_session",
             "user_credentials",
@@ -112,7 +122,6 @@ public abstract class IntegrationTestSupport {
             "link_request",
             "membership_application",
             "mailing",
-            "outbox",
             "volunteer_booking",
             "volunteer_shift",
             "offer_registration",
@@ -122,7 +131,8 @@ public abstract class IntegrationTestSupport {
             "invitation",
             "account",
             "member",
-            "household");
+            "household",
+            "outbox");
 
     private static final AtomicBoolean IDS_APART = new AtomicBoolean();
 
@@ -158,15 +168,17 @@ public abstract class IntegrationTestSupport {
     @BeforeEach
     protected void emptyTables() {
         browser.clear();
-        for (String table : EMPTIED) {
-            jdbc.sql("DELETE FROM " + table).update();
-        }
-        jdbc.sql("UPDATE administrator SET removed_at = NULL, removed_by = NULL WHERE LOWER(email) = LOWER(?)")
-                .param(firstAdministratorEmail)
-                .update();
-        jdbc.sql("DELETE FROM administrator WHERE LOWER(email) <> LOWER(?)")
-                .param(firstAdministratorEmail)
-                .update();
+        new TransactionTemplate(transactionManager).executeWithoutResult(status -> {
+            jdbc.sql("UPDATE administrator SET removed_at = NULL, removed_by = NULL WHERE LOWER(email) = LOWER(?)")
+                    .param(firstAdministratorEmail)
+                    .update();
+            jdbc.sql("DELETE FROM administrator WHERE LOWER(email) <> LOWER(?)")
+                    .param(firstAdministratorEmail)
+                    .update();
+            for (String table : EMPTIED) {
+                jdbc.sql("DELETE FROM " + table).update();
+            }
+        });
     }
 
     /// @param fullName the member's name

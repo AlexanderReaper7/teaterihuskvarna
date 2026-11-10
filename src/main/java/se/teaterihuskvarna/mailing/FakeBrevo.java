@@ -51,11 +51,9 @@ final class FakeBrevo implements Brevo {
 
     /// The list reaches every member with an account, as the real list does
     /// once [BrevoContacts] has caught up. The contacts the fake was handed
-    /// would undercount it: the development seed and the browser tests write
-    /// accounts with SQL, which hands the fake nothing, and the fake forgets
-    /// its contacts on a restart while the database keeps its accounts. A
-    /// segment reaches what a test set with [#reach(long, MailingReach)], or
-    /// nobody.
+    /// would undercount it: the fake forgets its contacts on a restart while
+    /// the database keeps its accounts. A segment reaches what a test set
+    /// with [#reach(long, MailingReach)], or nobody.
     @Override
     public MailingReach reach(@Nullable Long segmentId) {
         synchronized (this) {

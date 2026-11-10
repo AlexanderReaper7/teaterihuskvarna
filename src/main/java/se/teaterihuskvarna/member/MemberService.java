@@ -11,7 +11,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import org.jspecify.annotations.Nullable;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.MessageSource;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Limit;
@@ -57,7 +56,6 @@ public class MemberService {
     private final PasskeyService passkeys;
     private final Sessions sessions;
     private final MessageSource messages;
-    private final ApplicationEventPublisher events;
     private final Clock clock;
 
     MemberService(
@@ -69,7 +67,6 @@ public class MemberService {
             PasskeyService passkeys,
             Sessions sessions,
             MessageSource messages,
-            ApplicationEventPublisher events,
             Clock clock) {
         this.members = members;
         this.accounts = accounts;
@@ -79,7 +76,6 @@ public class MemberService {
         this.passkeys = passkeys;
         this.sessions = sessions;
         this.messages = messages;
-        this.events = events;
         this.clock = clock;
     }
 
@@ -108,7 +104,6 @@ public class MemberService {
         Member member = account.getMember();
         member.setFullName(form.fullName().strip());
         member.setContact(form.contact());
-        events.publishEvent(new MemberChanged(member.getId()));
         return details(member, account);
     }
 
@@ -183,7 +178,6 @@ public class MemberService {
             account = accounts.save(new Account(member, new Email(email), clock.instant()));
         }
         flush();
-        events.publishEvent(new MemberChanged(member.getId()));
         return details(member, account);
     }
 
@@ -233,7 +227,6 @@ public class MemberService {
             }
         }
         flush();
-        events.publishEvent(new MemberChanged(memberId));
         return details(member, account);
     }
 
@@ -259,7 +252,6 @@ public class MemberService {
         }
         members.delete(member);
         members.flush();
-        events.publishEvent(new MemberChanged(memberId));
     }
 
     /// The whole register as a CSV file for a spreadsheet (R021), in the format
