@@ -50,6 +50,20 @@ Written by an agent on 2026-09-28. Everything below is a default the user has no
 - The list is made once by hand in Brevo and named by `BREVO_LIST_ID`.
 - Not verified against a real account: that an empty string clears a text attribute and `null` a date, that Brevo answers 400 for an attribute that exists, and that a date attribute takes `yyyy-MM-dd`. They follow Brevo's API reference as read on 2026-09-28. [`HttpBrevoTest`](../../src/test/java/se/teaterihuskvarna/mailing/HttpBrevoTest.java) checks only the requests the application sends. The run under Verification covered none of them: the attributes did not exist yet, and it involved no shift and no changed address. That `emailBlacklisted: true` sent with a new address keeps the contact blocklisted was checked against a real account in #60, by sunsarav on 2026-10-21 and by the agent on 2026-11-06.
 
+### The mailing preview
+
+Written by an agent on 2026-11-10, with JTE 3.2.5 ([0004](0004-jte-for-templates.md)).
+
+- The preview page shows the mail in `<iframe sandbox src>`, and the mail is a response of its own from `GET /admin/utskick/forhandsgranska/{key}`. Until 2026-11-10 the page carried the mail in the frame's `srcdoc` attribute. JTE 3.2.5 writes nothing for a dynamic `srcdoc`, because escaping cannot make that attribute safe: the browser decodes the attribute and parses the result as a document.
+- [`AdministratorMailingPageController`](../../src/main/java/se/teaterihuskvarna/web/AdministratorMailingPageController.java) keeps the mail it built in the administrator's session under a new random key, and the frame's address carries the key. The session holds one mail, the latest. A frame whose key is no longer the latest gets 404 and a sentence that says a newer preview replaced it, so a page never shows a mail that its hidden fields would not create. Another administrator, or the same one in another session, gets the same 404.
+- The mail stays with the session in PostgreSQL until the next preview or the end of the login. The preview still writes nothing to `mailing`, and asks Brevo only for the segments and the count.
+- The frame's `sandbox` attribute allows nothing, so the mail runs no script and has an origin of its own. [`SecurityConfiguration`](../../src/main/java/se/teaterihuskvarna/login/SecurityConfiguration.java) sends the response with `Content-Security-Policy: sandbox; default-src 'none'; img-src https:; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'; frame-ancestors 'self'` and `X-Frame-Options: SAMEORIGIN`. The policy does what the attribute does when the address is opened in a tab, where the attribute is absent. `nosniff` and `no-store` are Spring Security's defaults on the administrator chain. Every other administrator response keeps `X-Frame-Options: DENY`.
+- The mail carries its styles in `style` attributes and its pictures from Sanity's CDN, which is why the policy lets inline styles and `https` pictures through. A picture from an `http` address would not show in the preview.
+- Rejected: a GET with the form in the query string. The administrator's own words can be 5000 characters, and each of å, ä and ö is six characters once percent-encoded, against Tomcat's 8 KB limit on the request line and headers.
+- Rejected: posting the hidden form into the frame with `<form target>`. A frame loads that way only after a click or a script, and the preview shows the mail without either.
+- Rejected: keeping the form in the session and building the mail again for the frame. The content could change between the two requests, the frame would need its own answer for content that had been unpublished, and `MailingForm` would have to be serialisable for the session's sake.
+- `POST /api/admin/mailings/preview` is unchanged: a REST client gets the HTML in the answer to its own POST, and has no frame to fill. That answer carries `X-Frame-Options: DENY`, `nosniff` and `no-store`, and not the policy above.
+
 ## Verification
 
 Written by an agent on 2026-11-04, for #200. The application ran from build 88f09be with `BREVO_API=http`, the dev profile and fixture content, against the development Brevo account, which accepts calls only from the address it authorises. The members' list and the test list were made for the run. A Playwright script drove the pages and read Brevo's API after each step. No mail was sent, neither a test nor a campaign.
@@ -76,3 +90,15 @@ Written by an agent on 2026-11-06, for #208. Brevo's API was called with the own
 | The list with no campaigns left | `{"campaigns":[],"count":0}` |
 
 Not run against a real account: the application from this branch. A lost answer, the wait as Väntar på Brevo, the delete after five minutes and the one-at-a-time index are covered only in `MailingIT`, against `FakeBrevo`, because Brevo cannot be made to time out on cue.
+
+Written by an agent on 2026-11-10, for the mailing preview. [`mailings.spec.ts`](../../e2e/tests/mailings.spec.ts) ran in the Chromium and Firefox that Playwright 1.64.1 carries, against the end-to-end stack with fixture content and `BREVO_API=fake`.
+
+| Step | What the browser showed |
+|---|---|
+| Preview of a mailing with an event | The frame held the subject, the typed words and the event, in both browsers. The browser sent the session cookie with the frame's request, and the response was 200 |
+| The same with JavaScript turned off | The same mail in the frame |
+| A document whose script rewrites a paragraph, fetches a marked address and moves the top page, served alone with no headers | The script ran: the browser asked for the marked address and the page moved to `/admin`. This is the control |
+| The same document in place of the mail, under the headers the application sent with the mail, in the frame | The paragraph kept its text, the marked address was never asked for and the page stayed |
+| The same, with the mail's address opened in a tab | The same, so the response's own policy refused the script without the frame's attribute |
+
+Not covered: a page on another site trying to frame the mail, which rests on the two headers as [`MailingIT`](../../src/test/java/se/teaterihuskvarna/mailing/MailingIT.java) reads them, and Safari.

@@ -8,7 +8,7 @@ description: Which template engine renders the HTML.
 
 ## Decision
 
-The application renders HTML with [JTE](https://jte.gg/), through `gg.jte:jte-spring-boot-starter-4` 3.2.4. Not Thymeleaf, which the produktägare's document names under "Teknikval" and which the system sketch shows inside the application box.
+The application renders HTML with [JTE](https://jte.gg/), through `gg.jte:jte-spring-boot-starter-4` 3.2.5. Not Thymeleaf, which the produktägare's document names under "Teknikval" and which the system sketch shows inside the application box.
 
 Swedish visitor-facing text does not live in template files. It lives in [`messages_sv.properties`](../../src/main/resources/messages_sv.properties) and in Sanity. Templates hold markup and message keys.
 
@@ -55,3 +55,15 @@ So the requirement was restated: **a non-developer can change everything they wo
 ## What it costs to undo
 
 Templates are the only thing affected, and they are rewritten rather than ported. There is no data migration and no API change. The cost scales with how many templates exist, which is the reason to decide now rather than at template twenty.
+
+## Agent notes
+
+Written by an agent on 2026-11-10.
+
+The version went from 3.2.4 to 3.2.5 on 2026-11-10. The table above is what was read on 2026-09-22 and still says 3.2.4. 3.2.5 was the newest release on Maven Central that day, published 2026-11-01, and its notes list three security fixes in the output escaping:
+
+- `<script>` and `on…` attributes are recognised in any letter case ([GHSA-2hfm-x4p2-r9hw](https://github.com/casid/jte/security/advisories/GHSA-2hfm-x4p2-r9hw)). No template here spells either with a capital. The only capitals in a tag or attribute name are `viewBox` on the icons.
+- A `javascript:` address is dropped also when a tab or a line break sits inside the word ([GHSA-mw9h-prf3-cr4h](https://github.com/casid/jte/security/advisories/GHSA-mw9h-prf3-cr4h)).
+- A dynamic `srcdoc` on an `<iframe>` is written as empty, and `javascript:` and `data:` addresses are dropped from `<a href>`, `<area href>`, `<base href>`, `<iframe src>`, `<form action>`, `<button formaction>` and `<input formaction>` ([GHSA-hvg6-pc44-97gv](https://github.com/casid/jte/security/advisories/GHSA-hvg6-pc44-97gv)).
+
+What this means for a template: JTE drops such a value without an error, at render time, so the compile-time argument above does not cover it. The mailing preview used `srcdoc` and showed an empty frame under 3.2.5 until it was rebuilt ([0026](0026-outbox-and-brevo-contacts.md), "The mailing preview"). Every other dynamic address in the templates on 2026-11-10 is a path the application builds, a configured address, or a Sanity address that [`ContentService`](../../src/main/java/se/teaterihuskvarna/content/ContentService.java) keeps only when it starts with `http://` or `https://`, so the guards drop nothing there.
