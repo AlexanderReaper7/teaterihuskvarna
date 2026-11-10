@@ -485,7 +485,7 @@ class LoginIT extends IntegrationTestSupport {
     @Test
     void requestsOverTheAddressLimitGetTheSameResponseButNoMail() throws Exception {
         insertAccount("Karin Karlsson", KARIN);
-        int limit = settings.requestsPerAddress();
+        int limit = settings.requestsPerAddressAndClient();
 
         MvcResult first = requestLink(LoginKind.MEMBER, KARIN);
         for (int request = 1; request < limit + 2; request++) {
@@ -522,6 +522,32 @@ class LoginIT extends IntegrationTestSupport {
             }
 
             assertThat(allowed).isEqualTo(settings.requestsPerAddress());
+        }
+    }
+
+    /// The same from one client, which stops at its own allowance for the
+    /// address, below the address's total.
+    @Test
+    void requestsSentAtOnceFromOneClientStopAtItsAllowance() throws Exception {
+        int requests = settings.requestsPerAddressAndClient() * 4;
+        CountDownLatch start = new CountDownLatch(1);
+        List<Future<Boolean>> results = new ArrayList<>();
+        try (ExecutorService threads = Executors.newFixedThreadPool(requests)) {
+            for (int request = 0; request < requests; request++) {
+                results.add(threads.submit(() -> {
+                    start.await();
+                    return limiter.tryAcquire(KARIN, "10.0.0.1");
+                }));
+            }
+            start.countDown();
+            long allowed = 0;
+            for (Future<Boolean> result : results) {
+                if (result.get()) {
+                    allowed++;
+                }
+            }
+
+            assertThat(allowed).isEqualTo(settings.requestsPerAddressAndClient());
         }
     }
 

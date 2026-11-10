@@ -13,6 +13,12 @@ import se.teaterihuskvarna.IntegrationTestSupport;
 /// Proves what [LinkRequestLimiter] counts, by calling it the way the login
 /// filter and the membership application do:
 ///
+/// - one client's allowance for an address is its own, so a client that uses
+///   it up does not stop another client from asking for the same address;
+/// - all clients together stop at the address's total, so many clients cannot
+///   send one address mail without end;
+/// - an IPv6 client is counted by its /64 network, since whoever has one
+///   address there has all of them;
 /// - a request that was refused does not count against its address, so a
 ///   client over its own limit cannot fill another person's address, and a
 ///   person who keeps trying while over the limit is let through again once
@@ -37,6 +43,43 @@ class LinkRequestLimiterIT extends IntegrationTestSupport {
     @Autowired
     private LinkRequestLimiter limiter;
 
+    /// Finding C4 of the review of 2026-11-10: with one count per address,
+    /// whoever asked five times for somebody else's address locked its owner
+    /// out for the hour.
+    @Test
+    void aClientAtItsAllowanceForAnAddressDoesNotStopAnotherClient() {
+        assertThat(settings.requestsPerAddressAndClient()).isLessThan(settings.requestsPerAddress());
+        for (int request = 0; request < settings.requestsPerAddressAndClient(); request++) {
+            assertThat(limiter.tryAcquire(KARIN, OTHER_CLIENT)).isTrue();
+        }
+        assertThat(limiter.tryAcquire(KARIN, OTHER_CLIENT)).isFalse();
+
+        assertThat(limiter.tryAcquire(KARIN, KARINS_CLIENT)).isTrue();
+    }
+
+    @Test
+    void everyClientIsRefusedOnceTheAddressIsAtItsTotal() {
+        for (int request = 0; request < settings.requestsPerAddress(); request++) {
+            assertThat(limiter.tryAcquire(KARIN, "198.51.100." + request)).isTrue();
+        }
+
+        assertThat(limiter.tryAcquire(KARIN, KARINS_CLIENT)).isFalse();
+    }
+
+    /// Three addresses in one /64, then one in the /64 beside it.
+    @Test
+    void anIpv6ClientIsCountedByItsNetwork() {
+        for (int request = 0; request < settings.requestsPerAddressAndClient(); request++) {
+            assertThat(limiter.tryAcquire(KARIN, "2001:db8:1:2::" + Integer.toHexString(request + 1))).isTrue();
+        }
+
+        assertThat(limiter.tryAcquire(KARIN, "2001:db8:1:2:aaaa:bbbb:cccc:dddd")).isFalse();
+        assertThat(limiter.tryAcquire(KARIN, "2001:db8:1:3::1")).isTrue();
+        assertThat(jdbc.sql("SELECT DISTINCT client_address FROM link_request ORDER BY client_address")
+                .query(String.class)
+                .list()).containsExactly("2001:db8:1:2::/64", "2001:db8:1:3::/64");
+    }
+
     @Test
     void aClientOverItsOwnLimitCannotFillAnAddress() {
         for (int request = 0; request < settings.requestsPerClient(); request++) {
@@ -52,12 +95,12 @@ class LinkRequestLimiterIT extends IntegrationTestSupport {
     /// The requests let through are moved to the window's last minute, then
     /// out of it, with the refused ones still inside.
     @Test
-    void tryingAgainWhileOverTheAddressLimitDoesNotProlongIt() {
-        for (int request = 0; request < settings.requestsPerAddress(); request++) {
+    void tryingAgainWhileOverTheAllowanceDoesNotProlongIt() {
+        for (int request = 0; request < settings.requestsPerAddressAndClient(); request++) {
             assertThat(limiter.tryAcquire(KARIN, KARINS_CLIENT)).isTrue();
         }
         makeOlder(settings.requestWindow().minusMinutes(1));
-        for (int request = 0; request < settings.requestsPerAddress(); request++) {
+        for (int request = 0; request < settings.requestsPerAddressAndClient(); request++) {
             assertThat(limiter.tryAcquire(KARIN, KARINS_CLIENT)).isFalse();
         }
         makeOlder(Duration.ofMinutes(2));
@@ -82,7 +125,24 @@ class LinkRequestLimiterIT extends IntegrationTestSupport {
     }
 
     @Test
-    void aRefusalByTheAddressLimitIsLoggedWithoutTheAddress(CapturedOutput output) {
+    void aRefusalByAClientsAllowanceIsLoggedWithoutTheAddress(CapturedOutput output) {
+        for (int request = 0; request < settings.requestsPerAddressAndClient(); request++) {
+            limiter.tryAcquire(KARIN, KARINS_CLIENT);
+        }
+        assertThat(output).doesNotContain("Refused a request for mail");
+
+        assertThat(limiter.tryAcquire(KARIN, KARINS_CLIENT)).isFalse();
+
+        assertThat(output)
+                .contains("Refused a request for mail: over the limit of " + settings.requestsPerAddressAndClient()
+                        + " per address from one client in " + settings.requestWindow())
+                .doesNotContain("per client")
+                .doesNotContain(KARIN)
+                .doesNotContain(KARINS_CLIENT);
+    }
+
+    @Test
+    void aRefusalByTheAddressTotalIsLoggedWithoutTheAddress(CapturedOutput output) {
         for (int request = 0; request < settings.requestsPerAddress(); request++) {
             limiter.tryAcquire(KARIN, "198.51.100." + request);
         }
@@ -94,6 +154,7 @@ class LinkRequestLimiterIT extends IntegrationTestSupport {
                 .contains("Refused a request for mail: over the limit of " + settings.requestsPerAddress()
                         + " per address in " + settings.requestWindow())
                 .doesNotContain("per client")
+                .doesNotContain("from one client")
                 .doesNotContain(KARIN)
                 .doesNotContain(KARINS_CLIENT);
     }
