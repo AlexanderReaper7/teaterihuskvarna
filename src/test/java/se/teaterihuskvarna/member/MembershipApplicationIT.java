@@ -25,6 +25,7 @@ import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 import se.teaterihuskvarna.IntegrationTestSupport;
 import se.teaterihuskvarna.login.LoginKind;
+import se.teaterihuskvarna.login.LoginSettings;
 
 /// Proves the membership application rules (R005) in `docs/projektplan.md`, through
 /// both adapters, the JTE form and the REST endpoints:
@@ -37,6 +38,8 @@ import se.teaterihuskvarna.login.LoginKind;
 /// - an unconfirmed application is deleted 24 hours after it was sent;
 /// - an address that already has an account gets a login link instead, and the
 ///   response is the same as for a new address;
+/// - the form counts against the login page's rate limit, per address and per
+///   client, and answers the same way over it, with no mail;
 /// - invalid input is refused before anything is stored or mailed.
 ///
 /// The service does the work after the rate limit on a background thread, so
@@ -56,6 +59,9 @@ class MembershipApplicationIT extends IntegrationTestSupport {
 
     @Autowired
     private MemberRepository members;
+
+    @Autowired
+    private LoginSettings login;
 
     @Test
     void anApplicationMailsAConfirmationLinkAndStoresNoMember() throws Exception {
@@ -238,6 +244,50 @@ class MembershipApplicationIT extends IntegrationTestSupport {
         assertThat(rowsIn("account")).isEqualTo(1);
     }
 
+    /// Without the limit the form would mail anyone as often as it was posted,
+    /// and would answer "is this address a member?" without end.
+    @Test
+    void applicationsOverTheAddressLimitGetTheSameResponseButNoMail() throws Exception {
+        int limit = login.requestsPerAddress();
+
+        MvcResult first = apply("Karin Karlsson", KARIN);
+        for (int application = 1; application < limit + 2; application++) {
+            assertThat(Visible.of(apply("Karin Karlsson", KARIN))).isEqualTo(Visible.of(first));
+        }
+
+        assertRedirect(first, "/bli-medlem/skickat");
+        assertThat(awaitMails(limit)).allSatisfy(mail -> assertThat(mail.getTo()).containsExactly(KARIN));
+    }
+
+    /// One client, a new address each time, through the REST adapter.
+    @Test
+    void applicationsOverTheClientLimitAreAcceptedButSendNoMail() throws Exception {
+        int limit = login.requestsPerClient();
+
+        for (int application = 0; application < limit + 2; application++) {
+            mockMvc.perform(applyByApi("Karin Karlsson", "karin" + application + "@example.test"))
+                    .andExpect(status().isAccepted());
+        }
+
+        assertThat(awaitMails(limit)).hasSize(limit);
+        assertThat(rowsIn("membership_application")).isEqualTo(limit);
+    }
+
+    /// The limit is the login page's own, not a second one beside it: requests
+    /// for a login link use up what the form allows the same address.
+    @Test
+    void theFormSharesTheLoginPagesLimit() throws Exception {
+        for (int request = 0; request < login.requestsPerAddress(); request++) {
+            requestLink(LoginKind.MEMBER, KARIN);
+        }
+
+        MvcResult applied = apply("Karin Karlsson", KARIN);
+
+        assertRedirect(applied, "/bli-medlem/skickat");
+        assertNoMail();
+        assertThat(rowsIn("membership_application")).isZero();
+    }
+
     @Test
     void aBlankNameRerendersTheFormAndSendsNothing() throws Exception {
         mockMvc.perform(post("/bli-medlem").param("fullName", " ").param("email", KARIN).with(csrf()))
@@ -250,11 +300,7 @@ class MembershipApplicationIT extends IntegrationTestSupport {
 
     @Test
     void theApiAcceptsAndConfirmsAnApplication() throws Exception {
-        mockMvc.perform(post("/api/membership-applications")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"fullName\": \"Karin Karlsson\", \"email\": \"" + KARIN + "\"}")
-                        .with(csrf()))
-                .andExpect(status().isAccepted());
+        mockMvc.perform(applyByApi("Karin Karlsson", KARIN)).andExpect(status().isAccepted());
         String token = tokenIn(awaitMail(), CONFIRMATION);
 
         mockMvc.perform(confirmByApi(token))
@@ -308,6 +354,13 @@ class MembershipApplicationIT extends IntegrationTestSupport {
                         .param("city", "Huskvarna")
                         .with(csrf()))
                 .andReturn();
+    }
+
+    private static MockHttpServletRequestBuilder applyByApi(String fullName, String email) {
+        return post("/api/membership-applications")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"fullName\": \"" + fullName + "\", \"email\": \"" + email + "\"}")
+                .with(csrf());
     }
 
     private static MockHttpServletRequestBuilder confirmByApi(String token) {
