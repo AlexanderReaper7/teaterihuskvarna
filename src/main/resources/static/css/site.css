@@ -820,6 +820,15 @@ select[aria-invalid="true"] {
   border-color: var(--color-error);
 }
 
+/* The mail in a mailing's preview, in a frame: on white whatever the page
+ * around it looks like, since that is what a mail client shows it on. */
+.mail-preview {
+  width: 100%;
+  height: 70vh;
+  border: 1px solid currentColor;
+  background: var(--color-white);
+}
+
 /* A plain text an administrator typed, such as an offer's description, shown
  * with its line breaks and nothing else. */
 .preserve-lines {

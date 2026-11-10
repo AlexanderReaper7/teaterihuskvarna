@@ -100,6 +100,21 @@ class SecurityConfiguration {
         "/forhandsgranska/**",
     };
 
+    /// The mail in a mailing's preview (R023), which
+    /// `AdministratorMailingPageController` serves for the frame on the preview
+    /// page.
+    private static final String PREVIEWED_MAIL = "/admin/utskick/forhandsgranska/*";
+
+    /// What the previewed mail may do, which is show itself. `sandbox` with no
+    /// allowance gives the document an origin of its own and no script. The
+    /// frame's `sandbox` attribute does the same, but only inside the frame,
+    /// and this also holds when the address is opened in a tab. The mail
+    /// carries its styles inline and its pictures by `https` address, so those
+    /// two load and nothing else does. `frame-ancestors 'self'` lets this
+    /// site's pages frame it and no other site's.
+    private static final String PREVIEWED_MAIL_POLICY = "sandbox; default-src 'none'; img-src https:; "
+            + "style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'; frame-ancestors 'self'";
+
     /// The largest upload request, from `spring.servlet.multipart.max-request-size`.
     private final long largestRequest;
 
@@ -131,6 +146,7 @@ class SecurityConfiguration {
                 .requestMatchers(urls.page(), urls.page() + "/**").permitAll()
                 .anyRequest().hasRole("ADMINISTRATOR"));
         login(http, LoginKind.ADMINISTRATOR, settings.administratorSession());
+        previewedMail(http);
         http.addFilterBefore(new ActiveLoginFilter(Directories.of(LoginKind.ADMINISTRATOR, directories)),
                 AuthorizationFilter.class);
         return http.build();
@@ -183,9 +199,9 @@ class SecurityConfiguration {
         return http.build();
     }
 
-    /// No page may be shown in a frame, except that the Studio may show a
-    /// content page in its Presentation preview. Spring's `X-Frame-Options:
-    /// DENY` cannot name another site, so a content page gets
+    /// No page of the member chain may be shown in a frame, except that the
+    /// Studio may show a content page in its Presentation preview. Spring's
+    /// `X-Frame-Options: DENY` cannot name another site, so a content page gets
     /// `Content-Security-Policy: frame-ancestors` instead, which browsers obey
     /// in its place. Without a configured Studio, the content pages allow only
     /// this site itself.
@@ -200,6 +216,24 @@ class SecurityConfiguration {
                 .addHeaderWriter(new DelegatingRequestMatcherHeaderWriter(contentPage,
                         new StaticHeadersWriter("Content-Security-Policy", "frame-ancestors " + ancestors)))
                 .addHeaderWriter(new DelegatingRequestMatcherHeaderWriter(new NegatedRequestMatcher(contentPage),
+                        new XFrameOptionsHeaderWriter(XFrameOptionsHeaderWriter.XFrameOptionsMode.DENY))));
+    }
+
+    /// No administrator page may be shown in a frame, except that the mailing
+    /// preview shows the previewed mail in one. That response gets
+    /// `X-Frame-Options: SAMEORIGIN` and [#PREVIEWED_MAIL_POLICY], and every
+    /// other one keeps Spring's `DENY`. `X-Content-Type-Options: nosniff` and
+    /// `Cache-Control: no-store` are Spring's defaults on every response of the
+    /// chain, the mail included.
+    private static void previewedMail(HttpSecurity http) {
+        RequestMatcher mail = PathPatternRequestMatcher.withDefaults().matcher(HttpMethod.GET, PREVIEWED_MAIL);
+        http.headers(headers -> headers
+                .frameOptions(options -> options.disable())
+                .addHeaderWriter(new DelegatingRequestMatcherHeaderWriter(mail,
+                        new StaticHeadersWriter("Content-Security-Policy", PREVIEWED_MAIL_POLICY)))
+                .addHeaderWriter(new DelegatingRequestMatcherHeaderWriter(mail,
+                        new XFrameOptionsHeaderWriter(XFrameOptionsHeaderWriter.XFrameOptionsMode.SAMEORIGIN)))
+                .addHeaderWriter(new DelegatingRequestMatcherHeaderWriter(new NegatedRequestMatcher(mail),
                         new XFrameOptionsHeaderWriter(XFrameOptionsHeaderWriter.XFrameOptionsMode.DENY))));
     }
 

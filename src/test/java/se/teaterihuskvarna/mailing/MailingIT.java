@@ -10,6 +10,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.flash;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -20,6 +21,8 @@ import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -39,7 +42,9 @@ import se.teaterihuskvarna.login.SignedIn;
 ///
 /// - Only an administrator reaches them.
 /// - The preview is the mail with the chosen content and Brevo's unsubscribe
-///   placeholder, and touches nothing in Brevo.
+///   placeholder, and touches nothing in Brevo. The page shows it in a frame
+///   that runs no script, from an address only the session that made the
+///   preview can fetch, and only this site may frame.
 /// - Preparing makes a draft to the members' list or to a Brevo segment, and
 ///   logs it. A mailing whose draft Brevo did not answer for waits as
 ///   `creating`, finds its draft by name, stops another mailing until then,
@@ -54,6 +59,10 @@ import se.teaterihuskvarna.login.SignedIn;
 /// - Brevo refusing a test says so.
 @ExtendWith(OutputCaptureExtension.class)
 class MailingIT extends IntegrationTestSupport {
+
+    /// The preview page's frame: `sandbox` without a value, and the mail's address.
+    private static final Pattern FRAME = Pattern.compile("<iframe class=\"mail-preview\" title=\"[^\"]*\" sandbox\\s+"
+            + "src=\"(/admin/utskick/forhandsgranska/[0-9a-f-]{36})\"></iframe>");
 
     @Autowired
     private Brevo brevo;
@@ -120,14 +129,23 @@ class MailingIT extends IntegrationTestSupport {
 
     @Test
     void thePreviewShowsTheChosenContentAndTouchesNothing() throws Exception {
-        mockMvc.perform(post("/admin/utskick/forhandsgranska").with(asAdministrator()).with(csrf())
-                        .param("audience", "LIST")
-                        .param("subject", "Höstens program")
-                        .param("intro", "Hej alla!\n\nNu drar vi igång.")
-                        .param("events", "kulturnatten")
-                        .param("news", "ny-webbplats"))
+        RequestPostProcessor administrator = loggedInAdministrator(firstAdministratorEmail);
+        int campaigns = fake.campaignCount();
+
+        MvcResult page = previewOnThePage(administrator, "Höstens program");
+        assertThat(page.getResponse().getStatus()).isEqualTo(200);
+        // The page names the subject and frames the mail. It does not hold the mail.
+        assertThat(page.getResponse().getContentAsString())
+                .contains("<dd>Höstens program</dd>")
+                .doesNotContain("Kulturnatten på torget")
+                .doesNotContain("srcdoc")
+                .doesNotContain("style=");
+
+        mockMvc.perform(get(frameOf(page)).with(administrator))
                 .andExpect(status().isOk())
-                .andExpect(content().string(containsString("Höstens program")))
+                .andExpect(content().contentType("text/html;charset=UTF-8"))
+                .andExpect(content().string(containsString(">Höstens program</h1>")))
+                .andExpect(content().string(containsString("Nu drar vi igång.")))
                 .andExpect(content().string(containsString("Kulturnatten på torget")))
                 .andExpect(content().string(containsString("Ny webbplats")))
                 .andExpect(content().string(containsString("{{ unsubscribe }}")))
@@ -137,9 +155,70 @@ class MailingIT extends IntegrationTestSupport {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"subject\": \"Hej\", \"audience\": \"LIST\", \"events\": [\"kulturnatten\"]}"))
                 .andExpect(status().isOk())
+                .andExpect(header().string("X-Frame-Options", "DENY"))
                 .andExpect(content().string(containsString("http://localhost/evenemang/kulturnatten")));
 
         assertThat(rowsIn("mailing")).isZero();
+        assertThat(fake.campaignCount()).isEqualTo(campaigns);
+    }
+
+    /// The frame has `sandbox` with no allowance ([#frameOf] requires it), and
+    /// the mail's own response says the same, so the mail runs no script and
+    /// cannot use the administrator's session wherever it is opened. Only this
+    /// site may frame it, and no administrator page may be framed at all.
+    @Test
+    void thePreviewedMailRunsNoScriptAndOnlyThisSiteFramesIt() throws Exception {
+        RequestPostProcessor administrator = loggedInAdministrator(firstAdministratorEmail);
+        MvcResult page = previewOnThePage(administrator, "Höstens program");
+
+        mockMvc.perform(get(frameOf(page)).with(administrator))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Content-Security-Policy", "sandbox; default-src 'none'; img-src https:; "
+                        + "style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'; frame-ancestors 'self'"))
+                .andExpect(header().string("X-Frame-Options", "SAMEORIGIN"))
+                .andExpect(header().string("X-Content-Type-Options", "nosniff"))
+                .andExpect(header().string("Cache-Control", containsString("no-store")));
+
+        assertThat(page.getResponse().getHeader("X-Frame-Options")).isEqualTo("DENY");
+        mockMvc.perform(get("/admin/utskick").with(administrator))
+                .andExpect(status().isOk())
+                .andExpect(header().string("X-Frame-Options", "DENY"))
+                .andExpect(header().doesNotExist("Content-Security-Policy"));
+    }
+
+    @Test
+    void onlyTheAdministratorWhoPreviewedReachesTheMail() throws Exception {
+        insertAccount("Karin Holm", "karin@example.test");
+        insertAdministrator("bo@example.test", "Bo Berg");
+        RequestPostProcessor administrator = loggedInAdministrator(firstAdministratorEmail);
+        String frame = frameOf(previewOnThePage(administrator, "Höstens program"));
+        mockMvc.perform(get(frame).with(administrator)).andExpect(status().isOk());
+
+        assertRedirect(mockMvc.perform(get(frame)).andReturn(), "/admin/logga-in");
+        RequestPostProcessor member = sessionOf(logInByLink(LoginKind.MEMBER, "karin@example.test"));
+        assertRedirect(mockMvc.perform(get(frame).with(member)).andReturn(), "/admin/logga-in");
+
+        // The mail lives in the session that previewed it, so the address alone
+        // gives another administrator nothing, and neither does a guessed key.
+        String replaced = "En nyare förhandsgranskning har ersatt den här.";
+        mockMvc.perform(get(frame).with(loggedInAdministrator("bo@example.test")))
+                .andExpect(status().isNotFound())
+                .andExpect(content().string(containsString(replaced)));
+        mockMvc.perform(get("/admin/utskick/forhandsgranska/00000000-0000-0000-0000-000000000000")
+                        .with(administrator))
+                .andExpect(status().isNotFound())
+                .andExpect(content().string(containsString(replaced)));
+
+        // A newer preview in the same session replaces the mail, and the older
+        // page's frame says so rather than showing a mail its buttons would not create.
+        String newer = frameOf(previewOnThePage(administrator, "Vårens program"));
+        mockMvc.perform(get(frame).with(administrator))
+                .andExpect(status().isNotFound())
+                .andExpect(header().string("X-Frame-Options", "SAMEORIGIN"))
+                .andExpect(content().string(containsString(replaced)));
+        mockMvc.perform(get(newer).with(administrator))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString(">Vårens program</h1>")));
     }
 
     @Test
@@ -597,6 +676,31 @@ class MailingIT extends IntegrationTestSupport {
         assertThat(jdbc.sql("SELECT status FROM mailing").query(String.class).single()).isEqualTo("creating");
         assertThat(jdbc.sql("SELECT brevo_campaign_id FROM mailing").query(Long.class).list()).containsOnlyNulls();
         return jdbc.sql("SELECT id FROM mailing").query(Long.class).single();
+    }
+
+    /// Logs in by link, so the session is a real one in PostgreSQL, which is
+    /// where the preview keeps its mail.
+    private RequestPostProcessor loggedInAdministrator(String email) throws Exception {
+        return sessionOf(logInByLink(LoginKind.ADMINISTRATOR, email));
+    }
+
+    /// Presses the form's preview button with an event and a news item chosen.
+    private MvcResult previewOnThePage(RequestPostProcessor administrator, String subject) throws Exception {
+        return mockMvc.perform(post("/admin/utskick/forhandsgranska").with(administrator).with(csrf())
+                        .param("audience", "LIST")
+                        .param("subject", subject)
+                        .param("intro", "Hej alla!\n\nNu drar vi igång.")
+                        .param("events", "kulturnatten")
+                        .param("news", "ny-webbplats"))
+                .andReturn();
+    }
+
+    /// @return the address of the mail the preview page frames, which must be
+    ///     in a frame whose `sandbox` allows nothing
+    private static String frameOf(MvcResult page) throws Exception {
+        Matcher frame = FRAME.matcher(page.getResponse().getContentAsString());
+        assertThat(frame.find()).as("a frame with a bare sandbox attribute on the preview page").isTrue();
+        return frame.group(1);
     }
 
     private MockHttpServletRequestBuilder prepareOnThePage(String intro) {

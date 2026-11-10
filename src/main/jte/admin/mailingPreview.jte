@@ -5,7 +5,7 @@
 @param Copy copy
 @param CsrfField csrf
 @param MailingForm form
-@param String html
+@param String mailKey
 @param String audienceName
 @param MailingReach reach
 @template.admin.layout(copy = copy, title = copy.text("adminMailings.preview.heading"), content = @`
@@ -25,8 +25,8 @@
         <p role="alert">${copy.text("adminMailings.error.noRecipients")}</p>
     @endif
     <p>${copy.text("adminMailings.preview.unsubscribe")}</p>
-    <iframe title="${copy.text("adminMailings.preview.frame")}" sandbox srcdoc="${html}"
-            style="width:100%;height:70vh;border:1px solid currentColor;background:#fff;"></iframe>
+    <iframe class="mail-preview" title="${copy.text("adminMailings.preview.frame")}" sandbox
+            src="/admin/utskick/forhandsgranska/${mailKey}"></iframe>
     <p>${copy.text("adminMailings.preview.next")}</p>
     <form method="post">
         @template.tag.csrf(csrf = csrf)

@@ -1,9 +1,14 @@
 package se.teaterihuskvarna.web;
 
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
 import jakarta.validation.ConstraintViolationException;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.util.UUID;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -35,10 +40,27 @@ import se.teaterihuskvarna.mailing.UnknownContent;
 /// The preview is a page of its own that carries the form in hidden fields,
 /// so going back to change something or going on to create the draft needs
 /// nothing stored between the requests.
+///
+/// The mail itself is the one thing stored. The preview page shows it in a
+/// frame, and a frame fetches its document with a GET, whose address cannot
+/// hold the form: the administrator's own words alone can be 5000 characters.
+/// So [#preview] keeps the mail it built in the administrator's session under
+/// a new key, and [#previewedMail] answers the frame with it. The session
+/// holds one mail, the latest, and the key makes an older preview page's frame
+/// answer 404 instead of showing a mail its buttons would not create.
 @Controller
 public class AdministratorMailingPageController {
 
     private static final String LIST = "/admin/utskick";
+
+    /// The session attribute with the key of the latest preview.
+    private static final String PREVIEWED_KEY = "mailingPreview.key";
+
+    /// The session attribute with the mail of the latest preview, as HTML.
+    private static final String PREVIEWED_MAIL = "mailingPreview.mail";
+
+    private static final MediaType HTML = new MediaType(MediaType.TEXT_HTML, StandardCharsets.UTF_8);
+    private static final MediaType TEXT = new MediaType(MediaType.TEXT_PLAIN, StandardCharsets.UTF_8);
 
     private final MailingService mailings;
     private final Copy copy;
@@ -67,11 +89,12 @@ public class AdministratorMailingPageController {
 
     /// R023.
     ///
-    /// @param form  what was typed
-    /// @param model receives the mail's HTML and the form, or the form again with what was wrong
+    /// @param form    what was typed
+    /// @param model   receives the form and the key of the mail, or the form again with what was wrong
+    /// @param session keeps the mail for [#previewedMail]
     /// @return the preview, or the mailing page
     @PostMapping(LIST + "/forhandsgranska")
-    public String preview(@ModelAttribute("form") MailingForm form, Model model) {
+    public String preview(@ModelAttribute("form") MailingForm form, Model model, HttpSession session) {
         String html;
         try {
             html = mailings.preview(form);
@@ -81,7 +104,10 @@ public class AdministratorMailingPageController {
             model.addAttribute("error", message(e));
             return page(form, FieldErrors.none(), model);
         }
-        model.addAttribute("html", html);
+        String key = UUID.randomUUID().toString();
+        session.setAttribute(PREVIEWED_KEY, key);
+        session.setAttribute(PREVIEWED_MAIL, html);
+        model.addAttribute("mailKey", key);
         try {
             model.addAttribute("reach", mailings.reach(form.audience()));
         } catch (UnknownAudience | BrevoUnavailable e) {
@@ -93,6 +119,24 @@ public class AdministratorMailingPageController {
                 .findFirst()
                 .orElse(""));
         return "admin/mailingPreview";
+    }
+
+    /// R023: the mail of the latest preview, for the frame on the preview page.
+    /// `SecurityConfiguration` sends it with the headers that keep it from
+    /// running script, from reaching the administrator's session and from being
+    /// framed by another site.
+    ///
+    /// @param key     the key [#preview] gave the mail
+    /// @param session where [#preview] kept the mail
+    /// @return the mail as HTML, or 404 with a sentence saying why, once a newer preview has replaced it
+    @GetMapping(LIST + "/forhandsgranska/{key}")
+    public ResponseEntity<String> previewedMail(@PathVariable String key, HttpSession session) {
+        if (key.equals(session.getAttribute(PREVIEWED_KEY))
+                && session.getAttribute(PREVIEWED_MAIL) instanceof String mail) {
+            return ResponseEntity.ok().contentType(HTML).body(mail);
+        }
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).contentType(TEXT)
+                .body(copy.text("adminMailings.preview.replaced"));
     }
 
     /// R022: creates the draft in Brevo.
