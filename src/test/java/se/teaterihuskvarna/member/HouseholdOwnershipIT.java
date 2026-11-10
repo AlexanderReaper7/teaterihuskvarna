@@ -189,10 +189,11 @@ class HouseholdOwnershipIT extends MemberRegisterSupport {
                 .param("memberId", String.valueOf(owner)).with(asAdministrator()).with(csrf())).andReturn(),
                 "/admin/hushall");
         assertThat(owner()).isEqualTo(owner);
-        // An owner that is not a number keeps the owner. Without a BindingResult it was answered with 400.
+        // An owner that is not a number keeps the owner, and the page says so as an error, where it
+        // used to announce the refusal as a notice. Without a BindingResult it was answered with 400.
         MvcResult unreadable = mockMvc.perform(post("/admin/hushall/" + household + "/agare")
                 .param("memberId", "abc").with(asAdministrator()).with(csrf()))
-                .andExpect(flash().attribute("notice",
+                .andExpect(flash().attribute("error",
                         "Välj en person i hushållet som har ett konto, eller administratörerna."))
                 .andReturn();
         assertRedirect(unreadable, "/admin/hushall");

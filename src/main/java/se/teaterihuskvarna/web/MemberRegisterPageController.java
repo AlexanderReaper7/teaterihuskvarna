@@ -308,13 +308,13 @@ public class MemberRegisterPageController {
     public String changeHouseholdOwner(@PathVariable long id, @ModelAttribute HouseholdOwnerForm form,
             BindingResult binding, RedirectAttributes redirected) {
         if (binding.hasErrors()) {
-            redirected.addFlashAttribute("notice", copy.text("household.owner.memberId.invalid"));
+            redirected.addFlashAttribute("error", copy.text("household.owner.memberId.invalid"));
             return "redirect:" + HOUSEHOLDS;
         }
         try {
             households.changeOwner(id, form);
         } catch (ConstraintViolationException | NoSuchMember e) {
-            redirected.addFlashAttribute("notice", copy.text("household.owner.memberId.invalid"));
+            redirected.addFlashAttribute("error", copy.text("household.owner.memberId.invalid"));
             return "redirect:" + HOUSEHOLDS;
         } catch (NoSuchHousehold e) {
             throw notFound(e);
