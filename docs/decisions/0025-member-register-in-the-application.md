@@ -6,6 +6,8 @@ description: Member deletion, household fees and management, and who changes a m
 
 # 0025: The member register, deletion, household fees and email changes
 
+Amended by an agent on 2026-11-10. The sentence that cites question T4 now quotes the question and says where it went.
+
 The Decision section is the user's. Everything under Agent notes is an agent's.
 
 ## Decision
@@ -17,7 +19,7 @@ The Decision section is the user's. Everything under Agent notes is an agent's.
 - A member can create and manage their own household, including editing and removing household members who have accounts. Removal only ends household membership, preserving the person's membership and account. A member can leave their own household. Decided by the user on 2026-09-30. The user chose this over restricting edits and removals to people without accounts, and chose removal from the household over deleting membership and login access.
 - The member who creates a household is its first owner. Only its owner can rename it, add people, or edit and remove other household members. Administrators can change the owner. An owner must choose another household member with an account before leaving; if none remains, administrators take over. Other members can leave directly. Decided by the user on 2026-10-01 after review of PR #66. This narrows the household editing permission in the 2026-09-30 decision.
 
-The second point answers T4 in [open-questions](../open-questions.md): the household fee belongs to the household, so a household can pay first and add members afterwards.
+The second point answers question T4, "Must a household have added all its members before it pays the family fee, or is the family fee bound to the account, so members can be added and changed after paying?": the household fee belongs to the household, so a household can pay first and add members afterwards. T4 is no longer in [open-questions](../open-questions.md), where a resolved question is deleted. Commit [`f68ec46`](https://github.com/AlexanderReaper7/teaterihuskvarna/commit/f68ec46) deleted it on 2026-09-28, so this record is where its answer lives.
 
 ## Agent notes
 

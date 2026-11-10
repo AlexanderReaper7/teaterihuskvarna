@@ -6,6 +6,8 @@ description: How members and administrators log in.
 
 # 0015: Login links on Spring Security
 
+Amended by an agent on 2026-11-10. Deleting a member removes an account, so the member chain runs the active-login check too.
+
 ## Decision
 
 Members and administrators log in with Spring Security 7.1.1's one-time-token login. The flow is Spring's: the filter that takes an address and generates a token, the filter that takes a token and logs in, the session, CSRF and the access rules. This project supplies the parts that Spring's defaults get wrong for it: a token store that keeps hashes, a lookup that says nothing about unknown addresses, a rate limit, mail sent after the response, and a cookie that makes a link work only in the browser that asked for it. They live in `se.teaterihuskvarna.login`.
@@ -91,7 +93,7 @@ The cost was measured the same day on the e2e stack, 5 000 sequential keep-alive
 | `/admin` | 1.192, 1.130 | 1.203, 1.115 |
 | `/api/admin/administrators` | 1.009, 1.004 | 0.964, 1.060 |
 
-The difference is smaller than the spread between two runs of the same build. By itself, the lookup (`removed_at IS NULL` by primary key) took 0.014 ms in `pgbench`. Spring Session's own load of the session takes 0.023 ms. Members get no such check, because nothing removes an account yet. Whatever later removes one should add the filter to the member chain.
+The difference is smaller than the spread between two runs of the same build. By itself, the lookup (`removed_at IS NULL` by primary key) took 0.014 ms in `pgbench`. Spring Session's own load of the session takes 0.023 ms. Members get the same check since 2026-09-28: `MemberService.delete` removes a member's account and ends its sessions, and the member chain runs `ActiveLoginFilter` too. The measurement above covers only the administrator chain.
 
 ## A login ends a fixed time after it starts
 

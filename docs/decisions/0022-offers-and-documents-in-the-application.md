@@ -8,6 +8,8 @@ description: Where member offers and member documents live, why not in Sanity, a
 
 Amended by the user on 2026-10-24. The old site's documents are members-only.
 
+Amended by an agent on 2026-11-10. The sentence that cites question T6 now quotes the question and says where it went.
+
 The Decision section is the user's. Everything under Agent notes is an agent's.
 
 ## Decision
@@ -18,7 +20,7 @@ The Decision section is the user's. Everything under Agent notes is an agent's.
 
 - The documents on the old WordPress site, such as stadgar, protocols and medlemsbrev, are member documents under R015, and only members see them. Decided by the user on 2026-10-24, asked whether they should be members-only or public.
 
-This answers T6 in [open-questions](../open-questions.md): at [the first meeting](../meetings/2026-09-24-meeting-1.md#what-the-site-does) Klas said offer details are for members only, and a Free Sanity dataset publishes every published document.
+This answers question T6, "Where do member-only offer details live?": at [the first meeting](../meetings/2026-09-24-meeting-1.md#what-the-site-does) Klas said offer details are for members only, and a Free Sanity dataset publishes every published document. T6 is no longer in [open-questions](../open-questions.md), where a resolved question is deleted. Commit [`f68ec46`](https://github.com/AlexanderReaper7/teaterihuskvarna/commit/f68ec46) deleted it on 2026-09-28, so this record is where its answer lives.
 
 ## Agent notes
 
