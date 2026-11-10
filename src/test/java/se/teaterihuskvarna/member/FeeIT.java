@@ -120,9 +120,9 @@ class FeeIT extends MemberRegisterSupport {
 
     /// The register reads the listed members' accounts in one query, and each
     /// payment instruction still names the member's own address (#91). A member
-    /// without an account gets no instruction. Olle is added before Nils so
-    /// that their member and account ids differ, and an address looked up by
-    /// the wrong id shows.
+    /// without an account gets no instruction. An address looked up by the
+    /// wrong id shows, because no account id is also a member id
+    /// ([IntegrationTestSupport#idsApart]).
     @Test
     void eachMemberInTheRegisterIsToldToWriteTheirOwnAddress() throws Exception {
         insertMember("Olle Utan Konto");
