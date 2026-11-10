@@ -29,8 +29,8 @@ import se.teaterihuskvarna.document.NotAPdf;
 import se.teaterihuskvarna.login.SignedIn;
 
 /// Member documents for administrators (R015): the list, an upload form, a
-/// delete button per document, and the files. Spring Security lets only an
-/// administrator account reach it.
+/// confirmation page before a delete, and the files. Spring Security lets only
+/// an administrator account reach it.
 ///
 /// An upload over the limit in `application.yaml` never reaches this class:
 /// Tomcat will not read its body, so Spring Security finds no CSRF token, and
@@ -93,6 +93,25 @@ public class AdministratorDocumentPageController {
         }
         redirected.addFlashAttribute("notice", copy.text("adminDocuments.uploaded", uploaded.title()));
         return "redirect:" + LIST;
+    }
+
+    /// The confirmation step before a delete. A document that is gone, as when
+    /// another administrator deleted it while the list stood open, sends the
+    /// list back with that said, as the delete itself does.
+    ///
+    /// @param id         the document
+    /// @param model      receives the document, which the page names
+    /// @param redirected receives the error when the document is gone
+    /// @return the page that asks before deleting, or a redirect to the list
+    @GetMapping(LIST + "/{id}/ta-bort")
+    public String confirmDelete(@PathVariable long id, Model model, RedirectAttributes redirected) {
+        try {
+            model.addAttribute("document", documents.summary(id));
+        } catch (NoSuchDocument e) {
+            redirected.addFlashAttribute("error", copy.text("adminDocuments.error.noSuch"));
+            return "redirect:" + LIST;
+        }
+        return "admin/documentDelete";
     }
 
     /// @param id         the document

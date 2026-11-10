@@ -12,7 +12,7 @@ import { text } from "../support/copy";
 import { clearLinkRequests, resetAdministrators, sql } from "../support/db";
 import { clearMail, waitForMail } from "../support/mail";
 import { ADMINISTRATORS, freshAddress } from "../support/site";
-import { ADMIN, MEMBER, PUBLIC, details, householdPages, prepareAdministratorPages, saveMailingDraft, scan } from "../support/pages";
+import { ADMIN, MEMBER, PUBLIC, confirmations, details, householdPages, prepareAdministratorPages, saveMailingDraft, scan } from "../support/pages";
 
 test.beforeEach(async () => {
   await resetAdministrators();
@@ -283,7 +283,8 @@ for (const width of WIDTHS) {
       const shifts = await details(page, "/admin/volontarpass", "/admin/volontarpass/");
       const mailings = await details(page, "/admin/utskick", "/admin/utskick/");
       const paths = [...new Set([...ADMIN, unpaid!, ...members, ...offers, ...shifts, ...mailings,
-        ...members.map((path) => path + "/ta-bort"), ...offers.map((path) => path + "/ta-bort")])];
+        ...members.map((path) => path + "/ta-bort"), ...offers.map((path) => path + "/ta-bort"),
+        ...await confirmations(page, shifts)])];
       expect([...found, ...await scan(page, paths, problems, shown)]).toEqual([]);
     });
   });

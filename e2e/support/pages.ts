@@ -74,9 +74,23 @@ export async function householdPages(): Promise<{ email: string; paths: string[]
     base + owner.id + "/ta-bort"] };
 }
 
-/// A real draft in the fake Brevo and a booked shift exist even in a standalone run.
-/// The preview is left on screen so the caller can check that POST-only page too.
-export async function prepareAdministratorPages(page: Page): Promise<void> {
+/// The pages that ask before a document, an administrator and each of `shifts`
+/// is deleted. The first two are found by the link that leads to them, on the
+/// list of documents and on the administrators' start page; a shift's is beside
+/// its own page.
+export async function confirmations(page: Page, shifts: string[]): Promise<string[]> {
+  const paths = shifts.map((path) => path + "/ta-bort");
+  for (const [list, prefix] of [["/admin/handlingar", "/admin/handlingar/"], ["/admin", "/admin/administratorer/"]]) {
+    await visit(page, list);
+    const link = page.locator(`a[href^="${prefix}"][href$="/ta-bort"]`).first();
+    await expect(link, `a link to the page that asks, on ${list}`).toBeVisible();
+    paths.push((await link.getAttribute("href"))!);
+  }
+  return paths;
+}
+
+/// A shift that one member has booked exists even in a standalone run.
+export async function bookedShift(): Promise<void> {
   await sql(`INSERT INTO volunteer_shift
     (event_id, event_title, event_slug, task, starts_at, ends_at, places, created_at)
     SELECT 'kulturnatten', 'Sidtestets volontärpass', 'kulturnatten', 'GARDEROB',
@@ -86,6 +100,12 @@ export async function prepareAdministratorPages(page: Page): Promise<void> {
     SELECT s.id, a.member_id, now() FROM volunteer_shift s CROSS JOIN account a
     WHERE s.event_title = 'Sidtestets volontärpass' AND a.email = 'erik.lindqvist@example.test'
     ON CONFLICT (shift_id, member_id) DO NOTHING`);
+}
+
+/// A real draft in the fake Brevo and a booked shift exist even in a standalone run.
+/// The preview is left on screen so the caller can check that POST-only page too.
+export async function prepareAdministratorPages(page: Page): Promise<void> {
+  await bookedShift();
   await visit(page, "/admin/utskick");
   await page.locator("#audience").selectOption({ index: 1 });
   await page.locator("#subject").fill("Sidtestets utskick");

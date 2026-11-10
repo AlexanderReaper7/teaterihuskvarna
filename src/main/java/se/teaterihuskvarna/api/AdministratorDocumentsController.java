@@ -58,6 +58,15 @@ public class AdministratorDocumentsController {
     }
 
     /// @param id the document
+    /// @return the document without its file
+    @GetMapping("/api/admin/documents/{id}")
+    public DocumentSummary summary(@PathVariable long id) {
+        return documents.summary(id);
+    }
+
+    /// The pages ask before they delete. Here the DELETE is the whole request.
+    ///
+    /// @param id the document
     @DeleteMapping("/api/admin/documents/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void delete(@PathVariable long id) {

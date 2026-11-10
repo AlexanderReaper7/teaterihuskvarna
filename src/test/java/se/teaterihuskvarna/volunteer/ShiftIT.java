@@ -385,13 +385,45 @@ class ShiftIT extends IntegrationTestSupport {
     @Test
     void theDeletionWarningCountsTheBookings() throws Exception {
         long id = insertShift(Instant.now().plus(Duration.ofDays(3)), 3);
-        assertThat(adminPage(id)).contains("Passet tas bort. Ingen har bokat det.");
+        assertThat(deletePage(id)).contains("Passet tas bort. Ingen har bokat det.");
 
         insertBooking(id, memberOf(insertAccount("Anna Först", "anna@example.test")), Instant.now());
-        assertThat(adminPage(id)).contains("Passet och dess bokning tas bort. Volontären får inget meddelande.");
+        assertThat(deletePage(id)).contains("Passet och dess bokning tas bort. Volontären får inget meddelande.");
 
         insertBooking(id, memberOf(insertAccount("Karin Holm", "karin@example.test")), Instant.now());
-        assertThat(adminPage(id)).contains("Passet och dess 2 bokningar tas bort. Volontärerna får inget meddelande.");
+        assertThat(deletePage(id))
+                .contains("Passet och dess 2 bokningar tas bort. Volontärerna får inget meddelande.");
+    }
+
+    /// The shift's page has a link, not a button that deletes. The page it leads
+    /// to says which shift goes, and only its button deletes.
+    @Test
+    void deletingOnThePageAsksFirst() throws Exception {
+        long id = insertShift(Instant.now().plus(Duration.ofDays(3)), 3);
+        insertBooking(id, memberOf(insertAccount("Anna Först", "anna@example.test")), Instant.now());
+        String path = "/admin/volontarpass/" + id + "/ta-bort";
+
+        assertThat(bodyOf(mockMvc.perform(get("/admin/volontarpass/" + id).with(asAdministrator())).andReturn()))
+                .contains("<a href=\"" + path + "\">")
+                .doesNotContain("action=\"" + path + "\"");
+
+        String page = deletePage(id);
+        assertThat(page).contains(
+                "<h1>" + text("adminShifts.delete") + "</h1>",
+                "Garderob, Kulturnatten på torget",
+                "<form method=\"post\" action=\"" + path + "\">",
+                "<a href=\"/admin/volontarpass/" + id + "\">" + text("adminShifts.delete.cancel") + "</a>");
+        assertThat(rowsIn("volunteer_shift")).isOne();
+        assertThat(rowsIn("volunteer_booking")).isOne();
+        mockMvc.perform(get("/admin/volontarpass/999999/ta-bort").with(asAdministrator()))
+                .andExpect(status().isNotFound());
+        assertRedirect(mockMvc.perform(get(path).with(asMember(insertAccount("Karin Holm", "karin@example.test"))))
+                .andReturn(), "/admin/logga-in");
+
+        mockMvc.perform(post(path).with(asAdministrator()).with(csrf()))
+                .andExpect(flash().attribute("notice", text("adminShifts.deleted")));
+        assertThat(rowsIn("volunteer_shift")).isZero();
+        assertThat(rowsIn("volunteer_booking")).isZero();
     }
 
     @Test
@@ -446,10 +478,10 @@ class ShiftIT extends IntegrationTestSupport {
         return messages.getMessage(key, null, Swedish.LOCALE);
     }
 
-    private String adminPage(long id) throws Exception {
-        return mockMvc.perform(get("/admin/volontarpass/" + id).with(asAdministrator()))
+    private String deletePage(long id) throws Exception {
+        return bodyOf(mockMvc.perform(get("/admin/volontarpass/" + id + "/ta-bort").with(asAdministrator()))
                 .andExpect(status().isOk())
-                .andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
+                .andReturn());
     }
 
     private long insertShift(Instant startsAt, int places) {

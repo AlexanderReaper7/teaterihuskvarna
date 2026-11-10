@@ -51,6 +51,25 @@ test("a file just over 10 MB gets the page's own message", async ({ page }) => {
   expect(await sql("SELECT 1 FROM member_document WHERE title = $1", [TITLE])).toHaveLength(0);
 });
 
+test("deleting a document asks first, and answering no keeps it", async ({ page }) => {
+  await upload(page, 1024);
+  const link = page.getByRole("link", { name: text("adminDocuments.remove.label", TITLE), exact: true });
+
+  await link.click();
+  await expect(page.getByRole("heading", { level: 1, name: text("adminDocuments.delete.heading") })).toBeVisible();
+  await expect(page.getByText(text("adminDocuments.delete.question", TITLE))).toBeVisible();
+  await page.getByRole("link", { name: text("adminDocuments.delete.cancel"), exact: true }).click();
+  await expect(page).toHaveURL("/admin/handlingar");
+  expect(await sql("SELECT 1 FROM member_document WHERE title = $1", [TITLE])).toHaveLength(1);
+
+  await link.click();
+  await page.locator("main").getByRole("button", { name: text("adminDocuments.delete.submit"), exact: true }).click();
+  await expect(page).toHaveURL("/admin/handlingar");
+  await expect(page.getByRole("status")).toHaveText(text("adminDocuments.deleted"));
+  await expect(link).toHaveCount(0);
+  expect(await sql("SELECT 1 FROM member_document WHERE title = $1", [TITLE])).toHaveLength(0);
+});
+
 test("a file over the request limit comes back to the page saying so, not as a stale form", async ({ page }) => {
   await upload(page, 11 * MB);
 

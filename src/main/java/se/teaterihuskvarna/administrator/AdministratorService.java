@@ -37,6 +37,13 @@ public class AdministratorService {
         return administrators.findActive().stream().map(AdministratorDetails::of).toList();
     }
 
+    /// @param id the administrator
+    /// @return the administrator, for the page that asks before a removal
+    /// @throws NoSuchAdministrator if no active administrator has that id
+    public AdministratorDetails details(long id) {
+        return administrators.findActiveById(id).map(AdministratorDetails::of).orElseThrow(NoSuchAdministrator::new);
+    }
+
     /// Adds an administrator, or makes a removed one active again if the address
     /// was used before. The row is reused because `administrator_email_key`
     /// spans removed rows too, so a second row for the address cannot exist.

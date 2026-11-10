@@ -82,9 +82,12 @@ class MemberDocumentIT extends IntegrationTestSupport {
         assertRedirect(mockMvc.perform(get("/admin/handlingar").with(member)).andReturn(), "/admin/logga-in");
         assertRedirect(mockMvc.perform(get("/admin/handlingar/" + id + "/fil").with(member)).andReturn(),
                 "/admin/logga-in");
+        assertRedirect(mockMvc.perform(get("/admin/handlingar/" + id + "/ta-bort").with(member)).andReturn(),
+                "/admin/logga-in");
         assertRedirect(mockMvc.perform(post("/admin/handlingar/" + id + "/ta-bort").with(member).with(csrf()))
                 .andReturn(), "/admin/logga-in");
         mockMvc.perform(get("/api/admin/documents").with(member)).andExpect(status().isForbidden());
+        mockMvc.perform(get("/api/admin/documents/" + id).with(member)).andExpect(status().isForbidden());
         mockMvc.perform(multipart("/api/admin/documents").file(pdf("a.pdf", PDF)).param("title", "Smyg")
                 .param("kind", "MEMBER_LETTER").param("publishedOn", "2026-09-01").with(member).with(csrf()))
                 .andExpect(status().isForbidden());
@@ -294,14 +297,57 @@ class MemberDocumentIT extends IntegrationTestSupport {
         mockMvc.perform(get("/api/member/documents/999999/file").with(member)).andExpect(status().isNotFound());
         mockMvc.perform(get("/admin/handlingar/999999/fil").with(asAdministrator()))
                 .andExpect(status().isNotFound());
+        mockMvc.perform(get("/api/admin/documents/999999").with(asAdministrator()))
+                .andExpect(status().isNotFound());
         mockMvc.perform(delete("/api/admin/documents/999999").with(asAdministrator()).with(csrf()))
                 .andExpect(status().isNotFound());
+        // The list another administrator already deleted from still has the link.
+        mockMvc.perform(get("/admin/handlingar/999999/ta-bort").with(asAdministrator()))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(flash().attribute("error", copy.text("adminDocuments.error.noSuch")));
         mockMvc.perform(post("/admin/handlingar/999999/ta-bort").with(asAdministrator()).with(csrf()))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(flash().attribute("error", copy.text("adminDocuments.error.noSuch")));
     }
 
     // Deleting
+
+    /// The list has a link, not a button that deletes. The page it leads to says
+    /// which document goes, and only its button deletes.
+    @Test
+    void deletingOnThePageAsksFirst() throws Exception {
+        long id = insertDocument("Kallelse till årsmötet", PDF);
+        String path = "/admin/handlingar/" + id + "/ta-bort";
+
+        String list = bodyOf(mockMvc.perform(get("/admin/handlingar").with(asAdministrator()))
+                .andExpect(status().isOk())
+                .andReturn());
+        assertThat(list)
+                .contains("<a href=\"" + path + "\" aria-label=\"Ta bort Kallelse till årsmötet\">")
+                .doesNotContain("action=\"" + path + "\"");
+
+        String page = bodyOf(mockMvc.perform(get(path).with(asAdministrator()))
+                .andExpect(status().isOk())
+                .andReturn());
+        assertThat(page).contains(
+                "<h1>" + copy.text("adminDocuments.delete.heading") + "</h1>",
+                copy.text("adminDocuments.delete.question", "Kallelse till årsmötet"),
+                copy.text("adminDocuments.delete.what", "Medlemsbrev", "1 september 2026"),
+                "<form method=\"post\" action=\"" + path + "\">",
+                "<a href=\"/admin/handlingar\">" + copy.text("adminDocuments.delete.cancel") + "</a>");
+        assertThat(rowsIn("member_document")).isOne();
+        mockMvc.perform(get("/api/admin/documents/" + id).with(asAdministrator()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.title").value("Kallelse till årsmötet"))
+                .andExpect(jsonPath("$.kind").value("MEMBER_LETTER"))
+                .andExpect(jsonPath("$.publishedOn").value("2026-09-01"))
+                .andExpect(jsonPath("$", not(hasKey("content"))));
+
+        mockMvc.perform(post(path).with(asAdministrator()).with(csrf()))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(flash().attribute("notice", copy.text("adminDocuments.deleted")));
+        assertThat(rowsIn("member_document")).isZero();
+    }
 
     @Test
     void anAdministratorDeletesADocumentThroughEitherAdapter() throws Exception {

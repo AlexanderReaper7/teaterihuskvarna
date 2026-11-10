@@ -98,12 +98,7 @@
                     <td>${administrator.email()}</td>
                     <td>
                         @if(administrator.id() != signedIn.id())
-                            <form method="post" action="/admin/administratorer/${administrator.id()}/ta-bort">
-                                @template.tag.csrf(csrf = csrf)
-                                <button type="submit" class="button-secondary" aria-label="${removeLabel}">
-                                    @template.icon.trash2() ${copy.text("admin.remove")}
-                                </button>
-                            </form>
+                            <a href="/admin/administratorer/${administrator.id()}/ta-bort" aria-label="${removeLabel}">@template.icon.trash2() ${copy.text("admin.remove")}</a>
                         @endif
                     </td>
                 </tr>

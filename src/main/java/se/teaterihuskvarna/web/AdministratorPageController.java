@@ -27,16 +27,17 @@ import se.teaterihuskvarna.volunteer.ShiftService;
 
 /// The administrators' start page. It opens with what needs doing: this year's
 /// fees, the upcoming shifts with free places and the upcoming offers. Then it
-/// lists who the administrators are, with a form to add one and a button to
+/// lists who the administrators are, with a form to add one and a link to
 /// remove each, and the logged-in administrator's own passkeys and devices.
 /// Spring Security lets only an administrator account reach it.
 ///
-/// A failed add shows the page again with the typed values kept. A remove has no
-/// typed values to keep, so it always redirects back, with its outcome as a flash
+/// A failed add shows the page again with the typed values kept. The link to
+/// remove leads to a page that asks first. The removal itself has no typed
+/// values to keep, so it always redirects back, with its outcome as a flash
 /// message. Flash attributes live in the session, which Spring Session serialises
 /// to PostgreSQL, so they are plain strings.
 ///
-/// The page offers no button to remove oneself, and the service refuses it for a
+/// The page offers no link to remove oneself, and the service refuses it for a
 /// form posted anyway.
 @Controller
 public class AdministratorPageController {
@@ -95,6 +96,32 @@ public class AdministratorPageController {
         }
         redirected.addFlashAttribute("notice", copy.text("admin.added", added.fullName()));
         return REDIRECT;
+    }
+
+    /// The confirmation step before a removal. It asks about neither the
+    /// logged-in administrator nor one who is gone, as when another administrator
+    /// removed them while the page stood open: both go back to the start page
+    /// with what the removal itself would have said.
+    ///
+    /// @param signedIn   the logged-in administrator
+    /// @param id         the administrator to remove
+    /// @param model      receives the administrator, whom the page names
+    /// @param redirected receives the error when there is nobody to ask about
+    /// @return the page that asks before removing, or a redirect to the start page
+    @GetMapping("/admin/administratorer/{id}/ta-bort")
+    public String confirmRemove(@AuthenticationPrincipal SignedIn signedIn, @PathVariable long id, Model model,
+            RedirectAttributes redirected) {
+        if (id == signedIn.id()) {
+            redirected.addFlashAttribute("error", copy.text("admin.error.self"));
+            return REDIRECT;
+        }
+        try {
+            model.addAttribute("administrator", administrators.details(id));
+        } catch (NoSuchAdministrator e) {
+            redirected.addFlashAttribute("error", copy.text("admin.error.noSuch"));
+            return REDIRECT;
+        }
+        return "admin/administratorRemove";
     }
 
     /// @param signedIn   the logged-in administrator, recorded as the one who removed

@@ -281,6 +281,61 @@ class AdministratorIT extends IntegrationTestSupport {
         assertThat(activeAdministrators()).isEqualTo(2);
     }
 
+    /// The list has a link, not a button that removes. The page it leads to says
+    /// who goes and what goes with them, and only its button removes.
+    @Test
+    void removingOnThePageAsksFirst() throws Exception {
+        long bo = insertAdministrator(BO, "Bo Berg");
+        insertAdministrator(CILLA, "Cilla Carlsson");
+        String path = "/admin/administratorer/" + bo + "/ta-bort";
+
+        String overview = bodyOf(mockMvc.perform(get("/admin").with(asFirstAdministrator()))
+                .andExpect(status().isOk())
+                .andReturn());
+        assertThat(overview)
+                .contains("<a href=\"" + path + "\" aria-label=\"Ta bort Bo Berg\">")
+                .doesNotContain("action=\"" + path + "\"");
+
+        String page = bodyOf(mockMvc.perform(get(path).with(asFirstAdministrator()))
+                .andExpect(status().isOk())
+                .andReturn());
+        assertThat(page).contains(
+                "<h1>" + copy.text("admin.remove.heading") + "</h1>",
+                copy.text("admin.remove.question", "Bo Berg", BO),
+                copy.text("admin.remove.what"),
+                "<form method=\"post\" action=\"" + path + "\">",
+                "<a href=\"/admin\">" + copy.text("admin.remove.cancel") + "</a>");
+        assertThat(activeAdministrators()).isEqualTo(3);
+        mockMvc.perform(get(API + "/" + bo).with(asFirstAdministrator()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.email").value(BO))
+                .andExpect(jsonPath("$.fullName").value("Bo Berg"));
+
+        assertRedirect(mockMvc.perform(post(path).with(asFirstAdministrator()).with(csrf())).andReturn(), "/admin");
+        assertThat(activeAdministrators()).isEqualTo(2);
+    }
+
+    /// An old tab still has the link to someone another administrator removed,
+    /// and the address can be typed for oneself. Neither gets the question.
+    @Test
+    void thePageDoesNotAskAboutOneselfOrSomeoneGone() throws Exception {
+        long bo = insertAdministrator(BO, "Bo Berg");
+        insertAdministrator(CILLA, "Cilla Carlsson");
+        administrators.remove(bo, firstAdministratorId());
+
+        mockMvc.perform(get("/admin/administratorer/" + bo + "/ta-bort").with(asFirstAdministrator()))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(flash().attribute("error", copy.text("admin.error.noSuch")));
+        mockMvc.perform(get("/admin/administratorer/" + firstAdministratorId() + "/ta-bort")
+                        .with(asFirstAdministrator()))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(flash().attribute("error", copy.text("admin.error.self")));
+        mockMvc.perform(get(API + "/" + bo).with(asFirstAdministrator())).andExpect(status().isNotFound());
+        mockMvc.perform(get(API + "/" + firstAdministratorId())
+                        .with(user(new SignedIn(LoginKind.MEMBER, 1, "karin@example.test", "Karin"))))
+                .andExpect(status().isForbidden());
+    }
+
     @Test
     void thePageRefusesARemovalWithTwoAdministrators() throws Exception {
         long bo = insertAdministrator(BO, "Bo Berg");
