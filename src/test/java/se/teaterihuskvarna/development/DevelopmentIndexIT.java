@@ -68,6 +68,16 @@ class DevelopmentIndexIT extends IntegrationTestSupport {
                 .andExpect(content().string(containsString("name=\"_csrf\"")));
     }
 
+    /// The index holds two forms for every account, and took no `Feedback`.
+    @Test
+    void theIndexSaysThatAFormWasStale() throws Exception {
+        mockMvc.perform(get("/dev").param("gammal", ""))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("Sidan hade stått öppen för länge")));
+        mockMvc.perform(get("/dev"))
+                .andExpect(content().string(not(containsString("Sidan hade stått öppen för länge"))));
+    }
+
     @ParameterizedTest
     @EnumSource(LoginKind.class)
     void immediateLoginUsesTheSelectedKindAndCreatesANormalSessionWithoutMail(LoginKind kind) throws Exception {

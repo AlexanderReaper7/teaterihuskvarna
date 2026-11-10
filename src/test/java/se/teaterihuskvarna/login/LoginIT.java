@@ -25,6 +25,8 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.mail.SimpleMailMessage;
@@ -326,6 +328,39 @@ class LoginIT extends IntegrationTestSupport {
         assertRedirect(mockMvc.perform(get("/medlem").with(sessionOf(page))).andReturn(), "/logga-in");
         assertThat(rowsIn("one_time_token")).isEqualTo(1);
         assertRedirect(followLink(LoginKind.MEMBER, token), "/medlem");
+    }
+
+    /// The link page's script presses the button. When that press is refused
+    /// as stale the page comes back marked `gammal`, says so and leaves the
+    /// button to the person: a script that pressed again would send a
+    /// browser that loses its session every time round in a circle.
+    @Test
+    void aLinkPageThatCameBackStaleSaysSoAndDoesNotPressItsOwnButton() throws Exception {
+        insertAccount("Karin Karlsson", KARIN);
+        requestLink(LoginKind.MEMBER, KARIN);
+        String token = tokenIn(awaitMail(), linkPath(LoginKind.MEMBER));
+
+        mockMvc.perform(get("/logga-in/lank").param("token", token).param("gammal", "")
+                        .cookie(requireNonNull(browserCookie(LoginKind.MEMBER))))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("Sidan hade stått öppen för länge")))
+                .andExpect(content().string(containsString(token)))
+                .andExpect(content().string(not(containsString("data-auto-submit"))));
+        assertRedirect(followLink(LoginKind.MEMBER, token), "/medlem");
+    }
+
+    /// The page with the form for the code took no `Feedback`, and showed a
+    /// code refused as stale as if nothing had been typed.
+    @ParameterizedTest
+    @EnumSource(LoginKind.class)
+    void thePageForTheCodeSaysThatAFormWasStale(LoginKind kind) throws Exception {
+        String page = LoginUrls.of(kind).sent();
+
+        mockMvc.perform(get(page).param("gammal", ""))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("Sidan hade stått öppen för länge")));
+        mockMvc.perform(get(page))
+                .andExpect(content().string(not(containsString("Sidan hade stått öppen för länge"))));
     }
 
     @Test

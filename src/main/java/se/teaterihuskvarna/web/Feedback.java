@@ -39,6 +39,14 @@ public record Feedback(boolean stale, @Nullable String error, @Nullable String n
         return new Feedback(request.getParameter(STALE) != null, text(flash, ERROR), text(flash, NOTICE));
     }
 
+    /// @param path a page on this site
+    /// @return a redirect that tells the page a form was refused as stale, as
+    ///         `se.teaterihuskvarna.login.RefusedRequests` tells the page the
+    ///         form was on
+    static Redirect staleAt(String path) {
+        return Redirect.to(path + "?" + STALE);
+    }
+
     /// @param message what went wrong in this request, in Swedish
     /// @return this feedback with that error, for a page the handler draws
     ///         itself and does not redirect to
