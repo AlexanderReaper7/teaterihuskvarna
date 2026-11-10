@@ -30,6 +30,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.system.CapturedOutput;
 import org.springframework.boot.test.system.OutputCaptureExtension;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
@@ -243,6 +244,48 @@ class MailingIT extends IntegrationTestSupport {
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString(
                         "Skriv en egen text eller välj minst ett evenemang eller en nyhet.")));
+
+        assertThat(rowsIn("mailing")).isZero();
+    }
+
+    /// A German browser, because the validator's own texts exist in German:
+    /// a constraint without a key of ours answered "darf nicht leer sein".
+    @Test
+    void aFormThatIsWrongSaysSoInSwedishWhateverTheBrowserAsksFor() throws Exception {
+        mockMvc.perform(post("/admin/utskick/forhandsgranska").with(asAdministrator()).with(csrf())
+                        .header(HttpHeaders.ACCEPT_LANGUAGE, "de-DE")
+                        .param("audience", "")
+                        .param("subject", " ")
+                        .param("intro", "Hej alla!"))
+                .andExpect(status().isOk())
+                .andExpect(header().string(HttpHeaders.CONTENT_LANGUAGE, "sv-SE"))
+                .andExpect(content().string(containsString("Ange ett ämne.")))
+                .andExpect(content().string(containsString("Välj mottagare.")));
+        mockMvc.perform(post("/admin/utskick").with(asAdministrator()).with(csrf())
+                        .header(HttpHeaders.ACCEPT_LANGUAGE, "de-DE")
+                        .param("audience", "LIST")
+                        .param("subject", "x".repeat(151))
+                        .param("intro", "x".repeat(5001)))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("Ämnet får vara högst 150 tecken.")))
+                .andExpect(content().string(containsString("Den egna texten får vara högst 5 000 tecken.")));
+
+        mockMvc.perform(post("/api/admin/mailings/preview").with(asAdministrator()).with(csrf())
+                        .header(HttpHeaders.ACCEPT_LANGUAGE, "de-DE")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"subject\": \"\", \"intro\": \"Hej alla!\", \"audience\": \"\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors.subject").value("Ange ett ämne."))
+                .andExpect(jsonPath("$.errors.audience").value("Välj mottagare."));
+        mockMvc.perform(post("/api/admin/mailings").with(asAdministrator()).with(csrf())
+                        .header(HttpHeaders.ACCEPT_LANGUAGE, "de-DE")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"subject\": \"" + "x".repeat(151) + "\", \"intro\": \"" + "x".repeat(5001)
+                                + "\", \"audience\": \"" + "x".repeat(41) + "\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors.subject").value("Ämnet får vara högst 150 tecken."))
+                .andExpect(jsonPath("$.errors.intro").value("Den egna texten får vara högst 5 000 tecken."))
+                .andExpect(jsonPath("$.errors.audience").value("Välj mottagare från listan."));
 
         assertThat(rowsIn("mailing")).isZero();
     }
