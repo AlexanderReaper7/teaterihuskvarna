@@ -1,8 +1,9 @@
 // Run through e2e/run.sh, which starts the stack these tests expect:
 // docs/decisions/0017.
-import { defineConfig, devices } from "@playwright/test";
+import { defineConfig, devices} from "@playwright/test";
 import { SITE } from "./support/site";
 
+// @ts-ignore
 export default defineConfig({
   testDir: "tests",
   // One database for the whole run, and tests that change administrators and
