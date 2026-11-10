@@ -109,6 +109,7 @@ public class MembershipApplicationService {
         String fullName = form.fullName().strip();
         String token = Tokens.newToken();
         Instant now = Instant.now();
+        Instant expires = now.plus(login.applicationLifetime());
         applications.replace(
                 fullName,
                 email.value(),
@@ -119,21 +120,24 @@ public class MembershipApplicationService {
                         blankToNull(form.city())),
                 Tokens.hash(token),
                 now,
-                now.plus(login.applicationLifetime()));
+                expires);
 
         String link = mail.link(CONFIRMATION_PATH, token);
         String lifetime = Lifetimes.describe(messages, login.applicationLifetime());
+        // Not sent once the application, and so the link, has expired.
         mailer.send(
                 email,
                 messages.getMessage("application.mail.subject", null, Swedish.LOCALE),
                 messages.getMessage("application.mail.body", new Object[] {fullName, link, lifetime},
-                        Swedish.LOCALE));
+                        Swedish.LOCALE),
+                expires);
     }
 
     /// Points a member who applied again to the login page, with no token. A
     /// login link here would work in any browser, since the application form
     /// sets no login cookie, and would reopen what [se.teaterihuskvarna.login.LoginBrowser]
     /// closes: anyone applying with their own address could pass the link on.
+    /// Nothing in the mail expires, so it is retried until it is sent.
     private void alreadyMember(Email email) {
         String login = mail.link(LoginUrls.of(LoginKind.MEMBER).page(), null);
         mailer.send(

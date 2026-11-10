@@ -98,13 +98,14 @@ public class LoginLinks {
         }
         String token = Tokens.newToken();
         String code = Tokens.newCode();
+        OffsetDateTime expires = OffsetDateTime.now(ZoneOffset.UTC).plus(settings.linkLifetime());
         jdbc.sql("""
                         INSERT INTO one_time_token (token_hash, kind, email, expires_at, browser_hash, code_hash)
                         VALUES (?, ?, ?, ?, ?, ?)""")
                 .param(Tokens.hash(token))
                 .param(kind.code())
                 .param(address.value())
-                .param(OffsetDateTime.now(ZoneOffset.UTC).plus(settings.linkLifetime()))
+                .param(expires)
                 .param(Tokens.hash(browser))
                 .param(Tokens.hash(code))
                 .update();
@@ -112,9 +113,12 @@ public class LoginLinks {
         Object[] arguments = {
             link, Lifetimes.describe(messages, settings.linkLifetime()), found.get().fullName(), code};
         String prefix = "login.mail." + kind.code();
+        // The mail is worth nothing once the link and the code have expired,
+        // so the outbox deletes it unsent from then.
         mailer.send(
                 address,
                 messages.getMessage(prefix + ".subject", null, Swedish.LOCALE),
-                messages.getMessage(prefix + ".body", arguments, Swedish.LOCALE));
+                messages.getMessage(prefix + ".body", arguments, Swedish.LOCALE),
+                expires.toInstant());
     }
 }

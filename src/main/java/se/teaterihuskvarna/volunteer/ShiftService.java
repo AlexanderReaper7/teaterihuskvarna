@@ -277,10 +277,10 @@ public class ShiftService {
     /// so a booking made today for tomorrow still gets its reminder. A booking
     /// made after the last run is reminded when it is made ([#book]); one the
     /// runs missed, such as during a restart, gets it on the shift's own day if
-    /// the shift has not started. A booking made on the shift's own day gets none: the
-    /// member booked knowing it was today. A member without an account has no
-    /// address and is marked as reminded all the same, so the job does not
-    /// look at the row again.
+    /// the shift has not started, with a text that says today. A booking made
+    /// on the shift's own day gets none: the member booked knowing it was
+    /// today. A member without an account has no address and is marked as
+    /// reminded all the same, so the job does not look at the row again.
     ///
     /// @return how many reminders were queued
     @Transactional
@@ -297,14 +297,24 @@ public class ShiftService {
         return sent;
     }
 
+    /// The text names the day. Made the day before, it says "i morgon", which
+    /// is wrong from midnight, so the mail is not sent from then. Made on the
+    /// shift's own day, for a booking the runs missed, it says "i dag", and is
+    /// not sent once the shift has started. [Mailer] has the rule.
+    ///
     /// @return how many mails were queued: one, or none for a member without an account
     private int remind(Booking booking, Shift shift) {
+        LocalDate shiftDay = LocalDate.ofInstant(shift.getStartsAt(), SWEDEN);
+        boolean today = !shiftDay.isAfter(LocalDate.now(clock.withZone(SWEDEN)));
+        String texts = today ? "shift.reminder.today" : "shift.reminder";
+        Instant notAfter = today ? shift.getStartsAt() : shiftDay.atStartOfDay(SWEDEN).toInstant();
         int sent = 0;
         for (String email : bookings.findEmail(booking.getMemberId())) {
-            mailer.send(new Email(email), text("shift.reminder.subject", shift.getEventTitle()),
-                    text("shift.reminder.body", text("shift.task." + shift.getTask().name()),
+            mailer.send(new Email(email), text(texts + ".subject", shift.getEventTitle()),
+                    text(texts + ".body", text("shift.task." + shift.getTask().name()),
                             shift.getEventTitle(), MAIL_TIME.format(shift.getStartsAt()),
-                            MAIL_END.format(shift.getEndsAt())));
+                            MAIL_END.format(shift.getEndsAt())),
+                    notAfter);
             sent++;
         }
         booking.reminded(clock.instant());

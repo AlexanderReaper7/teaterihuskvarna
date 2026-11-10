@@ -3,6 +3,7 @@ package se.teaterihuskvarna;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.clearInvocations;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -15,11 +16,14 @@ import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.sql.Timestamp;
+import java.time.Instant;
 import java.util.Arrays;
 import java.util.EnumMap;
 import java.util.HexFormat;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.locks.LockSupport;
@@ -35,6 +39,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.simple.JdbcClient;
+import org.springframework.mail.MailSendException;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mock.web.MockHttpServletResponse;
@@ -224,6 +229,27 @@ public abstract class IntegrationTestSupport {
         return jdbc.sql("SELECT COUNT(*) FROM outbox WHERE kind = 'mail' AND next_attempt_at <= now()")
                 .query(Long.class)
                 .single();
+    }
+
+    /// Makes the relay refuse every mail from now on. A refused mail stays in
+    /// the outbox, where a test can read what is stored with it, and still
+    /// counts as sent to [#awaitMails].
+    protected void refuseEveryMail() {
+        doThrow(new MailSendException("relay down")).when(mailSender).send(any(SimpleMailMessage.class));
+    }
+
+    /// @return `not_after` of the one mail in the outbox, or null if it has none
+    protected @Nullable Instant notAfterOfTheMailInTheOutbox() {
+        return jdbc.sql("SELECT not_after FROM outbox WHERE kind = 'mail'")
+                .query((row, number) -> Optional.ofNullable(row.getTimestamp(1)).map(Timestamp::toInstant))
+                .single()
+                .orElse(null);
+    }
+
+    /// @param sql a query for one timestamp
+    /// @return the timestamp
+    protected Instant instantFrom(String sql) {
+        return jdbc.sql(sql).query(Timestamp.class).single().toInstant();
     }
 
     /// Makes the mail helpers count from now.

@@ -130,14 +130,16 @@ public class InvitationService {
         }
         String token = Tokens.newToken();
         Instant now = Instant.now();
-        invitations.replace(member.getId(), email.value(), Tokens.hash(token), now,
-                now.plus(association.invitationLifetime()));
+        Instant expires = now.plus(association.invitationLifetime());
+        invitations.replace(member.getId(), email.value(), Tokens.hash(token), now, expires);
         String lifetime = Lifetimes.describe(messages, association.invitationLifetime());
         mailer.send(
                 email,
                 messages.getMessage("invitation.mail.subject", null, Swedish.LOCALE),
                 messages.getMessage("invitation.mail.body",
                         new Object[] {member.getFullName(), mail.link(PATH, token), lifetime, email.value()},
-                        Swedish.LOCALE));
+                        Swedish.LOCALE),
+                // Not sent once the invitation, and so the link, has expired.
+                expires);
     }
 }
