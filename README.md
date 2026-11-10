@@ -111,7 +111,9 @@ The stack is Traefik, the Spring Boot application behind it, and PostgreSQL
 startup.
 
 [`compose.yaml`](compose.yaml) alone is production. `COMPOSE_FILE` in [`.env.example`](.env.example) adds
-[`compose.dev.yaml`](compose.dev.yaml), which must never be loaded in production. It serves plain
+[`compose.dev.yaml`](compose.dev.yaml), which must never be loaded in production: a production
+`.env` starts from [`.env.production.example`](.env.production.example), which has no such line
+([runbook](docs/runbook.md)). The dev file serves plain
 HTTP on `PROXY_HTTP_PORT` (8000 unless set), turns on the `dev` profile with
 invented settings ([`application-dev.yaml`](src/main/resources/application-dev.yaml)) and invented members, and starts
 Mailpit, which catches every mail the application sends, and Sanity Studio at [http://localhost:3333/](http://localhost:3333/). Studio uses the `dev` dataset unless `SANITY_DATASET_NAME` selects another one, and previews the application on `PROXY_HTTP_PORT`. Set `STUDIO_HTTP_PORT` to change its host port. Studio code changes need `docker compose up -d --build studio`.
