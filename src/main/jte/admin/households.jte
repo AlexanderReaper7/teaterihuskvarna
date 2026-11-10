@@ -11,11 +11,15 @@
 @param NewHousehold form
 @param FieldErrors errors
 @param String notice
+@param String error
 @param boolean stale
 @template.admin.layout(copy = copy, title = copy.text("household.heading"), content = @`
     <h1>${copy.text("household.heading")}</h1>
     @if(stale)
         <p role="alert">${copy.text("form.stale")}</p>
+    @endif
+    @if(error != null)
+        <p role="alert">${error}</p>
     @endif
     @if(notice != null)
         <p role="status">${notice}</p>
