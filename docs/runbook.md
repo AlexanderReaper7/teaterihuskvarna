@@ -35,22 +35,26 @@ sh scripts/backup.sh
 
 [`scripts/backup.sh`](../scripts/backup.sh) runs `pg_dump` inside the `db` container, so its version always matches the server's, and writes `backups/teaterihuskvarna-2026-10-20T1430.dump`, named by date and time, in PostgreSQL's custom format. It prints `backup.sh: wrote <file>`. A dump that fails halfway leaves no file behind. Git and the image build both ignore `backups/`, since a dump from production holds real personal data.
 
+The dump holds no sessions. `spring_session.session_id` is the session cookie's value in plain text, so a dump with those rows logs its reader in as everyone who was logged in when it was made. The script leaves out the rows of `spring_session` and `spring_session_attributes` and keeps the two tables' definitions.
+
 ### Check that a backup restores
 
 ```sh
 sh scripts/restore-check.sh backups/teaterihuskvarna-2026-10-20T1430.dump
 ```
 
-[`scripts/restore-check.sh`](../scripts/restore-check.sh) restores the dump into a new database, `restore_check`, and never touches the real one. It compares the row count of every table with the live database, including `flyway_schema_history`, and deletes the check database afterwards:
+[`scripts/restore-check.sh`](../scripts/restore-check.sh) restores the dump into a new database, `restore_check`, and never touches the real one. It compares the row count of every table with the live database, including `flyway_schema_history`, and deletes the check database afterwards. The two session tables are the exception: they must exist in the restored database and hold no rows, whatever the live database holds.
 
 ```
 table                                          live   restored  result
 account                                           5          5  ok
-flyway_schema_history                             2          2  ok
-restore-check.sh: every table has the same row count, the dump restores
+flyway_schema_history                            15         15  ok
+spring_session                                    2          0  ok, sessions are not backed up
+spring_session_attributes                         2          0  ok, sessions are not backed up
+restore-check.sh: every table has the same row count and the dump holds no sessions, the dump restores
 ```
 
-It exits with 0 when every count matches, and with 1 when a count differs, a table is missing or the dump cannot be read. The live database is counted as it is now, so a row added after the dump shows as `DIFFERENT`. Run it right after [`backup.sh`](../scripts/backup.sh).
+It exits with 0 when every count matches, and with 1 when a count differs, a table is missing or the dump cannot be read. A dump with session rows in it, such as one made before the script left them out, fails with `HOLDS SESSIONS`: each of those rows is a working login until it expires, so treat that file as a credential. The live database is counted as it is now, so a row added after the dump shows as `DIFFERENT`. Run it right after [`backup.sh`](../scripts/backup.sh).
 
 ### Restore after data loss
 
@@ -63,6 +67,8 @@ docker compose start app
 ```
 
 `--clean --if-exists` drops each object in the dump before it is created again, so the command also works on a database with some tables left. If the whole volume is gone, `docker compose up -d db` creates an empty database, and the same command without `--clean --if-exists` fills it. Flyway sees its own history in the restored data and applies nothing twice.
+
+Everyone logs in again after a restore. The dump holds no sessions, so both session tables come back empty and the cookie in a member's or an administrator's browser matches nothing. Their passkeys and addresses are restored, so they log in the usual way.
 
 ## Not covered yet
 
