@@ -2,6 +2,7 @@ package se.teaterihuskvarna.web;
 
 import jakarta.validation.ConstraintViolationException;
 import java.nio.charset.StandardCharsets;
+import java.time.Clock;
 import java.time.Year;
 import java.time.ZoneId;
 import java.util.HashMap;
@@ -58,7 +59,7 @@ public class MemberRegisterPageController {
 
     private static final String LIST = "/admin/medlemmar";
     private static final String HOUSEHOLDS = "/admin/hushall";
-    /// The fee year is the year in Sweden, as the fee ledger counts it.
+    /// The fee year is the year in Sweden by the application's clock, as the fee ledger counts it.
     private static final ZoneId SWEDEN = ZoneId.of("Europe/Stockholm");
     /// The register's `avgift` parameter for each choice of fee, in Swedish like the path.
     private static final String PAID = "betald";
@@ -69,14 +70,16 @@ public class MemberRegisterPageController {
     private final FeeService fees;
     private final InvitationService invitations;
     private final Copy copy;
+    private final Clock clock;
 
     MemberRegisterPageController(MemberService members, HouseholdService households, FeeService fees,
-            InvitationService invitations, Copy copy) {
+            InvitationService invitations, Copy copy, Clock clock) {
         this.members = members;
         this.households = households;
         this.fees = fees;
         this.invitations = invitations;
         this.copy = copy;
+        this.clock = clock;
     }
 
     /// @param query what to search for, or nothing to list everyone
@@ -87,7 +90,7 @@ public class MemberRegisterPageController {
     public String list(@RequestParam(name = "q", required = false) @Nullable String query,
             @RequestParam(name = "avgift", required = false) @Nullable String fee, Model model) {
         FeeFilter filter = filter(fee);
-        String year = String.valueOf(Year.now(SWEDEN).getValue());
+        String year = String.valueOf(Year.now(clock.withZone(SWEDEN)).getValue());
         model.addAttribute("query", query == null ? "" : query);
         model.addAttribute("fee", filter == FeeFilter.ALL ? "" : fee);
         model.addAttribute("list", members.search(query, filter));

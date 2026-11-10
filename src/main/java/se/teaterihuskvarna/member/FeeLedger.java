@@ -1,5 +1,6 @@
 package se.teaterihuskvarna.member;
 
+import java.time.Clock;
 import java.time.Instant;
 import java.time.Year;
 import java.time.ZoneId;
@@ -23,8 +24,8 @@ import org.springframework.stereotype.Component;
 class FeeLedger {
 
     /// The association is in Huskvarna, so "this year" is the year there,
-    /// whatever zone the container runs in. New Year's night is the only time
-    /// the two can differ.
+    /// whatever zone the container or the application's clock is in. New
+    /// Year's night is the only time the two can differ.
     static final ZoneId SWEDEN = ZoneId.of("Europe/Stockholm");
 
     private final FeeRepository fees;
@@ -32,19 +33,24 @@ class FeeLedger {
     private final MemberRepository members;
     private final AssociationSettings association;
     private final ApplicationEventPublisher events;
+    private final Clock clock;
 
     FeeLedger(FeeRepository fees, AccountRepository accounts, MemberRepository members,
-            AssociationSettings association, ApplicationEventPublisher events) {
+            AssociationSettings association, ApplicationEventPublisher events, Clock clock) {
         this.fees = fees;
         this.accounts = accounts;
         this.members = members;
         this.association = association;
         this.events = events;
+        this.clock = clock;
     }
 
+    /// Read from the application's clock, never the system's, so a test can
+    /// stop the clock on New Year's night.
+    ///
     /// @return the current year in Sweden
     int currentYear() {
-        return Year.now(SWEDEN).getValue();
+        return Year.now(clock.withZone(SWEDEN)).getValue();
     }
 
     /// A member has gained a household. A household fee the member paid for
