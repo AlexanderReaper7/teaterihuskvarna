@@ -12,7 +12,8 @@
 @import se.teaterihuskvarna.web.CsrfField
 @import se.teaterihuskvarna.web.DeviceUrls
 @import se.teaterihuskvarna.web.FieldErrors
-@param String studioUrl = null
+@import se.teaterihuskvarna.web.Feedback
+@param String studioUrl
 @param Copy copy
 @param CsrfField csrf
 @param SignedIn signedIn
@@ -22,11 +23,10 @@
 @param List<AdministratorDetails> administrators
 @param NewAdministrator form
 @param FieldErrors errors
-@param String error
-@param String notice
+@param Feedback feedback
 @param List<PasskeyDetails> passkeys
 @param PasskeyUrls passkeyUrls
-@param boolean offerPasskey = false
+@param boolean offerPasskey
 @param List<DeviceDetails> devices
 @param DeviceUrls deviceUrls
 @template.admin.layout(copy = copy, title = copy.text("admin.heading"), content = @`
@@ -36,12 +36,7 @@
     @if(offerPasskey)
         @template.tag.passkeyOffer(copy = copy, csrf = csrf, urls = passkeyUrls)
     @endif
-    @if(error != null)
-        <p role="alert">${error}</p>
-    @endif
-    @if(notice != null)
-        <p role="status">${notice}</p>
-    @endif
+    @template.tag.feedback(copy = copy, feedback = feedback)
 
     <h2>${copy.text("admin.fees.heading", String.valueOf(fees.year()))}</h2>
     <p>${copy.text("admin.fees.count", fees.paid(), fees.paid() + fees.unpaid())}</p>

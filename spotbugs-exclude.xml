@@ -43,4 +43,66 @@
         <Bug pattern="EI_EXPOSE_REP,EI_EXPOSE_REP2"/>
     </Match>
 
+    <!--
+        MS_MUTABLE_ARRAY on JTE_LINE_INFO in a generated template class: a
+        public static array is one any code can write to, and every reader
+        then sees the change.
+
+        The JTE plugin writes the field into each class it generates from a
+        template. It maps a line of the generated code to a line of the
+        template, and JTE reads it to name the template line when a page
+        fails. The generated StaticTemplates reads it for the same purpose,
+        which is what makes SpotBugs report it: a public array that no other
+        class reads is not reported, and until the pages were called through
+        StaticTemplates no other class did.
+
+        Nothing in src writes to it or reads it. The classes are generated on
+        every build into target/generated-sources/jte, so the field cannot
+        be made private there, and the exclusion names only this field in
+        only those classes. Everything else SpotBugs finds in a template's
+        class is still reported, as it was before.
+
+        Seen to fire on 2026-11-10: 50 times, once for each template that
+        Templates has a method for.
+    -->
+    <Match>
+        <Class name="~gg\.jte\.generated\.precompiled\..*Generated"/>
+        <Field name="JTE_LINE_INFO"/>
+        <Bug pattern="MS_MUTABLE_ARRAY"/>
+    </Match>
+
+    <!--
+        EI_EXPOSE_REP2 on DynamicTemplates: a constructor that keeps a mutable
+        object it was handed lets the caller change it afterwards.
+
+        DynamicTemplates is generated beside StaticTemplates and keeps the
+        TemplateEngine it is constructed with. Nothing here constructs it:
+        TemplatesConfiguration makes a StaticTemplates, and PageRulesTest
+        fails the build if any class depends on DynamicTemplates. The plugin
+        has no setting that leaves the class out.
+
+        Seen to fire on 2026-11-10.
+    -->
+    <Match>
+        <Class name="gg.jte.generated.precompiled.DynamicTemplates"/>
+        <Bug pattern="EI_EXPOSE_REP2"/>
+    </Match>
+
+    <!--
+        SING_SINGLETON_HAS_NONPRIVATE_CONSTRUCTOR on StaticTemplates.Singleton:
+        a class meant to have one instance, with a constructor that lets
+        anyone make a second.
+
+        The generated class has static methods that call one shared
+        StaticTemplates. StaticTemplates holds no state, so a second instance
+        behaves exactly as the first, and nothing here uses the nested class:
+        the application has its StaticTemplates as a bean.
+
+        Seen to fire on 2026-11-10.
+    -->
+    <Match>
+        <Class name="gg.jte.generated.precompiled.StaticTemplates$Singleton"/>
+        <Bug pattern="SING_SINGLETON_HAS_NONPRIVATE_CONSTRUCTOR"/>
+    </Match>
+
 </FindBugsFilter>

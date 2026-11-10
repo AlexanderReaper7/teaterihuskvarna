@@ -4,11 +4,12 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.util.regex.Pattern;
 import org.jspecify.annotations.Nullable;
-import org.springframework.http.ResponseCookie;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseCookie;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.servlet.View;
 import se.teaterihuskvarna.content.PreviewPass;
 import se.teaterihuskvarna.content.Previews;
 
@@ -39,23 +40,23 @@ public class PreviewController {
     /// @return a redirect to the page, or to the start page if the secret is wrong
     /// @throws se.teaterihuskvarna.content.TooManyPreviews after 20 exchanges per IP per minute
     @GetMapping("/forhandsgranska/start")
-    public String start(@RequestParam(name = "sanity-preview-secret", required = false) @Nullable String secret,
+    public View start(@RequestParam(name = "sanity-preview-secret", required = false) @Nullable String secret,
             @RequestParam(name = "sanity-preview-pathname", required = false) @Nullable String pathname,
             HttpServletRequest request, HttpServletResponse response) {
         PreviewPass pass = secret == null ? null : previews.start(secret, request.getRemoteAddr()).orElse(null);
         if (pass == null) {
-            return "redirect:/";
+            return Redirect.to("/");
         }
         response.addHeader(HttpHeaders.SET_COOKIE, cookie(pass.value(), Previews.LIFETIME.toSeconds()));
-        return "redirect:" + localPath(pathname);
+        return Redirect.to(localPath(pathname));
     }
 
     /// @param response receives the expired cookie
     /// @return a redirect to the start page
     @GetMapping("/forhandsgranska/avsluta")
-    public String end(HttpServletResponse response) {
+    public View end(HttpServletResponse response) {
         response.addHeader(HttpHeaders.SET_COOKIE, cookie("", 0));
-        return "redirect:/";
+        return Redirect.to("/");
     }
 
     private static String cookie(String value, long maxAge) {

@@ -8,15 +8,14 @@
 @import se.teaterihuskvarna.web.Copy
 @import se.teaterihuskvarna.web.CsrfField
 @import se.teaterihuskvarna.web.FieldErrors
+@import se.teaterihuskvarna.web.Feedback
 @param Copy copy
 @param CsrfField csrf
 @param MemberFile file
 @param MemberForm form
 @param FieldErrors errors
 @param List<HouseholdDetails> households
-@param String error
-@param String notice
-@param boolean stale
+@param Feedback feedback
 !{long id = file.member().id().value();}
 !{FeeStatus thisYear = file.member().fee();}
 !{Instant paidAt = thisYear.paidAt();}
@@ -25,15 +24,7 @@
 @template.admin.layout(copy = copy, title = file.member().fullName(), content = @`
     <h1>${file.member().fullName()}</h1>
     <p><a href="/admin/medlemmar">${copy.text("register.toList")}</a></p>
-    @if(stale)
-        <p role="alert">${copy.text("form.stale")}</p>
-    @endif
-    @if(error != null)
-        <p role="alert">${error}</p>
-    @endif
-    @if(notice != null)
-        <p role="status">${notice}</p>
-    @endif
+    @template.tag.feedback(copy = copy, feedback = feedback)
     <p>${copy.text("register.memberSince", copy.date(file.member().memberSince()))}</p>
 
     <h2>${copy.text("fee.heading", String.valueOf(thisYear.year()))}

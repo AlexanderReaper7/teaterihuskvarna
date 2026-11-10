@@ -1,19 +1,19 @@
 package se.teaterihuskvarna.web;
 
+import gg.jte.generated.precompiled.Templates;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.ConstraintViolationException;
 import java.io.IOException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
-import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+import org.springframework.web.servlet.View;
 import se.teaterihuskvarna.export.CsvFile;
 import se.teaterihuskvarna.offer.NoSuchOffer;
 import se.teaterihuskvarna.offer.OfferDetails;
@@ -38,121 +38,106 @@ public class AdministratorOfferPageController {
 
     private final OfferService offers;
     private final Copy copy;
+    private final Templates templates;
 
-    AdministratorOfferPageController(OfferService offers, Copy copy) {
+    AdministratorOfferPageController(OfferService offers, Copy copy, Templates templates) {
         this.offers = offers;
         this.copy = copy;
+        this.templates = templates;
     }
 
-    /// @param model receives every offer
-    /// @return the list of offers
+    /// @param feedback what the request before left for this page
+    /// @return the list of every offer
     @GetMapping(LIST)
-    public String list(Model model) {
-        model.addAttribute("offers", offers.list());
-        return "admin/offers";
+    public View list(Feedback feedback) {
+        return HtmlPage.of(templates.adminOffers(copy, offers.list(), feedback));
     }
 
-    /// @param model receives an empty form
-    /// @return the page that creates an offer
+    /// @param csrf the hidden field of the page's form
+    /// @return the page that creates an offer, with an empty form
     @GetMapping(LIST + "/nytt")
-    public String newOffer(Model model) {
-        model.addAttribute("form", OfferForm.empty());
-        model.addAttribute("errors", FieldErrors.none());
-        return "admin/offerNew";
+    public View newOffer(CsrfField csrf) {
+        return HtmlPage.of(templates.adminOfferNew(copy, csrf, OfferForm.empty(), FieldErrors.none()));
     }
 
-    /// @param form       what was typed
-    /// @param binding    the values that could not be read, which are null in the form
-    /// @param model      receives the form again when it has errors
-    /// @param redirected receives the confirmation shown after the redirect
+    /// @param form    what was typed
+    /// @param binding the values that could not be read, which are null in the form
+    /// @param csrf    the hidden field of the page's form
     /// @return a redirect to the new offer's page, or the form again with what was wrong
     @PostMapping(LIST)
-    public String create(@ModelAttribute("form") OfferForm form, BindingResult binding, Model model,
-            RedirectAttributes redirected) {
+    public View create(@ModelAttribute("form") OfferForm form, BindingResult binding, CsrfField csrf) {
         if (binding.hasErrors()) {
-            // Spring made its binding result before the form, so its model holds no form.
-            model.addAttribute("form", form);
-            model.addAttribute("errors", FieldErrors.of(binding, copy, KEYS));
-            return "admin/offerNew";
+            return HtmlPage.of(templates.adminOfferNew(copy, csrf, form, FieldErrors.of(binding, copy, KEYS)));
         }
         OfferDetails created;
         try {
             created = offers.create(form);
         } catch (ConstraintViolationException e) {
-            model.addAttribute("errors", FieldErrors.of(e));
-            return "admin/offerNew";
+            return HtmlPage.of(templates.adminOfferNew(copy, csrf, form, FieldErrors.of(e)));
         }
-        redirected.addFlashAttribute("notice", copy.text("adminOffers.created"));
-        return redirect(created.id());
+        return redirect(created.id()).notice(copy.text("adminOffers.created"));
     }
 
-    /// @param id    the offer
-    /// @param model receives the offer, its form, and its registrations
-    /// @return the offer's page
+    /// @param id       the offer
+    /// @param csrf     the hidden field of the page's forms
+    /// @param feedback what the request before left for this page
+    /// @return the offer's page, with its form and its registrations
     @GetMapping(LIST + "/{id}")
-    public String offer(@PathVariable long id, Model model) {
+    public View offer(@PathVariable long id, CsrfField csrf, Feedback feedback) {
         OfferDetails offer = offers.details(id);
-        return page(offer, offer.toForm(), FieldErrors.none(), model);
+        return page(offer, offer.toForm(), FieldErrors.none(), csrf, feedback);
     }
 
-    /// @param id         the offer
-    /// @param form       what was typed
-    /// @param binding    the values that could not be read, which are null in the form
-    /// @param model      receives the page again when the form has errors
-    /// @param redirected receives the confirmation shown after the redirect
+    /// @param id       the offer
+    /// @param form     what was typed
+    /// @param binding  the values that could not be read, which are null in the form
+    /// @param csrf     the hidden field of the page's forms
+    /// @param feedback what the request before left for this page
     /// @return a redirect to the offer's page, or the page again with what was wrong
     @PostMapping(LIST + "/{id}")
-    public String update(@PathVariable long id, @ModelAttribute("form") OfferForm form, BindingResult binding,
-            Model model, RedirectAttributes redirected) {
+    public View update(@PathVariable long id, @ModelAttribute("form") OfferForm form, BindingResult binding,
+            CsrfField csrf, Feedback feedback) {
         if (binding.hasErrors()) {
-            return page(offers.details(id), form, FieldErrors.of(binding, copy, KEYS), model);
+            return page(offers.details(id), form, FieldErrors.of(binding, copy, KEYS), csrf, feedback);
         }
         try {
             offers.update(id, form);
         } catch (ConstraintViolationException e) {
-            return page(offers.details(id), form, FieldErrors.of(e), model);
+            return page(offers.details(id), form, FieldErrors.of(e), csrf, feedback);
         }
-        redirected.addFlashAttribute("notice", copy.text("adminOffers.saved"));
-        return redirect(id);
+        return redirect(id).notice(copy.text("adminOffers.saved"));
     }
 
-    /// @param id         the offer to show to members
-    /// @param redirected receives the confirmation shown after the redirect
-    /// @return a redirect to the offer's page
+    /// @param id the offer to show to members
+    /// @return a redirect to the offer's page, with the confirmation
     @PostMapping(LIST + "/{id}/publicera")
-    public String publish(@PathVariable long id, RedirectAttributes redirected) {
+    public View publish(@PathVariable long id) {
         offers.setPublished(id, true);
-        redirected.addFlashAttribute("notice", copy.text("adminOffers.published"));
-        return redirect(id);
+        return redirect(id).notice(copy.text("adminOffers.published"));
     }
 
-    /// @param id         the offer to hide from members
-    /// @param redirected receives the confirmation shown after the redirect
-    /// @return a redirect to the offer's page
+    /// @param id the offer to hide from members
+    /// @return a redirect to the offer's page, with the confirmation
     @PostMapping(LIST + "/{id}/avpublicera")
-    public String unpublish(@PathVariable long id, RedirectAttributes redirected) {
+    public View unpublish(@PathVariable long id) {
         offers.setPublished(id, false);
-        redirected.addFlashAttribute("notice", copy.text("adminOffers.unpublished"));
-        return redirect(id);
+        return redirect(id).notice(copy.text("adminOffers.unpublished"));
     }
 
-    /// @param id    the offer
-    /// @param model receives the offer, whose registration count the page names
+    /// @param id   the offer, whose registration count the page names
+    /// @param csrf the hidden field of the page's form
     /// @return the page that asks before deleting
     @GetMapping(LIST + "/{id}/ta-bort")
-    public String confirmDelete(@PathVariable long id, Model model) {
-        model.addAttribute("offer", offers.details(id));
-        return "admin/offerDelete";
+    public View confirmDelete(@PathVariable long id, CsrfField csrf) {
+        return HtmlPage.of(templates.adminOfferDelete(copy, csrf, offers.details(id)));
     }
 
-    /// @param id         the offer, which takes its registrations with it
-    /// @param redirected receives the confirmation shown after the redirect
-    /// @return a redirect to the list
+    /// @param id the offer, which takes its registrations with it
+    /// @return a redirect to the list, with the confirmation
     @PostMapping(LIST + "/{id}/ta-bort")
-    public String delete(@PathVariable long id, RedirectAttributes redirected) {
+    public View delete(@PathVariable long id) {
         offers.delete(id);
-        redirected.addFlashAttribute("notice", copy.text("adminOffers.deleted"));
-        return "redirect:" + LIST;
+        return Redirect.to(LIST).notice(copy.text("adminOffers.deleted"));
     }
 
     /// R020. The same file as the API's `registrations.csv`.
@@ -174,15 +159,12 @@ public class AdministratorOfferPageController {
         response.sendError(HttpStatus.NOT_FOUND.value());
     }
 
-    private String page(OfferDetails offer, OfferForm form, FieldErrors errors, Model model) {
-        model.addAttribute("offer", offer);
-        model.addAttribute("form", form);
-        model.addAttribute("errors", errors);
-        model.addAttribute("registrations", offers.registrations(offer.id()));
-        return "admin/offer";
+    private View page(OfferDetails offer, OfferForm form, FieldErrors errors, CsrfField csrf, Feedback feedback) {
+        return HtmlPage.of(templates.adminOffer(copy, csrf, offer, form, errors, offers.registrations(offer.id()),
+                feedback));
     }
 
-    private static String redirect(long id) {
-        return "redirect:" + LIST + "/" + id;
+    private static Redirect redirect(long id) {
+        return Redirect.to(LIST + "/" + id);
     }
 }

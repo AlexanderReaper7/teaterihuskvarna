@@ -4,10 +4,11 @@
 @import se.teaterihuskvarna.web.PageMetadata
 @import se.teaterihuskvarna.web.CsrfField
 @import se.teaterihuskvarna.web.FieldErrors
+@import se.teaterihuskvarna.web.Feedback
 @param Copy copy
 @param PageMetadata metadata
 @param CsrfField csrf
-@param boolean stale
+@param Feedback feedback
 @param ApplicationForm form
 @param FieldErrors errors
 @param AssociationSettings fees
@@ -17,9 +18,7 @@
         copy.kronor(fees.feeHouseholdOre()))}</p>
     <p>${copy.text("application.household")}</p>
     <p>${copy.text("application.intro")}</p>
-    @if(stale)
-        <p role="alert">${copy.text("form.stale")}</p>
-    @endif
+    @template.tag.feedback(copy = copy, feedback = feedback)
     @template.tag.errors(copy = copy, errors = errors)
     <form method="post" action="/bli-medlem">
         @template.tag.csrf(csrf = csrf)

@@ -262,6 +262,9 @@ class MemberDocumentIT extends IntegrationTestSupport {
                         .contentType("multipart/form-data; boundary=x")
                         .content(new byte[100]))
                 .andReturn(), "/admin/handlingar?gammal");
+        // The page says so. It took no `stale` value before, and showed the list with nothing said.
+        mockMvc.perform(get("/admin/handlingar").param("gammal", "").with(asAdministrator()))
+                .andExpect(content().string(containsString(copy.text("form.stale"))));
         assertThat(rowsIn("member_document")).isZero();
     }
 

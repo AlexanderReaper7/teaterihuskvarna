@@ -5,14 +5,14 @@
 @import se.teaterihuskvarna.web.Copy
 @import se.teaterihuskvarna.web.CsrfField
 @import se.teaterihuskvarna.web.FieldErrors
+@import se.teaterihuskvarna.web.Feedback
 @param Copy copy
 @param CsrfField csrf
 @param List<DocumentSummary> documents
 @param DocumentForm form
 @param FieldErrors errors
 @param String fileError
-@param String error
-@param String notice
+@param Feedback feedback
 !{String kindError = errors.message("kind");}
 !{String kindInvalid = kindError == null ? null : "true";}
 !{String kindDescribedBy = kindError == null ? null : "kind-error";}
@@ -20,12 +20,7 @@
 !{String fileDescribedBy = fileError == null ? null : "file-error";}
 @template.admin.layout(copy = copy, title = copy.text("adminDocuments.heading"), content = @`
     <h1>${copy.text("adminDocuments.heading")}</h1>
-    @if(error != null)
-        <p role="alert">${error}</p>
-    @endif
-    @if(notice != null)
-        <p role="status">${notice}</p>
-    @endif
+    @template.tag.feedback(copy = copy, feedback = feedback)
 
     @if(documents.isEmpty())
         <p>${copy.text("adminDocuments.none")}</p>

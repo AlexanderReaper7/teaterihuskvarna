@@ -100,9 +100,13 @@
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-validation</artifactId>
     </dependency>
+    <!-- What the generated templates run on: JteModel, which a method on
+         Templates returns, and with it jte-runtime. JTE's Spring Boot starter
+         is not here. It resolves a view by a name and hands the template a
+         map, which is the string a handler no longer returns. -->
     <dependency>
       <groupId>gg.jte</groupId>
-      <artifactId>jte-spring-boot-starter-4</artifactId>
+      <artifactId>jte-models-runtime</artifactId>
       <version>${jte.version}</version>
     </dependency>
     <!-- Boot 4 moved Flyway auto-configuration out of spring-boot-autoconfigure
@@ -206,7 +210,7 @@
                  another kind of id, compiles and is always false, and == on
                  two ids compares the objects and not the numbers. These three
                  checks refuse all of it. -->
-            <arg>-Xplugin:ErrorProne -XepDisableAllChecks -Xep:NullAway:ERROR -Xep:EqualsIncompatibleType:ERROR -Xep:CollectionIncompatibleType:ERROR -Xep:ReferenceEquality:ERROR -Xep:RequireExplicitNullMarking:ERROR -Xep:JSpecifyUnrecognizedAnnotationLocation:ERROR -XepOpt:NullAway:OnlyNullMarked=true -XepOpt:NullAway:JSpecifyMode=true -XepOpt:NullAway:ExternalInitAnnotations=jakarta.persistence.Entity -XepOpt:NullAway:HandleTestAssertionLibraries=true</arg>
+            <arg>-Xplugin:ErrorProne -XepExcludedPaths:.*/target/generated-sources/.* -XepDisableAllChecks -Xep:NullAway:ERROR -Xep:EqualsIncompatibleType:ERROR -Xep:CollectionIncompatibleType:ERROR -Xep:ReferenceEquality:ERROR -Xep:RequireExplicitNullMarking:ERROR -Xep:JSpecifyUnrecognizedAnnotationLocation:ERROR -XepOpt:NullAway:OnlyNullMarked=true -XepOpt:NullAway:JSpecifyMode=true -XepOpt:NullAway:ExternalInitAnnotations=jakarta.persistence.Entity -XepOpt:NullAway:HandleTestAssertionLibraries=true</arg>
           </compilerArgs>
           <annotationProcessorPaths>
             <path>
@@ -267,25 +271,50 @@
           </includeOnlyProperties>
         </configuration>
       </plugin>
-      <!-- Compiles every .jte template to a Java class. This is the whole reason
-           0004 chose JTE: a renamed field fails the build rather than a page. -->
+      <!-- Turns every .jte template into a Java class, and the pages among
+           them into methods on gg.jte.generated.precompiled.Templates, one
+           per page, with the page's @param lines as the method's parameters.
+           A handler shows a page by calling its method, so a page that does
+           not exist, a missing value and a value of the wrong type fail the
+           compile. 0004 chose JTE for that inside a template. This carries it
+           across the line between a handler and its template, where a view
+           name and a model were strings.
+
+           The sources land in target/generated-sources/jte and compile with
+           the rest of main. A tag, an icon or a layout is called from a
+           template and gets no method. -->
       <plugin>
         <groupId>gg.jte</groupId>
         <artifactId>jte-maven-plugin</artifactId>
         <version>${jte.version}</version>
         <configuration>
           <sourceDirectory>${project.basedir}/src/main/jte</sourceDirectory>
-          <targetDirectory>${project.build.outputDirectory}</targetDirectory>
           <contentType>Html</contentType>
           <binaryStaticContent>true</binaryStaticContent>
+          <targetResourceDirectory>${project.build.outputDirectory}</targetResourceDirectory>
+          <extensions>
+            <extension>
+              <className>gg.jte.models.generator.ModelExtension</className>
+              <settings>
+                <excludePattern>.*\.(tag|icon)\..*|.*\.JtelayoutGenerated</excludePattern>
+              </settings>
+            </extension>
+          </extensions>
         </configuration>
         <executions>
           <execution>
-            <id>precompile</id>
-            <phase>process-classes</phase>
-            <goals><goal>precompile</goal></goals>
+            <id>generate</id>
+            <phase>generate-sources</phase>
+            <goals><goal>generate</goal></goals>
           </execution>
         </executions>
+        <dependencies>
+          <dependency>
+            <groupId>gg.jte</groupId>
+            <artifactId>jte-models</artifactId>
+            <version>${jte.version}</version>
+          </dependency>
+        </dependencies>
       </plugin>
       <!-- Copies the hooks in .githooks into .git/hooks, so any clone that
            builds gets them with no setup step. core.hooksPath would need a git
@@ -414,6 +443,14 @@
           <failOnViolation>true</failOnViolation>
           <printFailingErrors>true</printFailingErrors>
           <targetJdk>${pmd.target.jdk}</targetJdk>
+          <!-- The classes the JTE plugin writes from the templates. PMD reads
+               sources, and until the pages were generated as sources it never
+               saw a template, so this leaves out nothing it used to check. It
+               finds only unused imports and full names there, which nobody
+               can fix: the files are written again on every build. -->
+          <excludeRoots>
+            <excludeRoot>${project.build.directory}/generated-sources/jte</excludeRoot>
+          </excludeRoots>
         </configuration>
         <executions>
           <execution>

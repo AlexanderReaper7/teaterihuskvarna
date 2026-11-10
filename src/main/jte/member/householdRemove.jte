@@ -3,24 +3,19 @@
 @import java.util.List
 @import se.teaterihuskvarna.member.HouseholdMember
 @import se.teaterihuskvarna.member.MemberId
+@import se.teaterihuskvarna.web.Feedback
 @param Copy copy
 @param CsrfField csrf
 @param String fullName
 @param MemberId memberId
 @param List<HouseholdMember> successors
-@param String error = null
-@param boolean stale
+@param Feedback feedback
 @param boolean leaving
 !{String heading = leaving ? copy.text("member.household.leaveHeading")
         : copy.text("member.household.removeHeading", fullName);}
 @template.member.layout(copy = copy, title = heading, content = @`
     <h1>${heading}</h1>
-    @if(stale)
-        <p role="alert">${copy.text("form.stale")}</p>
-    @endif
-    @if(error != null)
-        <p role="alert">${error}</p>
-    @endif
+    @template.tag.feedback(copy = copy, feedback = feedback)
     <p>${copy.text(leaving ? "member.household.leaveNote" : "member.household.removeNote")}</p>
     <p>${copy.text(leaving ? "member.household.leaveFeeNote" : "member.household.removeFeeNote")}</p>
     <form method="post" action="/medlem/hushall/medlemmar/${memberId.value()}/ta-bort">

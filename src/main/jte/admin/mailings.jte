@@ -9,7 +9,8 @@
 @import se.teaterihuskvarna.web.Copy
 @import se.teaterihuskvarna.web.CsrfField
 @import se.teaterihuskvarna.web.FieldErrors
-@param String studioUrl = null
+@import se.teaterihuskvarna.web.Feedback
+@param String studioUrl
 @param Copy copy
 @param CsrfField csrf
 @param MailingForm form
@@ -17,18 +18,12 @@
 @param MailingAudiences audiences
 @param MailingContent content
 @param List<MailingDetails> log
-@param String error
-@param String notice
+@param Feedback feedback
 !{String audienceError = errors.message("audience");}
 !{String introError = errors.message("intro");}
 @template.admin.layout(copy = copy, title = copy.text("adminMailings.heading"), content = @`
     <h1>${copy.text("adminMailings.heading")}</h1>
-    @if(error != null)
-        <p role="alert">${error}</p>
-    @endif
-    @if(notice != null)
-        <p role="status">${notice}</p>
-    @endif
+    @template.tag.feedback(copy = copy, feedback = feedback)
 
     <h2>${copy.text("adminMailings.new")}</h2>
     <p>${copy.text("adminMailings.how")}</p>

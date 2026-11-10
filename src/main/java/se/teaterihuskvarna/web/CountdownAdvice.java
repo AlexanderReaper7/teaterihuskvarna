@@ -7,45 +7,23 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.web.csrf.CsrfToken;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ModelAttribute;
-import org.springframework.web.bind.annotation.RequestParam;
-import se.teaterihuskvarna.content.ContentSettings;
 import se.teaterihuskvarna.login.DeviceService;
 import se.teaterihuskvarna.login.SignedIn;
 
-/// Puts [Copy] in the model of every page in this package, as `copy`, and
-/// whether the page was sent back because its form had gone stale, as `stale`.
-/// Keeps the [LoginCountdown] of a logged-in page on its request.
+/// Keeps the [LoginCountdown] of a logged-in page on its request, for every
+/// page in this package.
 ///
-/// Extra model attributes cost nothing in a template. The JTE starter hands the
-/// whole Spring model to the template as a map, and the precompiled template reads
-/// only the names it declares with `@param`, so an attribute nobody declared is
-/// ignored. A declared name with nothing in the model arrives as null, and nothing
-/// checks that at build time: the model is the one part of a JTE page the compiler
-/// cannot see.
-@ControllerAdvice(basePackageClasses = PageModel.class)
-public class PageModel {
+/// This is all the advice does. It used to put [Copy], the Studio's address
+/// and the stale flag in every page's model under a name, for the template to
+/// declare under the same name. A page now gets what it shows as the
+/// arguments of its method on `Templates`, so the compiler checks both sides.
+@ControllerAdvice(basePackageClasses = CountdownAdvice.class)
+public class CountdownAdvice {
 
-    private final Copy copy;
-    private final ContentSettings content;
     private final DeviceService devices;
 
-    PageModel(Copy copy, ContentSettings content, DeviceService devices) {
-        this.copy = copy;
-        this.content = content;
+    CountdownAdvice(DeviceService devices) {
         this.devices = devices;
-    }
-
-    /// @return the configured content editor, or null when none is connected
-    @ModelAttribute("studioUrl")
-    public @Nullable String studioUrl() {
-        String url = content.studioUrl();
-        return url == null || url.isBlank() ? null : url;
-    }
-
-    /// @return the Swedish copy, for the template to read by key
-    @ModelAttribute("copy")
-    public Copy copy() {
-        return copy;
     }
 
     /// The countdown before the login ends, for the member's and the
@@ -73,15 +51,5 @@ public class PageModel {
             new LoginCountdown(devices.status(session), urls, token == null ? "" : token.getToken())
                     .keepOn(request);
         }
-    }
-
-    /// `se.teaterihuskvarna.login.RefusedRequests` adds `gammal` to the query
-    /// when it sends a form whose session is gone back to its page.
-    ///
-    /// @param stale the `gammal` parameter, present or not
-    /// @return whether to ask the person to send the form again
-    @ModelAttribute("stale")
-    public boolean stale(@RequestParam(name = "gammal", required = false) @Nullable String stale) {
-        return stale != null;
     }
 }

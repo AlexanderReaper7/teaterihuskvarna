@@ -1,15 +1,14 @@
 @import se.teaterihuskvarna.member.MemberFile
 @import se.teaterihuskvarna.web.Copy
 @import se.teaterihuskvarna.web.CsrfField
+@import se.teaterihuskvarna.web.Feedback
 @param Copy copy
 @param CsrfField csrf
 @param MemberFile file
-@param boolean stale
+@param Feedback feedback
 @template.admin.layout(copy = copy, title = copy.text("register.delete.heading", file.member().fullName()), content = @`
     <h1>${copy.text("register.delete.heading", file.member().fullName())}</h1>
-    @if(stale)
-        <p role="alert">${copy.text("form.stale")}</p>
-    @endif
+    @template.tag.feedback(copy = copy, feedback = feedback)
     <p>${copy.text("register.delete.body")}</p>
     <form method="post" action="/admin/medlemmar/${file.member().id().value()}/ta-bort">
         @template.tag.csrf(csrf = csrf)
