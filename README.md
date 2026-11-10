@@ -16,7 +16,7 @@ Nothing else. Java and Maven are not installed on your machine: the build runs i
 ### First run
 
 1. Clone the repository and go into it: `git clone https://github.com/AlexanderReaper7/teaterihuskvarna.git` then `cd teaterihuskvarna`.
-2. Run every test and check once: `Ctrl+Shift+B` in VS Code, or the command under [Tests](#tests). The first build downloads Maven and every dependency and takes a few minutes; later builds reuse them. Besides the tests, it creates `.env` from [`.env.example`](.env.example) and installs the [git hooks](#git-hooks). Git ignores `.env`, so what goes in it stays on the machine. Set `SANITY_API_KEY` to a token with read access to the development dataset before presenting its content. Automated tests need no Sanity token.
+2. Run every test and check once: `Ctrl+Shift+B` in VS Code, or the command under [Tests](#tests). The first build downloads Maven and every dependency and takes a few minutes; later builds reuse them. Besides the tests, it creates `.env` from [`.env.example`](.env.example) and installs the [git hooks](#git-hooks). Git ignores `.env`, so what goes in it stays on the machine. The public pages show the development dataset's published content without a Sanity token, because that dataset answers queries from anyone. Set `SANITY_API_KEY` only for the Studio's draft preview. Automated tests need no Sanity token.
 3. Build and start the stack: `docker compose up -d --build`.
 4. Check that five containers are running: `docker compose ps` lists `proxy`, `app`, `db`, `mail` and [`studio`](studio/).
 5. Open [http://localhost:8000/](http://localhost:8000/). If the page does not load yet, the application is still starting. `docker compose logs -f app` shows it, and it is ready at the line `Started Application in ... seconds`. Ctrl+C stops following the log, not the application.
@@ -100,14 +100,14 @@ A clone made before [`f9df7d5`](https://github.com/AlexanderReaper7/teaterihuskv
 - **`address already in use` or `port is already allocated` on 8000.** Another program has the port. Set `PROXY_HTTP_PORT=8001` in `.env`, run `docker compose up -d` again and use [http://localhost:8001/](http://localhost:8001/).
 - **`Cannot connect to the Docker daemon`, or on Windows `error during connect`.** Docker is not running. Start Docker Desktop and wait until it says it is running.
 - **The build fails at `checkstyle`, `spotbugs` or `pmd`.** The code breaks one of the static analysis rules, and the message names the file and line. See [Static analysis](#static-analysis).
-- **The app cannot connect to the database after you changed `POSTGRES_PASSWORD` in `.env`.** The database reads the password only its volume is created. `docker compose down -v` deletes the volume, and the next start builds it again with the new password. A database client on the host uses the same password.
+- **The app cannot connect to the database after you changed `POSTGRES_PASSWORD` in `.env`.** The database reads the password only when its volume is created. `docker compose down -v` deletes the volume, and the next start builds it again with the new password. A database client on the host uses the same password.
 - **The app container keeps restarting, and its log says `The dev profile is active and SITE_URL is set`.** `.env` sets `SITE_URL`, which only production does. Leave it empty locally: the `dev` profile builds its own address from `PROXY_HTTP_PORT`, and a shared stack takes `SHARE_URL`. On the production host the fix is the opposite one, and the message names the lines to remove.
 - **Anything else.** Read the end of `docker compose logs app`. The first `ERROR` line usually names the problem.
 
 ## The local stack
 
 The stack is Traefik, the Spring Boot application behind it, and PostgreSQL
-18.2. Flyway applies the migrations in [`src/main/resources/db/migration`](src/main/resources/db/migration/) at
+18.6. Flyway applies the migrations in [`src/main/resources/db/migration`](src/main/resources/db/migration/) at
 startup.
 
 [`compose.yaml`](compose.yaml) alone is production. `COMPOSE_FILE` in [`.env.example`](.env.example) adds
@@ -139,7 +139,7 @@ need `docker compose up -d --build`.
 
 The association's editors use Sanity hosting, separate from this development stack, as decided in [0021](docs/decisions/0021-content-from-sanity.md). [Studio instructions](studio/README.md) cover deployment. The local Studio requires a Sanity login and internet access. Published edits appear on the application within 45 seconds, or on the next request after the publish webhook clears its cache. Automated tests alone use [`fixture.json`](src/main/resources/content/fixture.json), with their own source settings and no Sanity credentials.
 
-The `dev` dataset contains 16 invented demo documents imported on 2026-09-30. Event and news dates are now fixed Sanity values, editable in Studio. Tests still resolve fixture dates relative to the test day. The configured API key can read the imported content; anonymous queries returned no documents during verification.
+The `dev` dataset answers queries without a token. On 2026-11-10 a `count(*)` sent without one returned 89 documents: 32 image assets and 57 content documents. Of the 57, 44 have a `wp-` id from the import of the old WordPress site on 2026-10-31 ([Studio instructions](studio/README.md#importing-the-old-site)), 12 were created by the demo import on 2026-09-30, and 1 was created on 2026-10-28. So the dataset holds the old site's real text, names and pictures beside invented demo content, and no API key protects any of it. Whatever an editor publishes in `dev` can be read by anyone through Sanity's API from that moment, also when no page shows it, so nothing that must stay private goes into a published document. A draft needs a token to read ([0006](docs/decisions/0006-sanity-for-now.md)). Event and news dates are fixed Sanity values, editable in Studio. Tests still resolve fixture dates relative to the test day.
 
 ### Sharing the dev stack
 
@@ -238,7 +238,7 @@ on purpose, so a plain `docker compose up` never opens a debug port.
 [`docs/check.py`](docs/check.py) guards the quoted requirement text, the relative links between
 documents, the Mermaid diagrams, every document's provenance and front matter,
 the names of meeting documents, and that a requirement id followed by an issue
-(`R005 #8`) names the same issue everywhere. Its docstring lists all eight
+(`R005 #8`) names the same issue everywhere. Its docstring lists all nine
 checks. CI runs it; see [.github/workflows/docs.yml](.github/workflows/docs.yml).
 
 - Requirements are numbered `R001` upwards, in [docs/requirements.md](docs/requirements.md), which says how ids are given out.
