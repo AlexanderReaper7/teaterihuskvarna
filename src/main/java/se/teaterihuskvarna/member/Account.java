@@ -36,17 +36,19 @@ public class Account {
     private String email;
 
     @Column(name = "created_at", nullable = false)
-    private Instant createdAt = Instant.now();
+    private Instant createdAt;
 
     protected Account() {
         // for JPA
     }
 
-    /// @param member the member this account logs in as
-    /// @param email  the address, unique case insensitively across accounts
-    public Account(Member member, Email email) {
+    /// @param member    the member this account logs in as
+    /// @param email     the address, unique case insensitively across accounts
+    /// @param createdAt when the account is made
+    public Account(Member member, Email email, Instant createdAt) {
         this.member = member;
         this.email = email.value();
+        this.createdAt = createdAt;
     }
 
     /// @return the ID assigned by Hibernate

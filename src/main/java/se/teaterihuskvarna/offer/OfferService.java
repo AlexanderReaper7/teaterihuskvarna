@@ -1,6 +1,7 @@
 package se.teaterihuskvarna.offer;
 
 import jakarta.validation.Valid;
+import java.time.Clock;
 import java.time.Instant;
 import java.time.format.DateTimeFormatter;
 import java.util.Comparator;
@@ -45,19 +46,21 @@ public class OfferService {
     private final OfferRegistrationRepository registrations;
     private final MessageSource messages;
     private final ApplicationEventPublisher events;
+    private final Clock clock;
 
     OfferService(OfferRepository offers, OfferRegistrationRepository registrations, MessageSource messages,
-            ApplicationEventPublisher events) {
+            ApplicationEventPublisher events, Clock clock) {
         this.offers = offers;
         this.registrations = registrations;
         this.messages = messages;
         this.events = events;
+        this.clock = clock;
     }
 
     /// @param memberId the member asking
     /// @return the published offers still open for registration, soonest first
     public List<MemberOffer> openOffers(long memberId) {
-        Instant now = Instant.now();
+        Instant now = clock.instant();
         List<Offer> open = offers.findOpen(now);
         Map<Long, Long> counts = counts(open);
         Set<Long> mine = new HashSet<>(registrations.findOfferIdsByMemberId(memberId));
@@ -73,7 +76,7 @@ public class OfferService {
     /// @param memberId the member asking
     /// @return the published offers the member is registered for that have not started, soonest first
     public List<MemberOffer> registeredOffers(long memberId) {
-        Instant now = Instant.now();
+        Instant now = clock.instant();
         List<Offer> mine = offers.findUpcomingRegisteredBy(memberId, now);
         Map<Long, Long> counts = counts(mine);
         return mine.stream()
@@ -91,7 +94,7 @@ public class OfferService {
     public MemberOffer offer(long offerId, long memberId) {
         Offer offer = offers.findById(offerId).filter(Offer::isPublished).orElseThrow(NoSuchOffer::new);
         return memberOffer(offer, registrations.countByOfferId(offerId),
-                registrations.existsByOfferIdAndMemberId(offerId, memberId), Instant.now());
+                registrations.existsByOfferIdAndMemberId(offerId, memberId), clock.instant());
     }
 
     /// Takes a place. The offer row stays locked from the read until the
@@ -114,14 +117,14 @@ public class OfferService {
         if (registrations.existsByOfferIdAndMemberId(offerId, memberId)) {
             return RegistrationOutcome.ALREADY_REGISTERED;
         }
-        if (!offer.isOpenAt(Instant.now())) {
+        if (!offer.isOpenAt(clock.instant())) {
             throw new RegistrationClosed();
         }
         Integer left = offer.placesLeft(registrations.countByOfferId(offerId));
         if (left != null && left == 0) {
             throw new OfferFull();
         }
-        registrations.save(new OfferRegistration(offerId, memberId));
+        registrations.save(new OfferRegistration(offerId, memberId, clock.instant()));
         events.publishEvent(new MemberChanged(memberId));
         return RegistrationOutcome.REGISTERED;
     }
@@ -136,7 +139,7 @@ public class OfferService {
     @Transactional
     public boolean cancel(long offerId, long memberId) {
         Offer offer = offers.findById(offerId).filter(Offer::isPublished).orElseThrow(NoSuchOffer::new);
-        if (!offer.isOpenAt(Instant.now())) {
+        if (!offer.isOpenAt(clock.instant())) {
             throw new RegistrationClosed();
         }
         boolean cancelled = registrations.deleteRegistration(offerId, memberId) > 0;
@@ -148,7 +151,7 @@ public class OfferService {
 
     /// @return every offer, published or not, newest first
     public List<OfferDetails> list() {
-        Instant now = Instant.now();
+        Instant now = clock.instant();
         List<Offer> all = offers.findAllNewestFirst();
         Map<Long, Long> counts = counts(all);
         return all.stream()
@@ -159,7 +162,7 @@ public class OfferService {
     /// @return the offers that have not started, published or not, the soonest first and those without a start
     ///         time last, as the administrators' start page lists them
     public List<OfferDetails> upcoming() {
-        Instant now = Instant.now();
+        Instant now = clock.instant();
         return list().stream().filter(offer -> notStarted(offer, now)).sorted(SOONEST_FIRST).toList();
     }
 
@@ -168,7 +171,7 @@ public class OfferService {
     /// @throws NoSuchOffer if no offer has the id
     public OfferDetails details(long id) {
         Offer offer = offers.findById(id).orElseThrow(NoSuchOffer::new);
-        return OfferDetails.of(offer, registrations.countByOfferId(id), Instant.now());
+        return OfferDetails.of(offer, registrations.countByOfferId(id), clock.instant());
     }
 
     /// Creates an offer, unpublished.
@@ -178,8 +181,8 @@ public class OfferService {
     /// @throws jakarta.validation.ConstraintViolationException if the form breaks a constraint
     @Transactional
     public OfferDetails create(@Valid OfferForm form) {
-        Offer offer = offers.save(new Offer(form.values()));
-        return OfferDetails.of(offer, 0, Instant.now());
+        Offer offer = offers.save(new Offer(form.values(), clock.instant()));
+        return OfferDetails.of(offer, 0, clock.instant());
     }
 
     /// Changes an offer. Lowering the capacity below the number registered
@@ -193,8 +196,8 @@ public class OfferService {
     @Transactional
     public OfferDetails update(long id, @Valid OfferForm form) {
         Offer offer = offers.findById(id).orElseThrow(NoSuchOffer::new);
-        offer.change(form.values());
-        return OfferDetails.of(offer, registrations.countByOfferId(id), Instant.now());
+        offer.change(form.values(), clock.instant());
+        return OfferDetails.of(offer, registrations.countByOfferId(id), clock.instant());
     }
 
     /// @param id        the offer
@@ -202,7 +205,7 @@ public class OfferService {
     /// @throws NoSuchOffer if no offer has the id
     @Transactional
     public void setPublished(long id, boolean published) {
-        offers.findById(id).orElseThrow(NoSuchOffer::new).setPublished(published);
+        offers.findById(id).orElseThrow(NoSuchOffer::new).setPublished(published, clock.instant());
     }
 
     /// Deletes an offer and, through the foreign key, every registration for it.

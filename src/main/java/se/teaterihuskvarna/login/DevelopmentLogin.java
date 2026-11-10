@@ -2,6 +2,7 @@ package se.teaterihuskvarna.login;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import java.time.Clock;
 import java.util.Objects;
 import org.springframework.context.MessageSource;
 import org.springframework.context.annotation.Profile;
@@ -35,8 +36,10 @@ final class DevelopmentLogin extends AbstractHttpConfigurer<DevelopmentLogin, Ht
     private final DevelopmentLoginService logins;
     private final LoginSettings settings;
     private final DeviceNames devices;
+    private final Clock clock;
 
-    DevelopmentLogin(DevelopmentLoginService logins, LoginSettings settings, MessageSource messages) {
+    DevelopmentLogin(DevelopmentLoginService logins, LoginSettings settings, MessageSource messages, Clock clock) {
+        this.clock = clock;
         this.logins = logins;
         this.settings = settings;
         this.devices = new DeviceNames(messages);
@@ -56,7 +59,7 @@ final class DevelopmentLogin extends AbstractHttpConfigurer<DevelopmentLogin, Ht
                 http.getSharedObject(SecurityContextRepository.class), "No security context repository"));
         login.setAuthenticationSuccessHandler((request, response, authentication) -> {
             SignedIn signedIn = (SignedIn) Objects.requireNonNull(authentication.getPrincipal());
-            LoginSuccessHandler.inDevelopment(settings.session(signedIn.kind()), devices,
+            LoginSuccessHandler.inDevelopment(clock, settings.session(signedIn.kind()), devices,
                     LoginUrls.of(signedIn.kind()).success(), RefusedRequests.API.matches(request))
                     .onAuthenticationSuccess(request, response, authentication);
         });

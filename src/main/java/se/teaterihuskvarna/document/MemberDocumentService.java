@@ -2,6 +2,7 @@ package se.teaterihuskvarna.document;
 
 import jakarta.validation.Valid;
 import java.nio.charset.StandardCharsets;
+import java.time.Clock;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
@@ -31,9 +32,11 @@ public class MemberDocumentService {
     private static final byte[] PDF_HEADER = "%PDF-".getBytes(StandardCharsets.US_ASCII);
 
     private final MemberDocumentRepository documents;
+    private final Clock clock;
 
-    MemberDocumentService(MemberDocumentRepository documents) {
+    MemberDocumentService(MemberDocumentRepository documents, Clock clock) {
         this.documents = documents;
+        this.clock = clock;
     }
 
     /// @return every document without its file, grouped by kind, newest first within a kind
@@ -71,7 +74,8 @@ public class MemberDocumentService {
         }
         MemberDocument document = documents.save(new MemberDocument(form.title().strip(),
                 Objects.requireNonNull(form.kind()),
-                Objects.requireNonNull(form.publishedOn()), DocumentFilenames.sanitize(filename), content, uploadedBy));
+                Objects.requireNonNull(form.publishedOn()), DocumentFilenames.sanitize(filename), content, uploadedBy,
+                clock.instant()));
         return new DocumentSummary(document.getId(), document.getTitle(), document.getKind(),
                 document.getFilename(), document.getSizeBytes(), document.getPublishedOn(),
                 document.getUploadedAt());

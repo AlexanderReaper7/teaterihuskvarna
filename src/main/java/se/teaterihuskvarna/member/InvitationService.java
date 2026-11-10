@@ -1,6 +1,7 @@
 package se.teaterihuskvarna.member;
 
 import jakarta.validation.Valid;
+import java.time.Clock;
 import java.time.Instant;
 import java.util.Optional;
 import org.jspecify.annotations.Nullable;
@@ -41,10 +42,11 @@ public class InvitationService {
     private final MailSettings mail;
     private final AssociationSettings association;
     private final ApplicationEventPublisher events;
+    private final Clock clock;
 
     InvitationService(InvitationRepository invitations, MemberRepository members, AccountRepository accounts,
             Mailer mailer, MessageSource messages, MailSettings mail, AssociationSettings association,
-            ApplicationEventPublisher events) {
+            ApplicationEventPublisher events, Clock clock) {
         this.invitations = invitations;
         this.members = members;
         this.accounts = accounts;
@@ -53,6 +55,7 @@ public class InvitationService {
         this.mail = mail;
         this.association = association;
         this.events = events;
+        this.clock = clock;
     }
 
     /// An administrator invites a member. Sending again replaces the open
@@ -106,7 +109,7 @@ public class InvitationService {
         }
         Invitation invitation = found.get();
         invitations.delete(invitation);
-        if (!invitation.getExpiresAt().isAfter(Instant.now())) {
+        if (!invitation.getExpiresAt().isAfter(clock.instant())) {
             return InvitationOutcome.INVALID;
         }
         Optional<Member> member = members.findById(invitation.getMemberId());
@@ -116,7 +119,7 @@ public class InvitationService {
         if (accounts.findByEmailIgnoreCase(invitation.getEmail()).isPresent()) {
             return InvitationOutcome.EMAIL_TAKEN;
         }
-        accounts.save(new Account(member.get(), new Email(invitation.getEmail())));
+        accounts.save(new Account(member.get(), new Email(invitation.getEmail()), clock.instant()));
         events.publishEvent(new MemberChanged(invitation.getMemberId()));
         return InvitationOutcome.ACCEPTED;
     }
@@ -130,7 +133,7 @@ public class InvitationService {
             throw new EmailTaken();
         }
         String token = Tokens.newToken();
-        Instant now = Instant.now();
+        Instant now = clock.instant();
         Instant expires = now.plus(association.invitationLifetime());
         invitations.replace(member.getId(), email.value(), Tokens.hash(token), now, expires);
         String lifetime = Lifetimes.describe(messages, association.invitationLifetime());

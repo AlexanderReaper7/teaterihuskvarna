@@ -1,6 +1,7 @@
 package se.teaterihuskvarna.administrator;
 
 import jakarta.validation.Valid;
+import java.time.Clock;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.stereotype.Service;
@@ -25,11 +26,14 @@ public class AdministratorService {
     private final AdministratorRepository administrators;
     private final Sessions sessions;
     private final PasskeyService passkeys;
+    private final Clock clock;
 
-    AdministratorService(AdministratorRepository administrators, Sessions sessions, PasskeyService passkeys) {
+    AdministratorService(AdministratorRepository administrators, Sessions sessions, PasskeyService passkeys,
+            Clock clock) {
         this.administrators = administrators;
         this.sessions = sessions;
         this.passkeys = passkeys;
+        this.clock = clock;
     }
 
     /// @return the administrators who can log in, by name
@@ -59,13 +63,14 @@ public class AdministratorService {
         String fullName = form.fullName().strip();
         Optional<Administrator> existing = administrators.findByEmail(email.value());
         if (existing.isEmpty()) {
-            return AdministratorDetails.of(administrators.save(new Administrator(email, fullName, addedBy)));
+            return AdministratorDetails.of(
+                    administrators.save(new Administrator(email, fullName, addedBy, clock.instant())));
         }
         Administrator administrator = existing.get();
         if (administrator.isActive()) {
             throw new AdministratorAlreadyExists();
         }
-        administrator.reactivate(fullName, addedBy);
+        administrator.reactivate(fullName, addedBy, clock.instant());
         return AdministratorDetails.of(administrator);
     }
 
@@ -97,7 +102,7 @@ public class AdministratorService {
         if (active.size() <= MINIMUM) {
             throw new TooFewAdministrators();
         }
-        administrator.remove(removedBy);
+        administrator.remove(removedBy, clock.instant());
         passkeys.removeAll(LoginKind.ADMINISTRATOR, id);
         sessions.end(LoginKind.ADMINISTRATOR, id);
     }

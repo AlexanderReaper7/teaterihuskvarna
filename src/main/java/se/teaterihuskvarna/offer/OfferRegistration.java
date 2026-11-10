@@ -27,17 +27,19 @@ public class OfferRegistration {
     private long memberId;
 
     @Column(name = "created_at", nullable = false)
-    private Instant createdAt = Instant.now();
+    private Instant createdAt;
 
     protected OfferRegistration() {
         // for JPA
     }
 
-    /// @param offerId  the offer registered for
-    /// @param memberId the member who registered
-    OfferRegistration(long offerId, long memberId) {
+    /// @param offerId   the offer registered for
+    /// @param memberId  the member who registered
+    /// @param createdAt when they registered
+    OfferRegistration(long offerId, long memberId, Instant createdAt) {
         this.offerId = offerId;
         this.memberId = memberId;
+        this.createdAt = createdAt;
     }
 
     /// @return the ID assigned by Hibernate

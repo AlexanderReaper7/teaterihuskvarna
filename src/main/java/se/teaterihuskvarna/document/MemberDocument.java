@@ -46,7 +46,7 @@ public class MemberDocument {
     private int sizeBytes;
 
     @Column(name = "uploaded_at", nullable = false)
-    private Instant uploadedAt = Instant.now();
+    private Instant uploadedAt;
 
     @Column(name = "uploaded_by")
     private @Nullable Long uploadedBy;
@@ -64,8 +64,10 @@ public class MemberDocument {
     /// @param filename    the sanitised file name
     /// @param content     the PDF, copied
     /// @param uploadedBy  the administrator uploading it
+    /// @param uploadedAt  when it is uploaded
     MemberDocument(String title, DocumentKind kind, LocalDate publishedOn, String filename, byte[] content,
-            long uploadedBy) {
+            long uploadedBy, Instant uploadedAt) {
+        this.uploadedAt = uploadedAt;
         this.title = title;
         this.kind = kind;
         this.publishedOn = publishedOn;

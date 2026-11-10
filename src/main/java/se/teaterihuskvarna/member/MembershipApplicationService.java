@@ -1,6 +1,7 @@
 package se.teaterihuskvarna.member;
 
 import jakarta.validation.Valid;
+import java.time.Clock;
 import java.time.Instant;
 import java.util.Optional;
 import org.jspecify.annotations.Nullable;
@@ -48,6 +49,7 @@ public class MembershipApplicationService {
     private final AssociationSettings association;
     private final ApplicationEventPublisher events;
     private final FeeLedger ledger;
+    private final Clock clock;
 
     MembershipApplicationService(
             MembershipApplicationRepository applications,
@@ -61,7 +63,8 @@ public class MembershipApplicationService {
             MailSettings mail,
             AssociationSettings association,
             ApplicationEventPublisher events,
-            FeeLedger ledger) {
+            FeeLedger ledger,
+            Clock clock) {
         this.applications = applications;
         this.accounts = accounts;
         this.members = members;
@@ -74,6 +77,7 @@ public class MembershipApplicationService {
         this.association = association;
         this.events = events;
         this.ledger = ledger;
+        this.clock = clock;
     }
 
     /// Receives a Bli medlem form. Returns nothing, and returns the same way in
@@ -109,7 +113,7 @@ public class MembershipApplicationService {
 
         String fullName = form.fullName().strip();
         String token = Tokens.newToken();
-        Instant now = Instant.now();
+        Instant now = clock.instant();
         Instant expires = now.plus(login.applicationLifetime());
         applications.replace(
                 fullName,
@@ -169,7 +173,7 @@ public class MembershipApplicationService {
         MembershipApplication application = found.get();
         applications.delete(application);
 
-        if (!application.getExpiresAt().isAfter(Instant.now())) {
+        if (!application.getExpiresAt().isAfter(clock.instant())) {
             return Optional.empty();
         }
         // An invitation, or another application confirmed first, may have given
@@ -178,10 +182,10 @@ public class MembershipApplicationService {
             return Optional.empty();
         }
 
-        Member member = new Member(application.getFullName());
+        Member member = new Member(application.getFullName(), clock.instant());
         member.setContact(application.getContact());
         members.save(member);
-        accounts.save(new Account(member, new Email(application.getEmail())));
+        accounts.save(new Account(member, new Email(application.getEmail()), clock.instant()));
         events.publishEvent(new MemberChanged(member.getId()));
 
         // Read from the ledger like every other fee status rather than written

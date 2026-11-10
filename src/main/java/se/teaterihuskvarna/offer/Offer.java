@@ -40,10 +40,10 @@ public class Offer {
     private boolean published;
 
     @Column(name = "created_at", nullable = false)
-    private Instant createdAt = Instant.now();
+    private Instant createdAt;
 
     @Column(name = "updated_at", nullable = false)
-    private Instant updatedAt = createdAt;
+    private Instant updatedAt;
 
     protected Offer() {
         // for JPA
@@ -52,8 +52,11 @@ public class Offer {
     /// A new offer starts unpublished, so members see nothing until an
     /// administrator publishes it.
     ///
-    /// @param values the title, description, times and capacity
-    Offer(OfferValues values) {
+    /// @param values    the title, description, times and capacity
+    /// @param createdAt when the offer is made
+    Offer(OfferValues values, Instant createdAt) {
+        this.createdAt = createdAt;
+        this.updatedAt = createdAt;
         this.title = values.title();
         this.description = values.description();
         this.startsAt = values.startsAt();
@@ -103,19 +106,21 @@ public class Offer {
     }
 
     /// @param values the new title, description, times and capacity
-    void change(OfferValues values) {
+    /// @param at     when the change is made
+    void change(OfferValues values, Instant at) {
         this.title = values.title();
         this.description = values.description();
         this.startsAt = values.startsAt();
         this.registrationClosesAt = values.registrationClosesAt();
         this.capacity = values.capacity();
-        this.updatedAt = Instant.now();
+        this.updatedAt = at;
     }
 
     /// @param published whether members can see the offer
-    void setPublished(boolean published) {
+    /// @param at        when the change is made
+    void setPublished(boolean published, Instant at) {
         this.published = published;
-        this.updatedAt = Instant.now();
+        this.updatedAt = at;
     }
 
     /// Registration closes at `registration_closes_at`, or when the offer

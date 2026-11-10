@@ -3,6 +3,7 @@ package se.teaterihuskvarna.member;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.LockModeType;
 import jakarta.validation.Valid;
+import java.time.Clock;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -32,10 +33,11 @@ public class HouseholdService {
     private final FeeLedger ledger;
     private final ApplicationEventPublisher events;
     private final EntityManager entityManager;
+    private final Clock clock;
 
     HouseholdService(HouseholdRepository households, MemberRepository members, AccountRepository accounts,
             InvitationRepository invitations, FeeLedger ledger, ApplicationEventPublisher events,
-            EntityManager entityManager) {
+            EntityManager entityManager, Clock clock) {
         this.households = households;
         this.members = members;
         this.accounts = accounts;
@@ -43,6 +45,7 @@ public class HouseholdService {
         this.ledger = ledger;
         this.events = events;
         this.entityManager = entityManager;
+        this.clock = clock;
     }
 
     /// @return every household by name, each with its members
@@ -59,7 +62,7 @@ public class HouseholdService {
     /// @throws jakarta.validation.ConstraintViolationException if the form breaks a constraint
     @Transactional
     public HouseholdDetails create(@Valid NewHousehold form) {
-        Household household = households.save(new Household(form.name().strip()));
+        Household household = households.save(new Household(form.name().strip(), clock.instant()));
         return new HouseholdDetails(household.getId(), household.getName(), household.getOwnerMemberId(), List.of());
     }
 
@@ -90,7 +93,7 @@ public class HouseholdService {
         if (member.getHousehold() != null) {
             throw new AlreadyInHousehold();
         }
-        Household household = households.save(new Household(form.name().strip()));
+        Household household = households.save(new Household(form.name().strip(), clock.instant()));
         household.setOwnerMemberId(member.getId());
         member.setHousehold(household);
         ledger.joined(member, household);
@@ -118,7 +121,7 @@ public class HouseholdService {
     public long addForAccount(long accountId, @Valid ContactForm form) {
         lockOwnHousehold(accountId);
         Household household = ownedHousehold(accountId);
-        Member member = new Member(form.fullName().strip());
+        Member member = new Member(form.fullName().strip(), clock.instant());
         member.setContact(form.contact());
         member.setHousehold(household);
         members.save(member);

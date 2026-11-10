@@ -1,7 +1,7 @@
 package se.teaterihuskvarna.member;
 
 import jakarta.validation.Valid;
-import java.time.Instant;
+import java.time.Clock;
 import java.util.Objects;
 import java.util.Optional;
 import org.jspecify.annotations.Nullable;
@@ -24,14 +24,16 @@ public class FeeService {
     private final FeeLedger ledger;
     private final AssociationSettings association;
     private final ApplicationEventPublisher events;
+    private final Clock clock;
 
     FeeService(FeeRepository fees, MemberRepository members, FeeLedger ledger, AssociationSettings association,
-            ApplicationEventPublisher events) {
+            ApplicationEventPublisher events, Clock clock) {
         this.fees = fees;
         this.members = members;
         this.ledger = ledger;
         this.association = association;
         this.events = events;
+        this.clock = clock;
     }
 
     /// For the member's Brevo contact: the latest year their fee is paid,
@@ -77,7 +79,7 @@ public class FeeService {
         try {
             Household household = member.getHousehold();
             Long householdId = kind == FeeKind.HOUSEHOLD && household != null ? household.getId() : null;
-            fees.saveAndFlush(new Fee(memberId, year, kind, amount, Instant.now(), administratorId, householdId));
+            fees.saveAndFlush(new Fee(memberId, year, kind, amount, clock.instant(), administratorId, householdId));
             covered(memberId, householdId);
         } catch (DataIntegrityViolationException e) {
             // Two marks at once: fee_member_id_year_key refused the second.
