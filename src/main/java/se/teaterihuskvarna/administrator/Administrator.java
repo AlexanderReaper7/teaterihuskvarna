@@ -19,8 +19,8 @@ import se.teaterihuskvarna.login.Email;
 /// they name, and an association would be one more lazy proxy to trip over
 /// outside a transaction.
 ///
-/// Column lengths mirror `V2__login.sql` by hand, because `ddl-auto: validate`
-/// does not compare them: `docs/decisions/0012-jpa-over-a-schema-flyway-owns.md`.
+/// Column lengths mirror `V2__login.sql`, which `EntityColumnsIT` checks:
+/// `docs/decisions/0012-jpa-over-a-schema-flyway-owns.md`.
 @Entity
 @Table(name = "administrator")
 public class Administrator {

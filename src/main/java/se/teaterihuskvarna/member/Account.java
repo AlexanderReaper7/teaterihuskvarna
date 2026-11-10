@@ -18,8 +18,8 @@ import se.teaterihuskvarna.login.Email;
 /// accept an invitation. An administrator account is a different thing, in
 /// `se.teaterihuskvarna.administrator`.
 ///
-/// Column lengths mirror `V2__login.sql` by hand, because `ddl-auto: validate`
-/// does not compare them: `docs/decisions/0012-jpa-over-a-schema-flyway-owns.md`.
+/// Column lengths mirror `V2__login.sql`, which `EntityColumnsIT` checks:
+/// `docs/decisions/0012-jpa-over-a-schema-flyway-owns.md`.
 @Entity
 @Table(name = "account")
 public class Account {

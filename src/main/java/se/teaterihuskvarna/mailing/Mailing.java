@@ -14,8 +14,8 @@ import org.jspecify.annotations.Nullable;
 /// saved in status `creating` before Brevo is asked for the draft, and gets
 /// its campaign once Brevo answers or the campaign is found by its name.
 ///
-/// Column lengths mirror `V10__mailings.sql` and `V13__brevo_contacts.sql` by hand, because `ddl-auto: validate`
-/// does not compare them: `docs/decisions/0012-jpa-over-a-schema-flyway-owns.md`.
+/// Column lengths mirror `V10__mailings.sql` and `V13__brevo_contacts.sql`, which `EntityColumnsIT` checks:
+/// `docs/decisions/0012-jpa-over-a-schema-flyway-owns.md`.
 @Entity
 @Table(name = "mailing")
 public class Mailing {

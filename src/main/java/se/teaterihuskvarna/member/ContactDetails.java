@@ -9,7 +9,7 @@ import org.jspecify.annotations.Nullable;
 /// [MembershipApplication] both embed it, in columns of their own tables. Every
 /// part is optional.
 ///
-/// Column lengths mirror `V1__member_register.sql` and `V2__login.sql` by hand:
+/// Column lengths mirror `V1__member_register.sql` and `V2__login.sql`, which `EntityColumnsIT` checks:
 /// `docs/decisions/0012-jpa-over-a-schema-flyway-owns.md`.
 ///
 /// @param phone      a phone number, or null

@@ -16,9 +16,9 @@ import org.jspecify.annotations.Nullable;
 /// A member of the association. The email address is on the [Account], because
 /// a member added to a household may have none.
 ///
-/// Column lengths mirror `V1__member_register.sql` by hand, here and in [ContactDetails]. Nothing enforces
-/// that: `ddl-auto: validate` catches a missing table or column, but it does not
-/// compare lengths, which was measured rather than assumed. See
+/// Column lengths mirror `V1__member_register.sql`, here and in [ContactDetails], which
+/// `EntityColumnsIT` checks: `ddl-auto: validate` catches a missing table or column, but
+/// it does not compare lengths, which was measured rather than assumed. See
 /// `docs/decisions/0012-jpa-over-a-schema-flyway-owns.md`.
 ///
 /// No personal identity number, by `docs/projektplan.md`.

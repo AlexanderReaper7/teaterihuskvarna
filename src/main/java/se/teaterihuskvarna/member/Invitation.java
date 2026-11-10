@@ -12,7 +12,7 @@ import org.jspecify.annotations.Nullable;
 /// An open invitation for a member without an account to create one. The
 /// member is a plain id: the database deletes the row with the member (`ON
 /// DELETE CASCADE`), and the service loads the member itself when the link is
-/// used. Column lengths mirror `V6__fees_households_invitations.sql` by hand.
+/// used. Column lengths mirror `V6__fees_households_invitations.sql`, which `EntityColumnsIT` checks.
 @Entity
 @Table(name = "invitation")
 public class Invitation {
