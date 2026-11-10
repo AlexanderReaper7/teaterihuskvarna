@@ -102,12 +102,9 @@ final class PortableText {
             }
             StringBuilder text = new StringBuilder();
             for (JsonNode child : block.path("children")) {
-                String part = Json.text(child, "text");
-                if (part != null) {
-                    text.append(part);
-                }
+                text.append(spanText(child));
             }
-            if (!text.isEmpty()) {
+            if (!text.toString().isBlank()) {
                 paragraphs.add(text.toString());
             }
         }
@@ -145,11 +142,11 @@ final class PortableText {
     }
 
     private void block(StringBuilder out, JsonNode block, Function<@Nullable String, @Nullable String> source) {
-        StringBuilder inner = new StringBuilder();
-        inline(inner, block);
-        if (inner.isEmpty()) {
+        if (!hasText(block)) {
             return;
         }
+        StringBuilder inner = new StringBuilder();
+        inline(inner, block);
         String style = Json.text(block, "style");
         String tag = BLOCK_TAGS.getOrDefault(style == null ? "normal" : style, "p");
         out.append('<').append(tag).append(attribute(block, source)).append('>')
@@ -196,14 +193,32 @@ final class PortableText {
                 open.add(mark);
                 closers.add(tags[1]);
             }
-            String text = Json.text(spans.get(i), "text");
-            if (text != null) {
-                out.append(escape(text).replace("\n", "<br>"));
-            }
+            out.append(escape(spanText(spans.get(i))).replace("\n", "<br>"));
         }
         for (int j = closers.size() - 1; j >= 0; j--) {
             out.append(closers.get(j));
         }
+    }
+
+    /// A span's text exactly as stored, not through [Json#text], which reads
+    /// text of only spaces as missing. Portable Text stores the space between
+    /// a bold word and an italic word as a span of its own, and without it the
+    /// two words run together.
+    ///
+    /// @return the text, empty if the span has none
+    private static String spanText(JsonNode span) {
+        JsonNode text = span.path("text");
+        return text.isString() ? text.stringValue() : "";
+    }
+
+    /// @return whether the block has anything to show: an editor's empty line, or one of only spaces, has not
+    private static boolean hasText(JsonNode block) {
+        for (JsonNode child : block.path("children")) {
+            if (!spanText(child).isBlank()) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /// The span's marks this class can write, in the order Sanity lists them.

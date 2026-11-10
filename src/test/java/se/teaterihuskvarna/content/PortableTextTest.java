@@ -67,6 +67,45 @@ class PortableTextTest {
         assertThat(portableText.html(blocks)).doesNotContain("data-sanity");
     }
 
+    /// Portable Text stores the space between a bold word and an italic word
+    /// as a span of its own, with no marks.
+    @Test
+    void theSpaceBetweenTwoFormattedWordsStays() {
+        assertThat(render(paragraph(span("fet", "strong") + "," + span(" ") + "," + span("kursiv", "em"))))
+                .isEqualTo("<p><strong>fet</strong> <em>kursiv</em></p>");
+    }
+
+    @Test
+    void aSpaceOfItsOwnInsideARunningMarkStays() {
+        assertThat(render(paragraph(span("a", "strong") + "," + span(" ", "strong") + ","
+                + span("b", "strong", "em"))))
+                .isEqualTo("<p><strong>a <em>b</em></strong></p>");
+    }
+
+    @Test
+    void aLineBreakOfItsOwnBetweenTwoFormattedWordsStays() {
+        assertThat(render(paragraph(span("rad ett", "strong") + "," + span("\\n") + "," + span("rad två", "em"))))
+                .isEqualTo("<p><strong>rad ett</strong><br><em>rad två</em></p>");
+    }
+
+    @Test
+    void thePlainTextKeepsTheSpaceBetweenTwoFormattedWords() {
+        JsonNode blocks = MAPPER.readTree(paragraph(span("fet", "strong") + "," + span(" ") + ","
+                + span("kursiv", "em")));
+
+        assertThat(PortableText.plain(blocks)).isEqualTo("fet kursiv");
+    }
+
+    /// An editor's empty line, or one with a stray space, is no paragraph.
+    @Test
+    void aParagraphOfOnlySpacesIsLeftOut() {
+        String json = "[" + block(span("")) + "," + block(span(" ")) + "," + block(span("  ", "strong")) + ","
+                + block(span("a")) + "]";
+
+        assertThat(render(json)).isEqualTo("<p>a</p>");
+        assertThat(PortableText.plain(MAPPER.readTree(json))).isEqualTo("a");
+    }
+
     @Test
     void nothingRendersAsNothing() {
         assertThat(portableText.html(null)).isEmpty();
@@ -75,6 +114,19 @@ class PortableTextTest {
     private static String item(String kind, int level, String text) {
         return "{\"_type\":\"block\",\"style\":\"normal\",\"listItem\":\"" + kind + "\",\"level\":" + level
                 + ",\"children\":[{\"_type\":\"span\",\"text\":\"" + text + "\",\"marks\":[]}]}";
+    }
+
+    private static String paragraph(String spans) {
+        return "[" + block(spans) + "]";
+    }
+
+    private static String block(String spans) {
+        return "{\"_type\":\"block\",\"style\":\"normal\",\"children\":[" + spans + "]}";
+    }
+
+    private static String span(String text, String... marks) {
+        String list = marks.length == 0 ? "" : "\"" + String.join("\",\"", marks) + "\"";
+        return "{\"_type\":\"span\",\"text\":\"" + text + "\",\"marks\":[" + list + "]}";
     }
 
     private String render(String json) {
