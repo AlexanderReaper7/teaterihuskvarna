@@ -38,6 +38,7 @@ Written by an agent on 2026-09-28. Everything below is a default the user has no
 - One request at a time asks Sanity for a type. Every other request for that type gets the last copy without waiting, both while that request waits and for 10 seconds after a fetch that failed, `retry-after` in [`application.yaml`](../../src/main/resources/application.yaml). A Sanity that hangs then holds one request per type for the 5 s timeout in every 15 s, and the other threads of the server stay free for login and administration. Until 2026-11-10 every request for an expired type queued for its own 5 s attempt, which the review of that date found. The agent chose 10 seconds so that a publish which meets one failed fetch and no webhook still shows after 45 + 5 + 10 s, R008's minute, plus the next query.
 - With no copy at all, as after a restart while Sanity is down, the requests that arrive during the first fetch wait for it together and share its answer. Once a fetch has failed, every request gets 503 at once, except one per 10 seconds, which asks Sanity again.
 - The webhook ends a back-off as well, so a publish never waits one out. A fetch that was running when the webhook arrived stores what it read as stale, since it may have read Sanity before the publish, and its failure starts no back-off.
+- The webhook reads at most 64 KB of a body and answers 413 to a larger one: by its `Content-Length` before reading any of it, and without one, as in a chunked request, after one byte more than the limit. Anyone can call the webhook, and its signature can only be checked with the whole body in memory. Sanity sends the whole changed document, because the webhook has no projection, with a `Content-Length` ([Sanity's webhook page](https://www.sanity.io/docs/content-lake/webhooks)). The largest of the 57 documents in the `dev` dataset, which holds the old site's content, was 6 583 bytes as JSON on 2026-11-10, so the agent chose a limit ten times that. A refused publish still shows when the copy expires, within 45 seconds. Until 2026-11-10 Spring read a body of any length before the check, which the review of that date found.
 - The application queries `api.sanity.io`, not the CDN, because the CDN's own delay would add to R008's minute.
 - [`PortableText`](../../src/main/java/se/teaterihuskvarna/content/PortableText.java) renders only the styles and marks [`blockContent.ts`](../../studio/schemaTypes/blockContent.ts) offers, escapes all text, and drops a link that is not http, https, mailto, tel or a path on the site.
 - Preview: the Presentation tool writes a secret to the dataset and opens `/forhandsgranska/start` in a frame. The application checks the secret with Sanity, the same query `@sanity/preview-url-secret` makes, and sets a cookie holding an expiry time signed with a key made at startup. The cookie is `SameSite=None; Secure; Partitioned`, so it reaches the site only inside the Studio's frame. A page with that cookie reads the drafts perspective, which needs `SANITY_API_KEY`, and shows a banner. A REST client gets the same pass from `POST /api/content/preview` and sends it in the `Preview-Pass` header, since every capability has an endpoint ([0014](0014-one-service-layer-two-adapters.md)).
@@ -90,6 +91,23 @@ Sanity took 0.6 to 1.2 s to accept each publish, so counted from the publish its
 A fetch already running when the webhook arrives stores what it read, which can predate the publish, as a stale copy, so the next request fetches again. The runs above were made on 2026-11-04, when such a fetch kept its copy for another 45 s. The change of 2026-11-10 was not measured against Sanity: [`ContentCacheTest`](../../src/test/java/se/teaterihuskvarna/content/ContentCacheTest.java) covers it with a source that hangs. Without the webhook the guarantee is still the `max-age` bound.
 
 These numbers replace the runs of 2026-10-12, which were made on localhost while the project had no webhook, and so measured the expiry.
+
+### The webhook's body limit
+
+Written by an agent on 2026-11-10. Run with curl against the application of the e2e stack, built from the change and reached at its container address, so straight to Tomcat with no Traefik in between. The bodies were signed with that stack's webhook secret unless the table says otherwise. Not run against Sanity or through the proxy.
+
+| Body | Sent with | Answer |
+|---|---|---|
+| 52 bytes | `Content-Length` | 204 |
+| 52 bytes | chunked | 204 |
+| 52 bytes, another body's signature | `Content-Length` | 401 |
+| 52 bytes, no signature | `Content-Length` | 401 |
+| 65 536 bytes | `Content-Length`, then chunked | 204 both times |
+| 65 537 bytes | `Content-Length`, then chunked | 413 both times |
+| 5 MB | `Content-Length`, then chunked | 413 both times, after curl had sent about 590 KB |
+| 200 MB of zeros from a pipe, no signature | chunked | 413 after 0.0015 s and about 615 KB sent |
+
+[`ContentIT`](../../src/test/java/se/teaterihuskvarna/content/ContentIT.java) counts what the application reads: nothing of a body whose `Content-Length` is over the limit, and 65 537 bytes of a chunked body of 1 MB.
 
 ### R009, preview
 
