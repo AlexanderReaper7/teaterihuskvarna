@@ -347,6 +347,18 @@ class MembershipApplicationIT extends IntegrationTestSupport {
         mockMvc.perform(confirmByApi("not-a-token")).andExpect(status().isNotFound());
     }
 
+    /// The adapter checks this body itself, and answers as a service's constraints are answered.
+    @Test
+    void aConfirmationWithoutATokenIsRefusedInSwedish() throws Exception {
+        mockMvc.perform(post("/api/membership-applications/confirmation")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"token\": \"\"}")
+                        .with(csrf()))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors.token")
+                        .value("Länken kan ha gått ut eller redan använts. Fyll i ansökan igen."));
+    }
+
     @Test
     void theApiRefusesABlankName() throws Exception {
         mockMvc.perform(post("/api/membership-applications")

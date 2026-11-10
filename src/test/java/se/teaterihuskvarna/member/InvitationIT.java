@@ -177,6 +177,16 @@ class InvitationIT extends MemberRegisterSupport {
         assertNoMail();
     }
 
+    /// The adapter checks this body itself, and answers as a service's constraints are answered.
+    @Test
+    void anAcceptanceWithoutATokenIsRefusedInSwedish() throws Exception {
+        mockMvc.perform(post("/api/invitations/acceptance").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"token\": \" \"}").with(csrf()))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors.token")
+                        .value("Inbjudan finns inte, är redan använd eller har gått ut. Be om en ny inbjudan."));
+    }
+
     @Test
     void anInvalidAddressIsRefusedInSwedish() throws Exception {
         adminInvites(olle, "inte en adress")
