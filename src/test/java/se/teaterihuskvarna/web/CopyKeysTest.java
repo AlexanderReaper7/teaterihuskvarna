@@ -35,12 +35,14 @@ import org.junit.jupiter.api.Test;
 /// `? :`. A key put together while the page is drawn, as `"shift.task." +
 /// shift.task()` is, cannot be read from the source, so the second test checks
 /// those from the other side: where the keys under such a start name some of
-/// the constants of an enum, they name all of them.
+/// the constants of an enum, they name all of them, with the ending the
+/// template adds, as `"document.kind." + kind.name() + ".plural"` does.
 class CopyKeysTest {
 
     private static final Pattern CALL = Pattern.compile("copy\\.text\\(");
     private static final Pattern TEXT = Pattern.compile("\"([^\"]*)\"");
     private static final Pattern START = Pattern.compile("^\\s*\"([A-Za-z0-9.]+\\.)\"\\s*\\+");
+    private static final Pattern END = Pattern.compile("\\+\\s*\"(\\.[A-Za-z0-9.]+)\"\\s*$");
 
     @Test
     void everyKeyWrittenOutIsInTheSwedishMessages() throws IOException {
@@ -72,15 +74,18 @@ class CopyKeysTest {
         for (Use use : uses()) {
             Matcher start = START.matcher(use.key());
             if (start.find()) {
-                starts.add(start.group(1));
+                Matcher end = END.matcher(use.key());
+                starts.add(start.group(1) + " " + (end.find() ? end.group(1) : ""));
             }
         }
         int compared = 0;
-        for (String start : starts) {
+        for (String both : starts) {
+            String start = both.substring(0, both.indexOf(' '));
+            String end = both.substring(both.indexOf(' ') + 1);
             Set<String> ends = new HashSet<>();
             for (String key : keys) {
-                if (key.startsWith(start)) {
-                    ends.add(key.substring(start.length()));
+                if (key.startsWith(start) && key.endsWith(end)) {
+                    ends.add(key.substring(start.length(), key.length() - end.length()));
                 }
             }
             for (Class<?> type : enums()) {
@@ -91,7 +96,8 @@ class CopyKeysTest {
                 compared++;
                 for (String constant : constants) {
                     if (!ends.contains(constant)) {
-                        missing.add("%s%s for %s.%s".formatted(start, constant, type.getSimpleName(), constant));
+                        missing.add("%s%s%s for %s.%s".formatted(start, constant, end, type.getSimpleName(),
+                                constant));
                     }
                 }
             }
