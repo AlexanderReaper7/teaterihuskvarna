@@ -17,132 +17,126 @@ Innan du kan logga in måste du ha blivit inbjuden till Sanity-projektet. Be en 
    ![Inloggningssidan i Sanity med valen GitHub, Google och E-mail / password](editor-guide/logga-in.png)
 
 3. Om du väljer e-post och det är första gången, skickar Sanity en kod med fyra siffror till din e-postadress. Skriv in koden. Du behöver bara göra det en gång.
-4. När du är inloggad ser du listan **Content** till vänster med Evenemang, Serie, Nyhet, Sida och Partner.
+4. När du är inloggad ser du listan **Innehåll** till vänster med Evenemang, Nyheter, Serier, Sidor, Produktioner, Styrelsen, Ludde-priser och Partners.
 
 ## Skapa och publicera ett evenemang
-1. Klicka på **Evenemang** i listan **Content** till vänster.
+1. Klicka på **Evenemang** i listan **Innehåll** till vänster och sedan på **Kommande evenemang**. Där visas evenemangen som inte har hänt än.
 2. Klicka på plustecknet (**+**) högst upp i den mittersta kolumnen. Ett nytt, tomt formulär öppnas till höger.
 
    ![Ett nytt, tomt evenemang i Sanity Studio. Markören står i fältet Titel.](editor-guide/evenemang-nytt.png)
 
 3. Fyll i fälten uppifrån och ned. Formuläret är längre än fönstret, så **rulla nedåt** med musen för att se alla fält.
 
-   | Fält | Vad du gör |
-   |------|------------|
-   | **Titel** | Skriv evenemangets namn. |
-   | **Adress** | Klicka på **Generate** så skapas adressen av titeln. Hela adressen blir till exempel `/evenemang/exempelfoerestaellning`. Å, ä och ö ersätts med andra bokstäver, och det är normalt. |
-   | **Datum och tid** | Välj när evenemanget börjar. | 
-   | **Plats** | Skriv var evenemanget hålls. | 
-   | **Serie** | Välj serie om evenemanget hör till en, till exempel Kaffe med drömmar. Lämna tomt för ett fristående evenemang. | 
-   | **Ingress** | Skriv en eller två meningar. De visas i kalendern och på startsidan. | 
-   | **Huvudbild** | Dra en bild hit eller klistra in den. Bilden visas överst på evenemangets sida och i kalendern. | 
-   | **Alternativ text** | Beskriv bilden för den som inte ser den, till exempel "Tre skådespelare på scenen". | 
-   | **Beskrivning** | Skriv en längre text om evenemanget. | 
-   | **Bildgalleri** | Lägg till fler bilder, till exempel från repetitioner. | 
-   | **Länk till biljetter** | Klistra in länken där man köper biljetter. | 
+   | Fält | Vad du gör                                                                                                                                                                                     |
+      |------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+   | **Titel** | Skriv evenemangets namn.                                                                                                                                                                       |
+   | **Adress** | Klicka på **Generera** så skapas adressen av titeln. Hela adressen blir till exempel `/evenemang/exempelfoerestaellning`. Å, ä och ö ersätts med andra bokstäver, och det är normalt.          |
+   | **Datum och tid** | Välj när evenemanget börjar.                                                                                                                                                                   |
+   | **Plats** | Skriv var evenemanget hålls.                                                                                                                                                                   |
+   | **Serie** | Skriv i fältet för att söka efter serien och välj den, till exempel Kaffe med drömmar. Du kan också klicka på **Skapa ny** för att skapa en ny serie. Lämna tomt för ett fristående evenemang. |
+   | **Ingress** | Skriv en eller två meningar. De visas i kalendern och på startsidan.                                                                                                                           |
+   | **Huvudbild** | Klicka på **Ladda upp** för att välja en bild från datorn, eller dra eller klistra in en bild. Bilden visas överst på evenemangets sida och i kalendern.                                       |
+   | **Alternativ text** | Beskriv bilden för den som inte ser den, till exempel "Tre skådespelare på scenen". Du måste fylla i den när du har lagt till en bild.                                                         |
+   | **Beskrivning** | Skriv en längre text om evenemanget.                                                                                                                                                           |
+   | **Bildgalleri** | Lägg till fler bilder, till exempel från repetitioner.                                                                                                                                         |
+   | **Länk till biljetter** | Klistra in länken där man köper biljetter.                                                                                                                                                     |
 
    Du måste fylla i **Titel**, **Adress** och **Datum och tid** för att kunna publicera.
 
    Om ett obligatoriskt fält är tomt går det inte att publicera. Fältet får en röd ram och ett rött utropstecken, och över knappen **Publicera** står "Det finns valideringsfel som måste åtgärdas innan detta dokument kan publiceras". Fyll i fältet och klicka på **Publicera** igen.
 
-4. Klicka på knappen **Publish** längst ned till höger.
+4. Klicka på knappen **Publicera** längst ned till höger.
 
-   ![Ett ifyllt evenemang med den aktiva knappen Publish längst ned till höger.](editor-guide/evenemang-publicera.png)
+   ![Ett ifyllt evenemang med den aktiva knappen Publicera längst ned till höger.](editor-guide/evenemang-publicera.png)
 
 5. Kontrollera att fliken **Publicerad** nu är markerad högst upp. Då är evenemanget publicerat och syns på webbplatsen inom en minut.
 
 ## Skapa och publicera en nyhet
-1. Klicka på **Nyhet** i listan **Content** till vänster.
+1. Klicka på **Nyheter** i listan **Innehåll** till vänster.
 2. Klicka på plustecknet (**+**) högst upp i den mittersta kolumnen. Ett nytt, tomt formulär öppnas till höger.
 
    ![Ett nytt, tomt nyhetsformulär i Sanity Studio. Markören står vid fältet Rubrik.](editor-guide/nyhet-ny.png)
 
 3. Fyll i fälten uppifrån och ned. Formuläret är längre än fönstret, så **rulla nedåt** med musen för att se alla fält.
-   
-   | Fält | Vad du gör |
-   |------|------------|
-   | **Rubrik** | Skriv nyhetens rubrik. |
-   | **Adress** | Klicka på **Generate** så skapas adressen av rubriken. |
-   | **Publiceringsdatum** | Välj datum och tid då nyheten ska börja synas på webbplatsen. |
-   | **Ingress** | Skriv en kort inledning. |
-   | **Huvudbild** | Dra en bild hit eller klistra in den. |
-   | **Alternativ text** | Beskriv bilden för den som inte ser den. |
-   | **Brödtext** | Skriv själva nyheten. |
-   | **Video** | Klistra in en länk till YouTube eller Vimeo. Lämna tomt om du inte har någon. |
+
+   | Fält | Vad du gör                                                                                     |
+      |------|------------------------------------------------------------------------------------------------|
+   | **Rubrik** | Skriv nyhetens rubrik.                                                                         |
+   | **Adress** | Klicka på **Generera** så skapas adressen av rubriken.                                         |
+   | **Publiceringsdatum** | Välj datum och tid då nyheten ska börja synas på webbplatsen.                                  |
+   | **Ingress** | Skriv en kort inledning.                                                                       |
+   | **Huvudbild** | Klicka på **Ladda upp** för att välja en bild från datorn, eller dra eller klistra in en bild. |
+   | **Alternativ text** | Beskriv bilden för den som inte ser den. Du måste fylla i den när du har lagt till en bild.    |
+   | **Brödtext** | Skriv själva nyheten.                                                                          |
+   | **Video** | Klistra in en länk till YouTube eller Vimeo. Lämna tomt om du inte har någon.                  |
 
    Du måste fylla i **Rubrik** och **Adress** för att kunna publicera.
 
    Om ett obligatoriskt fält är tomt går det inte att publicera. Fältet får en röd ram och ett rött utropstecken, och över knappen **Publicera** står "Det finns valideringsfel som måste åtgärdas innan detta dokument kan publiceras". Fyll i fältet och klicka på **Publicera** igen.
 
-4. Klicka på knappen **Publish** längst ned till höger.
+4. Klicka på knappen **Publicera** längst ned till höger.
 5. Kontrollera att fliken **Publicerad** nu är markerad högst upp. Då är nyheten publicerad och syns på webbplatsen inom en minut.
 
 ## Redigera en fast sida
 De fasta sidorna är **Om föreningen**, **Styrelsen**, **Produktioner**, **Ludde-priser** och **Kontakt**. Du ändrar texten på dem, men skapar inga nya sidor.
 
-1. Klicka på **Sida** i listan **Content** till vänster. De fasta sidorna visas i mittenkolumnen.
+1. Klicka på **Sidor** i listan **Innehåll** till vänster. De fasta sidorna visas i mittenkolumnen.
 
-   ![Listan över de fem fasta sidorna i Sanity Studio](editor-guide/sida-lista.png)
+   ![Listan över de fasta sidorna i Sanity Studio](editor-guide/sida-lista.png)
 
 2. Klicka på den sida du vill ändra. Formuläret öppnas till höger.
 3. Ändra det du vill i formuläret. Det är längre än fönstret, så **rulla nedåt** för att se alla fält.
 
    | Fält | Vad du gör |
-   |------|------------|
+      |------|------------|
    | **Rubrik** | Ändra inte. Webbplatsen använder den för att hitta rätt sida. |
    | **Vilken sida** | Ändra inte. Det finns bara fem sidor, och adressen måste vara en av dem. |
-   | **Bild överst** | Dra en bild hit eller klistra in den. Du kan också klicka på **Upload** för att välja en bild från datorn, eller **Select** för att välja en bild som redan finns. |
-   | **Alternativ text** | Beskriv bilden för den som inte ser den, till exempel "Tre skådespelare på scenen". |
+   | **Bild överst** | Klicka på **Ladda upp** för att välja en bild från datorn, eller **Välj** för att välja en bild som redan finns. Du kan också dra eller klistra in en bild. |
+   | **Alternativ text** | Beskriv bilden för den som inte ser den, till exempel "Tre skådespelare på scenen". Du måste fylla i den när du har lagt till en bild. |
    | **Innehåll** | Skriv eller ändra sidans text. Verktygsraden ovanför texten har bland annat fet stil, kursiv, punktlista, numrerad lista och länk. |
 
-   ![Sidan Om föreningen där texten har ändrats och knappen Publish är aktiv](editor-guide/sida-redigera.png)
+   ![Sidan Om föreningen där texten har ändrats och knappen Publicera är aktiv](editor-guide/sida-redigera.png)
 
-4. Klicka på knappen **Publish** längst ned till höger när du är nöjd.
+4. Klicka på knappen **Publicera** längst ned till höger när du är nöjd.
 5. Kontrollera att fliken **Publicerad** är markerad högst upp. Ändringen syns på webbplatsen inom en minut.
 
-### Om du ångrar dig innan du har publicerat
-Du kan kasta alla ändringar du har gjort sedan sidan senast publicerades.
-
-1. Klicka på de tre prickarna (**...**) bredvid **Publish**.
-2. Välj **Discard changes**.
-3. Klicka på den röda knappen **Discard changes** för att bekräfta. Tryck på **Cancel** om du ångrar dig.
-
-   ![Frågan Discard changes med knapparna Cancel och Discard changes](editor-guide/sida-kasta.png)
+Har du ändrat något som du inte vill publicera kan du kassera ändringarna. Det beskrivs i avsnittet **Avpublicera, ta bort och ångra** längre ned.
 
 ## Lägg till eller ändra en partner
 Partnerna visas på sidan `/partners` på webbplatsen.
 
 ### Lägg till en ny partner
 
-1. Klicka på **Partner** i listan **Content** till vänster. De partners som finns visas i mittenkolumnen.
+1. Klicka på **Partners** i listan **Innehåll** till vänster. De partners som finns visas i mittenkolumnen.
 2. Klicka på plustecknet (**+**) högst upp i den mittersta kolumnen. Ett nytt, tomt formulär öppnas till höger.
 
-   ![Ett nytt, tomt partnerformulär i Sanity Studio](editor-guide/partner-ny.png)
    Formuläret kan också visas över hela fönstret.
+
+   ![Ett nytt, tomt partnerformulär i Sanity Studio](editor-guide/partner-ny.png)
 
 3. Fyll i fälten uppifrån och ned.
 
    | Fält | Vad du gör |
-   |------|------------|
+      |------|------------|
    | **Namn** | Skriv partnerns namn. |
-   | **Logotyp** | Dra en bild hit eller klistra in den. Du kan också klicka på **Upload** för att välja en bild från datorn, eller **Select** för att välja en bild som redan finns. |
-   | **Alternativ text** | Beskriv bilden för den som inte ser den, till exempel "Logotyp för Exempelpartner". |
+   | **Logotyp** | Klicka på **Ladda upp** för att välja en bild från datorn, eller **Välj** för att välja en bild som redan finns. Du kan också dra eller klistra in en bild. |
+   | **Alternativ text** | Beskriv bilden för den som inte ser den, till exempel "Logotyp för Exempelpartner". Du måste fylla i den när du har lagt till en bild. |
    | **Webbplats** | Skriv partnerns hela webbadress. Den måste börja med `https://` eller `http://`. |
    | **Beskrivning** | Skriv en kort text om partnern. |
 
    Du måste bara fylla i **Namn** för att kunna publicera.
 
-   ![En ifylld partner med den aktiva knappen Publish längst ned till höger](editor-guide/partner-publicera.png)
+   ![En ifylld partner med den aktiva knappen Publicera längst ned till höger](editor-guide/partner-publicera.png)
 
-4. Klicka på knappen **Publish** längst ned till höger.
+4. Klicka på knappen **Publicera** längst ned till höger.
 5. Kontrollera att fliken **Publicerad** nu är markerad högst upp. Partnern syns på webbplatsen inom en minut.
 
 ### Ändra en partner som redan finns
 
-1. Klicka på **Partner** i listan **Content** till vänster.
+1. Klicka på **Partners** i listan **Innehåll** till vänster.
 2. Klicka på partnern i mittenkolumnen. Formuläret öppnas till höger.
 3. Ändra det du vill, till exempel **Webbplats** eller **Beskrivning**.
-4. Klicka på knappen **Publish** längst ned till höger.
+4. Klicka på knappen **Publicera** längst ned till höger.
 5. Kontrollera att fliken **Publicerad** är markerad. Ändringen syns på webbplatsen inom en minut.
 
 ## Förhandsgranska ett utkast
@@ -156,7 +150,7 @@ När du skapar eller ändrar något sparas det först som ett **utkast**. Besök
 - Längst ned till vänster står "Redigerad för ... sen" för ändringar som inte är publicerade och "Senast publicerad för ... sen" för det som är publicerat.
 - Är fliken **Publicerad** grå har dokumentet aldrig publicerats. Då syns det inte på webbplatsen.
 
-   ![Ett utkast som aldrig har publicerats, med fliken Utkast markerad och en orange ring i listan. De två andra evenemangen har både orange ring och grön prick.](editor-guide/utkast-flikar.png)
+![Ett utkast som aldrig har publicerats, med fliken Utkast markerad och en orange ring i listan. De två andra evenemangen har både orange ring och grön prick.](editor-guide/utkast-flikar.png)
 
 ## Avpublicera, ta bort och ångra
 
