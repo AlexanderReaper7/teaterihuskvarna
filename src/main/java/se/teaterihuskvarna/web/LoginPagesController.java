@@ -51,56 +51,61 @@ public class LoginPagesController {
         return form(LoginPage.ADMINISTRATOR, failed, csrf, feedback);
     }
 
-    /// @param failed present when a code did not work, as `?fel`
-    /// @param csrf   the hidden field of the page's form
+    /// @param failed   present when a code did not work, as `?fel`
+    /// @param csrf     the hidden field of the page's form
+    /// @param feedback what the request before left for this page
     /// @return the page that says a link may be on its way, with the form for the code
     @GetMapping("/logga-in/skickat")
-    public View memberSent(@RequestParam(name = "fel", required = false) @Nullable String failed, CsrfField csrf) {
-        return sent(LoginPage.MEMBER, failed, csrf);
+    public View memberSent(@RequestParam(name = "fel", required = false) @Nullable String failed, CsrfField csrf,
+            Feedback feedback) {
+        return sent(LoginPage.MEMBER, failed, csrf, feedback);
     }
 
-    /// @param failed present when a code did not work, as `?fel`
-    /// @param csrf   the hidden field of the page's form
+    /// @param failed   present when a code did not work, as `?fel`
+    /// @param csrf     the hidden field of the page's form
+    /// @param feedback what the request before left for this page
     /// @return the page that says a link may be on its way, with the form for the code
     @GetMapping("/admin/logga-in/skickat")
     public View administratorSent(@RequestParam(name = "fel", required = false) @Nullable String failed,
-            CsrfField csrf) {
-        return sent(LoginPage.ADMINISTRATOR, failed, csrf);
+            CsrfField csrf, Feedback feedback) {
+        return sent(LoginPage.ADMINISTRATOR, failed, csrf, feedback);
     }
 
-    /// @param token   the token from the mailed link
-    /// @param browser the browser's [LoginBrowser] cookie, if it has one
-    /// @param csrf    the hidden field of the page's form
+    /// @param token    the token from the mailed link
+    /// @param browser  the browser's [LoginBrowser] cookie, if it has one
+    /// @param csrf     the hidden field of the page's form
+    /// @param feedback what the request before left for this page
     /// @return the page with the button that logs in, the page saying to open the link where it was asked for,
     ///         or the address form with an error
     @GetMapping("/logga-in/lank")
     public View memberLink(
             @RequestParam(required = false) @Nullable String token,
             @CookieValue(name = LoginBrowser.COOKIE, required = false) @Nullable String browser,
-            CsrfField csrf) {
-        return link(LoginPage.MEMBER, token, browser, csrf);
+            CsrfField csrf, Feedback feedback) {
+        return link(LoginPage.MEMBER, token, browser, csrf, feedback);
     }
 
-    /// @param token   the token from the mailed link
-    /// @param browser the browser's [LoginBrowser] cookie, if it has one
-    /// @param csrf    the hidden field of the page's form
+    /// @param token    the token from the mailed link
+    /// @param browser  the browser's [LoginBrowser] cookie, if it has one
+    /// @param csrf     the hidden field of the page's form
+    /// @param feedback what the request before left for this page
     /// @return the page with the button that logs in, the page saying to open the link where it was asked for,
     ///         or the address form with an error
     @GetMapping("/admin/logga-in/lank")
     public View administratorLink(
             @RequestParam(required = false) @Nullable String token,
             @CookieValue(name = LoginBrowser.COOKIE, required = false) @Nullable String browser,
-            CsrfField csrf) {
-        return link(LoginPage.ADMINISTRATOR, token, browser, csrf);
+            CsrfField csrf, Feedback feedback) {
+        return link(LoginPage.ADMINISTRATOR, token, browser, csrf, feedback);
     }
 
     private View form(LoginPage page, @Nullable String failed, CsrfField csrf, Feedback feedback) {
         return HtmlPage.of(templates.loginForm(copy, csrf, feedback, page, failed != null));
     }
 
-    private View sent(LoginPage page, @Nullable String failed, CsrfField csrf) {
+    private View sent(LoginPage page, @Nullable String failed, CsrfField csrf, Feedback feedback) {
         return HtmlPage.of(templates.loginSent(copy, csrf, page, copy.duration(settings.linkLifetime()),
-                failed != null));
+                failed != null, feedback));
     }
 
     /// The link in the mail opens a page with a button, and only the button's POST
@@ -112,9 +117,14 @@ public class LoginPagesController {
     /// A link opened in another browser than the one that asked for it gets a
     /// page saying so, rather than a button that would fail. The token stays
     /// usable where it was asked for, and so does the code.
-    private View link(LoginPage page, @Nullable String token, @Nullable String browser, CsrfField csrf) {
+    ///
+    /// The page's script presses the button for the person. After a press
+    /// that was refused as stale the page leaves it to them, so a browser
+    /// that loses its session every time is not sent round in a circle.
+    private View link(LoginPage page, @Nullable String token, @Nullable String browser, CsrfField csrf,
+            Feedback feedback) {
         return switch (links.open(page.kind(), token, browser)) {
-            case HERE -> HtmlPage.of(templates.loginLink(copy, csrf, page, token));
+            case HERE -> HtmlPage.of(templates.loginLink(copy, csrf, page, token, feedback));
             case ELSEWHERE -> HtmlPage.of(templates.loginElsewhere(copy, page));
             case UNUSABLE -> Redirect.to(page.failurePath());
         };

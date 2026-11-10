@@ -542,6 +542,22 @@ class OfferIT extends IntegrationTestSupport {
                 .andExpect(status().isNotFound());
     }
 
+    /// A form refused as stale comes back to the page it was on with `gammal`
+    /// in the query. These two took no `Feedback` and showed the form again
+    /// with nothing said.
+    @Test
+    void theNewOfferPageAndTheDeletePageSayThatAFormWasStale() throws Exception {
+        long id = insertOffer("Verkstad", true, null, IN_A_MONTH, null);
+
+        for (String page : List.of("/admin/erbjudanden/nytt", "/admin/erbjudanden/" + id + "/ta-bort")) {
+            mockMvc.perform(get(page).param("gammal", "").with(asAdministrator()))
+                    .andExpect(status().isOk())
+                    .andExpect(content().string(containsString(copy.text("form.stale"))));
+            mockMvc.perform(get(page).with(asAdministrator()))
+                    .andExpect(content().string(not(containsString(copy.text("form.stale")))));
+        }
+    }
+
     @Test
     void deletingAMemberRemovesTheirRegistrations() {
         long id = insertOffer("Verkstad", true, null, IN_A_MONTH, null);

@@ -53,27 +53,31 @@ public class AdministratorOfferPageController {
         return HtmlPage.of(templates.adminOffers(copy, offers.list(), feedback));
     }
 
-    /// @param csrf the hidden field of the page's form
+    /// @param csrf     the hidden field of the page's form
+    /// @param feedback what the request before left for this page
     /// @return the page that creates an offer, with an empty form
     @GetMapping(LIST + "/nytt")
-    public View newOffer(CsrfField csrf) {
-        return HtmlPage.of(templates.adminOfferNew(copy, csrf, OfferForm.empty(), FieldErrors.none()));
+    public View newOffer(CsrfField csrf, Feedback feedback) {
+        return HtmlPage.of(templates.adminOfferNew(copy, csrf, OfferForm.empty(), FieldErrors.none(), feedback));
     }
 
-    /// @param form    what was typed
-    /// @param binding the values that could not be read, which are null in the form
-    /// @param csrf    the hidden field of the page's form
+    /// @param form     what was typed
+    /// @param binding  the values that could not be read, which are null in the form
+    /// @param csrf     the hidden field of the page's form
+    /// @param feedback what the request before left for this page
     /// @return a redirect to the new offer's page, or the form again with what was wrong
     @PostMapping(LIST)
-    public View create(@ModelAttribute("form") OfferForm form, BindingResult binding, CsrfField csrf) {
+    public View create(@ModelAttribute("form") OfferForm form, BindingResult binding, CsrfField csrf,
+            Feedback feedback) {
         if (binding.hasErrors()) {
-            return HtmlPage.of(templates.adminOfferNew(copy, csrf, form, FieldErrors.of(binding, copy, KEYS)));
+            return HtmlPage.of(templates.adminOfferNew(copy, csrf, form, FieldErrors.of(binding, copy, KEYS),
+                    feedback));
         }
         OfferDetails created;
         try {
             created = offers.create(form);
         } catch (ConstraintViolationException e) {
-            return HtmlPage.of(templates.adminOfferNew(copy, csrf, form, FieldErrors.of(e)));
+            return HtmlPage.of(templates.adminOfferNew(copy, csrf, form, FieldErrors.of(e), feedback));
         }
         return redirect(created.id()).notice(copy.text("adminOffers.created"));
     }
@@ -124,12 +128,13 @@ public class AdministratorOfferPageController {
         return redirect(id).notice(copy.text("adminOffers.unpublished"));
     }
 
-    /// @param id   the offer, whose registration count the page names
-    /// @param csrf the hidden field of the page's form
+    /// @param id       the offer, whose registration count the page names
+    /// @param csrf     the hidden field of the page's form
+    /// @param feedback what the request before left for this page
     /// @return the page that asks before deleting
     @GetMapping(LIST + "/{id}/ta-bort")
-    public View confirmDelete(@PathVariable long id, CsrfField csrf) {
-        return HtmlPage.of(templates.adminOfferDelete(copy, csrf, offers.details(id)));
+    public View confirmDelete(@PathVariable long id, CsrfField csrf, Feedback feedback) {
+        return HtmlPage.of(templates.adminOfferDelete(copy, csrf, offers.details(id), feedback));
     }
 
     /// @param id the offer, which takes its registrations with it

@@ -128,7 +128,7 @@ public class AdministratorMailingPageController {
                 .map(choice -> choice.name())
                 .findFirst()
                 .orElse("");
-        return HtmlPage.of(templates.adminMailingPreview(copy, csrf, form, key, audienceName, reach));
+        return HtmlPage.of(templates.adminMailingPreview(copy, csrf, form, key, audienceName, reach, feedback));
     }
 
     /// R023: the mail of the latest preview, for the frame on the preview page.

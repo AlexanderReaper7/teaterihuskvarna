@@ -1,11 +1,13 @@
 @import se.teaterihuskvarna.web.Copy
 @import se.teaterihuskvarna.web.CsrfField
+@import se.teaterihuskvarna.web.Feedback
 @import se.teaterihuskvarna.web.LoginPage
 @param Copy copy
 @param CsrfField csrf
 @param LoginPage page
 @param String lifetime
 @param boolean failed
+@param Feedback feedback
 @template.layout(copy = copy, title = copy.text("login.sent.heading"), content = @`
     <h1>${copy.text("login.sent.heading")}</h1>
     @if(failed)
@@ -13,6 +15,7 @@
     @endif
     <p>${copy.text("login.sent.body", lifetime)}</p>
     <p>${copy.text("login.sent.spam")}</p>
+    @template.tag.feedback(copy = copy, feedback = feedback)
     <form method="post" action="${page.linkPath()}">
         @template.tag.csrf(csrf = csrf)
         <p>${copy.text("login.code.intro")}</p>

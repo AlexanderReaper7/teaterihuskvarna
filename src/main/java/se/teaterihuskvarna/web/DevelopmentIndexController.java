@@ -37,11 +37,13 @@ public class DevelopmentIndexController {
     /// @param signedIn    who is logged in, or null
     /// @param loginFailed present after an immediate login failed
     /// @param csrf        the hidden field of the page's forms, which post to the login pages
+    /// @param feedback    what the request before left for this page
     /// @return the development index: the routes, the accounts, the environment and the login
     @GetMapping("/dev")
     public View index(@AuthenticationPrincipal @Nullable SignedIn signedIn,
-            @RequestParam(name = "login-failed", required = false) @Nullable String loginFailed, CsrfField csrf) {
+            @RequestParam(name = "login-failed", required = false) @Nullable String loginFailed, CsrfField csrf,
+            Feedback feedback) {
         return HtmlPage.of(templates.developmentIndex(copy, csrf, development.routes(), development.loginAccounts(),
-                development.environment(), signedIn, loginFailed != null));
+                development.environment(), signedIn, loginFailed != null, feedback));
     }
 }

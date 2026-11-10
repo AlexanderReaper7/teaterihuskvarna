@@ -70,6 +70,30 @@ test("the preview shows the chosen mail in a frame and makes no mailing", async 
   expect(after.count).toBe(before.count);
 });
 
+test("a preview whose form is refused as stale goes back to the mailing page, which says so", async ({ page }) => {
+  // The token is too old with the session still there after a login in
+  // another tab. The refused form is sent back to the page it was on, and the
+  // preview is drawn by a POST: a GET of its address is read as a mailing
+  // whose id is not a number, and gave the error page. The administrator now
+  // lands one step up, on the mailing page.
+  await linkLogin(page, "administrator", ADMINISTRATORS.ada);
+  const [before] = await sql<{ count: string }>("SELECT count(*) FROM mailing");
+  await preview(page);
+  await page.locator('main input[name="_csrf"]').evaluateAll((fields) => {
+    for (const field of fields) {
+      (field as HTMLInputElement).value = "too-old";
+    }
+  });
+
+  await page.getByRole("button", { name: text("adminMailings.preview.prepare") }).click();
+
+  await expect(page).toHaveURL("/admin/utskick?gammal");
+  await expect(page.getByRole("alert").filter({ hasText: text("form.stale") })).toBeVisible();
+  await expect(page.locator("main h1")).toHaveText(text("adminMailings.heading"));
+  const [after] = await sql<{ count: string }>("SELECT count(*) FROM mailing");
+  expect(after.count).toBe(before.count);
+});
+
 test("the preview shows the mail without JavaScript", async ({ browser }) => {
   const context = await browser.newContext({ javaScriptEnabled: false });
   const page = await context.newPage();

@@ -6,6 +6,7 @@
 @import se.teaterihuskvarna.login.SignedIn
 @import se.teaterihuskvarna.web.Copy
 @import se.teaterihuskvarna.web.CsrfField
+@import se.teaterihuskvarna.web.Feedback
 @param Copy copy
 @param CsrfField csrf
 @param List<Route> routes
@@ -13,6 +14,7 @@
 @param RunningEnvironment environment
 @param SignedIn signedIn
 @param boolean loginFailed
+@param Feedback feedback
 !{String schemaVersion = environment.schemaVersion();}
 !{RunningEnvironment.Commit commit = environment.commit();}
 !{java.time.Instant commitTime = commit == null ? null : commit.time();}
@@ -56,6 +58,7 @@
 
     <h2>Accounts that can log in</h2>
     <p>Log in now opens the account's page immediately. Send link tests the normal email flow through <a href="${environment.mailpitUrl()}">Mailpit</a>.</p>
+    @template.tag.feedback(copy = copy, feedback = feedback)
     @if(loginFailed)
         <p role="alert">That account can no longer log in. Choose an account from the current list.</p>
     @endif
