@@ -1,6 +1,14 @@
 spring:
   application:
     name: teaterihuskvarna
+  # The site has one language, so the browser's Accept-Language chooses
+  # nothing. Left to Spring's default, a validation message without a key of
+  # ours came in the browser's language, and Content-Language named that
+  # language over a page that says lang="sv". The locale is
+  # se.teaterihuskvarna.Swedish.LOCALE.
+  web:
+    locale: sv_SE
+    locale-resolver: fixed
   datasource:
     url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/teaterihuskvarna}
     username: ${DATABASE_USER:teaterihuskvarna}
