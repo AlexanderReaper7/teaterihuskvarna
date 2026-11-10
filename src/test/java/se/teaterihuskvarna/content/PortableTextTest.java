@@ -88,6 +88,27 @@ class PortableTextTest {
                 .isEqualTo("<p><strong>rad ett</strong><br><em>rad två</em></p>");
     }
 
+    /// What an article moved from the old site can end a paragraph in: a span
+    /// of only line breaks, or a line break after the last word.
+    @Test
+    void theLineBreaksThatEndABlockAreLeftOut() {
+        assertThat(render(paragraph(span("sista ordet") + "," + span("\\n\\n\\n"))))
+                .isEqualTo("<p>sista ordet</p>");
+        assertThat(render(paragraph(span("rad ett\\nrad två\\n \\n"))))
+                .isEqualTo("<p>rad ett<br>rad två</p>");
+        assertThat(render("[" + item("bullet", 1, "punkt\\n") + "]"))
+                .isEqualTo("<ul><li>punkt</li></ul>");
+    }
+
+    /// A mark on a span that only ended the block has nothing left to mark.
+    @Test
+    void aMarkAroundOnlyTheEndOfABlockDoesNotOpen() {
+        assertThat(render(paragraph(span("ord", "strong") + "," + span(" \\n", "em") + "," + span("\\n"))))
+                .isEqualTo("<p><strong>ord</strong></p>");
+        assertThat(render(paragraph(span("a", "strong") + "," + span("b \\n", "strong", "em"))))
+                .isEqualTo("<p><strong>a<em>b</em></strong></p>");
+    }
+
     @Test
     void thePlainTextKeepsTheSpaceBetweenTwoFormattedWords() {
         JsonNode blocks = MAPPER.readTree(paragraph(span("fet", "strong") + "," + span(" ") + ","
