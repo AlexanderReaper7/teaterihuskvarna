@@ -29,15 +29,18 @@ public class HouseholdService {
     private final MemberRepository members;
     private final AccountRepository accounts;
     private final InvitationRepository invitations;
+    private final FeeLedger ledger;
     private final ApplicationEventPublisher events;
     private final EntityManager entityManager;
 
     HouseholdService(HouseholdRepository households, MemberRepository members, AccountRepository accounts,
-            InvitationRepository invitations, ApplicationEventPublisher events, EntityManager entityManager) {
+            InvitationRepository invitations, FeeLedger ledger, ApplicationEventPublisher events,
+            EntityManager entityManager) {
         this.households = households;
         this.members = members;
         this.accounts = accounts;
         this.invitations = invitations;
+        this.ledger = ledger;
         this.events = events;
         this.entityManager = entityManager;
     }
@@ -72,7 +75,9 @@ public class HouseholdService {
                         invitations));
     }
 
-    /// Creates a household and puts the signed-in member in it atomically.
+    /// Creates a household and puts the signed-in member in it atomically. A
+    /// household fee the member has already paid for this year covers the
+    /// new household from now on.
     ///
     /// @param accountId the signed-in account
     /// @param form the household name
@@ -88,6 +93,7 @@ public class HouseholdService {
         Household household = households.save(new Household(form.name().strip()));
         household.setOwnerMemberId(member.getId());
         member.setHousehold(household);
+        ledger.joined(member, household);
         events.publishEvent(new MemberChanged(member.getId()));
         return ownDetails(household);
     }

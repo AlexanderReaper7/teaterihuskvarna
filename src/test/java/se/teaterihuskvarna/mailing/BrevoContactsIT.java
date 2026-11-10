@@ -22,8 +22,10 @@ import se.teaterihuskvarna.member.ContactForm;
 import se.teaterihuskvarna.member.FeeKind;
 import se.teaterihuskvarna.member.FeeMark;
 import se.teaterihuskvarna.member.FeeService;
+import se.teaterihuskvarna.member.HouseholdService;
 import se.teaterihuskvarna.member.MemberForm;
 import se.teaterihuskvarna.member.MemberService;
+import se.teaterihuskvarna.member.NewHousehold;
 import se.teaterihuskvarna.offer.OfferService;
 import se.teaterihuskvarna.outbox.Outbox;
 import se.teaterihuskvarna.volunteer.ShiftService;
@@ -37,6 +39,8 @@ import se.teaterihuskvarna.volunteer.ShiftService;
 ///   reaches it too.
 /// - A household fee sets PAID_YEAR on everyone in the household, and undoing
 ///   it clears it.
+/// - A household fee marked before the payer has a household sets PAID_YEAR
+///   on the household the payer creates or is placed in afterwards.
 /// - Registering for an offer sets OFFERS, and a shift sets LAST_SHIFT once it
 ///   has started.
 /// - Deleting a member deletes the contact.
@@ -53,6 +57,9 @@ class BrevoContactsIT extends IntegrationTestSupport {
 
     @Autowired
     private FeeService fees;
+
+    @Autowired
+    private HouseholdService households;
 
     @Autowired
     private OfferService offers;
@@ -108,6 +115,41 @@ class BrevoContactsIT extends IntegrationTestSupport {
 
         fees.undo(karin);
         awaitContact(nils, c -> c.paidYear() == null);
+    }
+
+    /// The fee was marked while Karin had no household. Nils is added to the
+    /// household she creates afterwards, and his contact shows the year.
+    @Test
+    void aHouseholdFeePaidFirstSetsThePaidYearInTheHouseholdThePayerCreates() {
+        long karin = members.add(form("Karin Holm", "karin@example.test", null)).id();
+        long account = jdbc.sql("SELECT id FROM account WHERE member_id = ?").param(karin).query(Long.class).single();
+        int year = LocalDate.now(SWEDEN).getYear();
+        fees.markPaid(karin, new FeeMark(FeeKind.HOUSEHOLD, null), firstAdministratorId());
+
+        long household = households.createForAccount(account, new NewHousehold("Familjen Holm")).id();
+        long nils = members.add(form("Nils Holm", "nils@example.test", household)).id();
+
+        awaitContact(karin, c -> Integer.valueOf(year).equals(c.paidYear()));
+        awaitContact(nils, c -> Integer.valueOf(year).equals(c.paidYear()));
+    }
+
+    /// The same payment, and an administrator places Karin in the household
+    /// Nils is already in. Nothing about Nils changed in the register, so his
+    /// contact is sent again only because the fee now covers him.
+    @Test
+    void aHouseholdFeePaidFirstSetsThePaidYearInTheHouseholdThePayerIsPlacedIn() {
+        long household = jdbc.sql("INSERT INTO household (name, created_at) VALUES ('Familjen Holm', now()) "
+                + "RETURNING id").query(Long.class).single();
+        long nils = members.add(form("Nils Holm", "nils@example.test", household)).id();
+        long karin = members.add(form("Karin Holm", "karin@example.test", null)).id();
+        int year = LocalDate.now(SWEDEN).getYear();
+        fees.markPaid(karin, new FeeMark(FeeKind.HOUSEHOLD, null), firstAdministratorId());
+        awaitContact(karin, c -> Integer.valueOf(year).equals(c.paidYear()));
+        assertThat(awaitContact(nils, c -> true).paidYear()).isNull();
+
+        members.update(karin, form("Karin Holm", "karin@example.test", household));
+
+        awaitContact(nils, c -> Integer.valueOf(year).equals(c.paidYear()));
     }
 
     @Test

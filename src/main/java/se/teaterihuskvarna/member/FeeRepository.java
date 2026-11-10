@@ -25,7 +25,8 @@ interface FeeRepository extends JpaRepository<Fee, Long> {
 
     /// Household payments for a year, each with the household it was paid for.
     /// The household stays covered after the payer moves out or is deleted,
-    /// and a payer in no household covers nobody but themselves.
+    /// and a payer in no household covers nobody but themselves until they
+    /// gain one, when [FeeLedger#joined] gives the payment that household.
     ///
     /// @param year a year
     /// @param kind always [FeeKind#HOUSEHOLD]; a parameter rather than a literal in the query

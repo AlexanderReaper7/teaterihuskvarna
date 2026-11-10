@@ -54,7 +54,9 @@ public class FeeService {
 
     /// Records a payment for this year, the year taken in Sweden. A
     /// [FeeKind#HOUSEHOLD] payment covers everyone in the member's household,
-    /// and keeps covering it if the member later moves or is deleted.
+    /// and keeps covering it if the member later moves or is deleted. From a
+    /// member in no household it names none, and covers the household the
+    /// member gains later in the year: [FeeLedger#joined].
     ///
     /// @param memberId        the member who paid
     /// @param mark            the kind, and the amount if it differs from the configured one
