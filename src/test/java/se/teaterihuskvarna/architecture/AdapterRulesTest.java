@@ -1,5 +1,6 @@
 package se.teaterihuskvarna.architecture;
 
+import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.classes;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -35,6 +36,17 @@ class AdapterRulesTest {
         noClasses().that().resideInAnyPackage(andBelow(WEB), andBelow(API))
                 .should().dependOnClassesThat().areAssignableTo(Repository.class)
                 .because("a capability has to be named in a service before an adapter can use it")
+                .check(PRODUCTION);
+    }
+
+    /// A repository another package can see is one an adapter compiles against,
+    /// and then only the rule above is in the way. Package private, the
+    /// compiler stops it first.
+    @Test
+    void everyRepositoryIsPackagePrivate() {
+        classes().that().areAssignableTo(Repository.class)
+                .should().bePackagePrivate()
+                .because("only the services in a repository's own package may read and write its table")
                 .check(PRODUCTION);
     }
 
