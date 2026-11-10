@@ -76,15 +76,17 @@ public class MembershipApplicationPageController {
 
     /// Opened from the mailed link. A GET does not confirm, for the reason the login
     /// link page gives: a mail scanner following the link would otherwise use it up.
+    /// It does look, so a link that is used, expired or cut short says so here,
+    /// and the button is shown only while pressing it would make a member.
     ///
     /// @param token    the token from the mailed link, for the button to post
     /// @param csrf     the hidden field of the page's form
     /// @param feedback what the request before left for this page
-    /// @return the page with the confirm button, or the expired page when there is no token
+    /// @return the page with the confirm button, or the expired page when the link would confirm nothing
     @GetMapping("/bli-medlem/bekrafta")
     public View confirmation(@RequestParam(required = false) @Nullable String token, CsrfField csrf,
             Feedback feedback) {
-        if (token == null || token.isBlank()) {
+        if (token == null || !applications.confirmable(token)) {
             return HtmlPage.of(templates.applicationExpired(copy));
         }
         return HtmlPage.of(templates.applicationConfirm(copy, csrf, feedback, token));

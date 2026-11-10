@@ -44,6 +44,13 @@ async function confirm(page: Page, link: string): Promise<void> {
 
 const expired = (page: Page) => page.getByRole("heading", { name: text("application.expired.heading") });
 
+/// A link that would confirm nothing says so when it is opened, and shows no button to press.
+async function opensExpired(page: Page, link: string): Promise<void> {
+  await page.goto(link);
+  await expect(expired(page)).toBeVisible();
+  await expect(page.locator("main form")).toHaveCount(0);
+}
+
 test.describe("what works", () => {
   test("a visitor applies, confirms, and can then log in as a member", async ({ page }) => {
     const email = freshAddress("sokande");
@@ -111,21 +118,32 @@ test.describe("what a person might get wrong", () => {
     expect(await page.evaluate(() => (window as { injected?: number }).injected)).toBeUndefined();
   });
 
-  test("the confirmation link used a second time shows the expired page", async ({ page }) => {
+  test("the confirmation link opened a second time shows the expired page", async ({ page }) => {
     const link = await applyForLink(page, { fullName: "Två Gånger", email: freshAddress("tva") });
     await confirm(page, link);
     await expect(page.getByRole("heading", { name: text("application.welcome.heading", "Två Gånger") }))
       .toBeVisible();
-    await confirm(page, link);
-    await expect(expired(page)).toBeVisible();
+    await opensExpired(page, link);
   });
+
+  test("a confirm page left open while the link was used shows the expired page when its button is pressed",
+    async ({ page, context }) => {
+      const link = await applyForLink(page, { fullName: "Två Flikar", email: freshAddress("flikar") });
+      const other = await context.newPage();
+      await other.goto(link);
+      await expect(other.getByRole("button", { name: text("application.confirm.submit") })).toBeVisible();
+      await confirm(page, link);
+      await expect(page.getByRole("heading", { name: text("application.welcome.heading", "Två Flikar") }))
+        .toBeVisible();
+      await other.getByRole("button", { name: text("application.confirm.submit") }).click();
+      await expect(expired(other)).toBeVisible();
+    });
 
   test("an expired application shows the expired page and makes no member", async ({ page }) => {
     const email = freshAddress("gammal");
     const link = await applyForLink(page, { fullName: "För Sen", email });
     await expireApplication(email);
-    await confirm(page, link);
-    await expect(expired(page)).toBeVisible();
+    await opensExpired(page, link);
     expect(await sql("SELECT 1 FROM account WHERE lower(email) = lower($1)", [email])).toHaveLength(0);
   });
 
@@ -133,8 +151,7 @@ test.describe("what a person might get wrong", () => {
     const email = freshAddress("dubbel");
     const first = await applyForLink(page, { fullName: "Första Försöket", email });
     const second = await applyForLink(page, { fullName: "Andra Försöket", email });
-    await confirm(page, first);
-    await expect(expired(page)).toBeVisible();
+    await opensExpired(page, first);
     await confirm(page, second);
     await expect(page.getByRole("heading", { name: text("application.welcome.heading", "Andra Försöket") }))
       .toBeVisible();
@@ -164,8 +181,7 @@ test.describe("what a person might get wrong", () => {
 
   test("a mangled confirmation link shows the expired page", async ({ page }) => {
     const link = new URL(await applyForLink(page, { fullName: "Trasig Länk", email: freshAddress("trasig") }));
-    await confirm(page, `${link.pathname}?token=${link.searchParams.get("token")!.slice(0, 12)}`);
-    await expect(expired(page)).toBeVisible();
+    await opensExpired(page, `${link.pathname}?token=${link.searchParams.get("token")!.slice(0, 12)}`);
   });
 
   test("the confirmation page without a token shows the expired page", async ({ page }) => {

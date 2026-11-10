@@ -3,18 +3,21 @@ package se.teaterihuskvarna.api;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
+import org.jspecify.annotations.Nullable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import se.teaterihuskvarna.member.ApplicationForm;
 import se.teaterihuskvarna.member.MembershipApplicationService;
 import se.teaterihuskvarna.member.Welcome;
 
-/// A visitor's membership application over HTTP: the same two service calls the
-/// `/bli-medlem` pages make.
+/// A visitor's membership application over HTTP: the same three service calls
+/// the `/bli-medlem` pages make.
 @RestController
 public class MembershipApplicationsController {
 
@@ -33,6 +36,18 @@ public class MembershipApplicationsController {
     @ResponseStatus(HttpStatus.ACCEPTED)
     public void apply(@RequestBody ApplicationForm form, HttpServletRequest request) {
         applications.apply(form, request.getRemoteAddr());
+    }
+
+    /// Looks, and uses nothing up: the token still works afterwards.
+    ///
+    /// @param token the token from the mailed link
+    /// @return 204 when a confirmation would make a member now, or 404 when the
+    ///         token is missing, unknown, expired or already used
+    @GetMapping("/api/membership-applications/confirmation")
+    public ResponseEntity<Void> confirmable(@RequestParam(required = false) @Nullable String token) {
+        return applications.confirmable(token)
+                ? ResponseEntity.noContent().build()
+                : ResponseEntity.notFound().build();
     }
 
     /// @param confirmation the token from the mailed link

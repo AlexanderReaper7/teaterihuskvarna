@@ -64,6 +64,13 @@ interface MembershipApplicationRepository extends JpaRepository<MembershipApplic
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     Optional<MembershipApplication> findByTokenHash(String tokenHash);
 
+    /// Reads an application by its token and locks nothing, for a look that
+    /// leaves the link as it was. [#findByTokenHash] is the one to confirm with.
+    ///
+    /// @param tokenHash the hash of the token from the link
+    /// @return the application, or empty
+    Optional<MembershipApplication> readByTokenHash(String tokenHash);
+
     /// @param now the current time
     /// @return how many expired applications were deleted
     @Modifying

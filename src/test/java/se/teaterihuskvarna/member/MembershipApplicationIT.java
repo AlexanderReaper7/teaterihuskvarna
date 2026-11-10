@@ -36,6 +36,8 @@ import se.teaterihuskvarna.login.LoginSettings;
 ///   instruction with the configured bankgiro;
 /// - a confirmation link works once, and not after it expires, and the mail
 ///   that carries it is not kept or sent after that;
+/// - a link that would confirm nothing says so when it is opened, with no
+///   button, and looking at a link uses nothing up;
 /// - an unconfirmed application is deleted 24 hours after it was sent;
 /// - an address that already has an account gets a login link instead, and the
 ///   response is the same as for a new address;
@@ -49,6 +51,7 @@ import se.teaterihuskvarna.login.LoginSettings;
 class MembershipApplicationIT extends IntegrationTestSupport {
 
     private static final String CONFIRMATION = "/bli-medlem/bekrafta";
+    private static final String CONFIRMABLE = "/api/membership-applications/confirmation";
     private static final String KARIN = "karin@example.test";
     private static final String ERIK = "erik@example.test";
 
@@ -95,6 +98,48 @@ class MembershipApplicationIT extends IntegrationTestSupport {
 
         assertThat(rowsIn("member")).isZero();
         assertThat(rowsIn("membership_application")).isEqualTo(1);
+    }
+
+    /// The page used to show its button for any token at all, so a link that
+    /// was used, expired or cut short asked the person to press a button that
+    /// could only answer that the link does not work.
+    @Test
+    void aLinkThatWouldConfirmNothingSaysSoWhenItIsOpened() throws Exception {
+        assertOpensExpired("not-a-token");
+
+        apply("Karin Karlsson", KARIN);
+        String expired = tokenIn(awaitMail(), CONFIRMATION);
+        jdbc.sql("UPDATE membership_application SET expires_at = now() - INTERVAL '1 minute'").update();
+        assertOpensExpired(expired);
+        assertThat(rowsIn("membership_application")).as("a look deletes nothing").isEqualTo(1);
+
+        forgetMails();
+        apply("Karin Karlsson", KARIN);
+        String used = tokenIn(awaitMail(), CONFIRMATION);
+        mockMvc.perform(post(CONFIRMATION).param("token", used).with(csrf()))
+                .andExpect(content().string(containsString(bankgiro)));
+        assertOpensExpired(used);
+
+        forgetMails();
+        apply("Erik Eriksson", ERIK);
+        String taken = tokenIn(awaitMail(), CONFIRMATION);
+        insertAccount("Erik Eriksson", ERIK);
+        assertOpensExpired(taken);
+    }
+
+    @Test
+    void theApiTellsWhetherALinkWouldConfirmAndUsesNothingUp() throws Exception {
+        mockMvc.perform(applyByApi("Karin Karlsson", KARIN)).andExpect(status().isAccepted());
+        String token = tokenIn(awaitMail(), CONFIRMATION);
+
+        mockMvc.perform(get(CONFIRMABLE).param("token", token)).andExpect(status().isNoContent());
+        mockMvc.perform(get(CONFIRMABLE).param("token", token)).andExpect(status().isNoContent());
+        mockMvc.perform(get(CONFIRMABLE).param("token", "not-a-token")).andExpect(status().isNotFound());
+        mockMvc.perform(get(CONFIRMABLE)).andExpect(status().isNotFound());
+        assertThat(rowsIn("member")).isZero();
+
+        mockMvc.perform(confirmByApi(token)).andExpect(status().isOk());
+        mockMvc.perform(get(CONFIRMABLE).param("token", token)).andExpect(status().isNotFound());
     }
 
     @Test
@@ -379,6 +424,14 @@ class MembershipApplicationIT extends IntegrationTestSupport {
                 .andExpect(status().isForbidden());
 
         assertNoMail();
+    }
+
+    /// The expired page, and no form with the token in it to press.
+    private void assertOpensExpired(String token) throws Exception {
+        mockMvc.perform(get(CONFIRMATION).param("token", token))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("Länken fungerar inte")))
+                .andExpect(content().string(not(containsString(token))));
     }
 
     private MvcResult apply(String fullName, String email) throws Exception {
