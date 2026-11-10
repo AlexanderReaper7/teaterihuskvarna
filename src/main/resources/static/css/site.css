@@ -195,7 +195,8 @@ nav [aria-current="true"] {
 
 /* The menu button, shown only on a narrow screen and only by menu.js. Without
  * the script the button keeps its hidden attribute and every link stays shown,
- * so [hidden] has to win over the display the narrow layout gives both. */
+ * so [hidden] has to win over the display the narrow layout gives both. While
+ * the page loads, .menu-pending in the narrow layout below does their work. */
 .menu-button[hidden],
 .site-nav[hidden] {
   display: none;
@@ -905,6 +906,19 @@ td .buttons button {
 
   .menu-button:hover {
     background: color-mix(in srgb, var(--color-on-primary) 10%, transparent);
+  }
+
+  /* menu.js sets .menu-pending on <html> before the body is parsed and removes
+   * it once it has set the hidden attributes, so the first paint is already
+   * the collapsed header. Hiding the links only when the script had run moved
+   * the page up by 590 px after it was shown. The button still carries its
+   * hidden attribute here, and this selector outweighs .menu-button[hidden]. */
+  .menu-pending .site-nav {
+    display: none;
+  }
+
+  .menu-pending .menu-button[hidden] {
+    display: grid;
   }
 
   .site-nav {
