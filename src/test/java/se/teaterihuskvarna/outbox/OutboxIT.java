@@ -7,6 +7,7 @@ import static org.mockito.Mockito.doThrow;
 
 import jakarta.mail.SendFailedException;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.Map;
 import java.util.function.BooleanSupplier;
 import org.junit.jupiter.api.Test;
@@ -30,10 +31,14 @@ import se.teaterihuskvarna.login.Mailer;
 /// - A mail that keeps failing is tried every six hours until it goes out.
 /// - A failed attempt is logged with the classes of what failed and never
 ///   with a message, since the relay's message names the recipient.
+/// - A mail with a `not_after` is retried until then, and after it deleted
+///   unsent and never handed to the relay. A mail without one is retried
+///   until it is sent.
 @ExtendWith(OutputCaptureExtension.class)
 class OutboxIT extends IntegrationTestSupport {
 
     private static final String REFUSED = "refused-recipient@example.test";
+    private static final String EXPIRED = "expired-mail@example.test";
 
     @Autowired
     private Mailer mailer;
@@ -67,6 +72,7 @@ class OutboxIT extends IntegrationTestSupport {
 
         mailer.send(new Email("karin@example.test"), "Hej", "Text");
         awaitAttempts(1);
+        assertThat(notAfterOfTheMailInTheOutbox()).isNull();
         assertThat(jdbc.sql("SELECT last_error FROM outbox").query(String.class).single())
                 .isEqualTo(MailSendException.class.getName());
         assertThat(jdbc.sql("SELECT next_attempt_at > now() FROM outbox").query(Boolean.class).single()).isTrue();
@@ -124,6 +130,50 @@ class OutboxIT extends IntegrationTestSupport {
         forgetMails();
         makeDue();
         outbox.retry();
+        assertThat(awaitMail().getSubject()).isEqualTo("Hej");
+        awaitEmpty();
+    }
+
+    /// The mail waits for its next attempt, which is not due. The retry job
+    /// deletes it all the same, so the payload does not outlive the link in it.
+    @Test
+    void aMailPastItsNotAfterIsDeletedWithoutWaitingForItsNextAttempt(CapturedOutput output) {
+        doThrow(new MailSendException("relay down")).doNothing().when(mailSender).send(any(SimpleMailMessage.class));
+        mailer.send(new Email(EXPIRED), "Hej", "Text", Instant.now().plus(Duration.ofHours(1)));
+        awaitAttempts(1);
+        long id = jdbc.sql("SELECT id FROM outbox").query(Long.class).single();
+        forgetMails();
+        jdbc.sql("UPDATE outbox SET not_after = now() - interval '1 second'").update();
+
+        outbox.retry();
+
+        assertThat(rowsIn("outbox")).isZero();
+        assertNoMail();
+        assertThat(output)
+                .contains("Outbox row " + id + " of kind mail passed its not_after undone and was deleted")
+                .doesNotContain(EXPIRED);
+    }
+
+    /// The attempt after the commit finds the time already passed, as an
+    /// attempt does that waited in the queue behind a slow relay.
+    @Test
+    void aMailPastItsNotAfterIsNeverHandedToTheRelay() {
+        mailer.send(new Email(EXPIRED), "Hej", "Text", Instant.now().minusSeconds(1));
+
+        awaitEmpty();
+        assertNoMail();
+    }
+
+    @Test
+    void aMailBeforeItsNotAfterIsStillRetried() {
+        doThrow(new MailSendException("relay down")).doNothing().when(mailSender).send(any(SimpleMailMessage.class));
+        mailer.send(new Email("karin@example.test"), "Hej", "Text", Instant.now().plus(Duration.ofHours(1)));
+        awaitAttempts(1);
+
+        forgetMails();
+        makeDue();
+        outbox.retry();
+
         assertThat(awaitMail().getSubject()).isEqualTo("Hej");
         awaitEmpty();
     }

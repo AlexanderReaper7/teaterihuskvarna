@@ -41,7 +41,8 @@ import se.teaterihuskvarna.IntegrationTestSupport;
 /// - each login page looks an address up among its own kind only, and a link
 ///   works only on the page of its own kind;
 /// - the database holds the SHA-256 of a token, never the token;
-/// - a link expires after the configured lifetime, one hour by default;
+/// - a link expires after the configured lifetime, one hour by default, and
+///   the mail that carries it is not kept or sent after that;
 /// - opening a link logs nobody in, pressing its button does, and only once;
 /// - a link and its code work only in the browser that asked for them, and a
 ///   code allows five tries;
@@ -454,6 +455,31 @@ class LoginIT extends IntegrationTestSupport {
 
         assertRedirect(mockMvc.perform(get("/medlem").with(sessionOf(login))).andReturn(), "/logga-in");
         mockMvc.perform(get("/api/member").with(sessionOf(login))).andExpect(status().isForbidden());
+    }
+
+    /// The outbox deletes a mail unsent after its `not_after`, so a link that
+    /// has expired is neither mailed nor kept in the outbox in plain text.
+    @Test
+    void aMembersLoginMailIsNotSentAfterItsLinkExpires() throws Exception {
+        insertAccount("Karin Karlsson", KARIN);
+        refuseEveryMail();
+
+        requestLink(LoginKind.MEMBER, KARIN);
+        awaitMails(1);
+
+        assertThat(notAfterOfTheMailInTheOutbox())
+                .isEqualTo(instantFrom("SELECT expires_at FROM one_time_token WHERE kind = 'member'"));
+    }
+
+    @Test
+    void anAdministratorsLoginMailIsNotSentAfterItsLinkExpires() throws Exception {
+        refuseEveryMail();
+
+        requestLink(LoginKind.ADMINISTRATOR, firstAdministratorEmail);
+        awaitMails(1);
+
+        assertThat(notAfterOfTheMailInTheOutbox())
+                .isEqualTo(instantFrom("SELECT expires_at FROM one_time_token WHERE kind = 'administrator'"));
     }
 
     @Test

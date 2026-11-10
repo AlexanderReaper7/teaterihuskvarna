@@ -75,6 +75,17 @@ class InvitationIT extends MemberRegisterSupport {
                 .query(Long.class).single()).as("nobody is logged in").isZero();
     }
 
+    /// The outbox deletes a mail unsent after its `not_after`.
+    @Test
+    void theInvitationMailIsNotSentAfterItsLinkExpires() throws Exception {
+        refuseEveryMail();
+
+        adminInvites(olle, OLLE_EMAIL).andExpect(status().isAccepted());
+        awaitMails(1);
+
+        assertThat(notAfterOfTheMailInTheOutbox()).isEqualTo(instantFrom("SELECT expires_at FROM invitation"));
+    }
+
     @Test
     void aLinkWorksOnce() throws Exception {
         adminInvites(olle, OLLE_EMAIL);

@@ -1,5 +1,6 @@
 package se.teaterihuskvarna.volunteer;
 
+import static java.util.Objects.requireNonNull;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.containsString;
@@ -49,7 +50,10 @@ import se.teaterihuskvarna.login.SignedIn;
 ///   and cancelling gives the place back.
 /// - The reminder goes once, the day before, to each booked member's address,
 ///   at once to a booking made after the day's last run for a shift tomorrow,
-///   and on the day itself to a booking the runs missed.
+///   and on the day itself to a booking the runs missed, with a text that
+///   says today.
+/// - A reminder that says tomorrow is not sent once that day has come, and
+///   one that says today not once the shift has started.
 /// - A past shift leaves the list of upcoming ones for the list of past ones.
 /// - A member's last shift is the latest booked one that has started.
 /// - The CSV file lists who booked, with a byte order mark.
@@ -305,6 +309,43 @@ class ShiftIT extends IntegrationTestSupport {
         assertThat(awaitMail().getTo()).containsExactly("karin@example.test");
     }
 
+    /// "i morgon" is wrong from midnight, so the outbox deletes the mail
+    /// unsent from then.
+    @Test
+    void aReminderThatSaysTomorrowIsNotSentOnTheShiftsOwnDay() {
+        LocalDate today = LocalDate.now(SWEDEN);
+        long shift = insertShift(today.plusDays(1).atTime(18, 0).atZone(SWEDEN).toInstant(), 3);
+        long karin = memberOf(insertAccount("Karin Holm", "karin@example.test"));
+        book(today.atTime(12, 0), shift, karin);
+        refuseEveryMail();
+
+        assertThat(sendReminders(today.atTime(13, 0))).isOne();
+        SimpleMailMessage mail = awaitMails(1).getFirst();
+
+        assertThat(mail.getSubject()).contains("i morgon");
+        assertThat(mail.getText()).contains("volontärpass i morgon.");
+        assertThat(notAfterOfTheMailInTheOutbox()).isEqualTo(today.plusDays(1).atStartOfDay(SWEDEN).toInstant());
+    }
+
+    /// The runs missed the booking the day before. The clock stands on the
+    /// morning of the shift's own day.
+    @Test
+    void aReminderOnTheShiftsOwnDaySaysTodayAndIsNotSentAfterTheShiftStarts() {
+        LocalDate shiftDay = LocalDate.now(SWEDEN).plusDays(1);
+        Instant startsAt = shiftDay.atTime(18, 0).atZone(SWEDEN).toInstant();
+        long shift = insertShift(startsAt, 3);
+        long karin = memberOf(insertAccount("Karin Holm", "karin@example.test"));
+        insertBooking(shift, karin, shiftDay.atStartOfDay(SWEDEN).toInstant().minus(Duration.ofHours(3)));
+        refuseEveryMail();
+
+        assertThat(sendReminders(shiftDay.atTime(9, 0))).isOne();
+        SimpleMailMessage mail = awaitMails(1).getFirst();
+
+        assertThat(mail.getSubject()).contains("i dag").doesNotContain("i morgon");
+        assertThat(mail.getText()).contains("volontärpass i dag.").contains("18:00").doesNotContain("i morgon");
+        assertThat(notAfterOfTheMailInTheOutbox()).isEqualTo(startsAt);
+    }
+
     @Test
     void aPastShiftMovesToThePastListInBothAdapters() throws Exception {
         long yesterday = insertShift(Instant.now().minus(Duration.ofDays(1)).minus(Duration.ofHours(1)), 3);
@@ -502,9 +543,19 @@ class ShiftIT extends IntegrationTestSupport {
     /// Books through a service whose clock is stopped at `time` in Sweden. Made
     /// by hand, it has no transaction of its own, so the test gives it one.
     private void book(LocalDateTime time, long shiftId, long memberId) {
-        ShiftService stopped = new ShiftService(shiftRepository, bookingRepository, content, mailer, messages,
-                Clock.fixed(time.atZone(SWEDEN).toInstant(), SWEDEN), events);
+        ShiftService stopped = stoppedAt(time);
         new TransactionTemplate(transactions).executeWithoutResult(status -> stopped.book(shiftId, memberId));
+    }
+
+    /// @return how many reminders the job queued, run with the clock stopped at `time` in Sweden
+    private int sendReminders(LocalDateTime time) {
+        ShiftService stopped = stoppedAt(time);
+        return requireNonNull(new TransactionTemplate(transactions).execute(status -> stopped.sendReminders()));
+    }
+
+    private ShiftService stoppedAt(LocalDateTime time) {
+        return new ShiftService(shiftRepository, bookingRepository, content, mailer, messages,
+                Clock.fixed(time.atZone(SWEDEN).toInstant(), SWEDEN), events);
     }
 
     private void insertBooking(long shiftId, long memberId, Instant createdAt) {

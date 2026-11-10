@@ -34,7 +34,8 @@ import se.teaterihuskvarna.login.LoginSettings;
 ///   and the database keeps the SHA-256 of the confirmation token, not the token;
 /// - confirming creates one member with one account and shows the payment
 ///   instruction with the configured bankgiro;
-/// - a confirmation link works once, and not after it expires;
+/// - a confirmation link works once, and not after it expires, and the mail
+///   that carries it is not kept or sent after that;
 /// - an unconfirmed application is deleted 24 hours after it was sent;
 /// - an address that already has an account gets a login link instead, and the
 ///   response is the same as for a new address;
@@ -215,6 +216,30 @@ class MembershipApplicationIT extends IntegrationTestSupport {
         assertThat(Duration.ofSeconds(keptSeconds)).isEqualTo(Duration.ofHours(24));
         assertThat(jdbc.sql("SELECT email FROM membership_application").query(String.class).list())
                 .containsExactly(ERIK);
+    }
+
+    @Test
+    void theConfirmationMailIsNotSentAfterItsLinkExpires() throws Exception {
+        refuseEveryMail();
+
+        apply("Karin Karlsson", KARIN);
+        awaitMails(1);
+
+        assertThat(notAfterOfTheMailInTheOutbox())
+                .isEqualTo(instantFrom("SELECT expires_at FROM membership_application"));
+    }
+
+    /// It carries no link that expires, only the login page's address, so it
+    /// is retried until it is sent.
+    @Test
+    void theMailToAnAddressWithAnAccountIsRetriedUntilItIsSent() throws Exception {
+        insertAccount("Karin Karlsson", KARIN);
+        refuseEveryMail();
+
+        apply("Karin Karlsson", KARIN);
+        awaitMails(1);
+
+        assertThat(notAfterOfTheMailInTheOutbox()).isNull();
     }
 
     /// The form must not reveal that an address is already a member's, so the
