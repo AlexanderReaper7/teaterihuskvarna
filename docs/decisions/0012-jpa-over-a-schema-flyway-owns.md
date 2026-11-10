@@ -40,7 +40,7 @@ SchemaManagementException: Schema validation: missing column [nickname] in table
 
 It does not catch a length mismatch. Changing `@Column(length = 254)` to `255` against a `VARCHAR(254)` column built and tested green.
 
-So `validate` is a guard against a forgotten migration, which is the failure it was chosen for. It is not a guard against a column declared at the wrong width. Lengths in the entities and lengths in the migrations are kept equal by hand, and that is the known gap in this arrangement.
+So `validate` is a guard against a forgotten migration, which is the failure it was chosen for. It is not a guard against a column declared at the wrong width. Lengths in the entities and lengths in the migrations were kept equal by hand until 2026-11-10. Since then [`EntityColumnsIT`](../../src/test/java/se/teaterihuskvarna/architecture/EntityColumnsIT.java) compares every `@Column` length of every entity with the column in the database and fails the build on a difference, an agent's addition after the user asked that the code make mistakes hard. A form's `@Size` is still matched to its column by hand.
 
 ## What it costs to undo
 

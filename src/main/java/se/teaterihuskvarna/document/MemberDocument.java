@@ -18,8 +18,7 @@ import org.jspecify.annotations.Nullable;
 /// ([MemberDocumentRepository#findSummaries]) and never the entity; only a
 /// download loads it.
 ///
-/// Column lengths mirror `V8__member_documents.sql` by hand, because
-/// `ddl-auto: validate` does not compare them:
+/// Column lengths mirror `V8__member_documents.sql`, which `EntityColumnsIT` checks:
 /// `docs/decisions/0012-jpa-over-a-schema-flyway-owns.md`.
 @Entity
 @Table(name = "member_document")

@@ -17,7 +17,7 @@ import org.jspecify.annotations.Nullable;
 /// associations.
 /// Both go NULL in the database when their row is deleted, and the fee is then
 /// an anonymous line in the year's income, which nothing needs to navigate
-/// from. Column lengths mirror `V6__fees_households_invitations.sql` by hand:
+/// from. Column lengths mirror `V6__fees_households_invitations.sql`, which `EntityColumnsIT` checks:
 /// `docs/decisions/0012-jpa-over-a-schema-flyway-owns.md`.
 @Entity
 @Table(name = "fee")
