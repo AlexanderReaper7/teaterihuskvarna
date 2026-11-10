@@ -107,6 +107,14 @@ public class Fee {
         return householdId;
     }
 
+    /// Names the household a [FeeKind#HOUSEHOLD] payment covers, for a payer
+    /// who was in no household when it was marked and has joined one since.
+    ///
+    /// @param householdId the household the payer is in now
+    public void coverHousehold(long householdId) {
+        this.householdId = householdId;
+    }
+
     /// @return the administrator who marked the payment, or null once that row is deleted
     public @Nullable Long getMarkedBy() {
         return markedBy;

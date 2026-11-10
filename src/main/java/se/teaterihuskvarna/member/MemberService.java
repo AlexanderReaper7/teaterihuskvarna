@@ -185,7 +185,9 @@ public class MemberService {
 
     /// Changes every field of a member, the address and the household included
     /// (R018, R019). An address on a member without an account creates one, and
-    /// withdraws any open invitation, since its link would now fail.
+    /// withdraws any open invitation, since its link would now fail. A
+    /// household fee the member paid for this year while in no household
+    /// covers the household they are placed in: [FeeLedger#joined].
     ///
     /// @param memberId the member to change
     /// @param form     the new values
@@ -212,6 +214,9 @@ public class MemberService {
             previous.setOwnerMemberId(null);
         }
         member.setHousehold(next);
+        if (next != null && (previous == null || !previous.getId().equals(next.getId()))) {
+            ledger.joined(member, next);
+        }
         if (email != null) {
             Email address = new Email(email);
             refuseTaken(address, account);

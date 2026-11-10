@@ -8,14 +8,17 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.TreeSet;
 import org.jspecify.annotations.Nullable;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
 
-/// Computes fee statuses, the rule [FeeStatus] states, from the `fee` table. The
-/// services in this package call it inside their own transactions. It reads a
-/// member's address from their account itself, for the payment instruction,
-/// so no caller can pass the wrong one.
+/// Computes fee statuses, the rule [FeeStatus] states, from the `fee` table,
+/// and gives a household fee its household when the payer gains one after
+/// paying. The services in this package call it inside their own
+/// transactions. It reads a member's address from their account itself, for
+/// the payment instruction, so no caller can pass the wrong one.
 @Component
 class FeeLedger {
 
@@ -26,17 +29,47 @@ class FeeLedger {
 
     private final FeeRepository fees;
     private final AccountRepository accounts;
+    private final MemberRepository members;
     private final AssociationSettings association;
+    private final ApplicationEventPublisher events;
 
-    FeeLedger(FeeRepository fees, AccountRepository accounts, AssociationSettings association) {
+    FeeLedger(FeeRepository fees, AccountRepository accounts, MemberRepository members,
+            AssociationSettings association, ApplicationEventPublisher events) {
         this.fees = fees;
         this.accounts = accounts;
+        this.members = members;
         this.association = association;
+        this.events = events;
     }
 
     /// @return the current year in Sweden
     int currentYear() {
         return Year.now(SWEDEN).getValue();
+    }
+
+    /// A member has gained a household. A household fee the member paid for
+    /// this year while in no household names none, and now names this one, so
+    /// it covers everyone in it. The contact of each other member of the
+    /// household is told that their paid year may have changed.
+    ///
+    /// Every service that puts an existing member in a household calls this,
+    /// after it has done so, and publishes the member's own [MemberChanged]
+    /// itself. A payment that already names a household stays with that
+    /// household, and a payment for another year is left as it is.
+    ///
+    /// @param member    the member, already in the household
+    /// @param household the household the member has gained
+    void joined(Member member, Household household) {
+        Optional<Fee> own = fees.findByMemberIdAndYear(member.getId(), currentYear());
+        if (own.isEmpty() || own.get().getKind() != FeeKind.HOUSEHOLD || own.get().getHouseholdId() != null) {
+            return;
+        }
+        own.get().coverHousehold(household.getId());
+        for (Member other : members.findByHousehold(household.getId())) {
+            if (!other.getId().equals(member.getId())) {
+                events.publishEvent(new MemberChanged(other.getId()));
+            }
+        }
     }
 
     /// This year's status of each of some members, with the year's payments and

@@ -8,6 +8,7 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.flash;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -26,7 +27,8 @@ import org.springframework.test.web.servlet.request.RequestPostProcessor;
 /// Proves the fee rules (R013, R019): what a member sees for this year, how an
 /// administrator marks and undoes a payment through both adapters, and the
 /// household rule, that a member is paid by a payment of their own or by a
-/// household payment for the household they are in now.
+/// household payment for the household they are in now. A household payment
+/// made before the payer has a household is for the one the payer gains.
 ///
 /// Erik and Maria share a household, Johan is in none.
 class FeeIT extends MemberRegisterSupport {
@@ -315,6 +317,103 @@ class FeeIT extends MemberRegisterSupport {
         assertPaid(mariaAccount, MARIA_EMAIL, true);
     }
 
+    /// Pay first, create the household afterwards, add the family: the fee
+    /// was marked while the payer had no household, and covers the household
+    /// from the moment the payer creates it.
+    @Test
+    void aHouseholdFeePaidBeforeTheHouseholdExistsCoversTheHouseholdThePayerCreates() throws Exception {
+        markHouseholdFee(johan);
+        RequestPostProcessor asJohan = asMember(johanAccount, JOHAN_EMAIL);
+
+        mockMvc.perform(post("/api/member/household")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\": \"Familjen Bergström\"}")
+                        .with(asJohan)
+                        .with(csrf()))
+                .andExpect(status().isCreated());
+        long lisa = Long.parseLong(mockMvc.perform(post("/api/member/household/members")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"fullName\": \"Lisa Bergström\"}")
+                        .with(asJohan)
+                        .with(csrf()))
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8));
+
+        assertPaid(johanAccount, JOHAN_EMAIL, false);
+        assertCoveredByHousehold(lisa);
+        mockMvc.perform(get("/api/admin/members").param("fee", "PAID").with(asAdministrator()))
+                .andExpect(jsonPath("$.members[*].fullName",
+                        containsInAnyOrder("Johan Bergström", "Lisa Bergström")));
+        assertThat(fees.latestPaidYear(johan)).isEqualTo(thisYear());
+        assertThat(fees.latestPaidYear(lisa)).isEqualTo(thisYear());
+        assertThat(feeHouseholdOf(johan)).isEqualTo(householdOf(johan));
+    }
+
+    /// The same payment, and an administrator places the payer in a household
+    /// that already has members: it covers them from then on.
+    @Test
+    void aHouseholdFeePaidBeforeAnAdministratorPlacesThePayerCoversThatHousehold() throws Exception {
+        markHouseholdFee(johan);
+        assertUnpaid(erikAccount, ERIK_EMAIL);
+
+        placeInHousehold(johan, "Johan Bergström", JOHAN_EMAIL, household);
+
+        assertPaid(johanAccount, JOHAN_EMAIL, false);
+        assertPaid(erikAccount, ERIK_EMAIL, true);
+        assertPaid(mariaAccount, MARIA_EMAIL, true);
+        assertThat(fees.latestPaidYear(johan)).isEqualTo(thisYear());
+        assertThat(fees.latestPaidYear(erik)).isEqualTo(thisYear());
+        assertThat(fees.latestPaidYear(maria)).isEqualTo(thisYear());
+        assertThat(feeHouseholdOf(johan)).isEqualTo(household);
+    }
+
+    /// Only a household fee follows the payer into a household. An individual
+    /// fee paid before the household exists still covers the payer alone.
+    @Test
+    void anIndividualFeePaidBeforeTheHouseholdExistsCoversOnlyThePayer() throws Exception {
+        insertFee(johan, "INDIVIDUAL");
+
+        placeInHousehold(johan, "Johan Bergström", JOHAN_EMAIL, household);
+
+        assertThat(feeHouseholdOf(johan)).isNull();
+        assertPaid(johanAccount, JOHAN_EMAIL, false);
+        assertUnpaid(erikAccount, ERIK_EMAIL);
+    }
+
+    /// A payment that already names a household stays with it when an
+    /// administrator moves the payer, as it does when the payer is moved in
+    /// the database above.
+    @Test
+    void aHouseholdPaymentStaysWithItsHouseholdWhenAnAdministratorMovesThePayer() throws Exception {
+        insertFee(erik, "HOUSEHOLD");
+        long other = insertHousehold("Familjen Bergström");
+        moveTo(johan, other);
+
+        placeInHousehold(erik, "Erik Lindqvist", ERIK_EMAIL, other);
+
+        assertThat(feeHouseholdOf(erik)).isEqualTo(household);
+        assertPaid(mariaAccount, MARIA_EMAIL, true);
+        assertPaid(erikAccount, ERIK_EMAIL, false);
+        assertUnpaid(johanAccount, JOHAN_EMAIL);
+    }
+
+    /// A payer who joins a household that is already covered brings a second
+    /// household payment to it. No rule says otherwise, so either payment
+    /// keeps the household covered when the other is undone.
+    @Test
+    void aSecondHouseholdPaymentKeepsTheHouseholdCoveredWhenTheFirstIsUndone() throws Exception {
+        insertFee(erik, "HOUSEHOLD");
+        markHouseholdFee(johan);
+        placeInHousehold(johan, "Johan Bergström", JOHAN_EMAIL, household);
+
+        mockMvc.perform(delete("/api/admin/members/" + erik + "/fee").with(asAdministrator()).with(csrf()))
+                .andExpect(status().isNoContent());
+
+        assertPaid(johanAccount, JOHAN_EMAIL, false);
+        assertPaid(erikAccount, ERIK_EMAIL, true);
+        assertPaid(mariaAccount, MARIA_EMAIL, true);
+    }
+
     @Test
     void theAdministratorPageShowsHouseholdCoverageAndHistory() throws Exception {
         insertFee(erik, "HOUSEHOLD");
@@ -418,6 +517,52 @@ class FeeIT extends MemberRegisterSupport {
                 .param(member)
                 .query()
                 .singleRow();
+    }
+
+    /// An administrator marks a household fee through the API, as the member's
+    /// page offers for a member with or without a household.
+    private void markHouseholdFee(long member) throws Exception {
+        mockMvc.perform(post("/api/admin/members/" + member + "/fee")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"kind\": \"HOUSEHOLD\"}")
+                        .with(asAdministrator())
+                        .with(csrf()))
+                .andExpect(status().isNoContent());
+    }
+
+    /// An administrator edits the member and chooses a household for them.
+    private void placeInHousehold(long member, String fullName, String email, long householdId) throws Exception {
+        mockMvc.perform(put("/api/admin/members/" + member)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"fullName\": \"%s\", \"email\": \"%s\", \"householdId\": %d}"
+                                .formatted(fullName, email, householdId))
+                        .with(asAdministrator())
+                        .with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.householdId").value(householdId));
+    }
+
+    private long householdOf(long member) {
+        return jdbc.sql("SELECT household_id FROM member WHERE id = ?").param(member).query(Long.class).single();
+    }
+
+    /// @return the household the member's own payment this year names, or null for none
+    private @Nullable Long feeHouseholdOf(long member) {
+        return (Long) jdbc.sql("SELECT household_id FROM fee WHERE member_id = ? AND year = ?")
+                .params(member, thisYear())
+                .query()
+                .singleRow()
+                .get("household_id");
+    }
+
+    /// A member without an account has no `/api/member`, so the
+    /// administrator's view of them is read instead.
+    private void assertCoveredByHousehold(long member) throws Exception {
+        mockMvc.perform(get("/api/admin/members/" + member).with(asAdministrator()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.fees[0].year").value(thisYear()))
+                .andExpect(jsonPath("$.fees[0].paidAt").isNotEmpty())
+                .andExpect(jsonPath("$.fees[0].throughHousehold").value(true));
     }
 
     private void assertPaid(long account, String email, boolean throughHousehold) throws Exception {
