@@ -23,8 +23,8 @@ import se.teaterihuskvarna.volunteer.ShiftService;
 
 /// Volunteer shift administration (R016, R020): the upcoming shifts with a form
 /// to add one, each shift's page with who booked it, the CSV file of those
-/// bookings, and the delete button. Spring Security lets only an administrator
-/// account reach it.
+/// bookings, and a confirmation page before a delete. Spring Security lets only
+/// an administrator account reach it.
 @Controller
 public class AdministratorShiftPageController {
 
@@ -80,6 +80,15 @@ public class AdministratorShiftPageController {
         model.addAttribute("shift", shifts.details(id));
         model.addAttribute("volunteers", shifts.volunteers(id));
         return "admin/shift";
+    }
+
+    /// @param id    the shift
+    /// @param model receives the shift, whose booking count the page names
+    /// @return the page that asks before deleting
+    @GetMapping(LIST + "/{id}/ta-bort")
+    public String confirmDelete(@PathVariable long id, Model model) {
+        model.addAttribute("shift", shifts.details(id));
+        return "admin/shiftDelete";
     }
 
     /// @param id         the shift, which takes its bookings with it

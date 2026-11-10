@@ -166,7 +166,12 @@ Medlemmarna bokar passen under Mina sidor. På passets sida ser du hur många so
 
 ![Ett volontärpass med en bokad volontär](administrator-guide/pass-bokningar.png)
 
-**Ta bort passet** tar bort passet och dess bokningar. Volontärerna får inget meddelande, så tala om det för dem själv.
+Så här tar du bort ett pass:
+
+1. Tryck **Ta bort passet** längst ner på passets sida.
+2. Läs hur många bokningar som tas bort med passet och tryck **Ta bort**. **Nej, tillbaka till passet** tar dig tillbaka utan att något händer.
+
+Volontärerna får inget meddelande, så tala om det för dem själv. Det går inte att ångra.
 
 ## Handlingar
 
@@ -179,7 +184,12 @@ Handlingar är filer som medlemmarna kan läsa under Mina sidor, till exempel ka
 
 ![Formuläret för att ladda upp en handling, ifyllt](administrator-guide/handlingar.png)
 
-**Ta bort** på handlingens rad tar bort den.
+Så här tar du bort en handling:
+
+1. Tryck **Ta bort** på handlingens rad.
+2. Läs vilken handling det gäller och tryck **Ta bort**. **Nej, tillbaka till handlingarna** tar dig tillbaka utan att något händer.
+
+Filen tas bort, och medlemmarna kan inte längre läsa den. Det går inte att ångra.
 
 ## Utskick
 
@@ -224,7 +234,12 @@ Administratörerna står under **Administratörer** på översikten.
 
 ![Administratörerna och formuläret för att lägga till en](administrator-guide/administratorer.png)
 
-**Ta bort** på en rad tar bort administratören, loggar ut den överallt och tar bort dess lösenordsnycklar. Du kan inte ta bort dig själv; be en annan administratör göra det. Systemet vägrar också när bara två administratörer finns kvar, eftersom projektplanen kräver att minst två i styrelsen har tillgång.
+Så här tar du bort en administratör:
+
+1. Tryck **Ta bort** på administratörens rad.
+2. Läs vem det gäller och tryck **Ta bort**. **Nej, tillbaka till översikten** tar dig tillbaka utan att något händer.
+
+Administratören loggas ut överallt, och dess lösenordsnycklar tas bort. En borttagen administratör kan läggas till igen, och lägger då till sina lösenordsnycklar på nytt. Du kan inte ta bort dig själv; be en annan administratör göra det. Systemet vägrar också när bara två administratörer finns kvar, eftersom projektplanen kräver att minst två i styrelsen har tillgång.
 
 ## När något går fel
 
@@ -235,6 +250,8 @@ Skriv vad du gjorde, vad du väntade dig och vad som hände i stället, och ta g
 ## Verifiering
 
 En agent följde varje steg ovan den 3 november 2026 på en lokal testmiljö med webbplatsen som den ser ut när guiden publiceras, inloggad som den påhittade administratören Ada Admin, med ett skript som också tog bilderna. Skriptet kontrollerade att varje sida svarade som guiden säger, och från en påhittad medlems inloggning att medlemmarna ser det som guiden säger att de ser. Lösenordsnyckeln prövades med Chromiums låtsade autentiserare, inte med ett fingeravtryck eller en telefon.
+
+Den 10 november 2026 fick en handling, ett volontärpass och en administratör en sida som frågar innan något tas bort. En agent skrev om de tre stegen då och tog om bilderna av administratörerna och av volontärpasset. Stegen följdes den gången av de automatiska webbläsartesterna i [`e2e/tests/`](../e2e/tests/) ([`documents.spec.ts`](../e2e/tests/documents.spec.ts), [`shifts.spec.ts`](../e2e/tests/shifts.spec.ts) och [`admin.spec.ts`](../e2e/tests/admin.spec.ts)), inte av skriptet från den 3 november.
 
 Inte prövat:
 

@@ -6,7 +6,7 @@ import { expect, test, type Page } from "@playwright/test";
 import { linkLogin } from "../support/auth";
 import { clearLinkRequests, resetAdministrators } from "../support/db";
 import { ADMINISTRATORS } from "../support/site";
-import { ADMIN, MEMBER, PUBLIC, details, householdPages, prepareAdministratorPages, saveMailingDraft, scan } from "../support/pages";
+import { ADMIN, MEMBER, PUBLIC, confirmations, details, householdPages, prepareAdministratorPages, saveMailingDraft, scan } from "../support/pages";
 
 test.beforeEach(async () => {
   await resetAdministrators();
@@ -128,7 +128,8 @@ for (const width of WIDTHS) {
       const shifts = await details(page, "/admin/volontarpass", "/admin/volontarpass/");
       const mailings = await details(page, "/admin/utskick", "/admin/utskick/");
       expect([...preview, ...await scan(page, [...ADMIN, ...members, ...offers, ...shifts, ...mailings,
-        ...members.map((path) => path + "/ta-bort"), ...offers.map((path) => path + "/ta-bort")], misalignments)]).toEqual([]);
+        ...members.map((path) => path + "/ta-bort"), ...offers.map((path) => path + "/ta-bort"),
+        ...await confirmations(page, shifts)], misalignments)]).toEqual([]);
     });
   });
 }

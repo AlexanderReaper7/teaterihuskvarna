@@ -2,9 +2,7 @@
 @import se.teaterihuskvarna.volunteer.ShiftDetails
 @import se.teaterihuskvarna.volunteer.Volunteer
 @import se.teaterihuskvarna.web.Copy
-@import se.teaterihuskvarna.web.CsrfField
 @param Copy copy
-@param CsrfField csrf
 @param ShiftDetails shift
 @param List<Volunteer> volunteers
 @param String error
@@ -57,9 +55,5 @@
     @endif
 
     <h2>${copy.text("adminShifts.delete")}</h2>
-    <p>${copy.text("adminShifts.deleteWarning", shift.booked())}</p>
-    <form method="post" action="/admin/volontarpass/${shift.id()}/ta-bort">
-        @template.tag.csrf(csrf = csrf)
-        <button type="submit" class="button-secondary">@template.icon.trash2() ${copy.text("adminShifts.delete")}</button>
-    </form>
+    <p><a href="/admin/volontarpass/${shift.id()}/ta-bort">@template.icon.trash2() ${copy.text("adminShifts.delete")}</a></p>
 `)

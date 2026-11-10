@@ -47,15 +47,7 @@
                         <th scope="row"><a href="/admin/handlingar/${document.id()}/fil">${document.title()}</a></th>
                         <td>${copy.text("document.kind." + document.kind().name())}</td>
                         <td>${copy.date(document.publishedOn())}</td>
-                        <td>
-                            <form method="post" action="/admin/handlingar/${document.id()}/ta-bort">
-                                @template.tag.csrf(csrf = csrf)
-                                <button type="submit" class="button-secondary"
-                                        aria-label="${removeLabel}">
-                                    @template.icon.trash2() ${copy.text("adminDocuments.remove")}
-                                </button>
-                            </form>
-                        </td>
+                        <td><a href="/admin/handlingar/${document.id()}/ta-bort" aria-label="${removeLabel}">@template.icon.trash2() ${copy.text("adminDocuments.remove")}</a></td>
                     </tr>
                 @endfor
             </tbody>

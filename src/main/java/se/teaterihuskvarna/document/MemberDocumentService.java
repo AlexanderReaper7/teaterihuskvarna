@@ -41,6 +41,13 @@ public class MemberDocumentService {
         return documents.findSummaries();
     }
 
+    /// @param id the document
+    /// @return the document without its file, for the page that asks before a delete
+    /// @throws NoSuchDocument if no document has the id
+    public DocumentSummary summary(long id) {
+        return documents.findSummary(id).orElseThrow(NoSuchDocument::new);
+    }
+
     /// Stores a PDF. The file must start with `%PDF-`; the type the upload
     /// claimed is not trusted, since the sender chooses it.
     ///

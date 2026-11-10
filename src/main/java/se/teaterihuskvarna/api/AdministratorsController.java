@@ -41,6 +41,15 @@ public class AdministratorsController {
         return administrators.add(form, signedIn.id());
     }
 
+    /// @param id the administrator
+    /// @return the administrator
+    @GetMapping("/api/admin/administrators/{id}")
+    public AdministratorDetails details(@PathVariable long id) {
+        return administrators.details(id);
+    }
+
+    /// The pages ask before they remove. Here the DELETE is the whole request.
+    ///
     /// @param signedIn the logged-in administrator, recorded as the one who removed
     /// @param id       the administrator to remove, never the caller
     @DeleteMapping("/api/admin/administrators/{id}")
