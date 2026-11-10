@@ -137,9 +137,20 @@ Spring's request cache is off in both chains since 2026-09-23. It saves a refuse
 
 ## The rate limit answers like a success
 
-A filter in front of the token filter counts link requests per address and per client IP address in `link_request`. Over the limit, it answers with the same redirect a successful request gets and sends nothing. A distinct error would tell a caller the address had been asked for recently, which is itself a hint that it exists.
+A filter in front of the token filter counts link requests per address and per client IP address in `link_request` (`LinkRequestLimiter`). Over a limit, it answers with the same redirect a successful request gets and sends nothing. A distinct error would tell a caller the address had been asked for recently, which is itself a hint that it exists.
 
 The client IP address is the one Traefik forwards: `server.forward-headers-strategy: native` in [`src/main/resources/application.yaml`](../../src/main/resources/application.yaml), with the reasoning beside it.
+
+### Agent notes: what each limit counts
+
+Written by an agent on 2026-11-10, after finding C4 of the review of that day. A default the user has not reviewed.
+
+- An address counts the requests that were let through for it, 5 an hour by default. A client counts every request it made, refused ones too, 20 an hour by default, so a client that keeps asking stays over its limit instead of getting a new allowance each hour.
+- A refused request is stored with an empty address, so it counts against its client and against no address. Counted against the address, as it was until 2026-11-10, it let a client over its own limit fill any address's count by posting that address, and it kept a person who tried again while over the address limit over it for as long as they tried.
+- Each refusal is logged at WARN with the limit that refused it, as in `Refused a request for mail: over the limit of 5 per address in PT1H`, so an address held at its limit shows in the log. The line holds neither the address nor the client IP address.
+- The membership application form goes through the same limiter with the same counts, so requests on the login page use up what the form allows the same address, and the other way round.
+- `LinkRequestLimiterIT` proves the counting and the log lines, and `MembershipApplicationIT` that the form is limited.
+- Left open: whoever sends 5 requests an hour that are let through, with another person's address, still holds that address at its limit. That person cannot get a link of their own meanwhile, and gets 5 mails an hour they cannot use, because a link works only in the browser that asked for it. A member with a passkey ([0016](0016-passkeys-beside-links.md)) logs in without mail and is not affected. Nothing remembers a browser once its login has ended, so the limiter cannot tell the address's owner from anyone else. Closing this needs a decision by the user.
 
 ## Rejected
 
