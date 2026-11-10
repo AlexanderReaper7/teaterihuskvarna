@@ -76,9 +76,29 @@ public class Member {
         return household;
     }
 
-    /// @param household the household whose fee covers this member, or null for none
-    public void setHousehold(@Nullable Household household) {
+    /// For a member who is not stored yet, who has paid nothing that could
+    /// need to follow them.
+    ///
+    /// @param household the household the new member starts in, or null for none
+    /// @throws IllegalStateException if the member is stored: [FeeLedger#join] moves that one
+    public void startIn(@Nullable Household household) {
+        if (id != null) {
+            throw new IllegalStateException("a stored member joins a household through FeeLedger.join");
+        }
         this.household = household;
+    }
+
+    /// Only [FeeLedger#join] calls this, so that a household fee the member has
+    /// paid goes with them. `HouseholdRulesTest` fails the build on another caller.
+    ///
+    /// @param household the household whose fee covers this member from now on
+    void enter(Household household) {
+        this.household = household;
+    }
+
+    /// Takes the member out of their household. Their own fee stays theirs.
+    public void leaveHousehold() {
+        this.household = null;
     }
 
     /// @return the member's phone and postal address, [ContactDetails#NONE] if none is known

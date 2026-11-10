@@ -174,7 +174,7 @@ public class MemberService {
     public MemberDetails add(@Valid MemberForm form) {
         Member member = new Member(form.fullName().strip(), clock.instant());
         member.setContact(form.contact());
-        member.setHousehold(household(form.householdId()));
+        member.startIn(household(form.householdId()));
         members.save(member);
         String email = Blank.toNull(form.email());
         Account account = null;
@@ -191,7 +191,7 @@ public class MemberService {
     /// (R018, R019). An address on a member without an account creates one, and
     /// withdraws any open invitation, since its link would now fail. A
     /// household fee the member paid for this year while in no household
-    /// covers the household they are placed in: [FeeLedger#joined].
+    /// covers the household they are placed in: [FeeLedger#join].
     ///
     /// @param memberId the member to change
     /// @param form     the new values
@@ -217,9 +217,10 @@ public class MemberService {
                 && (next == null || !previous.getId().equals(next.getId()))) {
             previous.setOwnerMemberId(null);
         }
-        member.setHousehold(next);
-        if (next != null && (previous == null || !previous.getId().equals(next.getId()))) {
-            ledger.joined(member, next);
+        if (next == null) {
+            member.leaveHousehold();
+        } else if (previous == null || !previous.getId().equals(next.getId())) {
+            ledger.join(member, next);
         }
         if (email != null) {
             Email address = new Email(email);

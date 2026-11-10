@@ -95,8 +95,7 @@ public class HouseholdService {
         }
         Household household = households.save(new Household(form.name().strip(), clock.instant()));
         household.setOwnerMemberId(member.getId());
-        member.setHousehold(household);
-        ledger.joined(member, household);
+        ledger.join(member, household);
         events.publishEvent(new MemberChanged(member.getId()));
         return ownDetails(household);
     }
@@ -123,7 +122,7 @@ public class HouseholdService {
         Household household = ownedHousehold(accountId);
         Member member = new Member(form.fullName().strip(), clock.instant());
         member.setContact(form.contact());
-        member.setHousehold(household);
+        member.startIn(household);
         members.save(member);
         events.publishEvent(new MemberChanged(member.getId()));
         return member.getId();
@@ -184,7 +183,7 @@ public class HouseholdService {
         } else if (successorMemberId != null) {
             throw new HouseholdOwnerRequired();
         }
-        member.setHousehold(null);
+        member.leaveHousehold();
         events.publishEvent(new MemberChanged(memberId));
     }
 

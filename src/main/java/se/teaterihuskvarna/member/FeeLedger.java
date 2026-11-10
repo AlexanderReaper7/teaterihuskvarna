@@ -53,19 +53,21 @@ class FeeLedger {
         return Year.now(clock.withZone(SWEDEN)).getValue();
     }
 
-    /// A member has gained a household. A household fee the member paid for
+    /// Puts a stored member in a household. A household fee the member paid for
     /// this year while in no household names none, and now names this one, so
     /// it covers everyone in it. The contact of each other member of the
     /// household is told that their paid year may have changed.
     ///
-    /// Every service that puts an existing member in a household calls this,
-    /// after it has done so, and publishes the member's own [MemberChanged]
-    /// itself. A payment that already names a household stays with that
-    /// household, and a payment for another year is left as it is.
+    /// This is the only way in for a stored member: nothing else may call
+    /// [Member#enter], and `HouseholdRulesTest` fails the build if something
+    /// does. The caller publishes the member's own [MemberChanged] itself. A
+    /// payment that already names a household stays with that household, and
+    /// a payment for another year is left as it is.
     ///
-    /// @param member    the member, already in the household
-    /// @param household the household the member has gained
-    void joined(Member member, Household household) {
+    /// @param member    the member
+    /// @param household the household the member gains
+    void join(Member member, Household household) {
+        member.enter(household);
         Optional<Fee> own = fees.findByMemberIdAndYear(member.getId(), currentYear());
         if (own.isEmpty() || own.get().getKind() != FeeKind.HOUSEHOLD || own.get().getHouseholdId() != null) {
             return;
