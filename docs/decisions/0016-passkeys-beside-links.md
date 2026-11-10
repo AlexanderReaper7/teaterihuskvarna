@@ -6,6 +6,8 @@ description: Whether members and administrators can log in with passkeys.
 
 # 0016: Passkeys beside login links
 
+Amended by an agent on 2026-11-10. Deleting a member removes an account, and it removes the account's passkeys.
+
 ## Decision
 
 Members and administrators may add passkeys and log in with them. A login link still works for everyone, and it is still the only way in for someone who has no passkey or has lost the device. Passkeys are not in the requirement table; the user added them on 2026-09-23.
@@ -49,7 +51,7 @@ V4 creates `user_entities` and `user_credentials`, copied from the spring-securi
 
 The timestamps are Spring's `timestamp`, not `timestamptz`. `JdbcUserCredentialRepository` writes `java.sql.Timestamp` in the JVM's zone and reads it back the same way, and the container runs in UTC. Keeping Spring's type keeps V4 a copy of Spring's files, so the comparison on upgrade stays a plain diff.
 
-`user_entities.name` is a principal name that points at either `account` or `administrator`, so it cannot be a foreign key. Nothing in the database removes passkeys when their owner goes. `PasskeyService.removeAll` does, and `AdministratorService.remove` calls it, which `PasskeyIT.removingAnAdministratorRemovesTheirPasskeys` checks. **Whatever later removes an account must call it too.** Nothing removes accounts yet.
+`user_entities.name` is a principal name that points at either `account` or `administrator`, so it cannot be a foreign key. Nothing in the database removes passkeys when their owner goes. `PasskeyService.removeAll` does, and `AdministratorService.remove` calls it, which `PasskeyIT.removingAnAdministratorRemovesTheirPasskeys` checks. **Whatever removes an account must call it too.** `MemberService.delete` removes a member's account and has called it since 2026-09-28. No test checks that call: `MemberRegisterIT.deletingRemovesTheMemberAndKeepsTheFeesAnonymised` looks at the member, the account, the sessions and the fees, and not at passkeys.
 
 The alternative was a table of this project's own with a real foreign key per kind, and a `UserCredentialRepository` written here to read it. That is more code to own for one delete call.
 

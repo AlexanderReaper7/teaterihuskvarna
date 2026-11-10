@@ -6,6 +6,8 @@ description: Which template engine renders the HTML.
 
 # 0004: JTE rather than Thymeleaf for templates
 
+Amended by an agent on 2026-11-10. The record said there were no students, and there are now.
+
 ## Decision
 
 The application renders HTML with [JTE](https://jte.gg/), through `gg.jte:jte-spring-boot-starter-4` 3.2.5. Not Thymeleaf, which the produktägare's document names under "Teknikval" and which the system sketch shows inside the application box.
@@ -14,7 +16,7 @@ Swedish visitor-facing text does not live in template files. It lives in [`messa
 
 ## Why not Thymeleaf, given the plan says Thymeleaf
 
-The document's reason is that Spring Boot and Thymeleaf are "studenternas utbildningsspråk", the students' course material. There are no students. That reason does not survive the change, so the choice was reopened on its merits rather than inherited.
+The document's reason is that Spring Boot and Thymeleaf are "studenternas utbildningsspråk", the students' course material. When this was written, on 2026-09-22, the record said there were no students, so that reason did not survive the change and the choice was reopened on its merits rather than inherited. The premise no longer holds. On 2026-11-10 five accounts besides the owner have write access to the repository, and [0018](0018-kanban-with-weekly-syncs.md) and [0020](0020-pull-requests-and-merging.md) write their rules for students. This record has not been reopened on that ground.
 
 Both engines are healthy and both support Boot 4.1.1, so this was never about one being abandoned:
 

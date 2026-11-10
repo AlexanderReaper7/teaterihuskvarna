@@ -7,6 +7,8 @@ superseded_by: 0026-outbox-and-brevo-contacts.md
 
 # 0023: Each mailing gets its own Brevo list
 
+Amended by an agent on 2026-11-10. The sentence that cites question T1 now quotes the question and says where it went.
+
 The Decision section is the user's. Everything under Agent notes is an agent's.
 
 Superseded on 2026-09-28 by [0026](0026-outbox-and-brevo-contacts.md): members are now contacts on one list, kept up to date, and a mailing goes to the list or to a segment. The audiences below are still the ones the attributes in 0026 make possible.
@@ -16,7 +18,7 @@ Superseded on 2026-09-28 by [0026](0026-outbox-and-brevo-contacts.md): members a
 - Each mailing creates a new Brevo list with the addresses of its audience, and the draft campaign goes to that list. Decided by the user on 2026-09-28.
 - The audiences are every member, members who have paid this year, members who have not, volunteers with a shift in the last 12 months, and the members registered to a chosen offer. The user's words were "the more the merrier". Decided by the user on 2026-09-28.
 
-This answers T1 in [open-questions](../open-questions.md) and amends [0005](0005-brevo-campaign-drafts.md), which left the synchronisation open.
+This answers question T1, "How does the application synchronise a selected mailing audience to Brevo?", and amends [0005](0005-brevo-campaign-drafts.md), which left the synchronisation open. T1 is no longer in [open-questions](../open-questions.md), where a resolved question is deleted. Commit [`f68ec46`](https://github.com/AlexanderReaper7/teaterihuskvarna/commit/f68ec46) deleted it on 2026-09-28. The answer in force is in [0026](0026-outbox-and-brevo-contacts.md), which superseded this record the same day.
 
 ## Agent notes
 

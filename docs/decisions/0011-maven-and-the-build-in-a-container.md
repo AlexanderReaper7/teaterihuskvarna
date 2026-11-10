@@ -6,6 +6,8 @@ description: Which build tool builds the project, and where the build runs.
 
 # 0011: Maven, and the build runs in a container
 
+Amended by an agent on 2026-11-10. No image reaches a registry yet, and the two sentences that said otherwise now say what CI runs.
+
 ## Decision
 
 Maven 4, version `4.0.0-rc-7`, through the checked-in [`mvnw`](../../mvnw) wrapper. Tests use Testcontainers, at the version Spring Boot manages, against the same pinned PostgreSQL image the application runs against.
@@ -32,7 +34,7 @@ The fallback is cheap and does not need planning for: Maven 3.9.16 reads the sam
 
 The machine this was written on runs Temurin 26.0.2.1. The project is pinned to Java 25 LTS by [0009](0009-java-25-lts.md). Those already disagree, on day zero, with one developer. Four students on four machines will disagree in four more ways.
 
-[0008](0008-everything-in-containers.md) made the deployed artefact the one that was tested. Building in a container extends that backwards: the compiler is pinned too, so "works on my machine" stops being a claim anyone can make about the build.
+[0008](0008-everything-in-containers.md) decides that the deployed artefact is the one that was tested. Building in a container extends that backwards: the compiler is pinned too, so "works on my machine" stops being a claim anyone can make about the build.
 
 - Build stage: the `eclipse-temurin` JDK image the [`Dockerfile`](../../Dockerfile) pins, plus the checked-in wrapper. Docker Hub's `maven` image stopped at `4.0.0-rc-5` on 2026-09-22, when Apache had published `4.0.0-rc-6`, so taking the wrapper's word for the version instead removes a dependency on that image being republished, and keeps the Maven version in a file this repository owns.
 - Runtime stage: the `eclipse-temurin` JRE image the [`Dockerfile`](../../Dockerfile) pins, at the same version as the JDK, the pinned form of the base image [0008](0008-everything-in-containers.md) names.
@@ -50,7 +52,7 @@ So the two run in different places:
 - `docker build` compiles, runs unit tests and packages the jar. No daemon needed.
 - Integration tests run through a compose service, or on the GitHub Actions runner, where a daemon exists and the socket is already available.
 
-CI runs both before an image reaches GHCR, so the split changes where tests run, not whether a green build means they passed.
+CI runs both on every pull request and on `main`, in the `test` job, which runs `verify` with the integration tests, and the `image` job, which runs the image build with the unit tests. So the split changes where tests run, not whether a green build means they passed. No image reaches GHCR as of 2026-11-10, because the push [0008](0008-everything-in-containers.md) decides is not built. [`build.yml`](../../.github/workflows/build.yml) notes that whatever later publishes the image has to need both jobs.
 
 ## Testcontainers follows Spring Boot
 

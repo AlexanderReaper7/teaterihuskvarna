@@ -6,6 +6,8 @@ description: How the application is deployed and run in production and locally.
 
 # 0008: The whole application runs in containers
 
+Amended by an agent on 2026-11-10. The registry, the commit tags, the deploy step and the scheduled backup are decided and not built, and the record now says so.
+
 ## Decision
 
 Every running piece is a container on one host in an EU region: a reverse proxy, the Spring Boot application, and PostgreSQL. [`compose.yaml`](../../compose.yaml) describes production, and local development loads [`compose.dev.yaml`](../../compose.dev.yaml) on top of it.
@@ -32,6 +34,8 @@ Caddy did the same job in a four-line `Caddyfile` with no socket at all, and rem
 
 **Images are tagged with the commit sha, not only `latest`.** Two things depend on this: rolling back is pulling the previous tag, and the question "which version is running" has an answer. A `latest`-only setup can answer neither.
 
+Neither the registry nor the tags are in use as of 2026-11-10. [`build.yml`](../../.github/workflows/build.yml) builds the image as `teaterihuskvarna:<commit>` on the runner and pushes it nowhere. [`compose.yaml`](../../compose.yaml) runs `${APP_IMAGE:-teaterihuskvarna:dev}`, which it builds on the host, so what would run in production today is not the image CI built.
+
 ## Building the image
 
 A layered [`Dockerfile`](../../Dockerfile) with a pinned JRE base image, not `spring-boot:build-image`.
@@ -44,7 +48,9 @@ The cost is about twenty lines of [`Dockerfile`](../../Dockerfile) to own.
 
 ## Deploying
 
-GitHub Actions builds and pushes the image on a green build of `main`, then connects over SSH and runs `docker compose pull && docker compose up -d`. Deployment is therefore something CI does deliberately, at a moment recorded in the Actions log.
+The decision is that GitHub Actions builds and pushes the image on a green build of `main`, then connects over SSH and runs `docker compose pull && docker compose up -d`. Deployment is then something CI does deliberately, at a moment recorded in the Actions log.
+
+This is not built as of 2026-11-10. No workflow logs in to a registry, pushes an image or opens an SSH connection, and the repository has no Actions secrets, no environments and no tags.
 
 The alternative is an agent on the host polling the registry, such as Watchtower. Rejected: it deploys whatever is newest whenever it notices, with nobody watching, and pointing that mechanism at a database container is a way to lose data to an unattended major version upgrade.
 
@@ -55,6 +61,8 @@ From [0007](0007-postgres-in-a-container.md), unchanged in substance but concret
 - PostgreSQL's data lives in a named volume, not in the container's writable layer. A container that is replaced on every deployment must not be where the member register lives.
 - A scheduled job runs `pg_dump` and ships the result, encrypted, to storage on another machine in an EU region.
 - The restore has to have been run into an empty database and checked before launch.
+
+As of 2026-11-10 the first holds, since [`compose.yaml`](../../compose.yaml) keeps PostgreSQL's data in the named volume `postgres-data`. The second is not built, and [0007](0007-postgres-in-a-container.md) says what exists in its place.
 
 ## What it costs to undo
 

@@ -64,11 +64,13 @@ flowchart LR
     app <--> db[(PostgreSQL)]
     app -->|login links and campaign drafts| brevo[Brevo]
     app <-->|published content| sanity
-    github[GitHub Actions and GHCR] -->|tested image| host[EU container host]
+    github[GitHub Actions and GHCR] -.->|tested image, decided and not built| host[EU container host]
     host --- proxy
     host --- app
     host --- db
 ```
+
+The dashed arrow is decided in [0008](decisions/0008-everything-in-containers.md) and not built as of 2026-11-10. GitHub Actions tests the code and builds the image, and nothing pushes the image to GHCR or brings it to a host.
 
 The development Compose stack also runs Sanity Studio; association editors use Sanity hosting, per [0021](decisions/0021-content-from-sanity.md). Both editors connect to Sanity's hosted content database. The development application reads the same `dev` dataset as Studio; automated tests use fixture content.
 
@@ -135,11 +137,11 @@ Swedish is the visitor and member language. English is used for code and project
 - Only administrators can read the member register.
 - Login and mail endpoints have rate limits.
 - Login tokens are short-lived, single-use and stored in PostgreSQL.
-- The database is backed up daily to encrypted storage on another machine in an EU region.
+- The database must be backed up daily to encrypted storage on another machine in an EU region ([0007](decisions/0007-postgres-in-a-container.md)). This is not built as of 2026-11-10. [`scripts/backup.sh`](../scripts/backup.sh) writes an unencrypted dump into `backups/` in the checkout when someone runs it, and nothing in the repository schedules it or copies the dump to another machine.
 - A restore into an empty database must succeed before launch.
-- Container images use immutable commit tags so the deployed revision and rollback target are known.
+- Container images must use immutable commit tags so the deployed revision and rollback target are known ([0008](decisions/0008-everything-in-containers.md)). This is not built as of 2026-11-10. CI tags the image it builds with the commit and pushes it nowhere, and [`compose.yaml`](../compose.yaml) runs `${APP_IMAGE:-teaterihuskvarna:dev}`, which it builds on the host.
 
-Java 25 LTS and Spring Boot 4.1.2 are the committed runtime versions. GitHub Actions tests and builds the image. A successful build of `main` pushes the image to GHCR and deploys it over SSH.
+Java 25 LTS and Spring Boot 4.1.2 are the committed runtime versions. GitHub Actions tests the code and builds the image on every pull request and on `main`. The decision in [0008](decisions/0008-everything-in-containers.md) is that a successful build of `main` pushes the image to GHCR and deploys it over SSH. That is not built as of 2026-11-10. No workflow logs in to a registry, pushes an image or opens an SSH connection, and the repository has no Actions secrets, no environments and no tags.
 
 ## The association remains responsible for personal data
 

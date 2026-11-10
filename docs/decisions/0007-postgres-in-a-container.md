@@ -6,6 +6,8 @@ description: Where PostgreSQL runs.
 
 # 0007: PostgreSQL runs in a container, not as a managed service
 
+Amended by an agent on 2026-11-10. The backup requirements below stand and are not built, and the record now says so.
+
 ## Decision
 
 PostgreSQL runs as a container on the same host as the application, from the same pinned image used locally. The plan's earlier assumption of "a cloud provider with an EU region and a managed PostgreSQL service" is withdrawn.
@@ -31,6 +33,8 @@ So the following are requirements of this decision, not follow-up work:
 - **A restore has actually been run from a backup, into an empty database, and the result checked.** A backup nobody has restored is not a backup, it is a file. This is the same rule the rest of the project applies to tests: a guard that has never been seen to work is not known to work.
 - Backup retention is bounded and written down, because a backup holding personal data is subject to the same retention rule as the database. How long member data is kept after a lapsed membership is still an open question for the board, and the answer applies to backups too.
 
+As of 2026-11-10 the first, second and fourth are not built. [`scripts/backup.sh`](../../scripts/backup.sh) writes an unencrypted dump into `backups/` in the checkout, on the machine that runs the database, when someone runs it. Nothing in the repository schedules it, encrypts a dump, copies one to another machine or deletes an old one, and no retention period is written down. For the third, [`scripts/restore-check.sh`](../../scripts/restore-check.sh) restores a dump into a second database on the same server and compares every table's row count with the live database. No document in the repository records that it has been run on a backup from production. [The runbook](../runbook.md) describes both scripts.
+
 ## What it costs to undo
 
-Moving to a managed service later is a `pg_dump` and a `pg_restore` against a new connection string, plus deleting the backup cron. The application does not know the difference. Nothing here is one-way.
+Moving to a managed service later is a `pg_dump` and a `pg_restore` against a new connection string, plus deleting the backup job, once there is one. The application does not know the difference. Nothing here is one-way.
