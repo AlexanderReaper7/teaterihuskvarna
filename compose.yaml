@@ -52,7 +52,8 @@ services:
       SMTP_LOGIN: ${SMTP_LOGIN:-}
       SMTP_KEY: ${SMTP_KEY:-}
       # No defaults. Without the dev profile the application refuses to start
-      # while any of the first three is empty: docs/decisions/0015.
+      # while any of the first three is empty: docs/decisions/0015. With the
+      # dev profile it refuses to start when SITE_URL is set: RealSiteGuard.
       SITE_URL: ${SITE_URL:-}
       MAIL_FROM: ${MAIL_FROM:-}
       BANKGIRO: ${BANKGIRO:-}

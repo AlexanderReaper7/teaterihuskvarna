@@ -20,6 +20,8 @@ import java.util.Objects;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 import org.springframework.test.context.ActiveProfiles;
@@ -37,6 +39,18 @@ import tools.jackson.databind.json.JsonMapper;
 /// profile, so there is no way to test it in the shared context.
 @ActiveProfiles("dev")
 class DevelopmentIndexIT extends IntegrationTestSupport {
+
+    @Autowired
+    private ObjectProvider<RealSiteGuard> realSiteGuard;
+
+    /// This class's context is the whole application under the profile with no
+    /// `SITE_URL`, so its starting is the dev stack's case. The guard that
+    /// refuses the profile on a real site has to be in it: `RealSiteGuardTest`
+    /// covers what the guard decides.
+    @Test
+    void theApplicationStartsUnderTheProfileWithItsGuard() {
+        assertThat(realSiteGuard.getIfAvailable()).isNotNull();
+    }
 
     @Test
     void theIndexLinksThePagesAndOffersALinkForEveryAccount() throws Exception {
