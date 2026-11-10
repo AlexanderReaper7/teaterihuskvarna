@@ -8,6 +8,7 @@ import org.springframework.core.task.TaskExecutor;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
+import se.teaterihuskvarna.WithoutMessage;
 import se.teaterihuskvarna.outbox.AfterCommit;
 
 /// Runs work that depends on whether an address is known, off the request
@@ -21,7 +22,9 @@ import se.teaterihuskvarna.outbox.AfterCommit;
 /// the rest to this class.
 ///
 /// A failure is logged and dropped, for the same reason [Mailer] drops one: an
-/// error page for a known address alone would give the address away.
+/// error page for a known address alone would give the address away. The log
+/// gets the failure's class names and stack frames and never its message
+/// ([WithoutMessage]): the work is about an address, so a message may hold it.
 @Component
 public class Background {
 
@@ -57,7 +60,7 @@ public class Background {
         try {
             transactions.executeWithoutResult(status -> work.run());
         } catch (RuntimeException e) {
-            LOG.error("Background work failed", e);
+            LOG.error("Background work failed", WithoutMessage.of(e));
         }
     }
 }
