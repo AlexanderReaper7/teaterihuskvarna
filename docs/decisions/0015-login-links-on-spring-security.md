@@ -76,7 +76,7 @@ Before this change, the form mailed such an address a login link. The form sets 
 
 ## Sessions in PostgreSQL
 
-A member login lasts 30 days ("A login ends a fixed time after it starts"). In memory, every deploy would end it. Spring Session JDBC keeps sessions in `SPRING_SESSION`, so they survive a restart.
+A member login lasts 30 days ("A login ends a fixed time after it starts"). In memory, every deploy would end it. Spring Session JDBC keeps sessions in `SPRING_SESSION`, so they survive a restart. They do not survive a restore from a backup: `SESSION_ID` is the cookie's value in plain text, so [`backup.sh`](../../scripts/backup.sh) leaves the rows of both session tables out of the dump, and everyone logs in again ([runbook](../runbook.md)).
 
 `spring.session.jdbc.initialize-schema` is `never`, and V3 creates the tables instead. V3 is `schema-postgresql.sql` from the spring-session-jdbc 4.1.1 jar, and on 2026-09-23 it was identical to that file apart from its header comment and tabs turned to spaces. Upgrading Spring Session means comparing the two again.
 
