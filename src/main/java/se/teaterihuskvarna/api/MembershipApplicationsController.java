@@ -48,6 +48,6 @@ public class MembershipApplicationsController {
     /// not have to tell the two apart.
     ///
     /// @param token the token from the mailed link
-    public record Confirmation(@NotBlank String token) {
+    public record Confirmation(@NotBlank(message = "{application.expired.body}") String token) {
     }
 }

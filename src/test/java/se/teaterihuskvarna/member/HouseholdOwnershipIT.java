@@ -9,6 +9,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.flash;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -23,6 +24,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
+import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
@@ -186,6 +188,14 @@ class HouseholdOwnershipIT extends MemberRegisterSupport {
         assertRedirect(mockMvc.perform(post("/admin/hushall/" + household + "/agare")
                 .param("memberId", String.valueOf(owner)).with(asAdministrator()).with(csrf())).andReturn(),
                 "/admin/hushall");
+        assertThat(owner()).isEqualTo(owner);
+        // An owner that is not a number keeps the owner. Without a BindingResult it was answered with 400.
+        MvcResult unreadable = mockMvc.perform(post("/admin/hushall/" + household + "/agare")
+                .param("memberId", "abc").with(asAdministrator()).with(csrf()))
+                .andExpect(flash().attribute("notice",
+                        "Välj en person i hushållet som har ett konto, eller administratörerna."))
+                .andReturn();
+        assertRedirect(unreadable, "/admin/hushall");
         assertThat(owner()).isEqualTo(owner);
         mockMvc.perform(put(api).contentType(MediaType.APPLICATION_JSON).content("{\"memberId\":null}")
                 .with(asAdministrator()).with(csrf())).andExpect(status().isOk());

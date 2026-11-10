@@ -95,6 +95,33 @@ class MemberRegisterIT extends MemberRegisterSupport {
                 .andExpect(content().string(containsString("E-postadress för inloggning (frivilligt)</label>")));
     }
 
+    /// The list of households sends a number or nothing. Before the handlers
+    /// took a `BindingResult`, anything else was answered with 400 and the form
+    /// was lost.
+    @Test
+    void aHouseholdThatIsNotANumberShowsTheFormAgainAndStoresNothing() throws Exception {
+        mockMvc.perform(post("/admin/medlemmar")
+                        .param("fullName", "Erik Lindqvist")
+                        .param("householdId", "abc")
+                        .with(asAdministrator())
+                        .with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("Välj ett hushåll i listan.")))
+                .andExpect(content().string(containsString("value=\"Erik Lindqvist\"")));
+        assertThat(jdbc.sql("SELECT count(*) FROM member").query(Long.class).single()).isZero();
+
+        long olle = insertMember("Olle Lindqvist");
+        mockMvc.perform(post("/admin/medlemmar/" + olle)
+                        .param("fullName", "Olle Andersson")
+                        .param("householdId", "abc")
+                        .with(asAdministrator())
+                        .with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("Välj ett hushåll i listan.")));
+        assertThat(jdbc.sql("SELECT full_name FROM member WHERE id = ?").param(olle).query(String.class).single())
+                .isEqualTo("Olle Lindqvist");
+    }
+
     @Test
     void addingWithAnAddressCreatesAnAccountAndWithoutOneDoesNot() throws Exception {
         MvcResult added = mockMvc.perform(post("/admin/medlemmar")

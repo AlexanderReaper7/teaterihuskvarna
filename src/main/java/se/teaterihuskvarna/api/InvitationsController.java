@@ -41,6 +41,6 @@ public class InvitationsController {
     /// The body of an acceptance.
     ///
     /// @param token the token from the mailed link
-    public record Acceptance(@NotBlank String token) {
+    public record Acceptance(@NotBlank(message = "{invitation.invalid.body}") String token) {
     }
 }
