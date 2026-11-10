@@ -17,9 +17,9 @@ import org.springframework.transaction.annotation.Transactional;
 /// Spring's two tables name a passkey's owner by principal name, such as
 /// `administrator:3`, with no foreign key to `account` or `administrator`.
 /// Nothing in the database removes passkeys with their owner, so whatever
-/// removes an administrator or an account must call [#removeAll].
-/// [se.teaterihuskvarna.administrator.AdministratorService] does; nothing
-/// removes accounts yet. See `docs/decisions/0016-passkeys-beside-links.md`.
+/// removes an administrator or an account calls [#removeAll], and
+/// `LoginRemovalRulesTest` fails the build on a method that removes one and
+/// does not. See `docs/decisions/0016-passkeys-beside-links.md`.
 @Service
 @Transactional(readOnly = true)
 public class PasskeyService {
