@@ -21,6 +21,7 @@ import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 import se.teaterihuskvarna.IntegrationTestSupport;
 import se.teaterihuskvarna.login.Email;
+import se.teaterihuskvarna.login.MailLife;
 import se.teaterihuskvarna.login.Mailer;
 
 /// Proves the outbox through its first user, the mail.
@@ -52,14 +53,14 @@ class OutboxIT extends IntegrationTestSupport {
     @Test
     void aMailGoesOutAfterTheCommitAndNotAfterARollback() {
         new TransactionTemplate(transactions).executeWithoutResult(status -> {
-            mailer.send(new Email("karin@example.test"), "Rolled back", "Nothing");
+            mailer.send(new Email("karin@example.test"), "Rolled back", "Nothing", MailLife.untilSent());
             status.setRollbackOnly();
         });
         assertNoMail();
         assertThat(rowsIn("outbox")).isZero();
 
         new TransactionTemplate(transactions).executeWithoutResult(status ->
-                mailer.send(new Email("karin@example.test"), "Hej", "Text"));
+                mailer.send(new Email("karin@example.test"), "Hej", "Text", MailLife.untilSent()));
         SimpleMailMessage mail = awaitMail();
         assertThat(mail.getTo()).containsExactly("karin@example.test");
         assertThat(mail.getSubject()).isEqualTo("Hej");
@@ -70,7 +71,7 @@ class OutboxIT extends IntegrationTestSupport {
     void aRefusedMailIsTriedAgain() {
         doThrow(new MailSendException("relay down")).doNothing().when(mailSender).send(any(SimpleMailMessage.class));
 
-        mailer.send(new Email("karin@example.test"), "Hej", "Text");
+        mailer.send(new Email("karin@example.test"), "Hej", "Text", MailLife.untilSent());
         awaitAttempts(1);
         assertThat(notAfterOfTheMailInTheOutbox()).isNull();
         assertThat(jdbc.sql("SELECT last_error FROM outbox").query(String.class).single())
@@ -93,7 +94,7 @@ class OutboxIT extends IntegrationTestSupport {
         assertThat(refusal.getMessage()).contains(REFUSED);
         doThrow(refusal).when(mailSender).send(any(SimpleMailMessage.class));
 
-        mailer.send(new Email(REFUSED), "Hej", "Text");
+        mailer.send(new Email(REFUSED), "Hej", "Text", MailLife.untilSent());
         awaitAttempts(1);
 
         long id = jdbc.sql("SELECT id FROM outbox").query(Long.class).single();
@@ -112,7 +113,7 @@ class OutboxIT extends IntegrationTestSupport {
         doThrow(new MailSendException("relay refused " + REFUSED)).when(mailSender)
                 .send(any(SimpleMailMessage.class));
 
-        mailer.send(new Email("karin@example.test"), "Hej", "Text");
+        mailer.send(new Email("karin@example.test"), "Hej", "Text", MailLife.untilSent());
         awaitAttempts(1);
         for (int attempt = 2; attempt <= Outbox.MAX_ATTEMPTS + 2; attempt++) {
             makeDue();
@@ -139,7 +140,7 @@ class OutboxIT extends IntegrationTestSupport {
     @Test
     void aMailPastItsNotAfterIsDeletedWithoutWaitingForItsNextAttempt(CapturedOutput output) {
         doThrow(new MailSendException("relay down")).doNothing().when(mailSender).send(any(SimpleMailMessage.class));
-        mailer.send(new Email(EXPIRED), "Hej", "Text", Instant.now().plus(Duration.ofHours(1)));
+        mailer.send(new Email(EXPIRED), "Hej", "Text", MailLife.until(Instant.now().plus(Duration.ofHours(1))));
         awaitAttempts(1);
         long id = jdbc.sql("SELECT id FROM outbox").query(Long.class).single();
         forgetMails();
@@ -158,7 +159,7 @@ class OutboxIT extends IntegrationTestSupport {
     /// attempt does that waited in the queue behind a slow relay.
     @Test
     void aMailPastItsNotAfterIsNeverHandedToTheRelay() {
-        mailer.send(new Email(EXPIRED), "Hej", "Text", Instant.now().minusSeconds(1));
+        mailer.send(new Email(EXPIRED), "Hej", "Text", MailLife.until(Instant.now().minusSeconds(1)));
 
         awaitEmpty();
         assertNoMail();
@@ -167,7 +168,8 @@ class OutboxIT extends IntegrationTestSupport {
     @Test
     void aMailBeforeItsNotAfterIsStillRetried() {
         doThrow(new MailSendException("relay down")).doNothing().when(mailSender).send(any(SimpleMailMessage.class));
-        mailer.send(new Email("karin@example.test"), "Hej", "Text", Instant.now().plus(Duration.ofHours(1)));
+        mailer.send(new Email("karin@example.test"), "Hej", "Text",
+                MailLife.until(Instant.now().plus(Duration.ofHours(1))));
         awaitAttempts(1);
 
         forgetMails();

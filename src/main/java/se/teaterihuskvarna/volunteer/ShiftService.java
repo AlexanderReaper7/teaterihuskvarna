@@ -28,6 +28,7 @@ import se.teaterihuskvarna.content.Perspective;
 import se.teaterihuskvarna.export.Csv;
 import se.teaterihuskvarna.export.CsvFile;
 import se.teaterihuskvarna.login.Email;
+import se.teaterihuskvarna.login.MailLife;
 import se.teaterihuskvarna.login.Mailer;
 import se.teaterihuskvarna.member.MemberChanged;
 
@@ -314,7 +315,7 @@ public class ShiftService {
                     text(texts + ".body", text("shift.task." + shift.getTask().name()),
                             shift.getEventTitle(), MAIL_TIME.format(shift.getStartsAt()),
                             MAIL_END.format(shift.getEndsAt())),
-                    notAfter);
+                    MailLife.until(notAfter));
             sent++;
         }
         booking.reminded(clock.instant());

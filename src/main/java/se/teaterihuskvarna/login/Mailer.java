@@ -22,12 +22,12 @@ import tools.jackson.databind.json.JsonMapper;
 /// cannot work, and a mail sent before a commit that then fails is one nobody
 /// can take back. A send that fails is tried again later ([MailDelivery]).
 ///
-/// Every mail is one of two kinds, and the caller says which by the [#send]
-/// it calls. A mail whose text stays true is retried until it is sent, which
-/// is what the user decided for mail. A mail whose text stops being true, a
-/// link or a code that expires or a day named as tomorrow, is given that
-/// moment and is not sent after it, an exception an agent made after the
-/// review on 2026-11-10. The table of which mail is which is in
+/// Every mail is one of two kinds, and [#send] makes the caller say which
+/// with a [MailLife]. A mail whose text stays true is retried until it is
+/// sent, which is what the user decided for mail. A mail whose text stops
+/// being true, a link or a code that expires or a day named as tomorrow, is
+/// given that moment and is not sent after it, the exception the user decided
+/// on 2026-11-10. The table of which mail is which is in
 /// `docs/decisions/0026-outbox-and-brevo-contacts.md`.
 @Component
 public class Mailer {
@@ -40,28 +40,19 @@ public class Mailer {
         this.outbox = outbox;
     }
 
-    /// Queues a mail whose text stays true however late it arrives. It is
-    /// retried until it is sent. Returns before the mail is sent.
+    /// Queues a mail. Returns before the mail is sent.
     ///
     /// @param to      the recipient's address
     /// @param subject the subject line
     /// @param body    the plain text body
-    public void send(Email to, String subject, String body) {
-        outbox.add(MailDelivery.KIND, payload(to, subject, body));
-    }
-
-    /// Queues a mail whose text stops being true at a known moment: a link or
-    /// a code that expires, or a day the text names as tomorrow. It is retried
-    /// until that moment, and after it the mail is deleted unsent. Returns
-    /// before the mail is sent.
-    ///
-    /// @param to       the recipient's address
-    /// @param subject  the subject line
-    /// @param body     the plain text body
-    /// @param notAfter the moment the text stops being true, taken from what
-    ///                 makes it so, such as the link's own expiry
-    public void send(Email to, String subject, String body, Instant notAfter) {
-        outbox.add(MailDelivery.KIND, payload(to, subject, body), notAfter);
+    /// @param life    whether the mail is sent however late, or not after a moment
+    public void send(Email to, String subject, String body, MailLife life) {
+        Instant notAfter = life.notAfter();
+        if (notAfter == null) {
+            outbox.add(MailDelivery.KIND, payload(to, subject, body));
+        } else {
+            outbox.add(MailDelivery.KIND, payload(to, subject, body), notAfter);
+        }
     }
 
     private static String payload(Email to, String subject, String body) {

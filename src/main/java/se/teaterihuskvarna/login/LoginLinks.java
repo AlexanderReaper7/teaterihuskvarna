@@ -119,6 +119,6 @@ public class LoginLinks {
                 address,
                 messages.getMessage(prefix + ".subject", null, Swedish.LOCALE),
                 messages.getMessage(prefix + ".body", arguments, Swedish.LOCALE),
-                expires.toInstant());
+                MailLife.until(expires.toInstant()));
     }
 }
