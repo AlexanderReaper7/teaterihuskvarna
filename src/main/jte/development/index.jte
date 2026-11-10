@@ -12,7 +12,7 @@
 @param List<LoginAccount> accounts
 @param RunningEnvironment environment
 @param SignedIn signedIn
-@param boolean loginFailed = false
+@param boolean loginFailed
 !{String schemaVersion = environment.schemaVersion();}
 !{RunningEnvironment.Commit commit = environment.commit();}
 !{java.time.Instant commitTime = commit == null ? null : commit.time();}

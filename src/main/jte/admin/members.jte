@@ -5,22 +5,17 @@
 @import se.teaterihuskvarna.web.Copy
 @import se.teaterihuskvarna.web.CsrfField
 @import se.teaterihuskvarna.web.RegisterFilter
+@import se.teaterihuskvarna.web.Feedback
 @param Copy copy
 @param CsrfField csrf
 @param String query
 @param String fee
 @param List<RegisterFilter> filters
 @param MemberList list
-@param String error
-@param String notice
+@param Feedback feedback
 @template.admin.layout(copy = copy, title = copy.text("register.heading"), content = @`
     <h1>${copy.text("register.heading")}</h1>
-    @if(error != null)
-        <p role="alert">${error}</p>
-    @endif
-    @if(notice != null)
-        <p role="status">${notice}</p>
-    @endif
+    @template.tag.feedback(copy = copy, feedback = feedback)
     <p class="links">
         <a href="/admin/medlemmar/ny">@template.icon.plus() ${copy.text("register.add")}</a>
         <a href="/admin/hushall">@template.icon.house() ${copy.text("household.heading")}</a>

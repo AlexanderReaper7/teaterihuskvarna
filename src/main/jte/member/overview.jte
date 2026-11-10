@@ -12,19 +12,19 @@
 @import se.teaterihuskvarna.web.Copy
 @import se.teaterihuskvarna.web.CsrfField
 @import se.teaterihuskvarna.web.DeviceUrls
+@import se.teaterihuskvarna.web.Feedback
 @param Copy copy
 @param CsrfField csrf
 @param MemberDetails member
-@param HouseholdDetails household = null
+@param HouseholdDetails household
 @param List<MemberOffer> registrations
 @param List<MemberShift> shifts
 @param List<PasskeyDetails> passkeys
 @param PasskeyUrls passkeyUrls
-@param boolean offerPasskey = false
+@param boolean offerPasskey
 @param List<DeviceDetails> devices
 @param DeviceUrls deviceUrls
-@param String error
-@param String notice
+@param Feedback feedback
 !{Instant paidAt = member.fee().paidAt();}
 !{PaymentInstruction payment = member.fee().payment();}
 @template.member.layout(copy = copy, title = copy.text("member.heading"), content = @`
@@ -32,12 +32,7 @@
     @if(offerPasskey)
         @template.tag.passkeyOffer(copy = copy, csrf = csrf, urls = passkeyUrls)
     @endif
-    @if(error != null)
-        <p role="alert">${error}</p>
-    @endif
-    @if(notice != null)
-        <p role="status">${notice}</p>
-    @endif
+    @template.tag.feedback(copy = copy, feedback = feedback)
     <h2>${copy.text("fee.heading", String.valueOf(member.fee().year()))}
         @template.tag.feeBadge(copy = copy, paid = paidAt != null)</h2>
     @if(paidAt != null)

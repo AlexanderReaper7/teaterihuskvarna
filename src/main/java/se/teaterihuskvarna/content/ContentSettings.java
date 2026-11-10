@@ -44,6 +44,11 @@ public record ContentSettings(
         @Nullable String fixture,
         @Nullable @Pattern(regexp = "(https?://[^/?#\\s]+(?:/[^?#\\s]*)?)?") String studioUrl) {
 
+    /// @return the editor's address for a link to it, or null when none is configured
+    public @Nullable String studioLink() {
+        return studioUrl == null || studioUrl.isBlank() ? null : studioUrl;
+    }
+
     /// @return the editor's origin for frame permissions, without its path, or null
     public @Nullable String studioOrigin() {
         if (studioUrl == null || studioUrl.isBlank()) {

@@ -1,17 +1,17 @@
 package se.teaterihuskvarna.web;
 
+import gg.jte.generated.precompiled.Templates;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
-import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.server.ResponseStatusException;
-import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+import org.springframework.web.servlet.View;
 import se.teaterihuskvarna.login.SignedIn;
 import se.teaterihuskvarna.member.MemberId;
 import se.teaterihuskvarna.member.MemberService;
@@ -34,56 +34,52 @@ public class MemberShiftPageController {
     private final ShiftService shifts;
     private final MemberService members;
     private final Copy copy;
+    private final Templates templates;
 
-    MemberShiftPageController(ShiftService shifts, MemberService members, Copy copy) {
+    MemberShiftPageController(ShiftService shifts, MemberService members, Copy copy, Templates templates) {
         this.shifts = shifts;
         this.members = members;
         this.copy = copy;
+        this.templates = templates;
     }
 
     /// @param signedIn the logged-in account
-    /// @param model    receives the upcoming shifts
-    /// @return the list of shifts
+    /// @param csrf     the hidden field of the page's forms
+    /// @param feedback what the request before left for this page
+    /// @return the list of upcoming shifts
     @GetMapping(LIST)
-    public String list(@AuthenticationPrincipal SignedIn signedIn, Model model) {
-        model.addAttribute("shifts", shifts.upcoming(memberId(signedIn)));
-        return "member/shifts";
+    public View list(@AuthenticationPrincipal SignedIn signedIn, CsrfField csrf, Feedback feedback) {
+        return HtmlPage.of(templates.memberShifts(copy, csrf, shifts.upcoming(memberId(signedIn)), feedback));
     }
 
-    /// @param signedIn   the logged-in account
-    /// @param id         the shift
-    /// @param redirected receives the outcome, shown after the redirect
-    /// @return a redirect to the list
+    /// @param signedIn the logged-in account
+    /// @param id       the shift
+    /// @return a redirect to the list, with the outcome
     @PostMapping(LIST + "/{id}/boka")
-    public String book(@AuthenticationPrincipal SignedIn signedIn, @PathVariable long id,
-            RedirectAttributes redirected) {
+    public View book(@AuthenticationPrincipal SignedIn signedIn, @PathVariable long id) {
         try {
             BookingOutcome outcome = shifts.book(id, memberId(signedIn));
-            redirected.addFlashAttribute("notice", copy.text(outcome == BookingOutcome.BOOKED
+            return Redirect.to(LIST).notice(copy.text(outcome == BookingOutcome.BOOKED
                     ? "shifts.notice.booked" : "shifts.notice.alreadyBooked"));
         } catch (ShiftFull e) {
-            redirected.addFlashAttribute("error", copy.text("shifts.error.full"));
+            return Redirect.to(LIST).error(copy.text("shifts.error.full"));
         } catch (ShiftStarted e) {
-            redirected.addFlashAttribute("error", copy.text("shifts.error.started"));
+            return Redirect.to(LIST).error(copy.text("shifts.error.started"));
         }
-        return "redirect:" + LIST;
     }
 
-    /// @param signedIn   the logged-in account
-    /// @param id         the shift
-    /// @param redirected receives the outcome, shown after the redirect
-    /// @return a redirect to the list
+    /// @param signedIn the logged-in account
+    /// @param id       the shift
+    /// @return a redirect to the list, with the outcome
     @PostMapping(LIST + "/{id}/avboka")
-    public String cancel(@AuthenticationPrincipal SignedIn signedIn, @PathVariable long id,
-            RedirectAttributes redirected) {
+    public View cancel(@AuthenticationPrincipal SignedIn signedIn, @PathVariable long id) {
         try {
             boolean cancelled = shifts.cancel(id, memberId(signedIn));
-            redirected.addFlashAttribute("notice",
-                    copy.text(cancelled ? "shifts.notice.cancelled" : "shifts.notice.notBooked"));
+            return Redirect.to(LIST)
+                    .notice(copy.text(cancelled ? "shifts.notice.cancelled" : "shifts.notice.notBooked"));
         } catch (ShiftStarted e) {
-            redirected.addFlashAttribute("error", copy.text("shifts.error.started"));
+            return Redirect.to(LIST).error(copy.text("shifts.error.started"));
         }
-        return "redirect:" + LIST;
     }
 
     /// Sends the error page with 404, as for any path that does not exist.

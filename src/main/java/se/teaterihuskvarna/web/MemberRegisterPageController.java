@@ -1,5 +1,6 @@
 package se.teaterihuskvarna.web;
 
+import gg.jte.generated.precompiled.Templates;
 import jakarta.validation.ConstraintViolationException;
 import java.nio.charset.StandardCharsets;
 import java.time.Clock;
@@ -16,7 +17,6 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
-import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
@@ -24,7 +24,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.server.ResponseStatusException;
-import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+import org.springframework.web.servlet.View;
 import org.springframework.web.util.UriComponentsBuilder;
 import se.teaterihuskvarna.login.SignedIn;
 import se.teaterihuskvarna.member.AccountNeedsEmail;
@@ -34,8 +34,8 @@ import se.teaterihuskvarna.member.FeeFilter;
 import se.teaterihuskvarna.member.FeeKind;
 import se.teaterihuskvarna.member.FeeMark;
 import se.teaterihuskvarna.member.FeeService;
-import se.teaterihuskvarna.member.HouseholdService;
 import se.teaterihuskvarna.member.HouseholdOwnerForm;
+import se.teaterihuskvarna.member.HouseholdService;
 import se.teaterihuskvarna.member.InvitationRequest;
 import se.teaterihuskvarna.member.InvitationService;
 import se.teaterihuskvarna.member.MemberDetails;
@@ -73,255 +73,238 @@ public class MemberRegisterPageController {
     private final InvitationService invitations;
     private final Copy copy;
     private final Clock clock;
+    private final Templates templates;
 
     MemberRegisterPageController(MemberService members, HouseholdService households, FeeService fees,
-            InvitationService invitations, Copy copy, Clock clock) {
+            InvitationService invitations, Copy copy, Clock clock, Templates templates) {
         this.members = members;
         this.households = households;
         this.fees = fees;
         this.invitations = invitations;
         this.copy = copy;
         this.clock = clock;
+        this.templates = templates;
     }
 
-    /// @param query what to search for, or nothing to list everyone
-    /// @param fee   `betald` or `obetald` for only those whose fee this year is or is not paid
-    /// @param model receives the matches, the query and the choices of fee
-    /// @return the register
+    /// @param query    what to search for, or nothing to list everyone
+    /// @param fee      `betald` or `obetald` for only those whose fee this year is or is not paid
+    /// @param csrf     the hidden field of the page's forms
+    /// @param feedback what the request before left for this page
+    /// @return the register: the matches, the query and the choices of fee
     @GetMapping(LIST)
-    public String list(@RequestParam(name = "q", required = false) @Nullable String query,
-            @RequestParam(name = "avgift", required = false) @Nullable String fee, Model model) {
+    public View list(@RequestParam(name = "q", required = false) @Nullable String query,
+            @RequestParam(name = "avgift", required = false) @Nullable String fee, CsrfField csrf,
+            Feedback feedback) {
         FeeFilter filter = filter(fee);
         String year = String.valueOf(Year.now(clock.withZone(SWEDEN)).getValue());
-        model.addAttribute("query", query == null ? "" : query);
-        model.addAttribute("fee", filter == FeeFilter.ALL ? "" : fee);
-        model.addAttribute("list", members.search(query, filter));
-        model.addAttribute("filters", List.of(
+        List<RegisterFilter> filters = List.of(
                 new RegisterFilter(copy.text("register.filter.all"), listUrl(query, null), filter == FeeFilter.ALL),
                 new RegisterFilter(copy.text("register.filter.unpaid", year), listUrl(query, UNPAID),
                         filter == FeeFilter.UNPAID),
                 new RegisterFilter(copy.text("register.filter.paid", year), listUrl(query, PAID),
-                        filter == FeeFilter.PAID)));
-        return "admin/members";
+                        filter == FeeFilter.PAID));
+        return HtmlPage.of(templates.adminMembers(copy, csrf, query == null ? "" : query,
+                filter == FeeFilter.ALL ? "" : fee, filters, members.search(query, filter), feedback));
     }
 
-    /// @param model receives an empty form and the households to choose from
-    /// @return the form for a new member
+    /// @param csrf     the hidden field of the page's form
+    /// @param feedback what the request before left for this page
+    /// @return the form for a new member, empty, with the households to choose from
     @GetMapping(LIST + "/ny")
-    public String newMember(Model model) {
-        return newPage(MemberForm.empty(), FieldErrors.none(), null, model);
+    public View newMember(CsrfField csrf, Feedback feedback) {
+        return newPage(MemberForm.empty(), FieldErrors.none(), csrf, feedback);
     }
 
-    /// @param form       the new member
-    /// @param binding    what Spring could not read of the form
-    /// @param model      receives the form again when the add fails
-    /// @param redirected receives the confirmation shown after the redirect
+    /// @param form     the new member
+    /// @param binding  what Spring could not read of the form
+    /// @param csrf     the hidden field of the page's form
+    /// @param feedback what the request before left for this page
     /// @return a redirect to the new member's page, or the form again with what was wrong
     @PostMapping(LIST)
-    public String add(@ModelAttribute("form") MemberForm form, BindingResult binding, Model model,
-            RedirectAttributes redirected) {
+    public View add(@ModelAttribute("form") MemberForm form, BindingResult binding, CsrfField csrf,
+            Feedback feedback) {
         if (binding.hasErrors()) {
-            return newPage(form, FieldErrors.of(binding, copy, "member"), null, model);
+            return newPage(form, FieldErrors.of(binding, copy, "member"), csrf, feedback);
         }
         MemberDetails added;
         try {
             added = members.add(form);
         } catch (ConstraintViolationException e) {
-            return newPage(form, FieldErrors.of(e), null, model);
+            return newPage(form, FieldErrors.of(e), csrf, feedback);
         } catch (EmailTaken e) {
-            return newPage(form, FieldErrors.none(), copy.text("register.error.emailTaken"), model);
+            return newPage(form, FieldErrors.none(), csrf,
+                    feedback.withError(copy.text("register.error.emailTaken")));
         } catch (NoSuchHousehold e) {
-            return newPage(form, FieldErrors.none(), copy.text("register.error.noSuchHousehold"), model);
+            return newPage(form, FieldErrors.none(), csrf,
+                    feedback.withError(copy.text("register.error.noSuchHousehold")));
         }
-        redirected.addFlashAttribute("notice", copy.text("register.added", added.fullName()));
-        return redirect(added.id());
+        return redirect(added.id()).notice(copy.text("register.added", added.fullName()));
     }
 
-    /// @param id    the member
-    /// @param model receives the member's file and a form with their current values
-    /// @return the member's page
+    /// @param id       the member
+    /// @param csrf     the hidden field of the page's forms
+    /// @param feedback what the request before left for this page
+    /// @return the member's page: their file and a form with their current values
     @GetMapping(LIST + "/{id}")
-    public String member(@PathVariable MemberId id, Model model) {
+    public View member(@PathVariable MemberId id, CsrfField csrf, Feedback feedback) {
         MemberFile file = file(id);
-        return memberPage(file, MemberForm.of(file.member()), FieldErrors.none(), null, model);
+        return memberPage(file, MemberForm.of(file.member()), FieldErrors.none(), csrf, feedback);
     }
 
-    /// @param id         the member
-    /// @param form       the new values
-    /// @param binding    what Spring could not read of the form
-    /// @param model      receives the page again when the change fails
-    /// @param redirected receives the confirmation shown after the redirect
+    /// @param id       the member
+    /// @param form     the new values
+    /// @param binding  what Spring could not read of the form
+    /// @param csrf     the hidden field of the page's forms
+    /// @param feedback what the request before left for this page
     /// @return a redirect to the member's page, or the page again with what was wrong
     @PostMapping(LIST + "/{id}")
-    public String update(@PathVariable MemberId id, @ModelAttribute("form") MemberForm form, BindingResult binding,
-            Model model, RedirectAttributes redirected) {
+    public View update(@PathVariable MemberId id, @ModelAttribute("form") MemberForm form, BindingResult binding,
+            CsrfField csrf, Feedback feedback) {
         if (binding.hasErrors()) {
-            return memberPage(file(id), form, FieldErrors.of(binding, copy, "member"), null, model);
+            return memberPage(file(id), form, FieldErrors.of(binding, copy, "member"), csrf, feedback);
         }
+        String error;
         try {
             members.update(id, form);
+            return redirect(id).notice(copy.text("register.saved"));
         } catch (ConstraintViolationException e) {
-            return memberPage(file(id), form, FieldErrors.of(e), null, model);
+            return memberPage(file(id), form, FieldErrors.of(e), csrf, feedback);
         } catch (EmailTaken e) {
-            return memberPage(file(id), form, FieldErrors.none(), copy.text("register.error.emailTaken"), model);
+            error = copy.text("register.error.emailTaken");
         } catch (AccountNeedsEmail e) {
-            return memberPage(file(id), form, FieldErrors.none(), copy.text("register.error.accountNeedsEmail"),
-                    model);
+            error = copy.text("register.error.accountNeedsEmail");
         } catch (NoSuchHousehold e) {
-            return memberPage(file(id), form, FieldErrors.none(), copy.text("register.error.noSuchHousehold"),
-                    model);
+            error = copy.text("register.error.noSuchHousehold");
         } catch (NoSuchMember e) {
             throw notFound(e);
         }
-        redirected.addFlashAttribute("notice", copy.text("register.saved"));
-        return redirect(id);
+        return memberPage(file(id), form, FieldErrors.none(), csrf, feedback.withError(error));
     }
 
     /// The confirmation step before a delete.
     ///
-    /// @param id    the member
-    /// @param model receives the member's file
+    /// @param id       the member
+    /// @param csrf     the hidden field of the page's form
+    /// @param feedback what the request before left for this page
     /// @return the page that asks whether to delete
     @GetMapping(LIST + "/{id}/ta-bort")
-    public String confirmDelete(@PathVariable MemberId id, Model model) {
-        model.addAttribute("file", file(id));
-        return "admin/memberDelete";
+    public View confirmDelete(@PathVariable MemberId id, CsrfField csrf, Feedback feedback) {
+        return HtmlPage.of(templates.adminMemberDelete(copy, csrf, file(id), feedback));
     }
 
-    /// @param id         the member
-    /// @param redirected receives the confirmation shown after the redirect
-    /// @return a redirect to the register
+    /// @param id the member
+    /// @return a redirect to the register, with the outcome
     @PostMapping(LIST + "/{id}/ta-bort")
-    public String delete(@PathVariable MemberId id, RedirectAttributes redirected) {
+    public View delete(@PathVariable MemberId id) {
         try {
             members.delete(id);
         } catch (NoSuchMember e) {
-            redirected.addFlashAttribute("error", copy.text("register.error.noSuchMember"));
-            return "redirect:" + LIST;
+            return Redirect.to(LIST).error(copy.text("register.error.noSuchMember"));
         }
-        redirected.addFlashAttribute("notice", copy.text("register.deleted"));
-        return "redirect:" + LIST;
+        return Redirect.to(LIST).notice(copy.text("register.deleted"));
     }
 
-    /// @param signedIn   the administrator, recorded as the one who marked it
-    /// @param id         the member who paid
-    /// @param kind       `INDIVIDUAL` or `HOUSEHOLD`
-    /// @param kronor     the amount in whole kronor, or blank for the configured amount
-    /// @param back       `lista` when the button was in the register, which is where to go back to
-    /// @param query      the register's search, to go back to
-    /// @param fee        the register's choice of fee, to go back to
-    /// @param redirected receives the outcome, shown after the redirect
-    /// @return a redirect to the member's page, or to the register the button was in
+    /// @param signedIn the administrator, recorded as the one who marked it
+    /// @param id       the member who paid
+    /// @param kind     `INDIVIDUAL` or `HOUSEHOLD`
+    /// @param kronor   the amount in whole kronor, or blank for the configured amount
+    /// @param back     `lista` when the button was in the register, which is where to go back to
+    /// @param query    the register's search, to go back to
+    /// @param fee      the register's choice of fee, to go back to
+    /// @return a redirect to the member's page, or to the register the button was in, with the outcome
     @PostMapping(LIST + "/{id}/avgift")
-    public String markPaid(@AuthenticationPrincipal SignedIn signedIn, @PathVariable MemberId id,
+    public View markPaid(@AuthenticationPrincipal SignedIn signedIn, @PathVariable MemberId id,
             @RequestParam(required = false) @Nullable String kind,
             @RequestParam(required = false) @Nullable String kronor,
             @RequestParam(name = "tillbaka", required = false) @Nullable String back,
             @RequestParam(name = "q", required = false) @Nullable String query,
-            @RequestParam(name = "avgift", required = false) @Nullable String fee, RedirectAttributes redirected) {
-        String to = "lista".equals(back) ? "redirect:" + listUrl(query, fee) : redirect(id);
+            @RequestParam(name = "avgift", required = false) @Nullable String fee) {
+        Redirect to = "lista".equals(back) ? Redirect.to(listUrl(query, fee)) : redirect(id);
         try {
             fees.markPaid(id, new FeeMark(kind(kind), ore(kronor)), signedIn.administratorId());
         } catch (ConstraintViolationException e) {
-            redirected.addFlashAttribute("error", MemberPageController.firstMessage(e));
-            return to;
+            return to.error(MemberPageController.firstMessage(e));
         } catch (FeeAlreadyMarked e) {
-            redirected.addFlashAttribute("error", copy.text("fee.error.alreadyMarked"));
-            return to;
+            return to.error(copy.text("fee.error.alreadyMarked"));
         } catch (NoSuchMember e) {
             throw notFound(e);
         }
-        redirected.addFlashAttribute("notice", "lista".equals(back)
+        return to.notice("lista".equals(back)
                 ? copy.text("fee.markedFor", file(id).member().fullName())
                 : copy.text("fee.marked"));
-        return to;
     }
 
-    /// @param id         the member whose mark to undo
-    /// @param redirected receives the outcome, shown after the redirect
-    /// @return a redirect to the member's page
+    /// @param id the member whose mark to undo
+    /// @return a redirect to the member's page, with the outcome
     @PostMapping(LIST + "/{id}/avgift/angra")
-    public String undoFee(@PathVariable MemberId id, RedirectAttributes redirected) {
+    public View undoFee(@PathVariable MemberId id) {
         try {
             fees.undo(id);
         } catch (NoSuchFee e) {
-            redirected.addFlashAttribute("error", copy.text("fee.error.noSuch"));
-            return redirect(id);
+            return redirect(id).error(copy.text("fee.error.noSuch"));
         }
-        redirected.addFlashAttribute("notice", copy.text("fee.undone"));
-        return redirect(id);
+        return redirect(id).notice(copy.text("fee.undone"));
     }
 
-    /// @param id         the member to invite
-    /// @param email      the address to send the invitation to
-    /// @param redirected receives the outcome, shown after the redirect
-    /// @return a redirect to the member's page
+    /// @param id    the member to invite
+    /// @param email the address to send the invitation to
+    /// @return a redirect to the member's page, with the outcome
     @PostMapping(LIST + "/{id}/inbjudan")
-    public String invite(@PathVariable MemberId id, @RequestParam(defaultValue = "") String email,
-            RedirectAttributes redirected) {
+    public View invite(@PathVariable MemberId id, @RequestParam(defaultValue = "") String email) {
         try {
             invitations.invite(id, new InvitationRequest(email));
         } catch (ConstraintViolationException e) {
-            redirected.addFlashAttribute("error", MemberPageController.firstMessage(e));
-            return redirect(id);
+            return redirect(id).error(MemberPageController.firstMessage(e));
         } catch (MemberHasAccount e) {
-            redirected.addFlashAttribute("error", copy.text("invitation.error.hasAccount"));
-            return redirect(id);
+            return redirect(id).error(copy.text("invitation.error.hasAccount"));
         } catch (EmailTaken e) {
-            redirected.addFlashAttribute("error", copy.text("invitation.error.emailTaken"));
-            return redirect(id);
+            return redirect(id).error(copy.text("invitation.error.emailTaken"));
         } catch (NoSuchMember e) {
             throw notFound(e);
         }
-        redirected.addFlashAttribute("notice", copy.text("invitation.sent", email.strip()));
-        return redirect(id);
+        return redirect(id).notice(copy.text("invitation.sent", email.strip()));
     }
 
-    /// @param model receives the households and an empty form
-    /// @return the households page
+    /// @param csrf     the hidden field of the page's forms
+    /// @param feedback what the request before left for this page
+    /// @return the households page, with an empty form
     @GetMapping(HOUSEHOLDS)
-    public String households(Model model) {
-        return householdsPage(new NewHousehold(""), FieldErrors.none(), model);
+    public View households(CsrfField csrf, Feedback feedback) {
+        return householdsPage(new NewHousehold(""), FieldErrors.none(), csrf, feedback);
     }
 
-    /// @param form       the new household's name
-    /// @param model      receives the page again when the create fails
-    /// @param redirected receives the confirmation shown after the redirect
+    /// @param form     the new household's name
+    /// @param csrf     the hidden field of the page's forms
+    /// @param feedback what the request before left for this page
     /// @return a redirect to the households page, or the page again with what was wrong
     @PostMapping(HOUSEHOLDS)
-    public String createHousehold(@ModelAttribute("form") NewHousehold form, Model model,
-            RedirectAttributes redirected) {
+    public View createHousehold(@ModelAttribute("form") NewHousehold form, CsrfField csrf, Feedback feedback) {
         try {
             households.create(form);
         } catch (ConstraintViolationException e) {
-            return householdsPage(form, FieldErrors.of(e), model);
+            return householdsPage(form, FieldErrors.of(e), csrf, feedback);
         }
-        redirected.addFlashAttribute("notice", copy.text("household.created", form.name().strip()));
-        return "redirect:" + HOUSEHOLDS;
+        return Redirect.to(HOUSEHOLDS).notice(copy.text("household.created", form.name().strip()));
     }
 
     /// @param id the household
     /// @param form the next member owner, or administrator management
     /// @param binding what Spring could not read of the form
-    /// @param redirected receives confirmation or an invalid selection message
-    /// @return the household list
+    /// @return the household list, with confirmation or an invalid selection message
     @PostMapping(HOUSEHOLDS + "/{id}/agare")
-    public String changeHouseholdOwner(@PathVariable long id, @ModelAttribute HouseholdOwnerForm form,
-            BindingResult binding, RedirectAttributes redirected) {
+    public View changeHouseholdOwner(@PathVariable long id, @ModelAttribute HouseholdOwnerForm form,
+            BindingResult binding) {
         if (binding.hasErrors()) {
-            redirected.addFlashAttribute("error", copy.text("household.owner.memberId.invalid"));
-            return "redirect:" + HOUSEHOLDS;
+            return Redirect.to(HOUSEHOLDS).error(copy.text("household.owner.memberId.invalid"));
         }
         try {
             households.changeOwner(id, form);
         } catch (ConstraintViolationException | NoSuchMember e) {
-            redirected.addFlashAttribute("error", copy.text("household.owner.memberId.invalid"));
-            return "redirect:" + HOUSEHOLDS;
+            return Redirect.to(HOUSEHOLDS).error(copy.text("household.owner.memberId.invalid"));
         } catch (NoSuchHousehold e) {
             throw notFound(e);
         }
-        redirected.addFlashAttribute("notice", copy.text("household.owner.saved"));
-        return "redirect:" + HOUSEHOLDS;
+        return Redirect.to(HOUSEHOLDS).notice(copy.text("household.owner.saved"));
     }
 
     /// The whole register as a spreadsheet file (R021).
@@ -336,33 +319,17 @@ public class MemberRegisterPageController {
                 .body(members.exportCsv().getBytes(StandardCharsets.UTF_8));
     }
 
-    private String newPage(MemberForm form, FieldErrors errors, @Nullable String error, Model model) {
-        model.addAttribute("form", form);
-        model.addAttribute("errors", errors);
-        model.addAttribute("households", households.list());
-        if (error != null) {
-            model.addAttribute("error", error);
-        }
-        return "admin/memberNew";
+    private View newPage(MemberForm form, FieldErrors errors, CsrfField csrf, Feedback feedback) {
+        return HtmlPage.of(templates.adminMemberNew(copy, csrf, form, errors, households.list(), feedback));
     }
 
-    private String memberPage(MemberFile file, MemberForm form, FieldErrors errors, @Nullable String error,
-            Model model) {
-        model.addAttribute("file", file);
-        model.addAttribute("form", form);
-        model.addAttribute("errors", errors);
-        model.addAttribute("households", households.list());
-        if (error != null) {
-            model.addAttribute("error", error);
-        }
-        return "admin/member";
+    private View memberPage(MemberFile file, MemberForm form, FieldErrors errors, CsrfField csrf,
+            Feedback feedback) {
+        return HtmlPage.of(templates.adminMember(copy, csrf, file, form, errors, households.list(), feedback));
     }
 
-    private String householdsPage(NewHousehold form, FieldErrors errors, Model model) {
-        model.addAttribute("households", households.list());
-        model.addAttribute("form", form);
-        model.addAttribute("errors", errors);
-        return "admin/households";
+    private View householdsPage(NewHousehold form, FieldErrors errors, CsrfField csrf, Feedback feedback) {
+        return HtmlPage.of(templates.adminHouseholds(copy, csrf, households.list(), form, errors, feedback));
     }
 
     private MemberFile file(MemberId id) {
@@ -377,8 +344,8 @@ public class MemberRegisterPageController {
         return new ResponseStatusException(HttpStatus.NOT_FOUND, null, cause);
     }
 
-    private static String redirect(MemberId id) {
-        return "redirect:" + LIST + "/" + id;
+    private static Redirect redirect(MemberId id) {
+        return Redirect.to(LIST + "/" + id);
     }
 
     private static FeeFilter filter(@Nullable String fee) {

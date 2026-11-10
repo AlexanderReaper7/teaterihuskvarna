@@ -1,17 +1,17 @@
 package se.teaterihuskvarna.web;
 
+import gg.jte.generated.precompiled.Templates;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
-import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.server.ResponseStatusException;
-import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+import org.springframework.web.servlet.View;
 import se.teaterihuskvarna.login.SignedIn;
 import se.teaterihuskvarna.member.MemberId;
 import se.teaterihuskvarna.member.MemberService;
@@ -34,69 +34,64 @@ public class MemberOfferPageController {
     private final OfferService offers;
     private final MemberService members;
     private final Copy copy;
+    private final Templates templates;
 
-    MemberOfferPageController(OfferService offers, MemberService members, Copy copy) {
+    MemberOfferPageController(OfferService offers, MemberService members, Copy copy, Templates templates) {
         this.offers = offers;
         this.members = members;
         this.copy = copy;
+        this.templates = templates;
     }
 
     /// @param signedIn the logged-in account
-    /// @param model    receives the open offers
-    /// @return the list of offers
+    /// @return the list of open offers
     @GetMapping("/medlem/erbjudanden")
-    public String list(@AuthenticationPrincipal SignedIn signedIn, Model model) {
-        model.addAttribute("offers", offers.openOffers(memberId(signedIn)));
-        return "member/offers";
+    public View list(@AuthenticationPrincipal SignedIn signedIn) {
+        return HtmlPage.of(templates.memberOffers(copy, offers.openOffers(memberId(signedIn))));
     }
 
     /// @param signedIn the logged-in account
     /// @param id       the offer
-    /// @param model    receives the offer
+    /// @param csrf     the hidden field of the page's forms
+    /// @param feedback what the request before left for this page
     /// @return the offer's page
     @GetMapping("/medlem/erbjudanden/{id}")
-    public String offer(@AuthenticationPrincipal SignedIn signedIn, @PathVariable long id, Model model) {
-        model.addAttribute("offer", offers.offer(id, memberId(signedIn)));
-        return "member/offer";
+    public View offer(@AuthenticationPrincipal SignedIn signedIn, @PathVariable long id, CsrfField csrf,
+            Feedback feedback) {
+        return HtmlPage.of(templates.memberOffer(copy, csrf, offers.offer(id, memberId(signedIn)), feedback));
     }
 
-    /// @param signedIn   the logged-in account
-    /// @param id         the offer
-    /// @param redirected receives the outcome, shown after the redirect
-    /// @return a redirect to the offer's page
+    /// @param signedIn the logged-in account
+    /// @param id       the offer
+    /// @return a redirect to the offer's page, with the outcome
     @PostMapping("/medlem/erbjudanden/{id}/anmal")
-    public String register(@AuthenticationPrincipal SignedIn signedIn, @PathVariable long id,
-            RedirectAttributes redirected) {
+    public View register(@AuthenticationPrincipal SignedIn signedIn, @PathVariable long id) {
         MemberId memberId = memberId(signedIn);
         try {
             RegistrationOutcome outcome = offers.register(id, memberId);
             String key = outcome == RegistrationOutcome.REGISTERED
                     ? "offers.notice.registered" : "offers.notice.alreadyRegistered";
-            redirected.addFlashAttribute("notice", copy.text(key));
+            return redirect(id).notice(copy.text(key));
         } catch (OfferFull e) {
-            redirected.addFlashAttribute("error", copy.text("offers.error.full"));
+            return redirect(id).error(copy.text("offers.error.full"));
         } catch (RegistrationClosed e) {
-            redirected.addFlashAttribute("error", copy.text("offers.error.closed"));
+            return redirect(id).error(copy.text("offers.error.closed"));
         }
-        return redirect(id);
     }
 
-    /// @param signedIn   the logged-in account
-    /// @param id         the offer
-    /// @param redirected receives the outcome, shown after the redirect
-    /// @return a redirect to the offer's page
+    /// @param signedIn the logged-in account
+    /// @param id       the offer
+    /// @return a redirect to the offer's page, with the outcome
     @PostMapping("/medlem/erbjudanden/{id}/avanmal")
-    public String cancel(@AuthenticationPrincipal SignedIn signedIn, @PathVariable long id,
-            RedirectAttributes redirected) {
+    public View cancel(@AuthenticationPrincipal SignedIn signedIn, @PathVariable long id) {
         MemberId memberId = memberId(signedIn);
         try {
             boolean cancelled = offers.cancel(id, memberId);
-            redirected.addFlashAttribute("notice",
-                    copy.text(cancelled ? "offers.notice.cancelled" : "offers.notice.notRegistered"));
+            return redirect(id)
+                    .notice(copy.text(cancelled ? "offers.notice.cancelled" : "offers.notice.notRegistered"));
         } catch (RegistrationClosed e) {
-            redirected.addFlashAttribute("error", copy.text("offers.error.closed"));
+            return redirect(id).error(copy.text("offers.error.closed"));
         }
-        return redirect(id);
     }
 
     /// Sends the error page with 404, as for any path that does not exist.
@@ -114,7 +109,7 @@ public class MemberOfferPageController {
                 .id();
     }
 
-    private static String redirect(long id) {
-        return "redirect:/medlem/erbjudanden/" + id;
+    private static Redirect redirect(long id) {
+        return Redirect.to("/medlem/erbjudanden/" + id);
     }
 }

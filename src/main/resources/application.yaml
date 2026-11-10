@@ -132,8 +132,3 @@ teaterihuskvarna:
   first-administrator:
     email: ${FIRST_ADMINISTRATOR_EMAIL:}
     full-name: ${FIRST_ADMINISTRATOR_NAME:}
-
-gg:
-  jte:
-    development-mode: false
-    use-precompiled-templates: true

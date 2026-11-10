@@ -1,15 +1,14 @@
 @import se.teaterihuskvarna.document.DocumentSummary
 @import se.teaterihuskvarna.web.Copy
 @import se.teaterihuskvarna.web.CsrfField
+@import se.teaterihuskvarna.web.Feedback
 @param Copy copy
 @param CsrfField csrf
 @param DocumentSummary document
-@param boolean stale
+@param Feedback feedback
 @template.admin.layout(copy = copy, title = copy.text("adminDocuments.delete.heading"), content = @`
     <h1>${copy.text("adminDocuments.delete.heading")}</h1>
-    @if(stale)
-        <p role="alert">${copy.text("form.stale")}</p>
-    @endif
+    @template.tag.feedback(copy = copy, feedback = feedback)
     <p>${copy.text("adminDocuments.delete.question", document.title())}</p>
     <p>${copy.text("adminDocuments.delete.what", copy.text("document.kind." + document.kind().name()), copy.date(document.publishedOn()))}</p>
     <p>${copy.text("adminDocuments.delete.final")}</p>

@@ -1,15 +1,14 @@
 @import se.teaterihuskvarna.administrator.AdministratorDetails
 @import se.teaterihuskvarna.web.Copy
 @import se.teaterihuskvarna.web.CsrfField
+@import se.teaterihuskvarna.web.Feedback
 @param Copy copy
 @param CsrfField csrf
 @param AdministratorDetails administrator
-@param boolean stale
+@param Feedback feedback
 @template.admin.layout(copy = copy, title = copy.text("admin.remove.heading"), content = @`
     <h1>${copy.text("admin.remove.heading")}</h1>
-    @if(stale)
-        <p role="alert">${copy.text("form.stale")}</p>
-    @endif
+    @template.tag.feedback(copy = copy, feedback = feedback)
     <p>${copy.text("admin.remove.question", administrator.fullName(), administrator.email())}</p>
     <p>${copy.text("admin.remove.what")}</p>
     <p>${copy.text("admin.remove.again")}</p>

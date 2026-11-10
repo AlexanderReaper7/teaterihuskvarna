@@ -1,7 +1,6 @@
 package se.teaterihuskvarna.mailing;
 
-import gg.jte.TemplateEngine;
-import gg.jte.output.StringOutput;
+import gg.jte.generated.precompiled.Templates;
 import jakarta.validation.Valid;
 import java.time.Clock;
 import java.time.Duration;
@@ -10,7 +9,6 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
@@ -76,12 +74,12 @@ public class MailingService {
     private final MailingRepository mailings;
     private final ContentService content;
     private final MailSettings site;
-    private final TemplateEngine templates;
+    private final Templates templates;
     private final MessageSource messages;
     private final Clock clock;
 
     MailingService(Brevo brevo, MailingRepository mailings, ContentService content, MailSettings site,
-            TemplateEngine templates, MessageSource messages, Clock clock) {
+            Templates templates, MessageSource messages, Clock clock) {
         this.brevo = brevo;
         this.mailings = mailings;
         this.content = content;
@@ -393,10 +391,7 @@ public class MailingService {
         Mail.Labels labels = new Mail.Labels(text("mailing.mail.events"), text("mailing.mail.news"),
                 text("mailing.mail.readMore"), text("mailing.mail.site"), site.link("/", null),
                 text("mailing.mail.unsubscribe"), text("mailing.mail.why"));
-        StringOutput output = new StringOutput();
-        templates.render("mail/mailing.jte",
-                Map.of("mail", new Mail(form.subject().strip(), intro, events, news, labels)), output);
-        return output.toString();
+        return templates.mailMailing(new Mail(form.subject().strip(), intro, events, news, labels)).render();
     }
 
     private static @Nullable String imageUrl(@Nullable Image image) {

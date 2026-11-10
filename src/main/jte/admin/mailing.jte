@@ -2,23 +2,18 @@
 @import se.teaterihuskvarna.mailing.MailingDetails
 @import se.teaterihuskvarna.web.Copy
 @import se.teaterihuskvarna.web.CsrfField
+@import se.teaterihuskvarna.web.Feedback
 @param Copy copy
 @param CsrfField csrf
 @param MailingDetails mailing
 @param String testAddress
-@param String error
-@param String notice
+@param Feedback feedback
 !{Instant sentAt = mailing.sentAt();}
 !{Long campaignId = mailing.brevoCampaignId();}
 @template.admin.layout(copy = copy, title = mailing.subject(), content = @`
     <h1>${mailing.subject()}</h1>
     <p><a href="/admin/utskick">${copy.text("adminMailings.back")}</a></p>
-    @if(error != null)
-        <p role="alert">${error}</p>
-    @endif
-    @if(notice != null)
-        <p role="status">${notice}</p>
-    @endif
+    @template.tag.feedback(copy = copy, feedback = feedback)
     <dl>
         <dt>${copy.text("adminMailings.log.audience")}</dt>
         <dd>${mailing.audienceName()}</dd>

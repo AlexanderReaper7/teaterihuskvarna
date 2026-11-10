@@ -8,6 +8,7 @@ import static org.mockito.Mockito.mockingDetails;
 import com.tngtech.archunit.core.domain.JavaClass;
 import com.tngtech.archunit.core.importer.ClassFileImporter;
 import com.tngtech.archunit.core.importer.ImportOption;
+import gg.jte.generated.precompiled.Templates;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -24,16 +25,15 @@ import java.util.TreeSet;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 import org.mockito.invocation.Invocation;
+import org.springframework.core.MethodParameter;
 import org.springframework.core.annotation.AnnotatedElementUtils;
-import org.springframework.ui.ExtendedModelMap;
-import org.springframework.ui.Model;
 import org.springframework.validation.BeanPropertyBindingResult;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.servlet.mvc.support.RedirectAttributes;
-import org.springframework.web.servlet.mvc.support.RedirectAttributesModelMap;
+import org.springframework.web.method.support.HandlerMethodArgumentResolver;
+import se.teaterihuskvarna.content.Previews;
 
 /// A value that cannot become the type of its form field never reaches a
 /// service: a number no `int` holds, a date a date field would not send, a
@@ -50,6 +50,10 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributesModelMap;
 class UnreadableFormsTest {
 
     private final Copy copy = new Copy(new MessagesConfiguration().messageSource());
+
+    /// What [PageArguments] fills in. Asked the way Spring asks, so a type it
+    /// learns to fill in later is not taken for a form here.
+    private static final List<HandlerMethodArgumentResolver> FROM_THE_REQUEST = fromTheRequest();
 
     /// Without the `BindingResult` Spring answers 400 and the form is lost.
     @Test
@@ -71,9 +75,11 @@ class UnreadableFormsTest {
 
     /// Calls each handler that takes a `BindingResult` with every field that is
     /// not text unreadable, on a controller made of mocks. It fails when the
-    /// handler hands the form to anything it was constructed with, and when
-    /// it asks for a Swedish message that is missing, which [Copy] throws on:
-    /// `FieldErrors.of` reads the key `<prefix>.<field>.invalid` for each field.
+    /// handler hands the form to anything it was constructed with, other than
+    /// the templates, which show the form again. It fails too when the
+    /// handler asks for a Swedish message that is missing, which [Copy] throws
+    /// on: `FieldErrors.of` reads the key `<prefix>.<field>.invalid` for each
+    /// field.
     @Test
     void noHandlerGivesAnUnreadableFormToAService() throws Exception {
         List<String> wrong = new ArrayList<>();
@@ -138,11 +144,20 @@ class UnreadableFormsTest {
     /// A record of the application that Spring fills from the request's
     /// parameters, which it does with or without `@ModelAttribute`. Any other
     /// annotation means something else fills it, as `@AuthenticationPrincipal`
-    /// does.
+    /// does, and so does [PageArguments] for a `Feedback` and a `CsrfField`.
     private static boolean isForm(Parameter parameter) {
         Class<?> type = parameter.getType();
+        MethodParameter asSpringSeesIt = MethodParameter.forParameter(parameter);
         return type.isRecord() && type.getPackageName().startsWith("se.teaterihuskvarna")
-                && Arrays.stream(parameter.getAnnotations()).allMatch(ModelAttribute.class::isInstance);
+                && Arrays.stream(parameter.getAnnotations()).allMatch(ModelAttribute.class::isInstance)
+                && FROM_THE_REQUEST.stream().noneMatch(resolver -> resolver.supportsParameter(asSpringSeesIt));
+    }
+
+    private static List<HandlerMethodArgumentResolver> fromTheRequest() {
+        List<HandlerMethodArgumentResolver> resolvers = new ArrayList<>();
+        new PageArguments(mock(Previews.class)).addArgumentResolvers(resolvers);
+        assertThat(resolvers).as("what PageArguments fills in").isNotEmpty();
+        return resolvers;
     }
 
     /// Text always becomes a `String`, alone or in a list, so only the other
@@ -191,6 +206,8 @@ class UnreadableFormsTest {
                 arguments[i] = copy;
             } else if (types[i] == Clock.class) {
                 arguments[i] = Clock.fixed(Instant.EPOCH, ZoneOffset.UTC);
+            } else if (types[i] == Templates.class) {
+                arguments[i] = mock(Templates.class);
             } else {
                 arguments[i] = mock(types[i], RETURNS_DEEP_STUBS);
                 collaborators.add(arguments[i]);
@@ -213,11 +230,11 @@ class UnreadableFormsTest {
         if (type == String.class) {
             return "x";
         }
-        if (type == Model.class) {
-            return new ExtendedModelMap();
+        if (type == Feedback.class) {
+            return new Feedback(false, null, null);
         }
-        if (type == RedirectAttributes.class) {
-            return new RedirectAttributesModelMap();
+        if (type == CsrfField.class) {
+            return new CsrfField("_csrf", "x");
         }
         return mock(type, RETURNS_DEEP_STUBS);
     }

@@ -2,17 +2,16 @@
 @import se.teaterihuskvarna.web.Copy
 @import se.teaterihuskvarna.web.CsrfField
 @import se.teaterihuskvarna.web.FieldErrors
+@import se.teaterihuskvarna.web.Feedback
 @param Copy copy
 @param CsrfField csrf
 @param ContactForm form
 @param FieldErrors errors
-@param boolean stale
+@param Feedback feedback
 @template.member.layout(copy = copy, title = copy.text("member.contact.heading"), content = @`
     <h1>${copy.text("member.contact.heading")}</h1>
     <p>${copy.text("member.contact.emailNote")}</p>
-    @if(stale)
-        <p role="alert">${copy.text("form.stale")}</p>
-    @endif
+    @template.tag.feedback(copy = copy, feedback = feedback)
     @template.tag.errors(copy = copy, errors = errors)
     <form method="post" action="/medlem/kontaktuppgifter">
         @template.tag.csrf(csrf = csrf)

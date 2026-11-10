@@ -1,15 +1,16 @@
 package se.teaterihuskvarna.web;
 
+import gg.jte.generated.precompiled.Templates;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
 import java.util.Optional;
 import org.jspecify.annotations.Nullable;
 import org.springframework.stereotype.Controller;
-import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.servlet.View;
 import se.teaterihuskvarna.member.ApplicationForm;
 import se.teaterihuskvarna.member.AssociationSettings;
 import se.teaterihuskvarna.member.MembershipApplicationService;
@@ -26,33 +27,24 @@ public class MembershipApplicationPageController {
     private final MembershipApplicationService applications;
     private final AssociationSettings association;
     private final PageMetadataFactory metadata;
+    private final Copy copy;
+    private final Templates templates;
 
     MembershipApplicationPageController(MembershipApplicationService applications, AssociationSettings association,
-            PageMetadataFactory metadata) {
+            PageMetadataFactory metadata, Copy copy, Templates templates) {
         this.applications = applications;
         this.association = association;
         this.metadata = metadata;
+        this.copy = copy;
+        this.templates = templates;
     }
 
-    /// @return the application page's public search and sharing description
-    @ModelAttribute("metadata")
-    public PageMetadata metadata() {
-        return metadata.fixed("/bli-medlem", "application.heading", "metadata.membership");
-    }
-
-    /// @return the fee amounts, which the form states
-    @ModelAttribute("fees")
-    public AssociationSettings fees() {
-        return association;
-    }
-
-    /// @param model receives an empty form and no errors
-    /// @return the application form
+    /// @param csrf     the hidden field of the page's form
+    /// @param feedback what the request before left for this page
+    /// @return the application form, empty
     @GetMapping("/bli-medlem")
-    public String form(Model model) {
-        model.addAttribute("form", new ApplicationForm("", "", null, null, null, null));
-        model.addAttribute("errors", FieldErrors.none());
-        return "application/form";
+    public View form(CsrfField csrf, Feedback feedback) {
+        return formPage(new ApplicationForm("", "", null, null, null, null), FieldErrors.none(), csrf, feedback);
     }
 
     /// The client address is the one the servlet container reports. Behind the
@@ -60,52 +52,61 @@ public class MembershipApplicationPageController {
     /// the container to trust the proxy's forwarded header; this class does not read
     /// the header itself.
     ///
-    /// @param form    the submitted fields, bound by name
-    /// @param request the request, for the client address the rate limit counts
-    /// @param model   receives the errors when the form is shown again
+    /// @param form     the submitted fields, bound by name
+    /// @param request  the request, for the client address the rate limit counts
+    /// @param csrf     the hidden field of the page's form
+    /// @param feedback what the request before left for this page
     /// @return a redirect to the sent page, or the form again with what was wrong
     @PostMapping("/bli-medlem")
-    public String apply(@ModelAttribute("form") ApplicationForm form, HttpServletRequest request, Model model) {
+    public View apply(@ModelAttribute("form") ApplicationForm form, HttpServletRequest request, CsrfField csrf,
+            Feedback feedback) {
         try {
             applications.apply(form, request.getRemoteAddr());
         } catch (ConstraintViolationException e) {
-            model.addAttribute("errors", FieldErrors.of(e));
-            return "application/form";
+            return formPage(form, FieldErrors.of(e), csrf, feedback);
         }
-        return "redirect:/bli-medlem/skickat";
+        return Redirect.to("/bli-medlem/skickat");
     }
 
     /// @return the page that says a mail may be on its way
     @GetMapping("/bli-medlem/skickat")
-    public String sent() {
-        return "application/sent";
+    public View sent() {
+        return HtmlPage.of(templates.applicationSent(copy));
     }
 
     /// Opened from the mailed link. A GET does not confirm, for the reason the login
     /// link page gives: a mail scanner following the link would otherwise use it up.
     ///
-    /// @param token the token from the mailed link
-    /// @param model receives the token for the button to post
+    /// @param token    the token from the mailed link, for the button to post
+    /// @param csrf     the hidden field of the page's form
+    /// @param feedback what the request before left for this page
     /// @return the page with the confirm button, or the expired page when there is no token
     @GetMapping("/bli-medlem/bekrafta")
-    public String confirmation(@RequestParam(required = false) @Nullable String token, Model model) {
+    public View confirmation(@RequestParam(required = false) @Nullable String token, CsrfField csrf,
+            Feedback feedback) {
         if (token == null || token.isBlank()) {
-            return "application/expired";
+            return HtmlPage.of(templates.applicationExpired(copy));
         }
-        model.addAttribute("token", token);
-        return "application/confirm";
+        return HtmlPage.of(templates.applicationConfirm(copy, csrf, feedback, token));
     }
 
     /// @param token the token the confirm button posted
-    /// @param model receives the new member's name, address and the bankgiro
-    /// @return the welcome page with the payment instruction, or the expired page
+    /// @return the welcome page with the new member's name, address and the payment instruction, or the
+    ///         expired page
     @PostMapping("/bli-medlem/bekrafta")
-    public String confirm(@RequestParam String token, Model model) {
+    public View confirm(@RequestParam String token) {
         Optional<Welcome> welcome = applications.confirm(token);
         if (welcome.isEmpty()) {
-            return "application/expired";
+            return HtmlPage.of(templates.applicationExpired(copy));
         }
-        model.addAttribute("welcome", welcome.get());
-        return "application/welcome";
+        return HtmlPage.of(templates.applicationWelcome(copy, welcome.get()));
+    }
+
+    /// The form states the fee amounts, and the page has a public search and
+    /// sharing description.
+    private View formPage(ApplicationForm form, FieldErrors errors, CsrfField csrf, Feedback feedback) {
+        return HtmlPage.of(templates.applicationForm(copy,
+                metadata.fixed("/bli-medlem", "application.heading", "metadata.membership"), csrf, feedback, form,
+                errors, association));
     }
 }

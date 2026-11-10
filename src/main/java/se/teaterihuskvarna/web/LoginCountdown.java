@@ -13,7 +13,7 @@ import se.teaterihuskvarna.login.LoginStatus;
 ///
 /// The countdown is therefore in the member's and the administrator's layout,
 /// and a layout sees only what the page calling it passes on. Rather than every
-/// page passing this on, [PageModel] keeps it on the request before the page
+/// page passing this on, [CountdownAdvice] keeps it on the request before the page
 /// renders, and the layouts ask [#current], as they ask [Navigation] for the
 /// path.
 ///

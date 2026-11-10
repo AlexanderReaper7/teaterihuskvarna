@@ -6,11 +6,11 @@ description: Which template engine renders the HTML.
 
 # 0004: JTE rather than Thymeleaf for templates
 
-Amended by an agent on 2026-11-10. The record said there were no students, and there are now.
+Amended by an agent on 2026-11-10. The record said there were no students, and there are now. Amended by an agent on 2026-11-10 again: the templates are reached through generated methods and no longer through JTE's Spring Boot starter, see "How a handler reaches a template" in the agent notes.
 
 ## Decision
 
-The application renders HTML with [JTE](https://jte.gg/), through `gg.jte:jte-spring-boot-starter-4` 3.2.5. Not Thymeleaf, which the produktägare's document names under "Teknikval" and which the system sketch shows inside the application box.
+The application renders HTML with [JTE](https://jte.gg/) 3.2.5. Not Thymeleaf, which the produktägare's document names under "Teknikval" and which the system sketch shows inside the application box.
 
 Swedish visitor-facing text does not live in template files. It lives in [`messages_sv.properties`](../../src/main/resources/messages_sv.properties) and in Sanity. Templates hold markup and message keys.
 
@@ -69,3 +69,13 @@ The version went from 3.2.4 to 3.2.5 on 2026-11-10. The table above is what was 
 - A dynamic `srcdoc` on an `<iframe>` is written as empty, and `javascript:` and `data:` addresses are dropped from `<a href>`, `<area href>`, `<base href>`, `<iframe src>`, `<form action>`, `<button formaction>` and `<input formaction>` ([GHSA-hvg6-pc44-97gv](https://github.com/casid/jte/security/advisories/GHSA-hvg6-pc44-97gv)).
 
 What this means for a template: JTE drops such a value without an error, at render time, so the compile-time argument above does not cover it. The mailing preview used `srcdoc` and showed an empty frame under 3.2.5 until it was rebuilt ([0026](0026-outbox-and-brevo-contacts.md), "The mailing preview"). Every other dynamic address in the templates on 2026-11-10 is a path the application builds, a configured address, or a Sanity address that [`ContentService`](../../src/main/java/se/teaterihuskvarna/content/ContentService.java) keeps only when it starts with `http://` or `https://`, so the guards drop nothing there.
+
+### How a handler reaches a template
+
+The reasoning above stops at the template's edge. Inside a template the compiler checks every field and every type. Between a handler and its template nothing did: the handler returned the template's name as a string and filled a model, a map from a name to any object, and the template declared the same names with `@param`. A name spelled differently on the two sides, a value left out, or a template renamed, compiled and drew a page with a hole in it, or failed when the page was first asked for.
+
+Since 2026-11-10 the build generates one method per page on `gg.jte.generated.precompiled.Templates`, with the template's `@param` lines as the method's parameters, through `jte-maven-plugin`'s `generate` goal and `gg.jte:jte-models` ([`pom.xml`](../../pom.xml)). A handler answers with `HtmlPage.of(templates.memberHousehold(..))` or with a `Redirect`, and the three mistakes fail the compile. [`PageRulesTest`](../../src/test/java/se/teaterihuskvarna/architecture/PageRulesTest.java) fails the build on a handler that returns a view's name or takes a model, and the package comment in [`se.teaterihuskvarna.web`](../../src/main/java/se/teaterihuskvarna/web/package-info.java) says how the pieces fit.
+
+`gg.jte:jte-spring-boot-starter-4` is gone with it. Its job was to find a template by a view's name and hand it the model. The table above still lists it, as what was compared on 2026-09-22.
+
+What the compiler still cannot see: the arguments are positional, so two parameters of the same type next to each other can be passed in the wrong order. [`admin/shifts.jte`](../../src/main/jte/admin/shifts.jte) takes the upcoming shifts and the past ones as two lists, and [`admin/mailingPreview.jte`](../../src/main/jte/admin/mailingPreview.jte) takes two strings. And a redirect names its page by a path, which is a string.

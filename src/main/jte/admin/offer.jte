@@ -5,23 +5,18 @@
 @import se.teaterihuskvarna.web.Copy
 @import se.teaterihuskvarna.web.CsrfField
 @import se.teaterihuskvarna.web.FieldErrors
+@import se.teaterihuskvarna.web.Feedback
 @param Copy copy
 @param CsrfField csrf
 @param OfferDetails offer
 @param OfferForm form
 @param FieldErrors errors
 @param List<Registrant> registrations
-@param String error
-@param String notice
+@param Feedback feedback
 @template.admin.layout(copy = copy, title = offer.title(), content = @`
     <h1>${offer.title()}</h1>
     <p><a href="/admin/erbjudanden">${copy.text("adminOffers.back")}</a></p>
-    @if(error != null)
-        <p role="alert">${error}</p>
-    @endif
-    @if(notice != null)
-        <p role="status">${notice}</p>
-    @endif
+    @template.tag.feedback(copy = copy, feedback = feedback)
     <dl>
         <dt>${copy.text("adminOffers.list.state")}</dt>
         <dd>@if(offer.published())${copy.text("adminOffers.state.published")}@else${copy.text("adminOffers.state.draft")}@endif</dd>

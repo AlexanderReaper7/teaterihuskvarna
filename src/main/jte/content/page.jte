@@ -12,9 +12,9 @@
 @param Perspective perspective
 @param Page page
 @param EditAttributes edit
-@param List<Production> productions = List.of()
-@param List<BoardMember> board = List.of()
-@param List<LuddePrize> prizes = List.of()
+@param List<Production> productions
+@param List<BoardMember> board
+@param List<LuddePrize> prizes
 @template.layout(metadata = metadata, copy = copy, title = page.title(), preview = perspective == Perspective.DRAFTS, content = @`
     <article>
         <h1 data-sanity="${edit.field(page, "title")}">${page.title()}</h1>

@@ -6,6 +6,7 @@
 @import se.teaterihuskvarna.web.Copy
 @import se.teaterihuskvarna.web.CsrfField
 @import se.teaterihuskvarna.web.FieldErrors
+@import se.teaterihuskvarna.web.Feedback
 @param Copy copy
 @param CsrfField csrf
 @param List<ShiftDetails> shifts
@@ -13,19 +14,13 @@
 @param List<Event> events
 @param ShiftForm form
 @param FieldErrors errors
-@param String error
-@param String notice
+@param Feedback feedback
 !{String eventError = errors.message("eventId");}
 !{String taskError = errors.message("task");}
 !{String timesError = errors.message("endsAfterStart");}
 @template.admin.layout(copy = copy, title = copy.text("adminShifts.heading"), content = @`
     <h1>${copy.text("adminShifts.heading")}</h1>
-    @if(error != null)
-        <p role="alert">${error}</p>
-    @endif
-    @if(notice != null)
-        <p role="status">${notice}</p>
-    @endif
+    @template.tag.feedback(copy = copy, feedback = feedback)
     <h2>${copy.text("adminShifts.upcoming")}</h2>
     @if(shifts.isEmpty())
         <p>${copy.text("adminShifts.none")}</p>

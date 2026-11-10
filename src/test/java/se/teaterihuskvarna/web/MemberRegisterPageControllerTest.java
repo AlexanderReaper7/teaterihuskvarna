@@ -1,17 +1,19 @@
 package se.teaterihuskvarna.web;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.InstanceOfAssertFactories.list;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import gg.jte.generated.precompiled.Templates;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.List;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.context.support.StaticMessageSource;
-import org.springframework.ui.ExtendedModelMap;
 import se.teaterihuskvarna.Swedish;
 import se.teaterihuskvarna.member.FeeFilter;
 import se.teaterihuskvarna.member.FeeService;
@@ -35,14 +37,16 @@ class MemberRegisterPageControllerTest {
         messages.addMessage("register.filter.all", Swedish.LOCALE, "Alla");
         messages.addMessage("register.filter.unpaid", Swedish.LOCALE, "Har inte betalat {0}");
         messages.addMessage("register.filter.paid", Swedish.LOCALE, "Har betalat {0}");
+        Templates templates = mock(Templates.class);
         MemberRegisterPageController controller = new MemberRegisterPageController(members,
                 mock(HouseholdService.class), mock(FeeService.class), mock(InvitationService.class),
-                new Copy(messages), Clock.fixed(AFTER_MIDNIGHT_IN_SWEDEN, ZoneOffset.UTC));
-        ExtendedModelMap model = new ExtendedModelMap();
+                new Copy(messages), Clock.fixed(AFTER_MIDNIGHT_IN_SWEDEN, ZoneOffset.UTC), templates);
 
-        controller.list(null, null, model);
+        controller.list(null, null, new CsrfField("_csrf", "token"), new Feedback(false, null, null));
 
-        assertThat(model.get("filters")).asInstanceOf(list(RegisterFilter.class))
+        ArgumentCaptor<List<RegisterFilter>> filters = ArgumentCaptor.captor();
+        verify(templates).adminMembers(any(), any(), any(), any(), filters.capture(), any(), any());
+        assertThat(filters.getValue())
                 .extracting(RegisterFilter::label)
                 .containsExactly("Alla", "Har inte betalat 2027", "Har betalat 2027");
     }

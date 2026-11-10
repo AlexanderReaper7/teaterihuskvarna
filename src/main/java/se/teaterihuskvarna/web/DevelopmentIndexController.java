@@ -1,12 +1,13 @@
 package se.teaterihuskvarna.web;
 
+import gg.jte.generated.precompiled.Templates;
 import org.jspecify.annotations.Nullable;
 import org.springframework.context.annotation.Profile;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
-import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.servlet.View;
 import se.teaterihuskvarna.development.DevelopmentService;
 import se.teaterihuskvarna.login.SignedIn;
 
@@ -21,26 +22,26 @@ import se.teaterihuskvarna.login.SignedIn;
 public class DevelopmentIndexController {
 
     private final DevelopmentService development;
+    private final Copy copy;
+    private final Templates templates;
 
-    DevelopmentIndexController(DevelopmentService development) {
+    DevelopmentIndexController(DevelopmentService development, Copy copy, Templates templates) {
         this.development = development;
+        this.copy = copy;
+        this.templates = templates;
     }
 
     /// Both login chains keep the security context in the same session
     /// attribute, so whoever is logged in, member or administrator, shows here.
     ///
-    /// @param signedIn who is logged in, or null
+    /// @param signedIn    who is logged in, or null
     /// @param loginFailed present after an immediate login failed
-    /// @param model    receives the routes, the accounts, the environment and the login
-    /// @return the development index
+    /// @param csrf        the hidden field of the page's forms, which post to the login pages
+    /// @return the development index: the routes, the accounts, the environment and the login
     @GetMapping("/dev")
-    public String index(@AuthenticationPrincipal @Nullable SignedIn signedIn,
-            @RequestParam(name = "login-failed", required = false) @Nullable String loginFailed, Model model) {
-        model.addAttribute("routes", development.routes());
-        model.addAttribute("accounts", development.loginAccounts());
-        model.addAttribute("environment", development.environment());
-        model.addAttribute("signedIn", signedIn);
-        model.addAttribute("loginFailed", loginFailed != null);
-        return "development/index";
+    public View index(@AuthenticationPrincipal @Nullable SignedIn signedIn,
+            @RequestParam(name = "login-failed", required = false) @Nullable String loginFailed, CsrfField csrf) {
+        return HtmlPage.of(templates.developmentIndex(copy, csrf, development.routes(), development.loginAccounts(),
+                development.environment(), signedIn, loginFailed != null));
     }
 }

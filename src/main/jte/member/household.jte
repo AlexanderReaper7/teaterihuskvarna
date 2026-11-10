@@ -5,26 +5,17 @@
 @import se.teaterihuskvarna.web.Copy
 @import se.teaterihuskvarna.web.CsrfField
 @import se.teaterihuskvarna.web.FieldErrors
+@import se.teaterihuskvarna.web.Feedback
 @param Copy copy
 @param CsrfField csrf
-@param HouseholdDetails household = null
+@param HouseholdDetails household
 @param MemberId ownMemberId
 @param NewHousehold form
 @param FieldErrors errors
-@param boolean stale
-@param String error
-@param String notice
+@param Feedback feedback
 @template.member.layout(copy = copy, title = copy.text("member.household.manage"), content = @`
     <h1>${copy.text(household == null ? "household.create" : "member.household.manage")}</h1>
-    @if(stale)
-        <p role="alert">${copy.text("form.stale")}</p>
-    @endif
-    @if(error != null)
-        <p role="alert">${error}</p>
-    @endif
-    @if(notice != null)
-        <p role="status">${notice}</p>
-    @endif
+    @template.tag.feedback(copy = copy, feedback = feedback)
     @template.tag.errors(copy = copy, errors = errors)
     @if(household == null || household.ownedBy(ownMemberId))
     <form method="post" action="${household == null ? "/medlem/hushall" : "/medlem/hushall/namn"}">

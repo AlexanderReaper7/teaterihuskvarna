@@ -1,9 +1,9 @@
 package se.teaterihuskvarna.web;
 
 import jakarta.servlet.http.HttpSession;
+import java.util.List;
 import org.springframework.stereotype.Component;
-import org.springframework.ui.Model;
-import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+import se.teaterihuskvarna.login.DeviceDetails;
 import se.teaterihuskvarna.login.DeviceService;
 import se.teaterihuskvarna.login.NoSuchDevice;
 import se.teaterihuskvarna.login.SignedIn;
@@ -22,33 +22,33 @@ class DeviceSection {
         this.copy = copy;
     }
 
-    /// @param model    receives `devices` and `deviceUrls`
     /// @param signedIn whose devices to list
     /// @param session  the asking request's session, which the list marks
-    void addTo(Model model, SignedIn signedIn, HttpSession session) {
-        model.addAttribute("devices", devices.list(signedIn, session));
-        model.addAttribute("deviceUrls", DeviceUrls.of(signedIn.kind()));
+    /// @return their logged-in devices
+    List<DeviceDetails> list(SignedIn signedIn, HttpSession session) {
+        return devices.list(signedIn, session);
     }
 
-    /// @param signedIn   whose device to log out
-    /// @param id         the device's id
-    /// @param session    the asking request's session
-    /// @param redirected receives the outcome, shown after the redirect
-    void end(SignedIn signedIn, String id, HttpSession session, RedirectAttributes redirected) {
+    /// @param signedIn whose device to log out
+    /// @param id       the device's id
+    /// @param session  the asking request's session
+    /// @param page     the redirect back to the page
+    /// @return the redirect with the outcome
+    Redirect end(SignedIn signedIn, String id, HttpSession session, Redirect page) {
         try {
             devices.end(signedIn, id, session);
         } catch (NoSuchDevice e) {
-            redirected.addFlashAttribute("error", copy.text("device.error.noSuch"));
-            return;
+            return page.error(copy.text("device.error.noSuch"));
         }
-        redirected.addFlashAttribute("notice", copy.text("device.ended"));
+        return page.notice(copy.text("device.ended"));
     }
 
-    /// @param signedIn   whose other devices to log out
-    /// @param session    the asking request's session, which stays logged in
-    /// @param redirected receives the outcome, shown after the redirect
-    void endOthers(SignedIn signedIn, HttpSession session, RedirectAttributes redirected) {
+    /// @param signedIn whose other devices to log out
+    /// @param session  the asking request's session, which stays logged in
+    /// @param page     the redirect back to the page
+    /// @return the redirect with the outcome
+    Redirect endOthers(SignedIn signedIn, HttpSession session, Redirect page) {
         devices.endOthers(signedIn, session);
-        redirected.addFlashAttribute("notice", copy.text("device.endedOthers"));
+        return page.notice(copy.text("device.endedOthers"));
     }
 }
