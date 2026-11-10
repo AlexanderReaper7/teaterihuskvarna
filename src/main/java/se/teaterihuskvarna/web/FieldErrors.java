@@ -4,8 +4,12 @@ import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import org.jspecify.annotations.Nullable;
+import org.springframework.validation.BindingResult;
+import org.springframework.validation.FieldError;
 import se.teaterihuskvarna.Violations;
 
 /// What was wrong with a submitted form, field by field, for the page that shows
@@ -14,14 +18,21 @@ import se.teaterihuskvarna.Violations;
 /// Built from the `ConstraintViolationException` the service's method validation
 /// throws. The messages are already Swedish: the validator resolved their keys in
 /// `messages_sv.properties`.
+///
+/// Or built from a `BindingResult`, for a value that never reached the service
+/// because it could not become the type of its field.
 public final class FieldErrors {
 
-    private static final FieldErrors NONE = new FieldErrors(List.of());
+    private static final FieldErrors NONE = new FieldErrors(List.of(), Map.of());
 
     private final List<InvalidField> fields;
 
-    private FieldErrors(List<InvalidField> fields) {
+    /// What was typed in each field that could not be read, by field name.
+    private final Map<String, String> unreadable;
+
+    private FieldErrors(List<InvalidField> fields, Map<String, String> unreadable) {
         this.fields = fields;
+        this.unreadable = unreadable;
     }
 
     /// @return no errors, for a form shown for the first time
@@ -42,7 +53,38 @@ public final class FieldErrors {
             fields.add(new InvalidField(Violations.field(violation), violation.getMessage()));
         }
         fields.sort(Comparator.comparing(InvalidField::field).thenComparing(InvalidField::message));
-        return new FieldErrors(List.copyOf(fields));
+        return new FieldErrors(List.copyOf(fields), Map.of());
+    }
+
+    /// For a form with a value that could not become the type of its field: a
+    /// number no `int` holds, a date a date field would not send, a choice that
+    /// does not exist. Spring leaves such a field null in the form and reports it
+    /// in the `BindingResult` that the handler method takes right after the form.
+    /// Without that parameter Spring answers 400 and the form is lost.
+    ///
+    /// The message for the field `capacity` of a form with the prefix `offer` is
+    /// the key `offer.capacity.invalid`. `UnreadableValueKeysTest` fails when a
+    /// form has a field that can be unreadable and no such key.
+    ///
+    /// A handler that gets errors here must not call the service: the form's
+    /// null may be a valid value, which the service would then store.
+    ///
+    /// @param binding what Spring could not read
+    /// @param copy    the Swedish copy
+    /// @param prefix  what the form's keys start with, such as `offer`
+    /// @return one error for each unreadable field, with what was typed in it
+    public static FieldErrors of(BindingResult binding, Copy copy, String prefix) {
+        List<InvalidField> fields = new ArrayList<>();
+        Map<String, String> unreadable = new HashMap<>();
+        for (FieldError error : binding.getFieldErrors()) {
+            String field = error.getField();
+            fields.add(new InvalidField(field, copy.text(prefix + "." + field + ".invalid")));
+            if (error.getRejectedValue() instanceof String typed) {
+                unreadable.put(field, typed);
+            }
+        }
+        fields.sort(Comparator.comparing(InvalidField::field));
+        return new FieldErrors(List.copyOf(fields), Map.copyOf(unreadable));
     }
 
     /// @return true when the form had nothing wrong with it
@@ -64,6 +106,21 @@ public final class FieldErrors {
             }
         }
         return null;
+    }
+
+    /// What the page puts back in a field. A field that could not be read is null
+    /// in the form, so what was typed comes from here instead.
+    ///
+    /// @param field a form field's name, such as `capacity`
+    /// @param bound the field's value in the form, or null
+    /// @return what was typed if it could not be read, else the form's value as
+    ///         text, or null for an empty field
+    public @Nullable String value(String field, @Nullable Object bound) {
+        String typed = unreadable.get(field);
+        if (typed != null) {
+            return typed;
+        }
+        return bound == null ? null : bound.toString();
     }
 
     /// One error on one field.

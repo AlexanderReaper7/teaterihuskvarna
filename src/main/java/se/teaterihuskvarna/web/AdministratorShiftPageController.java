@@ -7,6 +7,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
@@ -29,6 +30,9 @@ public class AdministratorShiftPageController {
 
     private static final String LIST = "/admin/volontarpass";
 
+    /// What the keys of [ShiftForm]'s messages start with.
+    private static final String KEYS = "shift";
+
     private final ShiftService shifts;
     private final Copy copy;
 
@@ -45,11 +49,16 @@ public class AdministratorShiftPageController {
     }
 
     /// @param form       what was typed
+    /// @param binding    the values that could not be read, which are null in the form
     /// @param model      receives the page again when the form has errors
     /// @param redirected receives the confirmation shown after the redirect
     /// @return a redirect to the new shift, or the list again with what was wrong
     @PostMapping(LIST)
-    public String create(@ModelAttribute("form") ShiftForm form, Model model, RedirectAttributes redirected) {
+    public String create(@ModelAttribute("form") ShiftForm form, BindingResult binding, Model model,
+            RedirectAttributes redirected) {
+        if (binding.hasErrors()) {
+            return page(form, FieldErrors.of(binding, copy, KEYS), model);
+        }
         ShiftDetails created;
         try {
             created = shifts.create(form);

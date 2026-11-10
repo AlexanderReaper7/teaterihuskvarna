@@ -396,6 +396,32 @@ public abstract class IntegrationTestSupport {
         assertThat(locationOf(result)).isEqualTo(path);
     }
 
+    /// @param result a page
+    /// @return its body with every run of white space as one space, so that a tag
+    ///         the template splits over two lines can be matched
+    /// @throws UnsupportedEncodingException never, UTF-8 is always there
+    protected static String bodyOf(MvcResult result) throws UnsupportedEncodingException {
+        return result.getResponse().getContentAsString(StandardCharsets.UTF_8).replaceAll("\\s+", " ");
+    }
+
+    /// Asserts what a form's page shows for a field whose value could not become
+    /// the form's type: a link to the field in the summary, the value as it was
+    /// typed, and the message tied to the field.
+    ///
+    /// @param page    the page, from [#bodyOf]
+    /// @param field   the field's name, which is also its `id`
+    /// @param typed   what was sent in it
+    /// @param message the Swedish message the field gets
+    protected static void assertUnreadable(String page, String field, String typed, String message) {
+        assertThat(page).contains(
+                "<div role=\"alert\">",
+                "<li><a href=\"#" + field + "\">" + message + "</a></li>",
+                "id=\"" + field + "\" name=\"" + field + "\"",
+                "value=\"" + typed + "\"",
+                "aria-invalid=\"true\" aria-describedby=\"" + field + "-error\"",
+                "<span id=\"" + field + "-error\" class=\"field-error\">" + message + "</span>");
+    }
+
     /// Independent of `Tokens.hash`, so a test does not check the hash with the
     /// code it is checking.
     ///

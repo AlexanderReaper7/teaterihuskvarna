@@ -34,8 +34,11 @@ public record ShiftForm(
 
         @NotNull(message = "{shift.places.required}")
         @Min(value = 1, message = "{shift.places.min}")
-        @Max(value = 100, message = "{shift.places.max}")
+        @Max(value = PLACES_MAX, message = "{shift.places.max}")
         @Nullable Integer places) {
+
+    /// The most places a shift can have. The page's field carries it as `max`.
+    public static final int PLACES_MAX = 100;
 
     /// @return an empty form, for the page that adds a shift
     public static ShiftForm empty() {

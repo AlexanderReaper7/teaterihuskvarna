@@ -7,6 +7,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
@@ -24,12 +25,16 @@ import se.teaterihuskvarna.offer.OfferService;
 /// the CSV file of those registrations, and a confirmation page before a
 /// delete. Spring Security lets only an administrator account reach it.
 ///
-/// A failed save shows the form again with what was typed. Every other button
-/// redirects, with its outcome as a flash message.
+/// A failed save shows the form again with what was typed, also when a value
+/// could not become an [OfferForm] at all. Every other button redirects, with
+/// its outcome as a flash message.
 @Controller
 public class AdministratorOfferPageController {
 
     private static final String LIST = "/admin/erbjudanden";
+
+    /// What the keys of [OfferForm]'s messages start with.
+    private static final String KEYS = "offer";
 
     private final OfferService offers;
     private final Copy copy;
@@ -57,11 +62,19 @@ public class AdministratorOfferPageController {
     }
 
     /// @param form       what was typed
+    /// @param binding    the values that could not be read, which are null in the form
     /// @param model      receives the form again when it has errors
     /// @param redirected receives the confirmation shown after the redirect
     /// @return a redirect to the new offer's page, or the form again with what was wrong
     @PostMapping(LIST)
-    public String create(@ModelAttribute("form") OfferForm form, Model model, RedirectAttributes redirected) {
+    public String create(@ModelAttribute("form") OfferForm form, BindingResult binding, Model model,
+            RedirectAttributes redirected) {
+        if (binding.hasErrors()) {
+            // Spring made its binding result before the form, so its model holds no form.
+            model.addAttribute("form", form);
+            model.addAttribute("errors", FieldErrors.of(binding, copy, KEYS));
+            return "admin/offerNew";
+        }
         OfferDetails created;
         try {
             created = offers.create(form);
@@ -84,12 +97,16 @@ public class AdministratorOfferPageController {
 
     /// @param id         the offer
     /// @param form       what was typed
+    /// @param binding    the values that could not be read, which are null in the form
     /// @param model      receives the page again when the form has errors
     /// @param redirected receives the confirmation shown after the redirect
     /// @return a redirect to the offer's page, or the page again with what was wrong
     @PostMapping(LIST + "/{id}")
-    public String update(@PathVariable long id, @ModelAttribute("form") OfferForm form, Model model,
-            RedirectAttributes redirected) {
+    public String update(@PathVariable long id, @ModelAttribute("form") OfferForm form, BindingResult binding,
+            Model model, RedirectAttributes redirected) {
+        if (binding.hasErrors()) {
+            return page(offers.details(id), form, FieldErrors.of(binding, copy, KEYS), model);
+        }
         try {
             offers.update(id, form);
         } catch (ConstraintViolationException e) {
