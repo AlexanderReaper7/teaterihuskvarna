@@ -1,4 +1,3 @@
-@import java.util.Objects
 @import java.util.List
 @import se.teaterihuskvarna.document.DocumentForm
 @import se.teaterihuskvarna.document.DocumentKind
@@ -85,7 +84,7 @@
             @endif
         </p>
         @template.tag.field(copy = copy, name = "publishedOn", label = copy.text("adminDocuments.upload.publishedOn"), type = "date",
-                autocomplete = "off", value = Objects.toString(form.publishedOn(), null),
+                autocomplete = "off", value = errors.value("publishedOn", form.publishedOn()),
                 error = errors.message("publishedOn"), required = true)
         <p>
             <label for="file">${copy.text("adminDocuments.upload.file")}</label>

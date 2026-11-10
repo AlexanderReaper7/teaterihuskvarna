@@ -319,6 +319,87 @@ class OfferIT extends IntegrationTestSupport {
         assertThat(rowsIn("offer")).isZero();
     }
 
+    /// A capacity no `int` holds and a year of five digits never become an
+    /// `OfferForm`. They are errors on their fields, as a blank title is, and the
+    /// page keeps what was typed.
+    @Test
+    void theCreateFormShowsAValueItCannotReadOnItsField() throws Exception {
+        String page = bodyOf(mockMvc.perform(post("/admin/erbjudanden")
+                        .param("title", "Sminkkurs")
+                        .param("description", "Ta med egen spegel.")
+                        .param("startsAt", "12030-05-01T18:30")
+                        .param("registrationClosesAt", "2030-04-28T12:00")
+                        .param("capacity", "99999999999")
+                        .with(asAdministrator())
+                        .with(csrf()))
+                .andExpect(status().isOk())
+                .andReturn());
+
+        assertUnreadable(page, "capacity", "99999999999", copy.text("offer.capacity.invalid"));
+        assertUnreadable(page, "startsAt", "12030-05-01T18:30", copy.text("offer.startsAt.invalid"));
+        assertThat(page).contains("value=\"Sminkkurs\"", "Ta med egen spegel.</textarea>",
+                        "value=\"2030-04-28T12:00\"")
+                .doesNotContain("registrationClosesAt-error");
+        mockMvc.perform(post("/api/admin/offers")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"title\":\"Sminkkurs\",\"capacity\":99999999999}")
+                        .with(asAdministrator())
+                        .with(csrf()))
+                .andExpect(status().isBadRequest());
+        mockMvc.perform(post("/api/admin/offers")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"title\":\"Sminkkurs\",\"startsAt\":\"12030-05-01T18:30\"}")
+                        .with(asAdministrator())
+                        .with(csrf()))
+                .andExpect(status().isBadRequest());
+
+        assertThat(rowsIn("offer")).isZero();
+    }
+
+    @Test
+    void theEditFormShowsAValueItCannotReadOnItsField() throws Exception {
+        long id = insertOffer("Verkstad", true, 12, IN_A_MONTH, null);
+
+        String page = bodyOf(mockMvc.perform(post("/admin/erbjudanden/" + id)
+                        .param("title", "Verkstad i ateljén")
+                        .param("description", "")
+                        .param("startsAt", "2030-05-01T18:30")
+                        .param("registrationClosesAt", "i morgon")
+                        .param("capacity", "tolv")
+                        .with(asAdministrator())
+                        .with(csrf()))
+                .andExpect(status().isOk())
+                .andReturn());
+
+        assertUnreadable(page, "capacity", "tolv", copy.text("offer.capacity.invalid"));
+        assertUnreadable(page, "registrationClosesAt", "i morgon",
+                copy.text("offer.registrationClosesAt.invalid"));
+        assertThat(page).contains("<h1>Verkstad</h1>", "value=\"Verkstad i ateljén\"",
+                "value=\"2030-05-01T18:30\"");
+        mockMvc.perform(put("/api/admin/offers/" + id)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"title\":\"Verkstad i ateljén\",\"capacity\":\"tolv\"}")
+                        .with(asAdministrator())
+                        .with(csrf()))
+                .andExpect(status().isBadRequest());
+
+        assertThat(jdbc.sql("SELECT title FROM offer").query(String.class).single()).isEqualTo("Verkstad");
+        assertThat(jdbc.sql("SELECT capacity FROM offer").query(Integer.class).single()).isEqualTo(12);
+    }
+
+    /// The browser stops a number over the limit before it is sent, with the
+    /// same limit the service has. No other field of the form gets a limit.
+    @Test
+    void theCapacityFieldCarriesTheLimitTheServiceHas() throws Exception {
+        String page = bodyOf(mockMvc.perform(get("/admin/erbjudanden/nytt").with(asAdministrator()))
+                .andExpect(status().isOk())
+                .andReturn());
+
+        assertThat(page).contains("name=\"capacity\" type=\"number\" autocomplete=\"off\" max=\""
+                + OfferForm.CAPACITY_MAX + "\"");
+        assertThat(page.split(" max=\"", -1)).hasSize(2);
+    }
+
     @Test
     void anOfferIsCreatedAsADraftAndPublishedLater() throws Exception {
         MvcResult created = mockMvc.perform(post("/admin/erbjudanden")

@@ -10,6 +10,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
@@ -39,6 +40,9 @@ public class AdministratorDocumentPageController {
 
     private static final String LIST = "/admin/handlingar";
 
+    /// What the keys of [DocumentForm]'s messages start with.
+    private static final String KEYS = "document";
+
     /// The parameter `se.teaterihuskvarna.login.RefusedRequests` adds after an
     /// upload over the limit.
     private static final String TOO_LARGE = "forstor";
@@ -63,6 +67,7 @@ public class AdministratorDocumentPageController {
 
     /// @param signedIn   the logged-in administrator, recorded as the uploader
     /// @param form       the title, kind and date that were typed
+    /// @param binding    the values that could not be read, which are null in the form
     /// @param file       the PDF
     /// @param model      receives the page again when the upload fails
     /// @param redirected receives the confirmation shown after the redirect
@@ -70,8 +75,11 @@ public class AdministratorDocumentPageController {
     /// @throws IOException if the upload cannot be read
     @PostMapping(LIST)
     public String upload(@AuthenticationPrincipal SignedIn signedIn, @ModelAttribute("form") DocumentForm form,
-            @RequestParam(name = "file", required = false) @Nullable MultipartFile file, Model model,
-            RedirectAttributes redirected) throws IOException {
+            BindingResult binding, @RequestParam(name = "file", required = false) @Nullable MultipartFile file,
+            Model model, RedirectAttributes redirected) throws IOException {
+        if (binding.hasErrors()) {
+            return page(form, FieldErrors.of(binding, copy, KEYS), null, model);
+        }
         DocumentSummary uploaded;
         try {
             uploaded = documents.upload(form, file == null ? null : file.getOriginalFilename(),

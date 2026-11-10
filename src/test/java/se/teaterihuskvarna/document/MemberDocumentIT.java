@@ -193,6 +193,40 @@ class MemberDocumentIT extends IntegrationTestSupport {
         assertThat(rowsIn("member_document")).isZero();
     }
 
+    /// A year of five digits and a sort that does not exist never become a
+    /// `DocumentForm`. They are errors on their fields, and the page keeps what
+    /// was typed.
+    @Test
+    void theUploadFormShowsAValueItCannotReadOnItsField() throws Exception {
+        String page = bodyOf(mockMvc.perform(multipart("/admin/handlingar").file(pdf("a.pdf", PDF))
+                        .param("title", "Kallelse till årsmötet").param("kind", "ANNUAL_MEETING")
+                        .param("publishedOn", "12026-03-01").with(asAdministrator()).with(csrf()))
+                .andExpect(status().isOk())
+                .andReturn());
+
+        assertUnreadable(page, "publishedOn", "12026-03-01", copy.text("document.publishedOn.invalid"));
+        assertThat(page).contains("value=\"Kallelse till årsmötet\"",
+                "<option value=\"ANNUAL_MEETING\" selected>");
+
+        String noSuchKind = bodyOf(mockMvc.perform(multipart("/admin/handlingar").file(pdf("a.pdf", PDF))
+                        .param("title", "Kallelse till årsmötet").param("kind", "PROTOKOLL")
+                        .param("publishedOn", "2026-03-01").with(asAdministrator()).with(csrf()))
+                .andExpect(status().isOk())
+                .andReturn());
+
+        assertThat(noSuchKind).contains(
+                "<li><a href=\"#kind\">" + copy.text("document.kind.invalid") + "</a></li>",
+                "aria-invalid=\"true\" aria-describedby=\"kind-error\"",
+                "<span id=\"kind-error\" class=\"field-error\">" + copy.text("document.kind.invalid") + "</span>",
+                "value=\"2026-03-01\"");
+        mockMvc.perform(multipart("/api/admin/documents").file(pdf("a.pdf", PDF))
+                        .param("title", "Kallelse till årsmötet").param("kind", "ANNUAL_MEETING")
+                        .param("publishedOn", "12026-03-01").with(asAdministrator()).with(csrf()))
+                .andExpect(status().isBadRequest());
+
+        assertThat(rowsIn("member_document")).isZero();
+    }
+
     @Test
     void theUploadFormKeepsItsTokenOutOfTheAddress() throws Exception {
         mockMvc.perform(get("/admin/handlingar").with(asAdministrator()))

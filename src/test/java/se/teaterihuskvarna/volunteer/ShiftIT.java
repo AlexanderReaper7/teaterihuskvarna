@@ -144,6 +144,60 @@ class ShiftIT extends IntegrationTestSupport {
         assertThat(rowsIn("volunteer_shift")).isOne();
     }
 
+    /// A number of places no `int` holds, a year of five digits and a task that
+    /// does not exist never become a `ShiftForm`. They are errors on their
+    /// fields, and the page keeps what was typed.
+    @Test
+    void theFormShowsAValueItCannotReadOnItsField() throws Exception {
+        LocalDate day = LocalDate.now(SWEDEN).plusDays(10);
+
+        String page = bodyOf(mockMvc.perform(post("/admin/volontarpass").with(asAdministrator()).with(csrf())
+                        .param("eventId", EVENT)
+                        .param("task", "GARDEROB")
+                        .param("startsAt", day + "T17:00")
+                        .param("endsAt", "1" + day + "T21:30")
+                        .param("places", "99999999999"))
+                .andExpect(status().isOk())
+                .andReturn());
+
+        assertUnreadable(page, "places", "99999999999", text("shift.places.invalid"));
+        assertUnreadable(page, "endsAt", "1" + day + "T21:30", text("shift.endsAt.invalid"));
+        assertThat(page).contains("<option value=\"" + EVENT + "\" selected>", "value=\"GARDEROB\" required checked>",
+                        "value=\"" + day + "T17:00\"")
+                .doesNotContain("startsAt-error");
+
+        String noSuchTask = bodyOf(mockMvc.perform(post("/admin/volontarpass").with(asAdministrator())
+                        .with(csrf())
+                        .param("eventId", EVENT)
+                        .param("task", "DISKA")
+                        .param("startsAt", day + "T17:00")
+                        .param("endsAt", day + "T21:30")
+                        .param("places", "3"))
+                .andExpect(status().isOk())
+                .andReturn());
+
+        assertThat(noSuchTask).contains("<li><a href=\"#task\">" + text("shift.task.invalid") + "</a></li>",
+                "<span class=\"field-error\">" + text("shift.task.invalid") + "</span>", "value=\"3\"");
+        mockMvc.perform(post("/api/admin/shifts").with(asAdministrator()).with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"eventId": "%s", "task": "GARDEROB",
+                                 "startsAt": "%sT17:00", "endsAt": "%sT21:00", "places": 99999999999}
+                                """.formatted(EVENT, day, day)))
+                .andExpect(status().isBadRequest());
+
+        assertThat(rowsIn("volunteer_shift")).isZero();
+    }
+
+    /// The browser stops a number over the limit before it is sent, with the
+    /// same limit the service has.
+    @Test
+    void thePlacesFieldCarriesTheLimitTheServiceHas() throws Exception {
+        mockMvc.perform(get("/admin/volontarpass").with(asAdministrator()))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("max=\"" + ShiftForm.PLACES_MAX + "\"")));
+    }
+
     @Test
     void bookingIsIdempotentAndCancellingGivesThePlaceBack() throws Exception {
         long id = insertShift(Instant.now().plus(Duration.ofDays(3)), 1);
@@ -386,6 +440,10 @@ class ShiftIT extends IntegrationTestSupport {
                 .andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
         assertThat(shiftsPage).contains("id=\"pass-" + booked + "\"")
                 .contains("href=\"/medlem\" aria-current=\"true\">Mina sidor</a>").doesNotContain("Översikt");
+    }
+
+    private String text(String key) {
+        return messages.getMessage(key, null, Swedish.LOCALE);
     }
 
     private String adminPage(long id) throws Exception {

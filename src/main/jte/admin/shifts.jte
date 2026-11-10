@@ -1,5 +1,4 @@
 @import java.util.List
-@import java.util.Objects
 @import se.teaterihuskvarna.content.Event
 @import se.teaterihuskvarna.volunteer.ShiftDetails
 @import se.teaterihuskvarna.volunteer.ShiftForm
@@ -64,16 +63,16 @@
                 @endif
             </fieldset>
             @template.tag.field(copy = copy, name = "startsAt", label = copy.text("adminShifts.form.startsAt"), type = "datetime-local",
-                    autocomplete = "off", value = Objects.toString(form.startsAt(), null),
+                    autocomplete = "off", value = errors.value("startsAt", form.startsAt()),
                     error = errors.message("startsAt"), required = true)
             <div id="endsAfterStart">
             @template.tag.field(copy = copy, name = "endsAt", label = copy.text("adminShifts.form.endsAt"), type = "datetime-local",
-                    autocomplete = "off", value = Objects.toString(form.endsAt(), null),
+                    autocomplete = "off", value = errors.value("endsAt", form.endsAt()),
                     error = timesError != null ? timesError : errors.message("endsAt"), required = true)
             </div>
             @template.tag.field(copy = copy, name = "places", label = copy.text("adminShifts.form.places"), type = "number",
-                    autocomplete = "off", value = Objects.toString(form.places(), null),
-                    error = errors.message("places"), required = true)
+                    autocomplete = "off", value = errors.value("places", form.places()),
+                    error = errors.message("places"), required = true, max = String.valueOf(ShiftForm.PLACES_MAX))
             <button type="submit">@template.icon.plus() ${copy.text("adminShifts.form.submit")}</button>
         </form>
     @endif
