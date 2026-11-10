@@ -225,8 +225,6 @@ messages land in the Problems panel.
 The Java language server is the exception: it runs on the host JDK, and this
 project targets Java 25. If the host JDK is a different version the editor can
 offer APIs the build rejects, and `./mvnw verify` is what catches that.
-[`.devcontainer/`](.devcontainer/) is the fallback, a pinned JDK 25 with the docker socket passed
-through, for when that gap starts costing time.
 
 To debug the running application, pick "Attach to the application" in the Run
 view. It starts the dev stack with [`compose.debug.yaml`](compose.debug.yaml), which opens JDWP on

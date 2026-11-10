@@ -10,9 +10,6 @@
     "docker.docker",
     "ms-azuretools.vscode-containers",
 
-    // For .devcontainer/, the fallback when the host JDK is not 25.
-    "ms-vscode-remote.remote-containers",
-
     // compose.yaml, compose.debug.yaml and the GitHub workflows.
     "redhat.vscode-yaml",
     "github.vscode-github-actions",
