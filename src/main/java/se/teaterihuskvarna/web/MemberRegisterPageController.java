@@ -17,6 +17,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -111,11 +112,16 @@ public class MemberRegisterPageController {
     }
 
     /// @param form       the new member
+    /// @param binding    what Spring could not read of the form
     /// @param model      receives the form again when the add fails
     /// @param redirected receives the confirmation shown after the redirect
     /// @return a redirect to the new member's page, or the form again with what was wrong
     @PostMapping(LIST)
-    public String add(@ModelAttribute("form") MemberForm form, Model model, RedirectAttributes redirected) {
+    public String add(@ModelAttribute("form") MemberForm form, BindingResult binding, Model model,
+            RedirectAttributes redirected) {
+        if (binding.hasErrors()) {
+            return newPage(form, FieldErrors.of(binding, copy, "member"), null, model);
+        }
         MemberDetails added;
         try {
             added = members.add(form);
@@ -141,12 +147,16 @@ public class MemberRegisterPageController {
 
     /// @param id         the member
     /// @param form       the new values
+    /// @param binding    what Spring could not read of the form
     /// @param model      receives the page again when the change fails
     /// @param redirected receives the confirmation shown after the redirect
     /// @return a redirect to the member's page, or the page again with what was wrong
     @PostMapping(LIST + "/{id}")
-    public String update(@PathVariable long id, @ModelAttribute("form") MemberForm form, Model model,
-            RedirectAttributes redirected) {
+    public String update(@PathVariable long id, @ModelAttribute("form") MemberForm form, BindingResult binding,
+            Model model, RedirectAttributes redirected) {
+        if (binding.hasErrors()) {
+            return memberPage(file(id), form, FieldErrors.of(binding, copy, "member"), null, model);
+        }
         try {
             members.update(id, form);
         } catch (ConstraintViolationException e) {
@@ -291,15 +301,20 @@ public class MemberRegisterPageController {
 
     /// @param id the household
     /// @param form the next member owner, or administrator management
+    /// @param binding what Spring could not read of the form
     /// @param redirected receives confirmation or an invalid selection message
     /// @return the household list
     @PostMapping(HOUSEHOLDS + "/{id}/agare")
     public String changeHouseholdOwner(@PathVariable long id, @ModelAttribute HouseholdOwnerForm form,
-            RedirectAttributes redirected) {
+            BindingResult binding, RedirectAttributes redirected) {
+        if (binding.hasErrors()) {
+            redirected.addFlashAttribute("notice", copy.text("household.owner.memberId.invalid"));
+            return "redirect:" + HOUSEHOLDS;
+        }
         try {
             households.changeOwner(id, form);
         } catch (ConstraintViolationException | NoSuchMember e) {
-            redirected.addFlashAttribute("notice", copy.text("household.owner.invalid"));
+            redirected.addFlashAttribute("notice", copy.text("household.owner.memberId.invalid"));
             return "redirect:" + HOUSEHOLDS;
         } catch (NoSuchHousehold e) {
             throw notFound(e);

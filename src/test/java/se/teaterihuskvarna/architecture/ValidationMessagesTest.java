@@ -43,18 +43,6 @@ class ValidationMessagesTest {
 
     private static final Pattern KEY = Pattern.compile("\\{([A-Za-z0-9_.]+)}");
 
-    /// The constraints that had no key when this test was written, on
-    /// 2026-11-10, and still have none. All four answer a REST client only: the
-    /// first three are request bodies of the API, and the page that posts a
-    /// household's owner shows `household.owner.invalid` whatever the validator
-    /// said. Giving one a key means removing it here, and the test fails until
-    /// both are done. Nothing new belongs in this list.
-    private static final Set<String> KNOWN_WITHOUT_A_KEY = Set.of(
-            "se.teaterihuskvarna.api.InvitationsController$Acceptance.token @NotBlank",
-            "se.teaterihuskvarna.api.MemberController$HouseholdInvitation.memberId @NotNull",
-            "se.teaterihuskvarna.api.MembershipApplicationsController$Confirmation.token @NotBlank",
-            "se.teaterihuskvarna.member.HouseholdOwnerForm.memberId @Positive");
-
     @Test
     void everyConstraintNamesAKeyInTheSwedishMessages() throws Exception {
         Properties messages = new Properties();
@@ -92,7 +80,7 @@ class ValidationMessagesTest {
         assertThat(constraints).as("the constraints this test found, which must not be none").isNotEmpty();
         assertThat(withoutAKey)
                 .as("constraints whose message is not {a key in messages_sv.properties}")
-                .containsExactlyInAnyOrderElementsOf(KNOWN_WITHOUT_A_KEY);
+                .isEmpty();
     }
 
     /// A record component's constraint is on its field, its accessor and its

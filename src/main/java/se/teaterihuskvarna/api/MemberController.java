@@ -138,6 +138,7 @@ public class MemberController {
     ///
     /// @param memberId the household member to invite
     /// @param email    the address the invitation goes to
-    public record HouseholdInvitation(@NotNull Long memberId, @Nullable String email) {
+    public record HouseholdInvitation(
+            @NotNull(message = "{invitation.error.noSuchMember}") Long memberId, @Nullable String email) {
     }
 }

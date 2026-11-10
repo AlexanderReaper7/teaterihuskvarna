@@ -63,11 +63,13 @@ public final class FieldErrors {
     /// Without that parameter Spring answers 400 and the form is lost.
     ///
     /// The message for the field `capacity` of a form with the prefix `offer` is
-    /// the key `offer.capacity.invalid`. `UnreadableValueKeysTest` fails when a
-    /// form has a field that can be unreadable and no such key.
+    /// the key `offer.capacity.invalid`.
     ///
-    /// A handler that gets errors here must not call the service: the form's
-    /// null may be a valid value, which the service would then store.
+    /// A handler that gets errors here returns before it calls the service: the
+    /// form's null may be a valid value, which the service would then store.
+    /// `UnreadableFormsTest` calls every handler with every such field unreadable,
+    /// and fails when a form reaches a service, when a key is missing, and when
+    /// a form with such a field is read without a `BindingResult`.
     ///
     /// @param binding what Spring could not read
     /// @param copy    the Swedish copy
