@@ -288,8 +288,11 @@ main > .table-scroll {
   max-width: none;
 }
 
-/* Registers and booking tables need more room than public articles. */
-main.admin-content {
+/* Registers and booking tables need more room than public articles. The
+ * footer under them is as wide, so its text starts where the page's does:
+ * at 2560 px it started 224 px further in. */
+main.admin-content,
+main.admin-content + .site-footer p {
   max-width: 96rem;
 }
 

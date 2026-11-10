@@ -1,7 +1,8 @@
 // How things line up, on every page, from a phone's width to the user's own
 // 2560 px view: a field and the button after it, a link or button with an icon
-// and the words around it, an article's line length, and the titles in a row
-// of cards. layout.spec.ts checks what overflows, touches or breaks.
+// and the words around it, an article's line length, the titles in a row of
+// cards, and the footer under the page. layout.spec.ts checks what overflows,
+// touches or breaks.
 import { expect, test, type Page } from "@playwright/test";
 import { linkLogin } from "../support/auth";
 import { clearLinkRequests, resetAdministrators } from "../support/db";
@@ -95,6 +96,15 @@ async function misalignments(page: Page): Promise<string[]> {
           found.push(`the card titles in one row start ${offsets.map((o) => o.toFixed(0)).join(", ")} px down their cards`);
         }
       }
+    }
+
+    // The footer's text starts where the page's content does, also on an
+    // administrator's page, which is wider than the others.
+    const inside = (e: Element) => e.getBoundingClientRect().left + parseFloat(getComputedStyle(e).paddingLeft);
+    const main = document.querySelector("main");
+    const footer = document.querySelector(".site-footer p");
+    if (main && footer && Math.abs(inside(footer) - inside(main)) > 1) {
+      found.push(`the footer's text starts ${(inside(footer) - inside(main)).toFixed(0)} px to the right of the page's content`);
     }
     return found;
   });
