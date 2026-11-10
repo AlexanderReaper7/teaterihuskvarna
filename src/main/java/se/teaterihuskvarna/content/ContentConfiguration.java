@@ -21,7 +21,7 @@ class ContentConfiguration {
 
     @Bean
     ContentCache contentCache(ContentSource source, ContentSettings settings, Clock clock) {
-        return new ContentCache(source, settings.maxAge(), clock);
+        return new ContentCache(source, settings.maxAge(), settings.retryAfter(), clock);
     }
 
     @Bean

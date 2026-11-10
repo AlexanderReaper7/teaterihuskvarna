@@ -24,6 +24,8 @@ import org.springframework.validation.annotation.Validated;
 /// @param webhookSecret the secret Sanity signs its webhook with, from `SANITY_WEBHOOK_SECRET`
 /// @param maxAge        how long a fetched document list is shown before it is fetched again.
 ///                      R008 allows a minute at most, and the webhook usually clears it sooner
+/// @param retryAfter    how long the next fetch waits after one that failed, while the last copy is
+///                      shown. `application.yaml` says why the default is what it is
 /// @param fixture       the classpath file the `fixture` source reads
 /// @param studioUrl     the Studio's address, such as `https://teaterihuskvarna.sanity.studio`, from
 ///                      `SANITY_STUDIO_URL`. Public pages allow only it to show them in a frame, for
@@ -38,6 +40,7 @@ public record ContentSettings(
         @Nullable String token,
         @Nullable String webhookSecret,
         @NotNull @DurationMin(seconds = 1) @DurationMax(seconds = 60) Duration maxAge,
+        @NotNull @DurationMin(seconds = 1) @DurationMax(seconds = 60) Duration retryAfter,
         @Nullable String fixture,
         @Nullable @Pattern(regexp = "(https?://[^/?#\\s]+(?:/[^?#\\s]*)?)?") String studioUrl) {
 
