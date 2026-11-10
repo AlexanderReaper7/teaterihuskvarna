@@ -23,9 +23,11 @@ import java.util.EnumMap;
 import java.util.HexFormat;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.LockSupport;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -98,32 +100,67 @@ public abstract class IntegrationTestSupport {
     /// [#requestLink] sends and keeps it, [#followLink] and [#enterCode] send it.
     private final Map<LoginKind, Cookie> browser = new EnumMap<>(LoginKind.class);
 
-    /// Children before parents, because of the foreign keys. Passkeys have
-    /// none, so they go first by choice. The first
-    /// administrator is made active again rather than deleted, since the
-    /// application only seeds it when no administrator exists at all, and that
-    /// happens at startup, not between tests.
+    /// The tables emptied before every test, children before parents because of
+    /// the foreign keys. Passkeys have none, so they go first by choice.
+    /// `EmptiedTablesIT` fails when the database has a table that is not here,
+    /// so a new table cannot leak rows from one test into the next.
+    public static final List<String> EMPTIED = List.of(
+            "spring_session",
+            "user_credentials",
+            "user_entities",
+            "one_time_token",
+            "link_request",
+            "membership_application",
+            "mailing",
+            "outbox",
+            "volunteer_booking",
+            "volunteer_shift",
+            "offer_registration",
+            "offer",
+            "member_document",
+            "fee",
+            "invitation",
+            "account",
+            "member",
+            "household");
+
+    private static final AtomicBoolean IDS_APART = new AtomicBoolean();
+
+    /// Gives the ids of every table a million of their own, once per run.
+    ///
+    /// The tests insert a member and its account together, so the two ids
+    /// were often the same number, and code that passed one where the other
+    /// belongs still found a row and the test passed. With the sequences
+    /// apart, an id of the wrong kind names no row.
+    @BeforeEach
+    protected void idsApart() {
+        if (!IDS_APART.compareAndSet(false, true)) {
+            return;
+        }
+        // Not information_schema.sequences, which leaves out the sequence of an identity column.
+        List<String> sequences = jdbc.sql("""
+                        SELECT sequencename FROM pg_sequences
+                        WHERE schemaname = 'public' ORDER BY sequencename""")
+                .query(String.class)
+                .list().stream().map(Objects::requireNonNull).toList();
+        for (int i = 0; i < sequences.size(); i++) {
+            jdbc.sql("SELECT setval(CAST(? AS REGCLASS), ?)")
+                    .param(sequences.get(i))
+                    .param((i + 1) * 1_000_000L)
+                    .query(Long.class)
+                    .single();
+        }
+    }
+
+    /// The first administrator is made active again rather than deleted, since
+    /// the application only seeds it when no administrator exists at all, and
+    /// that happens at startup, not between tests.
     @BeforeEach
     protected void emptyTables() {
         browser.clear();
-        jdbc.sql("DELETE FROM spring_session").update();
-        jdbc.sql("DELETE FROM user_credentials").update();
-        jdbc.sql("DELETE FROM user_entities").update();
-        jdbc.sql("DELETE FROM one_time_token").update();
-        jdbc.sql("DELETE FROM link_request").update();
-        jdbc.sql("DELETE FROM membership_application").update();
-        jdbc.sql("DELETE FROM mailing").update();
-        jdbc.sql("DELETE FROM outbox").update();
-        jdbc.sql("DELETE FROM volunteer_booking").update();
-        jdbc.sql("DELETE FROM volunteer_shift").update();
-        jdbc.sql("DELETE FROM offer_registration").update();
-        jdbc.sql("DELETE FROM offer").update();
-        jdbc.sql("DELETE FROM member_document").update();
-        jdbc.sql("DELETE FROM fee").update();
-        jdbc.sql("DELETE FROM invitation").update();
-        jdbc.sql("DELETE FROM account").update();
-        jdbc.sql("DELETE FROM member").update();
-        jdbc.sql("DELETE FROM household").update();
+        for (String table : EMPTIED) {
+            jdbc.sql("DELETE FROM " + table).update();
+        }
         jdbc.sql("UPDATE administrator SET removed_at = NULL, removed_by = NULL WHERE LOWER(email) = LOWER(?)")
                 .param(firstAdministratorEmail)
                 .update();
