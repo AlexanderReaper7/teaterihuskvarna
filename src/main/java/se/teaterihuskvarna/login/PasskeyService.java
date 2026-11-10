@@ -67,11 +67,10 @@ public class PasskeyService {
     /// from inside the transaction that removes the login, so both go or
     /// neither does.
     ///
-    /// @param kind which kind of login the id belongs to
-    /// @param id   the account's or the administrator's id
+    /// @param id the account's or the administrator's id, whose type says which
     @Transactional
-    public void removeAll(LoginKind kind, long id) {
-        PublicKeyCredentialUserEntity owner = owners.findByUsername(kind.principalName(id));
+    public void removeAll(LoginId id) {
+        PublicKeyCredentialUserEntity owner = owners.findByUsername(id.principalName());
         if (owner == null) {
             return;
         }

@@ -9,6 +9,7 @@ import jakarta.persistence.Table;
 import java.time.Duration;
 import java.time.Instant;
 import org.jspecify.annotations.Nullable;
+import se.teaterihuskvarna.login.AdministratorId;
 
 /// A mailing prepared in Brevo, and what Brevo last said about it. It is
 /// saved in status `creating` before Brevo is asked for the draft, and gets
@@ -80,11 +81,11 @@ public class Mailing {
     /// @param audienceName the audience as the form showed it
     /// @param createdBy    the administrator who prepared it
     /// @param now          the moment it was prepared
-    Mailing(String subject, String audience, String audienceName, long createdBy, Instant now) {
+    Mailing(String subject, String audience, String audienceName, AdministratorId createdBy, Instant now) {
         this.subject = subject;
         this.audience = audience;
         this.audienceName = audienceName;
-        this.createdBy = createdBy;
+        this.createdBy = createdBy.value();
         this.createdAt = now;
         this.status = CREATING;
         this.checkedAt = now;
@@ -116,8 +117,8 @@ public class Mailing {
         return brevoCampaignId;
     }
 
-    public @Nullable Long getCreatedBy() {
-        return createdBy;
+    public @Nullable AdministratorId getCreatedBy() {
+        return createdBy == null ? null : new AdministratorId(createdBy);
     }
 
     public Instant getCreatedAt() {

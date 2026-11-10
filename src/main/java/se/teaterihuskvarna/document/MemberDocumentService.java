@@ -11,6 +11,7 @@ import org.springframework.core.io.ByteArrayResource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.validation.annotation.Validated;
+import se.teaterihuskvarna.login.AdministratorId;
 
 /// Annual meeting documents and member letters, R015.
 ///
@@ -64,7 +65,7 @@ public class MemberDocumentService {
     /// @throws jakarta.validation.ConstraintViolationException if the form breaks a constraint
     @Transactional
     public DocumentSummary upload(@Valid DocumentForm form, @Nullable String filename, byte @Nullable [] content,
-            long uploadedBy) {
+            AdministratorId uploadedBy) {
         if (content == null || content.length < PDF_HEADER.length
                 || !Arrays.equals(content, 0, PDF_HEADER.length, PDF_HEADER, 0, PDF_HEADER.length)) {
             throw new NotAPdf();

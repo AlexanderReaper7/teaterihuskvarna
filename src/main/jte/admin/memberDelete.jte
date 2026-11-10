@@ -11,9 +11,9 @@
         <p role="alert">${copy.text("form.stale")}</p>
     @endif
     <p>${copy.text("register.delete.body")}</p>
-    <form method="post" action="/admin/medlemmar/${file.member().id()}/ta-bort">
+    <form method="post" action="/admin/medlemmar/${file.member().id().value()}/ta-bort">
         @template.tag.csrf(csrf = csrf)
         <button type="submit">@template.icon.trash2() ${copy.text("register.delete.submit")}</button>
     </form>
-    <p><a href="/admin/medlemmar/${file.member().id()}">${copy.text("register.delete.cancel")}</a></p>
+    <p><a href="/admin/medlemmar/${file.member().id().value()}">${copy.text("register.delete.cancel")}</a></p>
 `)

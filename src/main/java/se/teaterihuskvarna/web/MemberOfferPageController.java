@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import se.teaterihuskvarna.login.SignedIn;
+import se.teaterihuskvarna.member.MemberId;
 import se.teaterihuskvarna.member.MemberService;
 import se.teaterihuskvarna.offer.NoSuchOffer;
 import se.teaterihuskvarna.offer.OfferFull;
@@ -66,7 +67,7 @@ public class MemberOfferPageController {
     @PostMapping("/medlem/erbjudanden/{id}/anmal")
     public String register(@AuthenticationPrincipal SignedIn signedIn, @PathVariable long id,
             RedirectAttributes redirected) {
-        long memberId = memberId(signedIn);
+        MemberId memberId = memberId(signedIn);
         try {
             RegistrationOutcome outcome = offers.register(id, memberId);
             String key = outcome == RegistrationOutcome.REGISTERED
@@ -87,7 +88,7 @@ public class MemberOfferPageController {
     @PostMapping("/medlem/erbjudanden/{id}/avanmal")
     public String cancel(@AuthenticationPrincipal SignedIn signedIn, @PathVariable long id,
             RedirectAttributes redirected) {
-        long memberId = memberId(signedIn);
+        MemberId memberId = memberId(signedIn);
         try {
             boolean cancelled = offers.cancel(id, memberId);
             redirected.addFlashAttribute("notice",
@@ -107,8 +108,8 @@ public class MemberOfferPageController {
         response.sendError(HttpStatus.NOT_FOUND.value());
     }
 
-    private long memberId(SignedIn signedIn) {
-        return members.findByAccount(signedIn.id())
+    private MemberId memberId(SignedIn signedIn) {
+        return members.findByAccount(signedIn.accountId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND))
                 .id();
     }

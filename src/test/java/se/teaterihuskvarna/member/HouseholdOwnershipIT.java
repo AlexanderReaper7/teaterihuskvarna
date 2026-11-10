@@ -28,6 +28,7 @@ import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
+import se.teaterihuskvarna.login.AccountId;
 
 /// Owner checks use valid requests with CSRF, so a forbidden result tests
 /// ownership rather than authentication or request validation.
@@ -157,6 +158,24 @@ class HouseholdOwnershipIT extends MemberRegisterSupport {
         assertThat(rowsIn("account")).isEqualTo(3);
     }
 
+    /// A form posts the choice "nobody" as an empty value, and a typed id reads that as no id, the
+    /// way a `Long` did. The owner form's first option is the administrators, with the value "".
+    @Test
+    void anEmptyChoiceIsNobodyThroughBothAdapters() throws Exception {
+        MvcResult toAdministrators = mockMvc.perform(post("/admin/hushall/" + household + "/agare")
+                .param("memberId", "").with(asAdministrator()).with(csrf()))
+                .andExpect(flash().attributeCount(1)).andExpect(flash().attributeExists("notice"))
+                .andReturn();
+        assertRedirect(toAdministrators, "/admin/hushall");
+        assertThat(jdbc.sql("SELECT owner_member_id FROM household WHERE id = ?").param(household)
+                .query().singleRow()).containsEntry("owner_member_id", null);
+
+        mockMvc.perform(delete(API + "/members/" + other).param("successorMemberId", "")
+                .with(otherLogin).with(csrf())).andExpect(status().isNoContent());
+        assertThat(jdbc.sql("SELECT household_id FROM member WHERE id = ?").param(other)
+                .query().singleRow()).containsEntry("household_id", null);
+    }
+
     @Test
     void administratorsTakeOverWhenNoAccountHolderRemains() throws Exception {
         moveTo(other, null);
@@ -205,7 +224,8 @@ class HouseholdOwnershipIT extends MemberRegisterSupport {
         long outsider = memberOf(insertAccount("Annan", "annan@example.test"));
         long child = insertMember("Olle");
         moveTo(child, household);
-        for (long invalid : new long[] {outsider, child, Long.MAX_VALUE}) {
+        // Zero and below are no member's id either, and are answered like any other unknown member.
+        for (long invalid : new long[] {outsider, child, Long.MAX_VALUE, 0, -1}) {
             mockMvc.perform(put(api).contentType(MediaType.APPLICATION_JSON)
                     .content("{\"memberId\":%d}".formatted(invalid)).with(asAdministrator()).with(csrf()))
                     .andExpect(status().isNotFound());
@@ -242,12 +262,13 @@ class HouseholdOwnershipIT extends MemberRegisterSupport {
         TransactionTemplate transaction = new TransactionTemplate(transactionManager);
         try (ExecutorService pool = Executors.newFixedThreadPool(2)) {
             Future<?> ownerLeaves = pool.submit(() -> transaction.executeWithoutResult(status -> {
-                service.removeForAccount(ownerAccount, owner, other);
+                service.removeForAccount(new AccountId(ownerAccount), new MemberId(owner), new MemberId(other));
                 handedOver.countDown();
                 await(commit);
             }));
             await(handedOver);
-            Future<?> otherLeaves = pool.submit(() -> service.removeForAccount(otherAccount, other, null));
+            Future<?> otherLeaves = pool.submit(
+                    () -> service.removeForAccount(new AccountId(otherAccount), new MemberId(other), null));
             try {
                 otherLeaves.get(1, TimeUnit.SECONDS);
             } catch (TimeoutException waitingForTheLock) {

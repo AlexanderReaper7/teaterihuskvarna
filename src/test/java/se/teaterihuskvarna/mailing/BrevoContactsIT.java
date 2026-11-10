@@ -18,12 +18,15 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 import se.teaterihuskvarna.IntegrationTestSupport;
+import se.teaterihuskvarna.login.AccountId;
+import se.teaterihuskvarna.login.AdministratorId;
 import se.teaterihuskvarna.member.ContactForm;
 import se.teaterihuskvarna.member.FeeKind;
 import se.teaterihuskvarna.member.FeeMark;
 import se.teaterihuskvarna.member.FeeService;
 import se.teaterihuskvarna.member.HouseholdService;
 import se.teaterihuskvarna.member.MemberForm;
+import se.teaterihuskvarna.member.MemberId;
 import se.teaterihuskvarna.member.MemberService;
 import se.teaterihuskvarna.member.NewHousehold;
 import se.teaterihuskvarna.offer.OfferService;
@@ -83,8 +86,8 @@ class BrevoContactsIT extends IntegrationTestSupport {
 
     @Test
     void aMemberWithAnAccountBecomesAContactAndFollowsTheirAddress() {
-        long karin = members.add(form("Karin Holm", "karin@example.test", null)).id();
-        long without = members.add(form("Utan Konto", null, null)).id();
+        MemberId karin = members.add(form("Karin Holm", "karin@example.test", null)).id();
+        MemberId without = members.add(form("Utan Konto", null, null)).id();
 
         Brevo.Contact contact = awaitContact(karin, c -> true);
         assertThat(contact.email()).isEqualTo("karin@example.test");
@@ -95,8 +98,9 @@ class BrevoContactsIT extends IntegrationTestSupport {
         members.update(karin, form("Karin Holm", "karin.holm@example.test", null));
         awaitContact(karin, c -> c.email().equals("karin.holm@example.test"));
 
-        long account = jdbc.sql("SELECT id FROM account WHERE member_id = ?").param(karin).query(Long.class).single();
-        members.updateContact(account, new ContactForm("Karin Holm-Berg", null, null, null, null));
+        long account = jdbc.sql("SELECT id FROM account WHERE member_id = ?").param(karin.value())
+                .query(Long.class).single();
+        members.updateContact(new AccountId(account), new ContactForm("Karin Holm-Berg", null, null, null, null));
         awaitContact(karin, c -> c.name().equals("Karin Holm-Berg"));
         assertThat(fake.contacts()).doesNotContainKey(without);
     }
@@ -105,11 +109,11 @@ class BrevoContactsIT extends IntegrationTestSupport {
     void aHouseholdFeeSetsThePaidYearOnTheWholeHousehold() {
         long household = jdbc.sql("INSERT INTO household (name, created_at) VALUES ('Familjen Holm', now()) "
                 + "RETURNING id").query(Long.class).single();
-        long karin = members.add(form("Karin Holm", "karin@example.test", household)).id();
-        long nils = members.add(form("Nils Holm", "nils@example.test", household)).id();
+        MemberId karin = members.add(form("Karin Holm", "karin@example.test", household)).id();
+        MemberId nils = members.add(form("Nils Holm", "nils@example.test", household)).id();
         int year = LocalDate.now(SWEDEN).getYear();
 
-        fees.markPaid(karin, new FeeMark(FeeKind.HOUSEHOLD, null), firstAdministratorId());
+        fees.markPaid(karin, new FeeMark(FeeKind.HOUSEHOLD, null), new AdministratorId(firstAdministratorId()));
         awaitContact(karin, c -> Integer.valueOf(year).equals(c.paidYear()));
         awaitContact(nils, c -> Integer.valueOf(year).equals(c.paidYear()));
 
@@ -121,13 +125,14 @@ class BrevoContactsIT extends IntegrationTestSupport {
     /// household she creates afterwards, and his contact shows the year.
     @Test
     void aHouseholdFeePaidFirstSetsThePaidYearInTheHouseholdThePayerCreates() {
-        long karin = members.add(form("Karin Holm", "karin@example.test", null)).id();
-        long account = jdbc.sql("SELECT id FROM account WHERE member_id = ?").param(karin).query(Long.class).single();
+        MemberId karin = members.add(form("Karin Holm", "karin@example.test", null)).id();
+        long account = jdbc.sql("SELECT id FROM account WHERE member_id = ?").param(karin.value())
+                .query(Long.class).single();
         int year = LocalDate.now(SWEDEN).getYear();
-        fees.markPaid(karin, new FeeMark(FeeKind.HOUSEHOLD, null), firstAdministratorId());
+        fees.markPaid(karin, new FeeMark(FeeKind.HOUSEHOLD, null), new AdministratorId(firstAdministratorId()));
 
-        long household = households.createForAccount(account, new NewHousehold("Familjen Holm")).id();
-        long nils = members.add(form("Nils Holm", "nils@example.test", household)).id();
+        long household = households.createForAccount(new AccountId(account), new NewHousehold("Familjen Holm")).id();
+        MemberId nils = members.add(form("Nils Holm", "nils@example.test", household)).id();
 
         awaitContact(karin, c -> Integer.valueOf(year).equals(c.paidYear()));
         awaitContact(nils, c -> Integer.valueOf(year).equals(c.paidYear()));
@@ -140,10 +145,10 @@ class BrevoContactsIT extends IntegrationTestSupport {
     void aHouseholdFeePaidFirstSetsThePaidYearInTheHouseholdThePayerIsPlacedIn() {
         long household = jdbc.sql("INSERT INTO household (name, created_at) VALUES ('Familjen Holm', now()) "
                 + "RETURNING id").query(Long.class).single();
-        long nils = members.add(form("Nils Holm", "nils@example.test", household)).id();
-        long karin = members.add(form("Karin Holm", "karin@example.test", null)).id();
+        MemberId nils = members.add(form("Nils Holm", "nils@example.test", household)).id();
+        MemberId karin = members.add(form("Karin Holm", "karin@example.test", null)).id();
         int year = LocalDate.now(SWEDEN).getYear();
-        fees.markPaid(karin, new FeeMark(FeeKind.HOUSEHOLD, null), firstAdministratorId());
+        fees.markPaid(karin, new FeeMark(FeeKind.HOUSEHOLD, null), new AdministratorId(firstAdministratorId()));
         awaitContact(karin, c -> Integer.valueOf(year).equals(c.paidYear()));
         assertThat(awaitContact(nils, c -> true).paidYear()).isNull();
 
@@ -154,7 +159,7 @@ class BrevoContactsIT extends IntegrationTestSupport {
 
     @Test
     void anOfferAndAStartedShiftShowOnTheContact() {
-        long karin = members.add(form("Karin Holm", "karin@example.test", null)).id();
+        MemberId karin = members.add(form("Karin Holm", "karin@example.test", null)).id();
         long offer = jdbc.sql("""
                 INSERT INTO offer (title, description, published, created_at, updated_at)
                 VALUES ('Verkstad', '', true, now(), now()) RETURNING id
@@ -175,7 +180,7 @@ class BrevoContactsIT extends IntegrationTestSupport {
                 .query(Long.class)
                 .single();
         jdbc.sql("INSERT INTO volunteer_booking (shift_id, member_id, created_at) VALUES (?, ?, now())")
-                .param(shift).param(karin).update();
+                .param(shift).param(karin.value()).update();
 
         assertThat(shifts.reportStartedShifts()).isOne();
         awaitContact(karin, c -> LocalDate.ofInstant(started, SWEDEN).equals(c.lastShift()));
@@ -184,7 +189,7 @@ class BrevoContactsIT extends IntegrationTestSupport {
 
     @Test
     void deletingAMemberDeletesTheContact() {
-        long karin = members.add(form("Karin Holm", "karin@example.test", null)).id();
+        MemberId karin = members.add(form("Karin Holm", "karin@example.test", null)).id();
         awaitContact(karin, c -> true);
 
         members.delete(karin);
@@ -199,7 +204,7 @@ class BrevoContactsIT extends IntegrationTestSupport {
     /// then sends the state as it is after the wait. Mail goes out meanwhile.
     @Test
     void anUpdateWaitsForTheMembersLock() throws Exception {
-        long karin = members.add(form("Karin Holm", "karin@example.test", null)).id();
+        MemberId karin = members.add(form("Karin Holm", "karin@example.test", null)).id();
         awaitContact(karin, c -> true);
         CountDownLatch locked = new CountDownLatch(1);
         CountDownLatch release = new CountDownLatch(1);
@@ -239,14 +244,14 @@ class BrevoContactsIT extends IntegrationTestSupport {
         awaitContact(karin, c -> c.name().equals("Karin Berg"));
     }
 
-    private Brevo.Contact awaitContact(long memberId, Predicate<Brevo.Contact> until) {
+    private Brevo.Contact awaitContact(MemberId memberId, Predicate<Brevo.Contact> until) {
         long deadline = System.currentTimeMillis() + WAIT_MILLIS;
         Brevo.Contact contact = fake.contacts().get(memberId);
         while ((contact == null || !until.test(contact)) && System.currentTimeMillis() < deadline) {
             pause();
             contact = fake.contacts().get(memberId);
         }
-        assertThat(contact).as("the contact of member %d", memberId).isNotNull().matches(until::test);
+        assertThat(contact).as("the contact of member %s", memberId).isNotNull().matches(until::test);
         return contact;
     }
 

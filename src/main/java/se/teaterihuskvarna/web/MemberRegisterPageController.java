@@ -42,6 +42,7 @@ import se.teaterihuskvarna.member.MemberDetails;
 import se.teaterihuskvarna.member.MemberFile;
 import se.teaterihuskvarna.member.MemberForm;
 import se.teaterihuskvarna.member.MemberHasAccount;
+import se.teaterihuskvarna.member.MemberId;
 import se.teaterihuskvarna.member.MemberService;
 import se.teaterihuskvarna.member.NewHousehold;
 import se.teaterihuskvarna.member.NoSuchFee;
@@ -140,7 +141,7 @@ public class MemberRegisterPageController {
     /// @param model receives the member's file and a form with their current values
     /// @return the member's page
     @GetMapping(LIST + "/{id}")
-    public String member(@PathVariable long id, Model model) {
+    public String member(@PathVariable MemberId id, Model model) {
         MemberFile file = file(id);
         return memberPage(file, MemberForm.of(file.member()), FieldErrors.none(), null, model);
     }
@@ -152,7 +153,7 @@ public class MemberRegisterPageController {
     /// @param redirected receives the confirmation shown after the redirect
     /// @return a redirect to the member's page, or the page again with what was wrong
     @PostMapping(LIST + "/{id}")
-    public String update(@PathVariable long id, @ModelAttribute("form") MemberForm form, BindingResult binding,
+    public String update(@PathVariable MemberId id, @ModelAttribute("form") MemberForm form, BindingResult binding,
             Model model, RedirectAttributes redirected) {
         if (binding.hasErrors()) {
             return memberPage(file(id), form, FieldErrors.of(binding, copy, "member"), null, model);
@@ -182,7 +183,7 @@ public class MemberRegisterPageController {
     /// @param model receives the member's file
     /// @return the page that asks whether to delete
     @GetMapping(LIST + "/{id}/ta-bort")
-    public String confirmDelete(@PathVariable long id, Model model) {
+    public String confirmDelete(@PathVariable MemberId id, Model model) {
         model.addAttribute("file", file(id));
         return "admin/memberDelete";
     }
@@ -191,7 +192,7 @@ public class MemberRegisterPageController {
     /// @param redirected receives the confirmation shown after the redirect
     /// @return a redirect to the register
     @PostMapping(LIST + "/{id}/ta-bort")
-    public String delete(@PathVariable long id, RedirectAttributes redirected) {
+    public String delete(@PathVariable MemberId id, RedirectAttributes redirected) {
         try {
             members.delete(id);
         } catch (NoSuchMember e) {
@@ -212,7 +213,7 @@ public class MemberRegisterPageController {
     /// @param redirected receives the outcome, shown after the redirect
     /// @return a redirect to the member's page, or to the register the button was in
     @PostMapping(LIST + "/{id}/avgift")
-    public String markPaid(@AuthenticationPrincipal SignedIn signedIn, @PathVariable long id,
+    public String markPaid(@AuthenticationPrincipal SignedIn signedIn, @PathVariable MemberId id,
             @RequestParam(required = false) @Nullable String kind,
             @RequestParam(required = false) @Nullable String kronor,
             @RequestParam(name = "tillbaka", required = false) @Nullable String back,
@@ -220,7 +221,7 @@ public class MemberRegisterPageController {
             @RequestParam(name = "avgift", required = false) @Nullable String fee, RedirectAttributes redirected) {
         String to = "lista".equals(back) ? "redirect:" + listUrl(query, fee) : redirect(id);
         try {
-            fees.markPaid(id, new FeeMark(kind(kind), ore(kronor)), signedIn.id());
+            fees.markPaid(id, new FeeMark(kind(kind), ore(kronor)), signedIn.administratorId());
         } catch (ConstraintViolationException e) {
             redirected.addFlashAttribute("error", MemberPageController.firstMessage(e));
             return to;
@@ -240,7 +241,7 @@ public class MemberRegisterPageController {
     /// @param redirected receives the outcome, shown after the redirect
     /// @return a redirect to the member's page
     @PostMapping(LIST + "/{id}/avgift/angra")
-    public String undoFee(@PathVariable long id, RedirectAttributes redirected) {
+    public String undoFee(@PathVariable MemberId id, RedirectAttributes redirected) {
         try {
             fees.undo(id);
         } catch (NoSuchFee e) {
@@ -256,7 +257,7 @@ public class MemberRegisterPageController {
     /// @param redirected receives the outcome, shown after the redirect
     /// @return a redirect to the member's page
     @PostMapping(LIST + "/{id}/inbjudan")
-    public String invite(@PathVariable long id, @RequestParam(defaultValue = "") String email,
+    public String invite(@PathVariable MemberId id, @RequestParam(defaultValue = "") String email,
             RedirectAttributes redirected) {
         try {
             invitations.invite(id, new InvitationRequest(email));
@@ -364,7 +365,7 @@ public class MemberRegisterPageController {
         return "admin/households";
     }
 
-    private MemberFile file(long id) {
+    private MemberFile file(MemberId id) {
         try {
             return members.find(id);
         } catch (NoSuchMember e) {
@@ -376,7 +377,7 @@ public class MemberRegisterPageController {
         return new ResponseStatusException(HttpStatus.NOT_FOUND, null, cause);
     }
 
-    private static String redirect(long id) {
+    private static String redirect(MemberId id) {
         return "redirect:" + LIST + "/" + id;
     }
 

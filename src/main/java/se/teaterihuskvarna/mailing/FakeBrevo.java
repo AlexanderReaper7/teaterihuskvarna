@@ -7,6 +7,7 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 import org.jspecify.annotations.Nullable;
 import org.springframework.jdbc.core.simple.JdbcClient;
+import se.teaterihuskvarna.member.MemberId;
 
 /// Keeps every call in memory and sends nothing, for development and the
 /// tests. A campaign reports `draft` until [#markSent] is called, the way a
@@ -17,7 +18,7 @@ final class FakeBrevo implements Brevo {
 
     private final JdbcClient jdbc;
     private final AtomicLong ids = new AtomicLong(100);
-    private final Map<Long, Contact> contacts = new LinkedHashMap<>();
+    private final Map<MemberId, Contact> contacts = new LinkedHashMap<>();
     private final Map<Long, Campaign> campaigns = new LinkedHashMap<>();
     private final Map<Long, CampaignReport> reports = new LinkedHashMap<>();
     private final List<String> tests = new ArrayList<>();
@@ -40,7 +41,7 @@ final class FakeBrevo implements Brevo {
     }
 
     @Override
-    public synchronized void deleteContact(long memberId) {
+    public synchronized void deleteContact(MemberId memberId) {
         contacts.remove(memberId);
     }
 
@@ -129,7 +130,7 @@ final class FakeBrevo implements Brevo {
     }
 
     /// @return every contact, by member id
-    synchronized Map<Long, Contact> contacts() {
+    synchronized Map<MemberId, Contact> contacts() {
         return Map.copyOf(contacts);
     }
 

@@ -97,8 +97,8 @@
                     <td>${administrator.fullName()}</td>
                     <td>${administrator.email()}</td>
                     <td>
-                        @if(administrator.id() != signedIn.id())
-                            <a href="/admin/administratorer/${administrator.id()}/ta-bort" aria-label="${removeLabel}">@template.icon.trash2() ${copy.text("admin.remove")}</a>
+                        @if(!administrator.id().equals(signedIn.administratorId()))
+                            <a href="/admin/administratorer/${administrator.id().value()}/ta-bort" aria-label="${removeLabel}">@template.icon.trash2() ${copy.text("admin.remove")}</a>
                         @endif
                     </td>
                 </tr>

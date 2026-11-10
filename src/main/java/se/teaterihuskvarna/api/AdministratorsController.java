@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RestController;
 import se.teaterihuskvarna.administrator.AdministratorDetails;
 import se.teaterihuskvarna.administrator.AdministratorService;
 import se.teaterihuskvarna.administrator.NewAdministrator;
+import se.teaterihuskvarna.login.AdministratorId;
 import se.teaterihuskvarna.login.SignedIn;
 
 /// Administrator accounts over HTTP: the same list, add and remove the `/admin`
@@ -38,13 +39,13 @@ public class AdministratorsController {
     @PostMapping("/api/admin/administrators")
     @ResponseStatus(HttpStatus.CREATED)
     public AdministratorDetails add(@AuthenticationPrincipal SignedIn signedIn, @RequestBody NewAdministrator form) {
-        return administrators.add(form, signedIn.id());
+        return administrators.add(form, signedIn.administratorId());
     }
 
     /// @param id the administrator
     /// @return the administrator
     @GetMapping("/api/admin/administrators/{id}")
-    public AdministratorDetails details(@PathVariable long id) {
+    public AdministratorDetails details(@PathVariable AdministratorId id) {
         return administrators.details(id);
     }
 
@@ -54,7 +55,7 @@ public class AdministratorsController {
     /// @param id       the administrator to remove, never the caller
     @DeleteMapping("/api/admin/administrators/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void remove(@AuthenticationPrincipal SignedIn signedIn, @PathVariable long id) {
-        administrators.remove(id, signedIn.id());
+    public void remove(@AuthenticationPrincipal SignedIn signedIn, @PathVariable AdministratorId id) {
+        administrators.remove(id, signedIn.administratorId());
     }
 }

@@ -7,8 +7,8 @@ import java.util.Optional;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.validation.annotation.Validated;
+import se.teaterihuskvarna.login.AdministratorId;
 import se.teaterihuskvarna.login.Email;
-import se.teaterihuskvarna.login.LoginKind;
 import se.teaterihuskvarna.login.PasskeyService;
 import se.teaterihuskvarna.login.Sessions;
 
@@ -44,8 +44,10 @@ public class AdministratorService {
     /// @param id the administrator
     /// @return the administrator, for the page that asks before a removal
     /// @throws NoSuchAdministrator if no active administrator has that id
-    public AdministratorDetails details(long id) {
-        return administrators.findActiveById(id).map(AdministratorDetails::of).orElseThrow(NoSuchAdministrator::new);
+    public AdministratorDetails details(AdministratorId id) {
+        return administrators.findActiveById(id.value())
+                .map(AdministratorDetails::of)
+                .orElseThrow(NoSuchAdministrator::new);
     }
 
     /// Adds an administrator, or makes a removed one active again if the address
@@ -58,7 +60,7 @@ public class AdministratorService {
     /// @throws AdministratorAlreadyExists if an active administrator has the address
     /// @throws jakarta.validation.ConstraintViolationException if the form breaks a constraint
     @Transactional
-    public AdministratorDetails add(@Valid NewAdministrator form, long addedBy) {
+    public AdministratorDetails add(@Valid NewAdministrator form, AdministratorId addedBy) {
         Email email = new Email(form.email());
         String fullName = form.fullName().strip();
         Optional<Administrator> existing = administrators.findByEmail(email.value());
@@ -85,8 +87,8 @@ public class AdministratorService {
     /// @throws NoSuchAdministrator if no active administrator has that id
     /// @throws TooFewAdministrators if two or fewer administrators remain
     @Transactional
-    public void remove(long id, long removedBy) {
-        if (id == removedBy) {
+    public void remove(AdministratorId id, AdministratorId removedBy) {
+        if (id.equals(removedBy)) {
             throw new CannotRemoveSelf();
         }
         // Counting without the lock lets two administrators remove each other at
@@ -96,14 +98,14 @@ public class AdministratorService {
         // removal took out, and hands this transaction the true count.
         List<Administrator> active = administrators.lockActive();
         Administrator administrator = active.stream()
-                .filter(candidate -> candidate.getId() == id)
+                .filter(candidate -> candidate.id().equals(id))
                 .findFirst()
                 .orElseThrow(NoSuchAdministrator::new);
         if (active.size() <= MINIMUM) {
             throw new TooFewAdministrators();
         }
         administrator.remove(removedBy, clock.instant());
-        passkeys.removeAll(LoginKind.ADMINISTRATOR, id);
-        sessions.end(LoginKind.ADMINISTRATOR, id);
+        passkeys.removeAll(id);
+        sessions.end(id);
     }
 }

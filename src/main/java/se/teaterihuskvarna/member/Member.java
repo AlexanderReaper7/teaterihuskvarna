@@ -54,6 +54,8 @@ public class Member {
         this.createdAt = createdAt;
     }
 
+    /// The number, for Hibernate and for a query. Everything else reads [#id].
+    ///
     /// @return the ID assigned by Hibernate
     /// @throws IllegalStateException if this entity has not been persisted
     public Long getId() {
@@ -61,6 +63,21 @@ public class Member {
             throw new IllegalStateException("Entity has not been persisted");
         }
         return id;
+    }
+
+    /// The id as its own type, which the compiler tells from every other id.
+    ///
+    /// Final, and it reads the number through [#getId]. A lazy reference to
+    /// this entity is a subclass Hibernate makes: it answers `getId` from the
+    /// reference itself and loads the row for any other method it can
+    /// override. It cannot override this one, so the id of a reference is
+    /// read without a query, and without loading a row ahead of a lock that
+    /// was meant to read it first. `EntityIdsIT` fails if that stops holding.
+    ///
+    /// @return the id
+    /// @throws IllegalStateException if this entity has not been persisted
+    public final MemberId id() {
+        return new MemberId(getId());
     }
 
     public String getFullName() {

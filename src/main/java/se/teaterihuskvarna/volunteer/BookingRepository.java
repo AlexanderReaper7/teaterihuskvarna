@@ -50,7 +50,7 @@ interface BookingRepository extends JpaRepository<Booking, Long> {
     /// @return who booked it, in the order they did
     @Query("""
             select new se.teaterihuskvarna.volunteer.Volunteer(
-                m.id, m.fullName, a.email, m.contact.phone, b.createdAt)
+                new se.teaterihuskvarna.member.MemberId(m.id), m.fullName, a.email, m.contact.phone, b.createdAt)
             from Booking b
             join Member m on m.id = b.memberId
             left join Account a on a.member = m

@@ -24,6 +24,7 @@ import se.teaterihuskvarna.member.InvitationRequest;
 import se.teaterihuskvarna.member.InvitationService;
 import se.teaterihuskvarna.member.MemberDetails;
 import se.teaterihuskvarna.member.MemberHasAccount;
+import se.teaterihuskvarna.member.MemberId;
 import se.teaterihuskvarna.member.MemberService;
 import se.teaterihuskvarna.member.NoSuchMember;
 import se.teaterihuskvarna.offer.OfferService;
@@ -71,7 +72,7 @@ public class MemberPageController {
         model.addAttribute("member", member);
         model.addAttribute("registrations", offers.registeredOffers(member.id()));
         model.addAttribute("shifts", shifts.booked(member.id()));
-        model.addAttribute("household", households.forAccount(signedIn.id()).orElse(null));
+        model.addAttribute("household", households.forAccount(signedIn.accountId()).orElse(null));
         passkeys.addTo(model, signedIn, passkeys.offer(session, request));
         devices.addTo(model, signedIn, session);
         return "member/overview";
@@ -96,7 +97,7 @@ public class MemberPageController {
     public String updateContact(@AuthenticationPrincipal SignedIn signedIn,
             @ModelAttribute("form") ContactForm form, Model model, RedirectAttributes redirected) {
         try {
-            members.updateContact(signedIn.id(), form);
+            members.updateContact(signedIn.accountId(), form);
         } catch (ConstraintViolationException e) {
             model.addAttribute("errors", FieldErrors.of(e));
             return "member/contact";
@@ -116,10 +117,10 @@ public class MemberPageController {
     /// @param redirected receives the outcome, shown after the redirect
     /// @return a redirect to the member page
     @PostMapping("/medlem/hushall/{memberId}/inbjudan")
-    public String invite(@AuthenticationPrincipal SignedIn signedIn, @PathVariable long memberId,
+    public String invite(@AuthenticationPrincipal SignedIn signedIn, @PathVariable MemberId memberId,
             @RequestParam(defaultValue = "") String email, RedirectAttributes redirected) {
         try {
-            invitations.inviteToHousehold(signedIn.id(), memberId, new InvitationRequest(email));
+            invitations.inviteToHousehold(signedIn.accountId(), memberId, new InvitationRequest(email));
         } catch (ConstraintViolationException e) {
             redirected.addFlashAttribute("error", firstMessage(e));
             return REDIRECT;
@@ -189,7 +190,7 @@ public class MemberPageController {
     /// An account always belongs to a member, so an empty result means the member
     /// was removed while the session lived on. That is a 404, not an empty page.
     private MemberDetails member(SignedIn signedIn) {
-        return members.findByAccount(signedIn.id())
+        return members.findByAccount(signedIn.accountId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
     }
 

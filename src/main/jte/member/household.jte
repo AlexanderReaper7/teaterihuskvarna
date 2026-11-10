@@ -1,5 +1,6 @@
 @import se.teaterihuskvarna.member.HouseholdDetails
 @import se.teaterihuskvarna.member.HouseholdMember
+@import se.teaterihuskvarna.member.MemberId
 @import se.teaterihuskvarna.member.NewHousehold
 @import se.teaterihuskvarna.web.Copy
 @import se.teaterihuskvarna.web.CsrfField
@@ -7,7 +8,7 @@
 @param Copy copy
 @param CsrfField csrf
 @param HouseholdDetails household = null
-@param Long ownMemberId
+@param MemberId ownMemberId
 @param NewHousehold form
 @param FieldErrors errors
 @param boolean stale
@@ -49,10 +50,10 @@
                         ${copy.text("household.hasAccount")}
                     @endif
                     @if(household.ownedBy(ownMemberId))
-                        <a href="/medlem/hushall/medlemmar/${member.id()}">@template.icon.pencil() ${copy.text("member.household.edit", member.fullName())}</a>
+                        <a href="/medlem/hushall/medlemmar/${member.id().value()}">@template.icon.pencil() ${copy.text("member.household.edit", member.fullName())}</a>
                     @endif
                     @if(household.ownedBy(ownMemberId) || member.id().equals(ownMemberId))
-                    <a href="/medlem/hushall/medlemmar/${member.id()}/ta-bort">@if(member.id().equals(ownMemberId))@template.icon.doorOpen()@else@template.icon.trash2()@endif ${copy.text(member.id().equals(ownMemberId)
+                    <a href="/medlem/hushall/medlemmar/${member.id().value()}/ta-bort">@if(member.id().equals(ownMemberId))@template.icon.doorOpen()@else@template.icon.trash2()@endif ${copy.text(member.id().equals(ownMemberId)
                             ? "member.household.leave" : "member.household.remove", member.fullName())}</a>
                     @endif
                 </li>

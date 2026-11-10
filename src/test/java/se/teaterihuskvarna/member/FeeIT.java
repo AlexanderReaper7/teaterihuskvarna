@@ -30,6 +30,7 @@ import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
+import se.teaterihuskvarna.login.AdministratorId;
 
 /// Proves the fee rules (R013, R019): what a member sees for this year, how an
 /// administrator marks and undoes a payment through both adapters, and the
@@ -377,8 +378,8 @@ class FeeIT extends MemberRegisterSupport {
         mockMvc.perform(get("/api/admin/members").param("fee", "PAID").with(asAdministrator()))
                 .andExpect(jsonPath("$.members[*].fullName",
                         containsInAnyOrder("Johan Bergström", "Lisa Bergström")));
-        assertThat(fees.latestPaidYear(johan)).isEqualTo(thisYear());
-        assertThat(fees.latestPaidYear(lisa)).isEqualTo(thisYear());
+        assertThat(fees.latestPaidYear(new MemberId(johan))).isEqualTo(thisYear());
+        assertThat(fees.latestPaidYear(new MemberId(lisa))).isEqualTo(thisYear());
         assertThat(feeHouseholdOf(johan)).isEqualTo(householdOf(johan));
     }
 
@@ -394,9 +395,9 @@ class FeeIT extends MemberRegisterSupport {
         assertPaid(johanAccount, JOHAN_EMAIL, false);
         assertPaid(erikAccount, ERIK_EMAIL, true);
         assertPaid(mariaAccount, MARIA_EMAIL, true);
-        assertThat(fees.latestPaidYear(johan)).isEqualTo(thisYear());
-        assertThat(fees.latestPaidYear(erik)).isEqualTo(thisYear());
-        assertThat(fees.latestPaidYear(maria)).isEqualTo(thisYear());
+        assertThat(fees.latestPaidYear(new MemberId(johan))).isEqualTo(thisYear());
+        assertThat(fees.latestPaidYear(new MemberId(erik))).isEqualTo(thisYear());
+        assertThat(fees.latestPaidYear(new MemberId(maria))).isEqualTo(thisYear());
         assertThat(feeHouseholdOf(johan)).isEqualTo(household);
     }
 
@@ -471,8 +472,8 @@ class FeeIT extends MemberRegisterSupport {
                 .andExpect(jsonPath("$.fees[0].paidAt").doesNotExist())
                 .andExpect(jsonPath("$.fees[1].year").value(thisYear() - 1))
                 .andExpect(jsonPath("$.fees[1].paidAt").isNotEmpty());
-        assertThat(fees.latestPaidYear(johan)).isEqualTo(thisYear() - 1);
-        assertThat(fees.latestPaidYear(maria)).isEqualTo(thisYear() - 1);
+        assertThat(fees.latestPaidYear(new MemberId(johan))).isEqualTo(thisYear() - 1);
+        assertThat(fees.latestPaidYear(new MemberId(maria))).isEqualTo(thisYear() - 1);
     }
 
     /// Midnight in Sweden is 23:00 UTC in winter, so the fee year turns an
@@ -518,11 +519,11 @@ class FeeIT extends MemberRegisterSupport {
                 association, Clock.fixed(AFTER_MIDNIGHT_IN_SWEDEN, ZoneOffset.UTC));
         TransactionTemplate transaction = new TransactionTemplate(transactions);
 
-        transaction.executeWithoutResult(status -> stopped.markPaid(johan, new FeeMark(FeeKind.INDIVIDUAL, null),
-                firstAdministratorId()));
+        transaction.executeWithoutResult(status -> stopped.markPaid(new MemberId(johan),
+                new FeeMark(FeeKind.INDIVIDUAL, null), new AdministratorId(firstAdministratorId())));
         assertThat(yearsPaidBy(johan)).containsExactly(2026, 2027);
 
-        transaction.executeWithoutResult(status -> stopped.undo(johan));
+        transaction.executeWithoutResult(status -> stopped.undo(new MemberId(johan)));
         assertThat(yearsPaidBy(johan)).containsExactly(2026);
     }
 
@@ -572,9 +573,9 @@ class FeeIT extends MemberRegisterSupport {
     void theLatestPaidYearFollowsTheHouseholdRule() {
         insertFee(erik, "HOUSEHOLD");
 
-        assertThat(fees.latestPaidYear(erik)).isEqualTo(thisYear());
-        assertThat(fees.latestPaidYear(maria)).isEqualTo(thisYear());
-        assertThat(fees.latestPaidYear(johan)).isNull();
+        assertThat(fees.latestPaidYear(new MemberId(erik))).isEqualTo(thisYear());
+        assertThat(fees.latestPaidYear(new MemberId(maria))).isEqualTo(thisYear());
+        assertThat(fees.latestPaidYear(new MemberId(johan))).isNull();
     }
 
     @Test

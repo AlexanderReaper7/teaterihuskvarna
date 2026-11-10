@@ -22,6 +22,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
+import se.teaterihuskvarna.member.MemberId;
 
 /// The requests [HttpBrevo] sends, checked against Brevo's API reference as
 /// read on 2026-09-28. Nothing here reaches a real Brevo account, so a field
@@ -31,6 +32,7 @@ import org.springframework.web.client.RestClient;
 class HttpBrevoTest {
 
     private static final String API = "https://api.brevo.test/v3";
+    private static final MemberId KARIN = new MemberId(42);
 
     private MockRestServiceServer server;
     private HttpBrevo brevo;
@@ -72,9 +74,9 @@ class HttpBrevoTest {
                          "listIds":[7]}""", true))
                 .andRespond(withStatus(HttpStatus.NO_CONTENT));
 
-        brevo.saveContact(new Brevo.Contact(42, "KARIN@example.test", "Karin Holm", 2026,
+        brevo.saveContact(new Brevo.Contact(KARIN, "KARIN@example.test", "Karin Holm", 2026,
                 LocalDate.of(2026, 9, 20), List.of(3L, 5L)));
-        brevo.saveContact(new Brevo.Contact(42, "karin@example.test", "Karin Holm", null, null, List.of()));
+        brevo.saveContact(new Brevo.Contact(KARIN, "karin@example.test", "Karin Holm", null, null, List.of()));
         server.verify();
     }
 
@@ -101,8 +103,8 @@ class HttpBrevoTest {
                          "listIds":[7]}""", true))
                 .andRespond(withStatus(HttpStatus.NO_CONTENT));
 
-        brevo.saveContact(new Brevo.Contact(42, "ny@example.test", "Karin Holm", null, null, List.of()));
-        brevo.saveContact(new Brevo.Contact(42, "karin@example.test", "Karin Holm", null, null, List.of()));
+        brevo.saveContact(new Brevo.Contact(KARIN, "ny@example.test", "Karin Holm", null, null, List.of()));
+        brevo.saveContact(new Brevo.Contact(KARIN, "karin@example.test", "Karin Holm", null, null, List.of()));
         server.verify();
     }
 
@@ -121,7 +123,7 @@ class HttpBrevoTest {
                 .andRespond(withStatus(HttpStatus.CREATED).contentType(MediaType.APPLICATION_JSON)
                         .body("{\"id\":5}"));
 
-        brevo.saveContact(new Brevo.Contact(42, "karin@example.test", "Karin Holm", null, null, List.of()));
+        brevo.saveContact(new Brevo.Contact(KARIN, "karin@example.test", "Karin Holm", null, null, List.of()));
         server.verify();
     }
 
@@ -134,8 +136,8 @@ class HttpBrevoTest {
                 .andExpect(method(HttpMethod.DELETE))
                 .andRespond(withStatus(HttpStatus.NOT_FOUND));
 
-        brevo.deleteContact(42);
-        brevo.deleteContact(43);
+        brevo.deleteContact(KARIN);
+        brevo.deleteContact(new MemberId(43));
         server.verify();
     }
 
@@ -336,7 +338,7 @@ class HttpBrevoTest {
                         .body("{\"code\":\"duplicate_parameter\"}"));
 
         assertThatThrownBy(() -> brevo.saveContact(
-                new Brevo.Contact(42, "karin@example.test", "Karin Holm", null, null, List.of())))
+                new Brevo.Contact(KARIN, "karin@example.test", "Karin Holm", null, null, List.of())))
                 .isInstanceOf(BrevoUnavailable.class);
     }
 

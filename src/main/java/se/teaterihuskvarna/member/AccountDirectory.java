@@ -38,6 +38,6 @@ class AccountDirectory implements LoginDirectory {
     }
 
     private static SignedIn signedIn(Account account) {
-        return new SignedIn(LoginKind.MEMBER, account.getId(), account.getEmail(), account.getMember().getFullName());
+        return SignedIn.of(account.id(), account.getEmail(), account.getMember().getFullName());
     }
 }

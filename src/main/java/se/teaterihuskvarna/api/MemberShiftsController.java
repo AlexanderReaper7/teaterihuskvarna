@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 import se.teaterihuskvarna.login.SignedIn;
+import se.teaterihuskvarna.member.MemberId;
 import se.teaterihuskvarna.member.MemberService;
 import se.teaterihuskvarna.volunteer.BookingOutcome;
 import se.teaterihuskvarna.volunteer.MemberShift;
@@ -64,8 +65,8 @@ public class MemberShiftsController {
         shifts.cancel(id, memberId(signedIn));
     }
 
-    private long memberId(SignedIn signedIn) {
-        return members.findByAccount(signedIn.id())
+    private MemberId memberId(SignedIn signedIn) {
+        return members.findByAccount(signedIn.accountId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND))
                 .id();
     }

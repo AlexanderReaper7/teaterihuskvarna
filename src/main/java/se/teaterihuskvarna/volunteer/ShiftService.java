@@ -29,6 +29,7 @@ import se.teaterihuskvarna.export.CsvFile;
 import se.teaterihuskvarna.login.Email;
 import se.teaterihuskvarna.login.MailLife;
 import se.teaterihuskvarna.login.Mailer;
+import se.teaterihuskvarna.member.MemberId;
 
 /// Volunteer shifts at performances: R016 booking, R017 the reminder, R020 the
 /// list and export. `docs/decisions/0024-volunteer-shifts.md`.
@@ -75,10 +76,10 @@ public class ShiftService {
 
     /// @param memberId the member asking
     /// @return the shifts that have not started, earliest first
-    public List<MemberShift> upcoming(long memberId) {
+    public List<MemberShift> upcoming(MemberId memberId) {
         List<Shift> found = shifts.findStartingFrom(clock.instant());
         Map<Long, Long> counts = counts(found);
-        Set<Long> mine = new HashSet<>(bookings.findShiftIdsByMemberId(memberId));
+        Set<Long> mine = new HashSet<>(bookings.findShiftIdsByMemberId(memberId.value()));
         return found.stream()
                 .map(shift -> memberShift(shift, counts.getOrDefault(shift.getId(), 0L), mine.contains(shift.getId())))
                 .toList();
@@ -86,7 +87,7 @@ public class ShiftService {
 
     /// @param memberId the member asking
     /// @return the shifts the member has a place on that have not started, earliest first
-    public List<MemberShift> booked(long memberId) {
+    public List<MemberShift> booked(MemberId memberId) {
         return upcoming(memberId).stream().filter(MemberShift::booked).toList();
     }
 
@@ -101,9 +102,9 @@ public class ShiftService {
     /// @throws ShiftStarted if the shift has started
     /// @throws ShiftFull if every place is taken
     @Transactional
-    public BookingOutcome book(long shiftId, long memberId) {
+    public BookingOutcome book(long shiftId, MemberId memberId) {
         Shift shift = shifts.lockById(shiftId).orElseThrow(() -> new NoSuchShift("no shift " + shiftId));
-        if (bookings.existsByShiftIdAndMemberId(shiftId, memberId)) {
+        if (bookings.existsByShiftIdAndMemberId(shiftId, memberId.value())) {
             return BookingOutcome.ALREADY_BOOKED;
         }
         if (!clock.instant().isBefore(shift.getStartsAt())) {
@@ -136,12 +137,12 @@ public class ShiftService {
     /// @throws NoSuchShift if no shift has the id
     /// @throws ShiftStarted if the shift has started
     @Transactional
-    public boolean cancel(long shiftId, long memberId) {
+    public boolean cancel(long shiftId, MemberId memberId) {
         Shift shift = shifts.findById(shiftId).orElseThrow(() -> new NoSuchShift("no shift " + shiftId));
         if (!clock.instant().isBefore(shift.getStartsAt())) {
             throw new ShiftStarted("shift " + shiftId + " has started");
         }
-        return bookings.deleteBooking(shiftId, memberId) > 0;
+        return bookings.deleteBooking(shiftId, memberId.value()) > 0;
     }
 
     /// @return the events a shift can be added to: the upcoming published ones
@@ -241,8 +242,8 @@ public class ShiftService {
     ///
     /// @param memberId a member
     /// @return the day in Sweden the latest shift the member was booked on started, or null
-    public @Nullable LocalDate lastShift(long memberId) {
-        Instant start = bookings.findLastShiftStart(memberId, clock.instant());
+    public @Nullable LocalDate lastShift(MemberId memberId) {
+        Instant start = bookings.findLastShiftStart(memberId.value(), clock.instant());
         return start == null ? null : LocalDate.ofInstant(start, SWEDEN);
     }
 
@@ -297,7 +298,7 @@ public class ShiftService {
         String texts = today ? "shift.reminder.today" : "shift.reminder";
         Instant notAfter = today ? shift.getStartsAt() : shiftDay.atStartOfDay(SWEDEN).toInstant();
         int sent = 0;
-        for (String email : bookings.findEmail(booking.getMemberId())) {
+        for (String email : bookings.findEmail(booking.getMemberId().value())) {
             mailer.send(new Email(email), text(texts + ".subject", shift.getEventTitle()),
                     text(texts + ".body", text("shift.task." + shift.getTask().name()),
                             shift.getEventTitle(), MAIL_TIME.format(shift.getStartsAt()),

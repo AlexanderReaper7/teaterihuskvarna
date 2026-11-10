@@ -40,6 +40,7 @@ import org.springframework.test.web.servlet.request.RequestPostProcessor;
 import se.teaterihuskvarna.IntegrationTestSupport;
 import se.teaterihuskvarna.login.LoginKind;
 import se.teaterihuskvarna.login.SignedIn;
+import se.teaterihuskvarna.member.MemberId;
 import se.teaterihuskvarna.web.Copy;
 
 /// Proves the offer rules (R014) and the registration export (R020) through
@@ -602,7 +603,7 @@ class OfferIT extends IntegrationTestSupport {
         register(second, anna);
         register(first, anna);
 
-        assertThat(offers.offerIdsOf(memberOf(anna))).containsExactly(first, second);
+        assertThat(offers.offerIdsOf(new MemberId(memberOf(anna)))).containsExactly(first, second);
     }
 
     @Test
@@ -674,7 +675,8 @@ class OfferIT extends IntegrationTestSupport {
     }
 
     private void register(long offerId, long accountId) {
-        assertThat(offers.register(offerId, memberOf(accountId))).isEqualTo(RegistrationOutcome.REGISTERED);
+        assertThat(offers.register(offerId, new MemberId(memberOf(accountId))))
+                .isEqualTo(RegistrationOutcome.REGISTERED);
     }
 
     private RequestPostProcessor asMember(long accountId) {
@@ -696,7 +698,7 @@ class OfferIT extends IntegrationTestSupport {
                 return "NOT STARTED";
             }
             try {
-                return offers.register(offerId, memberId).name();
+                return offers.register(offerId, new MemberId(memberId)).name();
             } catch (OfferFull e) {
                 return "FULL";
             }

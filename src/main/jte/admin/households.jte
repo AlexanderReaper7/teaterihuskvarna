@@ -37,7 +37,7 @@
                 <option value="" selected="${household.ownerMemberId() == null}">${copy.text("household.owner.admin")}</option>
                 @for(HouseholdMember member : household.members())
                     @if(member.hasAccount())
-                        <option value="${member.id()}" selected="${member.id().equals(household.ownerMemberId())}">${member.fullName()}</option>
+                        <option value="${member.id().value()}" selected="${member.id().equals(household.ownerMemberId())}">${member.fullName()}</option>
                     @endif
                 @endfor
             </select>
@@ -49,7 +49,7 @@
             <ul>
                 @for(HouseholdMember member : household.members())
                     <li>
-                        <a href="/admin/medlemmar/${member.id()}">${member.fullName()}</a>
+                        <a href="/admin/medlemmar/${member.id().value()}">${member.fullName()}</a>
                         @if(member.hasAccount())
                             ${copy.text("household.hasAccount")}
                         @endif

@@ -9,7 +9,7 @@ import org.jspecify.annotations.Nullable;
 /// @param name    what the household is called
 /// @param ownerMemberId the member owner, or null for administrator management
 /// @param members its members by name
-public record HouseholdDetails(Long id, String name, @Nullable Long ownerMemberId, List<HouseholdMember> members) {
+public record HouseholdDetails(Long id, String name, @Nullable MemberId ownerMemberId, List<HouseholdMember> members) {
 
     /// @param id      the household's identifier
     /// @param name    what the household is called
@@ -21,7 +21,7 @@ public record HouseholdDetails(Long id, String name, @Nullable Long ownerMemberI
 
     /// @param memberId the signed-in member
     /// @return whether that member owns the household
-    public boolean ownedBy(long memberId) {
-        return ownerMemberId != null && ownerMemberId == memberId;
+    public boolean ownedBy(MemberId memberId) {
+        return memberId.equals(ownerMemberId);
     }
 }

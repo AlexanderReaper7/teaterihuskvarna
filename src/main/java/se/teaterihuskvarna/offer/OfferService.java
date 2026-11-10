@@ -17,6 +17,7 @@ import org.springframework.validation.annotation.Validated;
 import se.teaterihuskvarna.Swedish;
 import se.teaterihuskvarna.export.Csv;
 import se.teaterihuskvarna.export.CsvFile;
+import se.teaterihuskvarna.member.MemberId;
 
 /// Offers and registrations, R014 and R020.
 ///
@@ -55,11 +56,11 @@ public class OfferService {
 
     /// @param memberId the member asking
     /// @return the published offers still open for registration, soonest first
-    public List<MemberOffer> openOffers(long memberId) {
+    public List<MemberOffer> openOffers(MemberId memberId) {
         Instant now = clock.instant();
         List<Offer> open = offers.findOpen(now);
         Map<Long, Long> counts = counts(open);
-        Set<Long> mine = new HashSet<>(registrations.findOfferIdsByMemberId(memberId));
+        Set<Long> mine = new HashSet<>(registrations.findOfferIdsByMemberId(memberId.value()));
         return open.stream()
                 .map(offer -> memberOffer(offer, counts.getOrDefault(offer.getId(), 0L),
                         mine.contains(offer.getId()), now))
@@ -71,9 +72,9 @@ public class OfferService {
     ///
     /// @param memberId the member asking
     /// @return the published offers the member is registered for that have not started, soonest first
-    public List<MemberOffer> registeredOffers(long memberId) {
+    public List<MemberOffer> registeredOffers(MemberId memberId) {
         Instant now = clock.instant();
-        List<Offer> mine = offers.findUpcomingRegisteredBy(memberId, now);
+        List<Offer> mine = offers.findUpcomingRegisteredBy(memberId.value(), now);
         Map<Long, Long> counts = counts(mine);
         return mine.stream()
                 .map(offer -> memberOffer(offer, counts.getOrDefault(offer.getId(), 0L), true, now))
@@ -87,10 +88,10 @@ public class OfferService {
     /// @param memberId the member asking
     /// @return the offer as this member sees it
     /// @throws NoSuchOffer if no published offer has the id
-    public MemberOffer offer(long offerId, long memberId) {
+    public MemberOffer offer(long offerId, MemberId memberId) {
         Offer offer = offers.findById(offerId).filter(Offer::isPublished).orElseThrow(NoSuchOffer::new);
         return memberOffer(offer, registrations.countByOfferId(offerId),
-                registrations.existsByOfferIdAndMemberId(offerId, memberId), clock.instant());
+                registrations.existsByOfferIdAndMemberId(offerId, memberId.value()), clock.instant());
     }
 
     /// Takes a place. The offer row stays locked from the read until the
@@ -108,9 +109,9 @@ public class OfferService {
     /// @throws RegistrationClosed if registration has closed
     /// @throws OfferFull if every place is taken
     @Transactional
-    public RegistrationOutcome register(long offerId, long memberId) {
+    public RegistrationOutcome register(long offerId, MemberId memberId) {
         Offer offer = offers.lockById(offerId).filter(Offer::isPublished).orElseThrow(NoSuchOffer::new);
-        if (registrations.existsByOfferIdAndMemberId(offerId, memberId)) {
+        if (registrations.existsByOfferIdAndMemberId(offerId, memberId.value())) {
             return RegistrationOutcome.ALREADY_REGISTERED;
         }
         if (!offer.isOpenAt(clock.instant())) {
@@ -132,12 +133,12 @@ public class OfferService {
     /// @throws NoSuchOffer if no published offer has the id
     /// @throws RegistrationClosed if registration has closed
     @Transactional
-    public boolean cancel(long offerId, long memberId) {
+    public boolean cancel(long offerId, MemberId memberId) {
         Offer offer = offers.findById(offerId).filter(Offer::isPublished).orElseThrow(NoSuchOffer::new);
         if (!offer.isOpenAt(clock.instant())) {
             throw new RegistrationClosed();
         }
-        return registrations.deleteRegistration(offerId, memberId) > 0;
+        return registrations.deleteRegistration(offerId, memberId.value()) > 0;
     }
 
     /// @return every offer, published or not, newest first
@@ -212,8 +213,8 @@ public class OfferService {
     ///
     /// @param memberId a member
     /// @return the ids of the offers the member is registered for, lowest first
-    public List<Long> offerIdsOf(long memberId) {
-        return registrations.findOfferIdsByMemberId(memberId).stream().sorted().toList();
+    public List<Long> offerIdsOf(MemberId memberId) {
+        return registrations.findOfferIdsByMemberId(memberId.value()).stream().sorted().toList();
     }
 
     /// @param id the offer

@@ -54,7 +54,7 @@ public class AdministratorDocumentsController {
             @ModelAttribute DocumentForm form,
             @RequestParam(name = "file", required = false) @Nullable MultipartFile file) throws IOException {
         return documents.upload(form, file == null ? null : file.getOriginalFilename(),
-                file == null ? null : file.getBytes(), signedIn.id());
+                file == null ? null : file.getBytes(), signedIn.administratorId());
     }
 
     /// @param id the document

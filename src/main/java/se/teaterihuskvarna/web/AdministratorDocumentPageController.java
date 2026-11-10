@@ -83,7 +83,7 @@ public class AdministratorDocumentPageController {
         DocumentSummary uploaded;
         try {
             uploaded = documents.upload(form, file == null ? null : file.getOriginalFilename(),
-                    file == null ? null : file.getBytes(), signedIn.id());
+                    file == null ? null : file.getBytes(), signedIn.administratorId());
         } catch (ConstraintViolationException e) {
             return page(form, FieldErrors.of(e), null, model);
         } catch (NotAPdf e) {

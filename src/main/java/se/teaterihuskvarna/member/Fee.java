@@ -10,6 +10,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.Instant;
 import org.jspecify.annotations.Nullable;
+import se.teaterihuskvarna.login.AdministratorId;
 
 /// One fee payment for one year, as an administrator marked it.
 ///
@@ -60,14 +61,14 @@ public class Fee {
     /// @param paidAt    when the administrator marked it
     /// @param markedBy  the administrator who marked it
     /// @param householdId the household a [FeeKind#HOUSEHOLD] payment covers, or null
-    public Fee(long memberId, int year, FeeKind kind, int amountOre, Instant paidAt, long markedBy,
+    public Fee(MemberId memberId, int year, FeeKind kind, int amountOre, Instant paidAt, AdministratorId markedBy,
             @Nullable Long householdId) {
-        this.memberId = memberId;
+        this.memberId = memberId.value();
         this.year = year;
         this.kind = kind;
         this.amountOre = amountOre;
         this.paidAt = paidAt;
-        this.markedBy = markedBy;
+        this.markedBy = markedBy.value();
         this.householdId = householdId;
     }
 
@@ -81,8 +82,8 @@ public class Fee {
     }
 
     /// @return the member who paid, or null once that member is deleted
-    public @Nullable Long getMemberId() {
-        return memberId;
+    public @Nullable MemberId getMemberId() {
+        return memberId == null ? null : new MemberId(memberId);
     }
 
     public int getYear() {
@@ -116,7 +117,7 @@ public class Fee {
     }
 
     /// @return the administrator who marked the payment, or null once that row is deleted
-    public @Nullable Long getMarkedBy() {
-        return markedBy;
+    public @Nullable AdministratorId getMarkedBy() {
+        return markedBy == null ? null : new AdministratorId(markedBy);
     }
 }

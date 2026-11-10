@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 import se.teaterihuskvarna.login.SignedIn;
+import se.teaterihuskvarna.member.MemberId;
 import se.teaterihuskvarna.member.MemberService;
 import se.teaterihuskvarna.offer.MemberOffer;
 import se.teaterihuskvarna.offer.OfferService;
@@ -60,7 +61,7 @@ public class MemberOffersController {
     /// @return 201 when a place was taken, 200 when the member already had one, with the offer either way
     @PostMapping("/api/member/offers/{id}/registration")
     public ResponseEntity<MemberOffer> register(@AuthenticationPrincipal SignedIn signedIn, @PathVariable long id) {
-        long memberId = memberId(signedIn);
+        MemberId memberId = memberId(signedIn);
         RegistrationOutcome outcome = offers.register(id, memberId);
         HttpStatus status = outcome == RegistrationOutcome.REGISTERED ? HttpStatus.CREATED : HttpStatus.OK;
         return ResponseEntity.status(status).body(offers.offer(id, memberId));
@@ -78,8 +79,8 @@ public class MemberOffersController {
 
     /// An account always belongs to a member, so none means the member was
     /// removed while the session lived on.
-    private long memberId(SignedIn signedIn) {
-        return members.findByAccount(signedIn.id())
+    private MemberId memberId(SignedIn signedIn) {
+        return members.findByAccount(signedIn.accountId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND))
                 .id();
     }

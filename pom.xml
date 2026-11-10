@@ -198,8 +198,15 @@
             <arg>-J--add-exports=jdk.compiler/com.sun.tools.javac.util=ALL-UNNAMED</arg>
             <arg>-J--add-opens=jdk.compiler/com.sun.tools.javac.code=ALL-UNNAMED</arg>
             <arg>-J--add-opens=jdk.compiler/com.sun.tools.javac.comp=ALL-UNNAMED</arg>
-            <!-- Keep plugin options in one argument without embedded newlines. -->
-            <arg>-Xplugin:ErrorProne -XepDisableAllChecks -Xep:NullAway:ERROR -Xep:RequireExplicitNullMarking:ERROR -Xep:JSpecifyUnrecognizedAnnotationLocation:ERROR -XepOpt:NullAway:OnlyNullMarked=true -XepOpt:NullAway:JSpecifyMode=true -XepOpt:NullAway:ExternalInitAnnotations=jakarta.persistence.Entity -XepOpt:NullAway:HandleTestAssertionLibraries=true</arg>
+            <!-- Keep plugin options in one argument without embedded newlines.
+                 EqualsIncompatibleType, CollectionIncompatibleType and
+                 ReferenceEquality are on for the id types (MemberId,
+                 AccountId, AdministratorId). equals, Map.get and contains
+                 take any Object, so comparing an id with a number, or with
+                 another kind of id, compiles and is always false, and == on
+                 two ids compares the objects and not the numbers. These three
+                 checks refuse all of it. -->
+            <arg>-Xplugin:ErrorProne -XepDisableAllChecks -Xep:NullAway:ERROR -Xep:EqualsIncompatibleType:ERROR -Xep:CollectionIncompatibleType:ERROR -Xep:ReferenceEquality:ERROR -Xep:RequireExplicitNullMarking:ERROR -Xep:JSpecifyUnrecognizedAnnotationLocation:ERROR -XepOpt:NullAway:OnlyNullMarked=true -XepOpt:NullAway:JSpecifyMode=true -XepOpt:NullAway:ExternalInitAnnotations=jakarta.persistence.Entity -XepOpt:NullAway:HandleTestAssertionLibraries=true</arg>
           </compilerArgs>
           <annotationProcessorPaths>
             <path>

@@ -52,13 +52,13 @@ public class Household {
     }
 
     /// @return the member owner, or null when administrators manage the household
-    public @Nullable Long getOwnerMemberId() {
-        return ownerMemberId;
+    public @Nullable MemberId getOwnerMemberId() {
+        return ownerMemberId == null ? null : new MemberId(ownerMemberId);
     }
 
     /// @param memberId the member owner, or null for administrator management
-    public void setOwnerMemberId(@Nullable Long memberId) {
-        ownerMemberId = memberId;
+    public void setOwnerMemberId(@Nullable MemberId memberId) {
+        ownerMemberId = memberId == null ? null : memberId.value();
     }
 
     /// @param name the new household name
