@@ -31,6 +31,7 @@ import se.teaterihuskvarna.member.InvitationService;
 import se.teaterihuskvarna.member.MemberDetails;
 import se.teaterihuskvarna.member.MemberFile;
 import se.teaterihuskvarna.member.MemberForm;
+import se.teaterihuskvarna.member.MemberId;
 import se.teaterihuskvarna.member.MemberList;
 import se.teaterihuskvarna.member.MemberService;
 import se.teaterihuskvarna.member.NewHousehold;
@@ -80,7 +81,7 @@ public class MemberRegisterController {
     /// @param id the member
     /// @return the member with fees per year, household and open invitation
     @GetMapping("/api/admin/members/{id}")
-    public MemberFile find(@PathVariable long id) {
+    public MemberFile find(@PathVariable MemberId id) {
         return members.find(id);
     }
 
@@ -88,7 +89,7 @@ public class MemberRegisterController {
     /// @param form every field, the address and household included
     /// @return the member as stored
     @PutMapping("/api/admin/members/{id}")
-    public MemberDetails update(@PathVariable long id, @RequestBody MemberForm form) {
+    public MemberDetails update(@PathVariable MemberId id, @RequestBody MemberForm form) {
         return members.update(id, form);
     }
 
@@ -97,7 +98,7 @@ public class MemberRegisterController {
     /// @param id the member
     @DeleteMapping("/api/admin/members/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void delete(@PathVariable long id) {
+    public void delete(@PathVariable MemberId id) {
         members.delete(id);
     }
 
@@ -106,15 +107,15 @@ public class MemberRegisterController {
     /// @param mark     the kind, and the amount in öre if not the configured one
     @PostMapping("/api/admin/members/{id}/fee")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void markPaid(@AuthenticationPrincipal SignedIn signedIn, @PathVariable long id,
+    public void markPaid(@AuthenticationPrincipal SignedIn signedIn, @PathVariable MemberId id,
             @RequestBody FeeMark mark) {
-        fees.markPaid(id, mark, signedIn.id());
+        fees.markPaid(id, mark, signedIn.administratorId());
     }
 
     /// @param id the member whose mark for this year to undo
     @DeleteMapping("/api/admin/members/{id}/fee")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void undoFee(@PathVariable long id) {
+    public void undoFee(@PathVariable MemberId id) {
         fees.undo(id);
     }
 
@@ -122,7 +123,7 @@ public class MemberRegisterController {
     /// @param request the address the invitation goes to
     @PostMapping("/api/admin/members/{id}/invitation")
     @ResponseStatus(HttpStatus.ACCEPTED)
-    public void invite(@PathVariable long id, @RequestBody InvitationRequest request) {
+    public void invite(@PathVariable MemberId id, @RequestBody InvitationRequest request) {
         invitations.invite(id, request);
     }
 

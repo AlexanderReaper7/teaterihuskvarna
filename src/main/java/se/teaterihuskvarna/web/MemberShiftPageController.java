@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import se.teaterihuskvarna.login.SignedIn;
+import se.teaterihuskvarna.member.MemberId;
 import se.teaterihuskvarna.member.MemberService;
 import se.teaterihuskvarna.volunteer.BookingOutcome;
 import se.teaterihuskvarna.volunteer.NoSuchShift;
@@ -94,8 +95,8 @@ public class MemberShiftPageController {
         response.sendError(HttpStatus.NOT_FOUND.value());
     }
 
-    private long memberId(SignedIn signedIn) {
-        return members.findByAccount(signedIn.id())
+    private MemberId memberId(SignedIn signedIn) {
+        return members.findByAccount(signedIn.accountId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND))
                 .id();
     }

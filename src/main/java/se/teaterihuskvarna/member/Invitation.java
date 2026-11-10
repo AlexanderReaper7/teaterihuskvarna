@@ -45,8 +45,8 @@ public class Invitation {
     /// @param tokenHash [se.teaterihuskvarna.login.Tokens#hash] of the token in the mailed link
     /// @param createdAt when the invitation was sent
     /// @param expiresAt when the link stops working
-    public Invitation(long memberId, String email, String tokenHash, Instant createdAt, Instant expiresAt) {
-        this.memberId = memberId;
+    public Invitation(MemberId memberId, String email, String tokenHash, Instant createdAt, Instant expiresAt) {
+        this.memberId = memberId.value();
         this.email = email;
         this.tokenHash = tokenHash;
         this.createdAt = createdAt;
@@ -62,8 +62,8 @@ public class Invitation {
         return id;
     }
 
-    public long getMemberId() {
-        return memberId;
+    public MemberId getMemberId() {
+        return new MemberId(memberId);
     }
 
     public String getEmail() {

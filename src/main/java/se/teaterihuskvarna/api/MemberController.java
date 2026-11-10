@@ -22,6 +22,7 @@ import se.teaterihuskvarna.member.HouseholdService;
 import se.teaterihuskvarna.member.InvitationRequest;
 import se.teaterihuskvarna.member.InvitationService;
 import se.teaterihuskvarna.member.MemberDetails;
+import se.teaterihuskvarna.member.MemberId;
 import se.teaterihuskvarna.member.MemberService;
 import se.teaterihuskvarna.member.NewHousehold;
 
@@ -44,7 +45,7 @@ public class MemberController {
     /// @return 200 with the member, or 404 if the member was removed while the session lived on
     @GetMapping("/api/member")
     public ResponseEntity<MemberDetails> member(@AuthenticationPrincipal SignedIn signedIn) {
-        return ResponseEntity.of(members.findByAccount(signedIn.id()));
+        return ResponseEntity.of(members.findByAccount(signedIn.accountId()));
     }
 
     /// Changes everything but the address, which only an administrator changes (R012).
@@ -54,14 +55,14 @@ public class MemberController {
     /// @return the member as stored
     @PutMapping("/api/member/contact")
     public MemberDetails updateContact(@AuthenticationPrincipal SignedIn signedIn, @RequestBody ContactForm form) {
-        return members.updateContact(signedIn.id(), form);
+        return members.updateContact(signedIn.accountId(), form);
     }
 
     /// @param signedIn the logged-in account
     /// @return 200 with the member's household, or 404 when the member is in none
     @GetMapping("/api/member/household")
     public ResponseEntity<HouseholdDetails> household(@AuthenticationPrincipal SignedIn signedIn) {
-        return ResponseEntity.of(households.forAccount(signedIn.id()));
+        return ResponseEntity.of(households.forAccount(signedIn.accountId()));
     }
 
     /// @param signedIn the logged-in account
@@ -71,7 +72,7 @@ public class MemberController {
     @ResponseStatus(HttpStatus.CREATED)
     public HouseholdDetails createHousehold(@AuthenticationPrincipal SignedIn signedIn,
             @RequestBody NewHousehold form) {
-        return households.createForAccount(signedIn.id(), form);
+        return households.createForAccount(signedIn.accountId(), form);
     }
 
     /// @param signedIn the logged-in account
@@ -80,7 +81,7 @@ public class MemberController {
     @PutMapping("/api/member/household")
     public HouseholdDetails renameHousehold(@AuthenticationPrincipal SignedIn signedIn,
             @RequestBody NewHousehold form) {
-        return households.renameForAccount(signedIn.id(), form);
+        return households.renameForAccount(signedIn.accountId(), form);
     }
 
     /// @param signedIn the logged-in account
@@ -88,16 +89,16 @@ public class MemberController {
     /// @return the new member's id, without creating an account
     @PostMapping("/api/member/household/members")
     @ResponseStatus(HttpStatus.CREATED)
-    public long addHouseholdMember(@AuthenticationPrincipal SignedIn signedIn, @RequestBody ContactForm form) {
-        return households.addForAccount(signedIn.id(), form);
+    public MemberId addHouseholdMember(@AuthenticationPrincipal SignedIn signedIn, @RequestBody ContactForm form) {
+        return households.addForAccount(signedIn.accountId(), form);
     }
 
     /// @param signedIn the logged-in account
     /// @param memberId a person in the caller's household
     /// @return the person's editable contact details
     @GetMapping("/api/member/household/members/{memberId}")
-    public ContactForm householdMember(@AuthenticationPrincipal SignedIn signedIn, @PathVariable long memberId) {
-        return households.memberForAccount(signedIn.id(), memberId);
+    public ContactForm householdMember(@AuthenticationPrincipal SignedIn signedIn, @PathVariable MemberId memberId) {
+        return households.memberForAccount(signedIn.accountId(), memberId);
     }
 
     /// @param signedIn the logged-in account
@@ -105,9 +106,9 @@ public class MemberController {
     /// @param form the new name and contact details
     /// @return the saved contact details
     @PutMapping("/api/member/household/members/{memberId}")
-    public ContactForm updateHouseholdMember(@AuthenticationPrincipal SignedIn signedIn, @PathVariable long memberId,
-            @RequestBody ContactForm form) {
-        return households.updateForAccount(signedIn.id(), memberId, form);
+    public ContactForm updateHouseholdMember(@AuthenticationPrincipal SignedIn signedIn,
+            @PathVariable MemberId memberId, @RequestBody ContactForm form) {
+        return households.updateForAccount(signedIn.accountId(), memberId, form);
     }
 
     /// The caller can remove themselves to leave the household.
@@ -117,9 +118,9 @@ public class MemberController {
     /// @param successorMemberId the next owner if the caller leaves, or null
     @DeleteMapping("/api/member/household/members/{memberId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void removeHouseholdMember(@AuthenticationPrincipal SignedIn signedIn, @PathVariable long memberId,
-            @RequestParam(required = false) @Nullable Long successorMemberId) {
-        households.removeForAccount(signedIn.id(), memberId, successorMemberId);
+    public void removeHouseholdMember(@AuthenticationPrincipal SignedIn signedIn, @PathVariable MemberId memberId,
+            @RequestParam(required = false) @Nullable MemberId successorMemberId) {
+        households.removeForAccount(signedIn.accountId(), memberId, successorMemberId);
     }
 
     /// Invites someone in the caller's household who has no account (R019).
@@ -130,7 +131,7 @@ public class MemberController {
     @ResponseStatus(HttpStatus.ACCEPTED)
     public void invite(@AuthenticationPrincipal SignedIn signedIn,
             @RequestBody @Valid HouseholdInvitation invitation) {
-        invitations.inviteToHousehold(signedIn.id(), invitation.memberId(), new InvitationRequest(
+        invitations.inviteToHousehold(signedIn.accountId(), invitation.memberId(), new InvitationRequest(
                 invitation.email() == null ? "" : invitation.email()));
     }
 
@@ -139,6 +140,6 @@ public class MemberController {
     /// @param memberId the household member to invite
     /// @param email    the address the invitation goes to
     public record HouseholdInvitation(
-            @NotNull(message = "{invitation.error.noSuchMember}") Long memberId, @Nullable String email) {
+            @NotNull(message = "{invitation.error.noSuchMember}") MemberId memberId, @Nullable String email) {
     }
 }

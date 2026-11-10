@@ -25,6 +25,7 @@ import se.teaterihuskvarna.content.Event;
 import se.teaterihuskvarna.content.Image;
 import se.teaterihuskvarna.content.NewsItem;
 import se.teaterihuskvarna.content.Perspective;
+import se.teaterihuskvarna.login.AdministratorId;
 import se.teaterihuskvarna.login.MailSettings;
 
 /// Mailings, R022 to R025, prepared here and sent from Brevo:
@@ -174,7 +175,7 @@ public class MailingService {
     /// @throws DraftUnanswered if Brevo did not answer and its draft is not found yet
     /// @throws BrevoUnavailable if Brevo refuses or cannot be reached
     /// @throws jakarta.validation.ConstraintViolationException if the form breaks a constraint
-    public MailingDetails prepare(@Valid MailingForm form, long administratorId) {
+    public MailingDetails prepare(@Valid MailingForm form, AdministratorId administratorId) {
         String html = html(form);
         String audienceName = audienceName(form.audience());
         Long segment = segmentId(form.audience());

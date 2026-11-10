@@ -20,6 +20,7 @@ import se.teaterihuskvarna.administrator.CannotRemoveSelf;
 import se.teaterihuskvarna.administrator.NewAdministrator;
 import se.teaterihuskvarna.administrator.NoSuchAdministrator;
 import se.teaterihuskvarna.administrator.TooFewAdministrators;
+import se.teaterihuskvarna.login.AdministratorId;
 import se.teaterihuskvarna.login.SignedIn;
 import se.teaterihuskvarna.member.MemberService;
 import se.teaterihuskvarna.offer.OfferService;
@@ -87,7 +88,7 @@ public class AdministratorPageController {
             HttpSession session, Model model, RedirectAttributes redirected) {
         AdministratorDetails added;
         try {
-            added = administrators.add(form, signedIn.id());
+            added = administrators.add(form, signedIn.administratorId());
         } catch (ConstraintViolationException e) {
             return page(signedIn, session, form, FieldErrors.of(e), null, false, model);
         } catch (AdministratorAlreadyExists e) {
@@ -109,9 +110,9 @@ public class AdministratorPageController {
     /// @param redirected receives the error when there is nobody to ask about
     /// @return the page that asks before removing, or a redirect to the start page
     @GetMapping("/admin/administratorer/{id}/ta-bort")
-    public String confirmRemove(@AuthenticationPrincipal SignedIn signedIn, @PathVariable long id, Model model,
-            RedirectAttributes redirected) {
-        if (id == signedIn.id()) {
+    public String confirmRemove(@AuthenticationPrincipal SignedIn signedIn, @PathVariable AdministratorId id,
+            Model model, RedirectAttributes redirected) {
+        if (id.equals(signedIn.administratorId())) {
             redirected.addFlashAttribute("error", copy.text("admin.error.self"));
             return REDIRECT;
         }
@@ -129,10 +130,10 @@ public class AdministratorPageController {
     /// @param redirected receives the outcome, shown after the redirect
     /// @return a redirect to the page
     @PostMapping("/admin/administratorer/{id}/ta-bort")
-    public String remove(@AuthenticationPrincipal SignedIn signedIn, @PathVariable long id,
+    public String remove(@AuthenticationPrincipal SignedIn signedIn, @PathVariable AdministratorId id,
             RedirectAttributes redirected) {
         try {
-            administrators.remove(id, signedIn.id());
+            administrators.remove(id, signedIn.administratorId());
         } catch (CannotRemoveSelf e) {
             redirected.addFlashAttribute("error", copy.text("admin.error.self"));
             return REDIRECT;

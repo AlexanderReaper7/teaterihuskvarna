@@ -10,5 +10,5 @@ import org.jspecify.annotations.Nullable;
 /// @param fullName          the member's name
 /// @param hasAccount        whether the member can log in
 /// @param invitationExpires when an open invitation's link stops working, or null for none
-public record HouseholdMember(Long id, String fullName, boolean hasAccount, @Nullable Instant invitationExpires) {
+public record HouseholdMember(MemberId id, String fullName, boolean hasAccount, @Nullable Instant invitationExpires) {
 }

@@ -24,6 +24,7 @@ import se.teaterihuskvarna.member.HouseholdDetails;
 import se.teaterihuskvarna.member.HouseholdService;
 import se.teaterihuskvarna.member.HouseholdOwnerRequired;
 import se.teaterihuskvarna.member.HouseholdSuccessorRequired;
+import se.teaterihuskvarna.member.MemberId;
 import se.teaterihuskvarna.member.NewHousehold;
 import se.teaterihuskvarna.member.MemberService;
 import se.teaterihuskvarna.member.NoSuchHousehold;
@@ -51,7 +52,7 @@ public class MemberHouseholdPageController {
     /// @return household creation or management
     @GetMapping("/medlem/hushall")
     public String household(@AuthenticationPrincipal SignedIn signedIn, Model model) {
-        HouseholdDetails household = households.forAccount(signedIn.id()).orElse(null);
+        HouseholdDetails household = households.forAccount(signedIn.accountId()).orElse(null);
         model.addAttribute("form", new NewHousehold(household == null ? "" : household.name()));
         model.addAttribute("errors", FieldErrors.none());
         return householdPage(signedIn, model);
@@ -66,7 +67,7 @@ public class MemberHouseholdPageController {
     public String create(@AuthenticationPrincipal SignedIn signedIn, @ModelAttribute("form") NewHousehold form,
             Model model, RedirectAttributes redirected) {
         try {
-            households.createForAccount(signedIn.id(), form);
+            households.createForAccount(signedIn.accountId(), form);
         } catch (ConstraintViolationException e) {
             model.addAttribute("errors", FieldErrors.of(e));
             return householdPage(signedIn, model);
@@ -87,7 +88,7 @@ public class MemberHouseholdPageController {
     public String rename(@AuthenticationPrincipal SignedIn signedIn, @ModelAttribute("form") NewHousehold form,
             Model model, RedirectAttributes redirected) {
         try {
-            households.renameForAccount(signedIn.id(), form);
+            households.renameForAccount(signedIn.accountId(), form);
         } catch (ConstraintViolationException e) {
             model.addAttribute("errors", FieldErrors.of(e));
             return householdPage(signedIn, model);
@@ -101,9 +102,9 @@ public class MemberHouseholdPageController {
     /// @return the form for adding a person
     @GetMapping("/medlem/hushall/ny")
     public String newMember(@AuthenticationPrincipal SignedIn signedIn, Model model) {
-        HouseholdDetails household = households.forAccount(signedIn.id())
+        HouseholdDetails household = households.forAccount(signedIn.accountId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
-        long memberId = members.findByAccount(signedIn.id())
+        MemberId memberId = members.findByAccount(signedIn.accountId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND)).id();
         if (!household.ownedBy(memberId)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN);
@@ -123,7 +124,7 @@ public class MemberHouseholdPageController {
     public String addMember(@AuthenticationPrincipal SignedIn signedIn, @ModelAttribute("form") ContactForm form,
             Model model, RedirectAttributes redirected) {
         try {
-            households.addForAccount(signedIn.id(), form);
+            households.addForAccount(signedIn.accountId(), form);
         } catch (ConstraintViolationException e) {
             model.addAttribute("errors", FieldErrors.of(e));
             model.addAttribute("action", "/medlem/hushall/medlemmar");
@@ -138,8 +139,8 @@ public class MemberHouseholdPageController {
     /// @param model receives their current details
     /// @return the contact form
     @GetMapping("/medlem/hushall/medlemmar/{memberId}")
-    public String editMember(@AuthenticationPrincipal SignedIn signedIn, @PathVariable long memberId, Model model) {
-        model.addAttribute("form", households.memberForAccount(signedIn.id(), memberId));
+    public String editMember(@AuthenticationPrincipal SignedIn signedIn, @PathVariable MemberId memberId, Model model) {
+        model.addAttribute("form", households.memberForAccount(signedIn.accountId(), memberId));
         model.addAttribute("errors", FieldErrors.none());
         model.addAttribute("action", "/medlem/hushall/medlemmar/" + memberId);
         return MEMBER_FORM;
@@ -152,10 +153,10 @@ public class MemberHouseholdPageController {
     /// @param redirected receives confirmation
     /// @return household management or the invalid form
     @PostMapping("/medlem/hushall/medlemmar/{memberId}")
-    public String updateMember(@AuthenticationPrincipal SignedIn signedIn, @PathVariable long memberId,
+    public String updateMember(@AuthenticationPrincipal SignedIn signedIn, @PathVariable MemberId memberId,
             @ModelAttribute("form") ContactForm form, Model model, RedirectAttributes redirected) {
         try {
-            households.updateForAccount(signedIn.id(), memberId, form);
+            households.updateForAccount(signedIn.accountId(), memberId, form);
         } catch (ConstraintViolationException e) {
             model.addAttribute("errors", FieldErrors.of(e));
             model.addAttribute("action", "/medlem/hushall/medlemmar/" + memberId);
@@ -170,14 +171,14 @@ public class MemberHouseholdPageController {
     /// @param model receives the person's name, and whether the caller is leaving
     /// @return the confirmation page
     @GetMapping("/medlem/hushall/medlemmar/{memberId}/ta-bort")
-    public String removeForm(@AuthenticationPrincipal SignedIn signedIn, @PathVariable long memberId, Model model) {
-        model.addAttribute("fullName", households.memberForAccount(signedIn.id(), memberId).fullName());
+    public String removeForm(@AuthenticationPrincipal SignedIn signedIn, @PathVariable MemberId memberId, Model model) {
+        model.addAttribute("fullName", households.memberForAccount(signedIn.accountId(), memberId).fullName());
         model.addAttribute("memberId", memberId);
         model.addAttribute("leaving", leaving(signedIn, memberId));
-        HouseholdDetails household = households.forAccount(signedIn.id())
+        HouseholdDetails household = households.forAccount(signedIn.accountId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
         model.addAttribute("successors", household.ownedBy(memberId) ? household.members().stream()
-                .filter(member -> member.hasAccount() && member.id() != memberId).toList() : List.of());
+                .filter(member -> member.hasAccount() && !member.id().equals(memberId)).toList() : List.of());
         return "member/householdRemove";
     }
 
@@ -188,12 +189,12 @@ public class MemberHouseholdPageController {
     /// @param redirected receives confirmation
     /// @return the member overview, including when the caller has just left
     @PostMapping("/medlem/hushall/medlemmar/{memberId}/ta-bort")
-    public String remove(@AuthenticationPrincipal SignedIn signedIn, @PathVariable long memberId,
-            @RequestParam(required = false) @Nullable Long successorMemberId, Model model,
+    public String remove(@AuthenticationPrincipal SignedIn signedIn, @PathVariable MemberId memberId,
+            @RequestParam(required = false) @Nullable MemberId successorMemberId, Model model,
             RedirectAttributes redirected) {
         boolean leaving = leaving(signedIn, memberId);
         try {
-            households.removeForAccount(signedIn.id(), memberId, successorMemberId);
+            households.removeForAccount(signedIn.accountId(), memberId, successorMemberId);
         } catch (HouseholdSuccessorRequired e) {
             model.addAttribute("error", copy.text("household.successor.required"));
             return removeForm(signedIn, memberId, model);
@@ -219,13 +220,13 @@ public class MemberHouseholdPageController {
 
     /// Whether the person to remove is the caller, who then leaves the household
     /// and is told so in the first person.
-    private boolean leaving(SignedIn signedIn, long memberId) {
-        return members.findByAccount(signedIn.id()).map(own -> own.id() == memberId).orElse(false);
+    private boolean leaving(SignedIn signedIn, MemberId memberId) {
+        return members.findByAccount(signedIn.accountId()).map(own -> own.id().equals(memberId)).orElse(false);
     }
 
     private String householdPage(SignedIn signedIn, Model model) {
-        model.addAttribute("household", households.forAccount(signedIn.id()).orElse(null));
-        model.addAttribute("ownMemberId", members.findByAccount(signedIn.id())
+        model.addAttribute("household", households.forAccount(signedIn.accountId()).orElse(null));
+        model.addAttribute("ownMemberId", members.findByAccount(signedIn.accountId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND)).id());
         return "member/household";
     }

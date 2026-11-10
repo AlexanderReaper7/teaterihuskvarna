@@ -8,6 +8,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.Instant;
 import org.jspecify.annotations.Nullable;
+import se.teaterihuskvarna.login.AdministratorId;
 import se.teaterihuskvarna.login.Email;
 
 /// An administrator account. Not an account in the member sense: an
@@ -55,13 +56,15 @@ public class Administrator {
     /// @param fullName  the name to greet them by
     /// @param createdBy the administrator who added this one, or null for the first administrator
     /// @param createdAt when they were added
-    public Administrator(Email email, String fullName, @Nullable Long createdBy, Instant createdAt) {
+    public Administrator(Email email, String fullName, @Nullable AdministratorId createdBy, Instant createdAt) {
         this.email = email.value();
         this.fullName = fullName;
-        this.createdBy = createdBy;
+        this.createdBy = createdBy == null ? null : createdBy.value();
         this.createdAt = createdAt;
     }
 
+    /// The number, for Hibernate and for a query. Everything else reads [#id].
+    ///
     /// @return the ID assigned by Hibernate
     /// @throws IllegalStateException if this entity has not been persisted
     public Long getId() {
@@ -69,6 +72,21 @@ public class Administrator {
             throw new IllegalStateException("Entity has not been persisted");
         }
         return id;
+    }
+
+    /// The id as its own type, which the compiler tells from every other id.
+    ///
+    /// Final, and it reads the number through [#getId]. A lazy reference to
+    /// this entity is a subclass Hibernate makes: it answers `getId` from the
+    /// reference itself and loads the row for any other method it can
+    /// override. It cannot override this one, so the id of a reference is
+    /// read without a query, and without loading a row ahead of a lock that
+    /// was meant to read it first. `EntityIdsIT` fails if that stops holding.
+    ///
+    /// @return the id
+    /// @throws IllegalStateException if this entity has not been persisted
+    public final AdministratorId id() {
+        return new AdministratorId(getId());
     }
 
     public String getEmail() {
@@ -83,16 +101,16 @@ public class Administrator {
         return createdAt;
     }
 
-    public @Nullable Long getCreatedBy() {
-        return createdBy;
+    public @Nullable AdministratorId getCreatedBy() {
+        return createdBy == null ? null : new AdministratorId(createdBy);
     }
 
     public @Nullable Instant getRemovedAt() {
         return removedAt;
     }
 
-    public @Nullable Long getRemovedBy() {
-        return removedBy;
+    public @Nullable AdministratorId getRemovedBy() {
+        return removedBy == null ? null : new AdministratorId(removedBy);
     }
 
     /// @return whether this administrator can log in, that is, has not been removed
@@ -102,9 +120,9 @@ public class Administrator {
 
     /// @param by the administrator doing the removing
     /// @param at when they are removed
-    public void remove(long by, Instant at) {
+    public void remove(AdministratorId by, Instant at) {
         this.removedAt = at;
-        this.removedBy = by;
+        this.removedBy = by.value();
     }
 
     /// Makes a removed administrator active again, as if newly added. The row is
@@ -114,10 +132,10 @@ public class Administrator {
     /// @param newFullName the name given when re-adding, which may differ from the old one
     /// @param by          the administrator doing the adding
     /// @param at          when they are added again
-    public void reactivate(String newFullName, long by, Instant at) {
+    public void reactivate(String newFullName, AdministratorId by, Instant at) {
         this.fullName = newFullName;
         this.createdAt = at;
-        this.createdBy = by;
+        this.createdBy = by.value();
         this.removedAt = null;
         this.removedBy = null;
     }

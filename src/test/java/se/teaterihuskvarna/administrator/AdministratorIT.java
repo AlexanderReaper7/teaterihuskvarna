@@ -32,6 +32,7 @@ import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
 import se.teaterihuskvarna.IntegrationTestSupport;
+import se.teaterihuskvarna.login.AdministratorId;
 import se.teaterihuskvarna.login.LoginKind;
 import se.teaterihuskvarna.login.SignedIn;
 import se.teaterihuskvarna.web.Copy;
@@ -321,7 +322,7 @@ class AdministratorIT extends IntegrationTestSupport {
     void thePageDoesNotAskAboutOneselfOrSomeoneGone() throws Exception {
         long bo = insertAdministrator(BO, "Bo Berg");
         insertAdministrator(CILLA, "Cilla Carlsson");
-        administrators.remove(bo, firstAdministratorId());
+        administrators.remove(new AdministratorId(bo), new AdministratorId(firstAdministratorId()));
 
         mockMvc.perform(get("/admin/administratorer/" + bo + "/ta-bort").with(asFirstAdministrator()))
                 .andExpect(status().is3xxRedirection())
@@ -391,7 +392,7 @@ class AdministratorIT extends IntegrationTestSupport {
                 throw new IllegalStateException("the start signal never came");
             }
             try {
-                administrators.remove(id, by);
+                administrators.remove(new AdministratorId(id), new AdministratorId(by));
                 return Optional.empty();
             } catch (RuntimeException e) {
                 return Optional.of(e);

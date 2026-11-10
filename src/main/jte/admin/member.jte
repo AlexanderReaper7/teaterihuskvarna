@@ -17,7 +17,7 @@
 @param String error
 @param String notice
 @param boolean stale
-!{long id = file.member().id();}
+!{long id = file.member().id().value();}
 !{FeeStatus thisYear = file.member().fee();}
 !{Instant paidAt = thisYear.paidAt();}
 !{HouseholdDetails household = file.household();}
@@ -104,7 +104,7 @@
         <ul>
             @for(HouseholdMember other : household.members())
                 <li>
-                    <a href="/admin/medlemmar/${other.id()}">${other.fullName()}</a>
+                    <a href="/admin/medlemmar/${other.id().value()}">${other.fullName()}</a>
                     @if(other.hasAccount())
                         ${copy.text("household.hasAccount")}
                     @endif

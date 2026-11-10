@@ -3,6 +3,7 @@ package se.teaterihuskvarna.mailing;
 import java.time.LocalDate;
 import java.util.List;
 import org.jspecify.annotations.Nullable;
+import se.teaterihuskvarna.member.MemberId;
 
 /// The calls to Brevo's API the application makes:
 /// `docs/decisions/0026-outbox-and-brevo-contacts.md`.
@@ -23,7 +24,7 @@ interface Brevo {
     ///
     /// @param memberId the member, who is the contact's `ext_id`
     /// @throws BrevoUnavailable if Brevo refuses or cannot be reached
-    void deleteContact(long memberId);
+    void deleteContact(MemberId memberId);
 
     /// @return the segments the association made in Brevo, by name
     /// @throws BrevoUnavailable if Brevo refuses or cannot be reached
@@ -76,7 +77,7 @@ interface Brevo {
     /// @param paidYear  the latest year the fee is paid, attribute PAID_YEAR, or null
     /// @param lastShift the day the latest booked shift started, attribute LAST_SHIFT, or null
     /// @param offerIds  the offers the member is registered for, attribute OFFERS as `;12;15;`
-    record Contact(long memberId, String email, String name, @Nullable Integer paidYear,
+    record Contact(MemberId memberId, String email, String name, @Nullable Integer paidYear,
             @Nullable LocalDate lastShift, List<Long> offerIds) {
 
         public Contact {

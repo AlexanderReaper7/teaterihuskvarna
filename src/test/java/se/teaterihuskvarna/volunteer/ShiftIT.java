@@ -39,6 +39,7 @@ import se.teaterihuskvarna.content.ContentService;
 import se.teaterihuskvarna.login.LoginKind;
 import se.teaterihuskvarna.login.Mailer;
 import se.teaterihuskvarna.login.SignedIn;
+import se.teaterihuskvarna.member.MemberId;
 
 /// Proves volunteer shifts (R016, R017, R020) through both adapters.
 ///
@@ -416,8 +417,8 @@ class ShiftIT extends IntegrationTestSupport {
         insertBooking(future, karin, Instant.now());
         insertBooking(future, nils, Instant.now());
 
-        assertThat(shifts.lastShift(karin)).isEqualTo(LocalDate.ofInstant(past, SWEDEN));
-        assertThat(shifts.lastShift(nils)).isNull();
+        assertThat(shifts.lastShift(new MemberId(karin))).isEqualTo(LocalDate.ofInstant(past, SWEDEN));
+        assertThat(shifts.lastShift(new MemberId(nils))).isNull();
     }
 
     @Test
@@ -467,7 +468,7 @@ class ShiftIT extends IntegrationTestSupport {
     @Test
     void theCsvFileListsWhoBookedTheSameThroughBothAdapters() throws Exception {
         long id = insertShift(Instant.now().plus(Duration.ofDays(3)), 3);
-        shifts.book(id, memberOf(insertAccount("=Karin Holm", "karin@example.test")));
+        shifts.book(id, new MemberId(memberOf(insertAccount("=Karin Holm", "karin@example.test"))));
 
         MvcResult page = mockMvc.perform(get("/admin/volontarpass/" + id + "/bokningar.csv")
                         .with(asAdministrator()))
@@ -541,7 +542,8 @@ class ShiftIT extends IntegrationTestSupport {
     /// by hand, it has no transaction of its own, so the test gives it one.
     private void book(LocalDateTime time, long shiftId, long memberId) {
         ShiftService stopped = stoppedAt(time);
-        new TransactionTemplate(transactions).executeWithoutResult(status -> stopped.book(shiftId, memberId));
+        new TransactionTemplate(transactions)
+                .executeWithoutResult(status -> stopped.book(shiftId, new MemberId(memberId)));
     }
 
     /// @return how many reminders the job queued, run with the clock stopped at `time` in Sweden

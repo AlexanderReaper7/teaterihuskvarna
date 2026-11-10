@@ -26,6 +26,7 @@ import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
 import se.teaterihuskvarna.IntegrationTestSupport;
+import se.teaterihuskvarna.login.AdministratorId;
 import se.teaterihuskvarna.login.LoginKind;
 import se.teaterihuskvarna.login.SignedIn;
 import se.teaterihuskvarna.web.Copy;
@@ -169,10 +170,10 @@ class MemberDocumentIT extends IntegrationTestSupport {
         byte[] large = Arrays.copyOf(PDF, MemberDocumentService.MAX_BYTES + 1);
         DocumentForm form = new DocumentForm("Stor", DocumentKind.MEMBER_LETTER, LocalDate.of(2026, 9, 1));
 
-        assertThatThrownBy(() -> documents.upload(form, "stor.pdf", large, firstAdministratorId()))
+        assertThatThrownBy(() -> documents.upload(form, "stor.pdf", large, new AdministratorId(firstAdministratorId())))
                 .isInstanceOf(FileTooLarge.class);
         byte[] limit = Arrays.copyOf(PDF, MemberDocumentService.MAX_BYTES);
-        assertThat(documents.upload(form, "precis.pdf", limit, firstAdministratorId()).sizeBytes())
+        assertThat(documents.upload(form, "precis.pdf", limit, new AdministratorId(firstAdministratorId())).sizeBytes())
                 .isEqualTo(MemberDocumentService.MAX_BYTES);
         assertThat(rowsIn("member_document")).isEqualTo(1);
     }
@@ -269,7 +270,7 @@ class MemberDocumentIT extends IntegrationTestSupport {
     @Test
     void everyDownloadPathSendsTheSameSafeHeaders() throws Exception {
         long id = documents.upload(new DocumentForm("Brev", DocumentKind.MEMBER_LETTER, LocalDate.of(2026, 9, 1)),
-                "C:\\hem\\..\\Års\"möte\r\n.pdf", PDF, firstAdministratorId()).id();
+                "C:\\hem\\..\\Års\"möte\r\n.pdf", PDF, new AdministratorId(firstAdministratorId())).id();
         RequestPostProcessor member = asMember(insertAccount("Karin Holm", "karin@example.test"));
 
         List<MvcResult> downloads = List.of(
@@ -380,11 +381,12 @@ class MemberDocumentIT extends IntegrationTestSupport {
 
     private long insertDocument(String title, byte[] content) {
         return documents.upload(new DocumentForm(title, DocumentKind.MEMBER_LETTER, LocalDate.of(2026, 9, 1)),
-                title + ".pdf", content, firstAdministratorId()).id();
+                title + ".pdf", content, new AdministratorId(firstAdministratorId())).id();
     }
 
     private void insertDocument(String title, DocumentKind kind, LocalDate publishedOn) {
-        documents.upload(new DocumentForm(title, kind, publishedOn), title + ".pdf", PDF, firstAdministratorId());
+        documents.upload(new DocumentForm(title, kind, publishedOn), title + ".pdf", PDF,
+                new AdministratorId(firstAdministratorId()));
     }
 
     private static MockMultipartFile pdf(String filename, byte[] content) {

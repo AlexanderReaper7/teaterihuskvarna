@@ -151,7 +151,7 @@ public class AdministratorMailingPageController {
             Model model, RedirectAttributes redirected) {
         MailingDetails prepared;
         try {
-            prepared = mailings.prepare(form, signedIn.id());
+            prepared = mailings.prepare(form, signedIn.administratorId());
         } catch (ConstraintViolationException e) {
             return page(form, FieldErrors.of(e), model);
         } catch (EmptyMailing | UnknownContent | UnknownAudience | AudienceHasNonMembers | EmptyAudience

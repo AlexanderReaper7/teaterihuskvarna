@@ -4,6 +4,7 @@ import java.util.Optional;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Component;
 import se.teaterihuskvarna.member.FeeService;
+import se.teaterihuskvarna.member.MemberId;
 import se.teaterihuskvarna.member.MemberService;
 import se.teaterihuskvarna.member.Recipient;
 import se.teaterihuskvarna.offer.OfferService;
@@ -63,7 +64,7 @@ class BrevoContacts implements OutboxHandler {
 
     @Override
     public void handle(String payload) {
-        long memberId = Long.parseLong(payload);
+        MemberId memberId = MemberId.valueOf(payload);
         jdbc.sql("SELECT 1 FROM (SELECT pg_advisory_xact_lock(?, hashtext(?))) AS locked")
                 .param(LOCK_SPACE)
                 .param(payload)

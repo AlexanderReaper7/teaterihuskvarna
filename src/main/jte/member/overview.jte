@@ -126,7 +126,7 @@
                         @if(other.invitationExpires() != null)
                             ${copy.text("household.invited", copy.dateTime(other.invitationExpires()))}
                         @endif
-                        <form method="post" action="/medlem/hushall/${other.id()}/inbjudan">
+                        <form method="post" action="/medlem/hushall/${other.id().value()}/inbjudan">
                             @template.tag.csrf(csrf = csrf)
                             !{String fieldId = "invite-" + other.id();}
                             <label for="${fieldId}">${copy.text("invitation.email", other.fullName())}</label>

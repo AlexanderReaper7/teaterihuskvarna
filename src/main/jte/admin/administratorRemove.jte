@@ -14,7 +14,7 @@
     <p>${copy.text("admin.remove.what")}</p>
     <p>${copy.text("admin.remove.again")}</p>
     <div class="buttons">
-        <form method="post" action="/admin/administratorer/${administrator.id()}/ta-bort">
+        <form method="post" action="/admin/administratorer/${administrator.id().value()}/ta-bort">
             @template.tag.csrf(csrf = csrf)
             <button type="submit">@template.icon.trash2() ${copy.text("admin.remove.submit")}</button>
         </form>

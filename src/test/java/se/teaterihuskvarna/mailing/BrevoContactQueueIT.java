@@ -19,6 +19,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 import se.teaterihuskvarna.IntegrationTestSupport;
+import se.teaterihuskvarna.member.MemberId;
 
 /// The database queues a member's Brevo contact, with no Java code asking:
 /// `V17__brevo_contact_queue.sql`. Every write here is SQL, so no service
@@ -97,7 +98,7 @@ class BrevoContactQueueIT extends IntegrationTestSupport {
         awaitContact(karin, contact -> contact.email().equals("karin.berg@example.test"));
 
         jdbc.sql("DELETE FROM member WHERE id = ?").param(karin).update();
-        await(() -> !fake.contacts().containsKey(karin), () -> "no contact for the deleted member");
+        await(() -> !fake.contacts().containsKey(new MemberId(karin)), () -> "no contact for the deleted member");
     }
 
     /// The fee names the household, so it covers Nils, who paid nothing and
@@ -262,7 +263,8 @@ class BrevoContactQueueIT extends IntegrationTestSupport {
                 .single();
     }
 
-    private Brevo.Contact awaitContact(long memberId, Predicate<Brevo.Contact> until) {
+    private Brevo.Contact awaitContact(long member, Predicate<Brevo.Contact> until) {
+        MemberId memberId = new MemberId(member);
         await(() -> {
             Brevo.Contact contact = fake.contacts().get(memberId);
             return contact != null && until.test(contact);

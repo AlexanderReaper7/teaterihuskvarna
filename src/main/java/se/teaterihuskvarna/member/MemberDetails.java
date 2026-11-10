@@ -20,7 +20,7 @@ import org.jspecify.annotations.Nullable;
 /// @param memberSince when the member was added to the register
 /// @param fee         this year's fee status, the year taken in Sweden
 public record MemberDetails(
-        Long id,
+        MemberId id,
         String fullName,
         @Nullable String email,
         @Nullable String phone,
@@ -36,7 +36,7 @@ public record MemberDetails(
         Household household = member.getHousehold();
         ContactDetails contact = member.getContact();
         return new MemberDetails(
-                member.getId(),
+                member.id(),
                 member.getFullName(),
                 account == null ? null : account.getEmail(),
                 contact.phone(),

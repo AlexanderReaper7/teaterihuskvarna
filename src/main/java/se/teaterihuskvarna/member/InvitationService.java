@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.validation.annotation.Validated;
 import se.teaterihuskvarna.Swedish;
+import se.teaterihuskvarna.login.AccountId;
 import se.teaterihuskvarna.login.Email;
 import se.teaterihuskvarna.login.Lifetimes;
 import se.teaterihuskvarna.login.MailLife;
@@ -65,8 +66,8 @@ public class InvitationService {
     /// @throws MemberHasAccount if the member already has an account
     /// @throws EmailTaken if another account has the address
     @Transactional
-    public void invite(long memberId, @Valid InvitationRequest request) {
-        send(members.findById(memberId).orElseThrow(NoSuchMember::new), request);
+    public void invite(MemberId memberId, @Valid InvitationRequest request) {
+        send(members.findById(memberId.value()).orElseThrow(NoSuchMember::new), request);
     }
 
     /// A member invites someone in their own household.
@@ -79,10 +80,10 @@ public class InvitationService {
     /// @throws MemberHasAccount if the member already has an account
     /// @throws EmailTaken if another account has the address
     @Transactional
-    public void inviteToHousehold(long accountId, long memberId, @Valid InvitationRequest request) {
-        Account inviter = accounts.findById(accountId).orElseThrow(NoSuchMember::new);
+    public void inviteToHousehold(AccountId accountId, MemberId memberId, @Valid InvitationRequest request) {
+        Account inviter = accounts.findById(accountId.value()).orElseThrow(NoSuchMember::new);
         Household household = inviter.getMember().getHousehold();
-        Member invited = members.findById(memberId).orElseThrow(NoSuchMember::new);
+        Member invited = members.findById(memberId.value()).orElseThrow(NoSuchMember::new);
         Household theirs = invited.getHousehold();
         if (household == null || theirs == null || !household.getId().equals(theirs.getId())) {
             throw new NoSuchMember();
@@ -109,8 +110,8 @@ public class InvitationService {
         if (!invitation.getExpiresAt().isAfter(clock.instant())) {
             return InvitationOutcome.INVALID;
         }
-        Optional<Member> member = members.findById(invitation.getMemberId());
-        if (member.isEmpty() || accounts.findByMember(invitation.getMemberId()).isPresent()) {
+        Optional<Member> member = members.findById(invitation.getMemberId().value());
+        if (member.isEmpty() || accounts.findByMember(invitation.getMemberId().value()).isPresent()) {
             return InvitationOutcome.INVALID;
         }
         if (accounts.findByEmailIgnoreCase(invitation.getEmail()).isPresent()) {

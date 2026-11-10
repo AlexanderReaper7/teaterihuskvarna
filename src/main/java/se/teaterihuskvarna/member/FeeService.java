@@ -9,6 +9,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.validation.annotation.Validated;
+import se.teaterihuskvarna.login.AdministratorId;
 
 /// An administrator marks this year's fee paid, and undoes the mark (R019).
 /// Nobody pays through the site: the fee goes to the bankgiro, and an
@@ -38,8 +39,8 @@ public class FeeService {
     ///
     /// @param memberId a member
     /// @return the year, or null if no year is paid or there is no such member
-    public @Nullable Integer latestPaidYear(long memberId) {
-        Optional<Member> member = members.findById(memberId);
+    public @Nullable Integer latestPaidYear(MemberId memberId) {
+        Optional<Member> member = members.findById(memberId.value());
         if (member.isEmpty()) {
             return null;
         }
@@ -64,10 +65,10 @@ public class FeeService {
     /// @throws NoSuchMember if there is no such member
     /// @throws FeeAlreadyMarked if the member already has a payment of their own this year
     @Transactional
-    public void markPaid(long memberId, @Valid FeeMark mark, long administratorId) {
-        Member member = members.findById(memberId).orElseThrow(NoSuchMember::new);
+    public void markPaid(MemberId memberId, @Valid FeeMark mark, AdministratorId administratorId) {
+        Member member = members.findById(memberId.value()).orElseThrow(NoSuchMember::new);
         int year = ledger.currentYear();
-        if (fees.findByMemberIdAndYear(memberId, year).isPresent()) {
+        if (fees.findByMemberIdAndYear(memberId.value(), year).isPresent()) {
             throw new FeeAlreadyMarked();
         }
         FeeKind kind = Objects.requireNonNull(mark.kind());
@@ -89,8 +90,8 @@ public class FeeService {
     /// @param memberId the member whose mark to undo
     /// @throws NoSuchFee if the member has no payment of their own this year
     @Transactional
-    public void undo(long memberId) {
-        Fee fee = fees.findByMemberIdAndYear(memberId, ledger.currentYear()).orElseThrow(NoSuchFee::new);
+    public void undo(MemberId memberId) {
+        Fee fee = fees.findByMemberIdAndYear(memberId.value(), ledger.currentYear()).orElseThrow(NoSuchFee::new);
         fees.delete(fee);
     }
 }

@@ -11,6 +11,7 @@ import jakarta.persistence.Table;
 import java.time.Instant;
 import java.time.LocalDate;
 import org.jspecify.annotations.Nullable;
+import se.teaterihuskvarna.login.AdministratorId;
 
 /// A PDF for members, with the file itself in `content`.
 ///
@@ -65,7 +66,7 @@ public class MemberDocument {
     /// @param uploadedBy  the administrator uploading it
     /// @param uploadedAt  when it is uploaded
     MemberDocument(String title, DocumentKind kind, LocalDate publishedOn, String filename, byte[] content,
-            long uploadedBy, Instant uploadedAt) {
+            AdministratorId uploadedBy, Instant uploadedAt) {
         this.uploadedAt = uploadedAt;
         this.title = title;
         this.kind = kind;
@@ -73,7 +74,7 @@ public class MemberDocument {
         this.filename = filename;
         this.content = content.clone();
         this.sizeBytes = content.length;
-        this.uploadedBy = uploadedBy;
+        this.uploadedBy = uploadedBy.value();
     }
 
     /// @return the ID assigned by Hibernate
@@ -110,8 +111,8 @@ public class MemberDocument {
         return uploadedAt;
     }
 
-    public @Nullable Long getUploadedBy() {
-        return uploadedBy;
+    public @Nullable AdministratorId getUploadedBy() {
+        return uploadedBy == null ? null : new AdministratorId(uploadedBy);
     }
 
     public LocalDate getPublishedOn() {

@@ -76,9 +76,9 @@ class FeeLedger {
     /// @return each member's status for this year, in the order of `members`
     List<FeeStatus> thisYear(List<Member> members) {
         int year = currentYear();
-        Map<Long, Fee> own = new HashMap<>();
+        Map<MemberId, Fee> own = new HashMap<>();
         for (Fee fee : fees.findByYear(year)) {
-            Long memberId = fee.getMemberId();
+            MemberId memberId = fee.getMemberId();
             if (memberId != null) {
                 own.put(memberId, fee);
             }
@@ -87,18 +87,18 @@ class FeeLedger {
         for (HouseholdPayment payment : fees.householdPayments(year, FeeKind.HOUSEHOLD)) {
             households.merge(payment.getHouseholdId(), payment.getPaidAt(), FeeLedger::earlier);
         }
-        Map<Long, String> emails = new HashMap<>();
-        List<Long> ids = members.stream().map(Member::getId).toList();
+        Map<MemberId, String> emails = new HashMap<>();
+        List<Long> ids = members.stream().map(member -> member.getId()).toList();
         if (!ids.isEmpty()) {
             for (Account account : accounts.findByMembers(ids)) {
-                emails.put(account.getMember().getId(), account.getEmail());
+                emails.put(account.getMember().id(), account.getEmail());
             }
         }
         List<FeeStatus> statuses = new ArrayList<>();
         for (Member member : members) {
             Household household = member.getHousehold();
             Instant householdPaid = household == null ? null : households.get(household.getId());
-            statuses.add(status(year, own.get(member.getId()), householdPaid, emails.get(member.getId())));
+            statuses.add(status(year, own.get(member.id()), householdPaid, emails.get(member.id())));
         }
         return statuses;
     }

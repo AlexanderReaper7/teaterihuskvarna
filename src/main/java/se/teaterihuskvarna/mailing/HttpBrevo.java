@@ -16,6 +16,7 @@ import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
+import se.teaterihuskvarna.member.MemberId;
 import tools.jackson.databind.JsonNode;
 
 /// Brevo's v3 HTTP API, authenticated with the `api-key` header. Every call
@@ -108,7 +109,7 @@ final class HttpBrevo implements Brevo {
         JsonNode existing;
         try {
             existing = client.get()
-                    .uri("/contacts/{id}?identifierType=ext_id", contact.memberId())
+                    .uri("/contacts/{id}?identifierType=ext_id", contact.memberId().value())
                     .retrieve()
                     .body(JsonNode.class);
         } catch (HttpClientErrorException.NotFound ignored) {
@@ -119,7 +120,7 @@ final class HttpBrevo implements Brevo {
         if (existing == null) {
             post("/contacts", Map.of(
                     "email", contact.email(),
-                    "ext_id", String.valueOf(contact.memberId()),
+                    "ext_id", String.valueOf(contact.memberId().value()),
                     "attributes", attributes(contact),
                     "listIds", List.of(listId),
                     "updateEnabled", true));
@@ -138,7 +139,7 @@ final class HttpBrevo implements Brevo {
         }
         try {
             client.put()
-                    .uri("/contacts/{id}?identifierType=ext_id", contact.memberId())
+                    .uri("/contacts/{id}?identifierType=ext_id", contact.memberId().value())
                     .contentType(MediaType.APPLICATION_JSON)
                     .body(body)
                     .retrieve()
@@ -150,10 +151,10 @@ final class HttpBrevo implements Brevo {
     }
 
     @Override
-    public void deleteContact(long memberId) {
+    public void deleteContact(MemberId memberId) {
         try {
             client.delete()
-                    .uri("/contacts/{id}?identifierType=ext_id", memberId)
+                    .uri("/contacts/{id}?identifierType=ext_id", memberId.value())
                     .retrieve()
                     .toBodilessEntity();
         } catch (HttpClientErrorException.NotFound ignored) {
