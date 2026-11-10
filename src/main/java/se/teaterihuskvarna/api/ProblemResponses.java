@@ -6,6 +6,8 @@ import java.util.Map;
 import java.util.TreeMap;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
+import org.springframework.validation.FieldError;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import se.teaterihuskvarna.Violations;
@@ -69,6 +71,26 @@ public class ProblemResponses {
         Map<String, String> errors = new TreeMap<>();
         for (ConstraintViolation<?> violation : exception.getConstraintViolations()) {
             errors.merge(Violations.field(violation), violation.getMessage(),
+                    (first, second) -> first + " " + second);
+        }
+        ProblemDetail problem = ProblemDetail.forStatus(HttpStatus.BAD_REQUEST);
+        problem.setTitle("Invalid input");
+        problem.setProperty("errors", errors);
+        return problem;
+    }
+
+    /// A body the adapter checks itself with `@Valid`, because it reaches no
+    /// service method that would. The answer is the one a service's
+    /// constraints get, so a client reads both the same way. Without this
+    /// handler Spring answers 400 and names no field.
+    ///
+    /// @param exception what Spring threw before the handler method ran
+    /// @return 400, with the message for each invalid field
+    @ExceptionHandler
+    public ProblemDetail invalidBody(MethodArgumentNotValidException exception) {
+        Map<String, String> errors = new TreeMap<>();
+        for (FieldError error : exception.getBindingResult().getFieldErrors()) {
+            errors.merge(error.getField(), String.valueOf(error.getDefaultMessage()),
                     (first, second) -> first + " " + second);
         }
         ProblemDetail problem = ProblemDetail.forStatus(HttpStatus.BAD_REQUEST);
