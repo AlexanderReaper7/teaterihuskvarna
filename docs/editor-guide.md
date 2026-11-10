@@ -14,7 +14,7 @@ Innan du kan logga in måste du ha blivit inbjuden till Sanity-projektet. Be en 
 1. Öppna Studio i webbläsaren. Adressen är: *adress läggs till när den publicerade Studion finns*.
 2. Välj hur du vill logga in: **GitHub**, **Google** eller **E-mail / password**.
 
-   ![Inloggningssidan i Sanity med valen GitHub, Google och E-mail / password](img/editor-guide/logga-in.png)
+   ![Inloggningssidan i Sanity med valen GitHub, Google och E-mail / password](editor-guide/logga-in.png)
 
 3. Om du väljer e-post och det är första gången, skickar Sanity en kod med fyra siffror till din e-postadress. Skriv in koden. Du behöver bara göra det en gång.
 4. När du är inloggad ser du listan **Content** till vänster med Evenemang, Serie, Nyhet, Sida och Partner.
@@ -23,7 +23,7 @@ Innan du kan logga in måste du ha blivit inbjuden till Sanity-projektet. Be en 
 1. Klicka på **Evenemang** i listan **Content** till vänster.
 2. Klicka på plustecknet (**+**) högst upp i den mittersta kolumnen. Ett nytt, tomt formulär öppnas till höger.
 
-   ![Ett nytt, tomt evenemang i Sanity Studio. Markören står i fältet Titel.](img/editor-guide/evenemang-nytt.png)
+   ![Ett nytt, tomt evenemang i Sanity Studio. Markören står i fältet Titel.](editor-guide/evenemang-nytt.png)
 
 3. Fyll i fälten uppifrån och ned. Formuläret är längre än fönstret, så **rulla nedåt** med musen för att se alla fält.
 
@@ -47,7 +47,7 @@ Innan du kan logga in måste du ha blivit inbjuden till Sanity-projektet. Be en 
 
 4. Klicka på knappen **Publish** längst ned till höger.
 
-   ![Ett ifyllt evenemang med den aktiva knappen Publish längst ned till höger.](img/editor-guide/evenemang-publicera.png)
+   ![Ett ifyllt evenemang med den aktiva knappen Publish längst ned till höger.](editor-guide/evenemang-publicera.png)
 
 5. Kontrollera att fliken **Publicerad** nu är markerad högst upp. Då är evenemanget publicerat och syns på webbplatsen inom en minut.
 
@@ -55,7 +55,7 @@ Innan du kan logga in måste du ha blivit inbjuden till Sanity-projektet. Be en 
 1. Klicka på **Nyhet** i listan **Content** till vänster.
 2. Klicka på plustecknet (**+**) högst upp i den mittersta kolumnen. Ett nytt, tomt formulär öppnas till höger.
 
-   ![Ett nytt, tomt nyhetsformulär i Sanity Studio. Markören står vid fältet Rubrik.](img/editor-guide/nyhet-ny.png)
+   ![Ett nytt, tomt nyhetsformulär i Sanity Studio. Markören står vid fältet Rubrik.](editor-guide/nyhet-ny.png)
 
 3. Fyll i fälten uppifrån och ned. Formuläret är längre än fönstret, så **rulla nedåt** med musen för att se alla fält.
    
@@ -82,7 +82,7 @@ De fasta sidorna är **Om föreningen**, **Styrelsen**, **Produktioner**, **Ludd
 
 1. Klicka på **Sida** i listan **Content** till vänster. De fasta sidorna visas i mittenkolumnen.
 
-   ![Listan över de fem fasta sidorna i Sanity Studio](img/editor-guide/sida-lista.png)
+   ![Listan över de fem fasta sidorna i Sanity Studio](editor-guide/sida-lista.png)
 
 2. Klicka på den sida du vill ändra. Formuläret öppnas till höger.
 3. Ändra det du vill i formuläret. Det är längre än fönstret, så **rulla nedåt** för att se alla fält.
@@ -95,7 +95,7 @@ De fasta sidorna är **Om föreningen**, **Styrelsen**, **Produktioner**, **Ludd
    | **Alternativ text** | Beskriv bilden för den som inte ser den, till exempel "Tre skådespelare på scenen". |
    | **Innehåll** | Skriv eller ändra sidans text. Verktygsraden ovanför texten har bland annat fet stil, kursiv, punktlista, numrerad lista och länk. |
 
-   ![Sidan Om föreningen där texten har ändrats och knappen Publish är aktiv](img/editor-guide/sida-redigera.png)
+   ![Sidan Om föreningen där texten har ändrats och knappen Publish är aktiv](editor-guide/sida-redigera.png)
 
 4. Klicka på knappen **Publish** längst ned till höger när du är nöjd.
 5. Kontrollera att fliken **Publicerad** är markerad högst upp. Ändringen syns på webbplatsen inom en minut.
@@ -107,7 +107,7 @@ Du kan kasta alla ändringar du har gjort sedan sidan senast publicerades.
 2. Välj **Discard changes**.
 3. Klicka på den röda knappen **Discard changes** för att bekräfta. Tryck på **Cancel** om du ångrar dig.
 
-   ![Frågan Discard changes med knapparna Cancel och Discard changes](img/editor-guide/sida-kasta.png)
+   ![Frågan Discard changes med knapparna Cancel och Discard changes](editor-guide/sida-kasta.png)
 
 ## Lägg till eller ändra en partner
 Partnerna visas på sidan `/partners` på webbplatsen.
@@ -117,7 +117,7 @@ Partnerna visas på sidan `/partners` på webbplatsen.
 1. Klicka på **Partner** i listan **Content** till vänster. De partners som finns visas i mittenkolumnen.
 2. Klicka på plustecknet (**+**) högst upp i den mittersta kolumnen. Ett nytt, tomt formulär öppnas till höger.
 
-   ![Ett nytt, tomt partnerformulär i Sanity Studio](img/editor-guide/partner-ny.png)
+   ![Ett nytt, tomt partnerformulär i Sanity Studio](editor-guide/partner-ny.png)
    Formuläret kan också visas över hela fönstret.
 
 3. Fyll i fälten uppifrån och ned.
@@ -132,7 +132,7 @@ Partnerna visas på sidan `/partners` på webbplatsen.
 
    Du måste bara fylla i **Namn** för att kunna publicera.
 
-   ![En ifylld partner med den aktiva knappen Publish längst ned till höger](img/editor-guide/partner-publicera.png)
+   ![En ifylld partner med den aktiva knappen Publish längst ned till höger](editor-guide/partner-publicera.png)
 
 4. Klicka på knappen **Publish** längst ned till höger.
 5. Kontrollera att fliken **Publicerad** nu är markerad högst upp. Partnern syns på webbplatsen inom en minut.
@@ -156,7 +156,7 @@ När du skapar eller ändrar något sparas det först som ett **utkast**. Besök
 - Längst ned till vänster står "Redigerad för ... sen" för ändringar som inte är publicerade och "Senast publicerad för ... sen" för det som är publicerat.
 - Är fliken **Publicerad** grå har dokumentet aldrig publicerats. Då syns det inte på webbplatsen.
 
-   ![Ett utkast som aldrig har publicerats, med fliken Utkast markerad och en orange ring i listan. De två andra evenemangen har både orange ring och grön prick.](img/editor-guide/utkast-flikar.png)
+   ![Ett utkast som aldrig har publicerats, med fliken Utkast markerad och en orange ring i listan. De två andra evenemangen har både orange ring och grön prick.](editor-guide/utkast-flikar.png)
 
 ## Avpublicera, ta bort och ångra
 
@@ -170,7 +170,7 @@ Klicka på de tre prickarna (**...**) högst upp i formuläret och välj **Grans
 2. Välj **Kassera ändringar**.
 3. En ruta frågar "Är du säker på att du vill kassera alla ändringar sedan senast publicerat?" Klicka på **Kassera ändringar** för att bekräfta, eller **Avbryt**.
 
-   ![Rutan Kassera ändringar med knapparna Avbryt och Kassera ändringar](img/editor-guide/kassera-andringar.png)
+   ![Rutan Kassera ändringar med knapparna Avbryt och Kassera ändringar](editor-guide/kassera-andringar.png)
 
 ### Ta bort något
 
@@ -180,7 +180,7 @@ Det finns inget val för att bara avpublicera. Vill du ta bort något från webb
 2. Klicka på de tre prickarna (**...**) bredvid knappen **Publicera** och välj **Radera**.
 3. En ruta frågar "Är du säker på att du vill ta bort detta dokument?" och visar dokumentet med dess status, till exempel **Publicerad**. Klicka på **Ta bort dokument** för att bekräfta, eller **Avbryt**.
 
-   ![Rutan Radera dokument med knapparna Avbryt och Ta bort dokument](img/editor-guide/radera-dokument.png)
+   ![Rutan Radera dokument med knapparna Avbryt och Ta bort dokument](editor-guide/radera-dokument.png)
 
 ### Om du har publicerat något fel
 
@@ -202,4 +202,17 @@ Du kan se tidigare versioner och skriva tillbaka den text du vill ha.
 
 ## Hur lång tid tar det innan ändringen syns?
 
+Efter att du har klickat på **Publicera** ska ändringen synas på webbplatsen inom en minut, se [R008](requirements.md). Vid mätningen tog det som mest drygt 45 sekunder, se [beslut 0021](decisions/0021-content-from-sanity.md#r008-publish-to-visible).
+
+Om ändringen inte syns:
+
+1. Vänta en minut.
+2. Ladda om sidan med **Ctrl + Shift + R**.
+3. Kontrollera i Studio att fliken **Publicerad** är markerad. Om bara **Utkast** är markerad är ändringen inte publicerad. Klicka på **Publicera**.
+4. Syns det fortfarande inte, kontakta systemets förvaltare enligt nästa avsnitt.
+
 ## Vem kontaktar du om något går fel?
+
+Kontakta systemets förvaltare: *ingen är utsedd än*. Vem som förvaltar systemet efter praktikperioden är fråga C2 i [open-questions.md](open-questions.md).
+
+Skriv alltid vad du försökte göra och vad som hände. Skicka gärna en skärmbild, men inte om den visar personuppgifter.
