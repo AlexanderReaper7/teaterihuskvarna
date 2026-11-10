@@ -25,8 +25,7 @@
             @for(Production production : productions)
                 !{Integer first = production.firstYear();}
                 !{Integer last = production.lastYear();}
-                <article class="card">
-                    @template.tag.image(image = production.image(), source = edit.field(production, "huvudbild"))
+                @template.tag.card(image = production.image(), source = edit.field(production, "huvudbild"), content = @`
                     <h2 data-sanity="${edit.field(production, "title")}">${production.title()}</h2>
                     @if(first != null && last != null)
                         <p class="meta"><span data-sanity="${edit.field(production, "ar")}">${String.valueOf(first)}</span>${copy.text("productions.years.between")}<span data-sanity="${edit.field(production, "tillAr")}">${String.valueOf(last)}</span></p>
@@ -34,7 +33,7 @@
                         <p class="meta" data-sanity="${edit.field(production, "ar")}">${String.valueOf(first)}</p>
                     @endif
                     $unsafe{production.bodyHtml()}
-                </article>
+                `)
             @endfor
             </div>
         @endif
@@ -42,26 +41,24 @@
             <div class="cards">
             @for(BoardMember member : board)
                 !{String responsibility = member.responsibility();}
-                <article class="card">
-                    @template.tag.image(image = member.image(), source = edit.field(member, "bild"))
+                @template.tag.card(image = member.image(), source = edit.field(member, "bild"), content = @`
                     <h2 data-sanity="${edit.field(member, "namn")}">${member.name()}</h2>
                     <p class="meta" data-sanity="${edit.field(member, "roll")}">${member.role()}</p>
                     @if(responsibility != null)
                         <p data-sanity="${edit.field(member, "ansvar")}">${responsibility}</p>
                     @endif
-                </article>
+                `)
             @endfor
             </div>
         @endif
         @if(!prizes.isEmpty())
             <div class="cards">
             @for(LuddePrize prize : prizes)
-                <article class="card">
-                    @template.tag.image(image = prize.image(), source = edit.field(prize, "bild"))
+                @template.tag.card(image = prize.image(), source = edit.field(prize, "bild"), content = @`
                     <h2 data-sanity="${edit.field(prize, "mottagare")}">${prize.recipient()}</h2>
                     <p class="meta" data-sanity="${edit.field(prize, "ar")}">${String.valueOf(prize.year())}</p>
                     $unsafe{prize.citationHtml()}
-                </article>
+                `)
             @endfor
             </div>
         @endif

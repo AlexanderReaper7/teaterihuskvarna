@@ -418,14 +418,36 @@ main > article > .hero {
 .cards {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(18rem, 1fr));
-  gap: 1.5rem;
-  margin: 0 0 1.5rem;
+  column-gap: 1.5rem;
 }
 
+/* A card takes two rows of its list's grid, the first for its picture and the
+ * second for everything else, and tag/card.jte puts each in a box. Each row of
+ * cards sizes its own two. So the titles in a row start at one height, under
+ * the tallest picture in that row, and a row where no card has a picture has
+ * no empty box above its titles. /produktioner had two such rows at 2560 px,
+ * when the picture's box was kept for every card of a list in which any card
+ * had a picture.
+ *
+ * The space under a row of cards is the card's own margin. A gap between the
+ * grid's rows would also fall between a card's picture and its text. */
 .card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: subgrid;
+  grid-row: span 2;
+  margin: 0 0 1.5rem;
   padding: 1rem;
   background: var(--color-panel);
   overflow-wrap: break-word;
+}
+
+.card > .card-picture {
+  grid-row: 1;
+}
+
+.card > .card-text {
+  grid-row: 2;
 }
 
 /* A card's title looks the same whether the page makes it an h2 or, under a
@@ -438,10 +460,9 @@ main > article > .hero {
 }
 
 /* Every picture in a list of cards has the same 4:3 box and shows whole
- * inside it, so the titles in a row line up whatever the pictures' own
- * proportions. A card without a picture keeps an empty box of the same size
- * when another card in the list has one. Productions are posters, upright, so
- * their list uses an upright box. */
+ * inside it, so the pictures in a row are as tall as each other whatever
+ * their own proportions. Productions are posters, upright, so their list uses
+ * an upright box. */
 .cards {
   --picture-ratio: 4 / 3;
 }
@@ -454,17 +475,11 @@ main > article > .hero {
   width: 100%;
 }
 
-/* Only the card's own picture, its first child. A picture in the card's text
- * sits in a figure and keeps its proportions. */
-.card > img {
+/* Only the card's own picture. A picture in the card's text sits in a figure
+ * and keeps its proportions. */
+.card-picture > img {
   aspect-ratio: var(--picture-ratio);
   object-fit: contain;
-}
-
-.cards:has(> .card > img:not(.logo)) > .card:not(:has(> img))::before {
-  content: "";
-  display: block;
-  aspect-ratio: var(--picture-ratio);
 }
 
 .card img.logo {

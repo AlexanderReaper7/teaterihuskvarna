@@ -6,8 +6,7 @@
 @param EditAttributes edit
 @param int level = 3
 !{String summary = item.summary();}
-<article class="card">
-    @template.tag.image(image = item.image(), kind = "card-picture", source = edit.field(item, "huvudbild"))
+@template.tag.card(image = item.image(), kind = "card-picture", source = edit.field(item, "huvudbild"), content = @`
     @if(level == 2)
         <h2 data-sanity="${edit.field(item, "title")}"><a href="/nyheter/${item.slug()}">${item.title()}</a></h2>
     @else
@@ -17,4 +16,4 @@
     @if(summary != null)
         <p data-sanity="${edit.field(item, "ingress")}">${summary}</p>
     @endif
-</article>
+`)
