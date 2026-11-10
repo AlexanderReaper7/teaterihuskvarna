@@ -17,6 +17,7 @@ import se.teaterihuskvarna.login.LinkRequestLimiter;
 import se.teaterihuskvarna.login.LoginKind;
 import se.teaterihuskvarna.login.LoginSettings;
 import se.teaterihuskvarna.login.LoginUrls;
+import se.teaterihuskvarna.login.MailLife;
 import se.teaterihuskvarna.login.MailSettings;
 import se.teaterihuskvarna.login.Mailer;
 import se.teaterihuskvarna.login.Tokens;
@@ -130,7 +131,7 @@ public class MembershipApplicationService {
                 messages.getMessage("application.mail.subject", null, Swedish.LOCALE),
                 messages.getMessage("application.mail.body", new Object[] {fullName, link, lifetime},
                         Swedish.LOCALE),
-                expires);
+                MailLife.until(expires));
     }
 
     /// Points a member who applied again to the login page, with no token. A
@@ -143,7 +144,8 @@ public class MembershipApplicationService {
         mailer.send(
                 email,
                 messages.getMessage("application.mail.member.subject", null, Swedish.LOCALE),
-                messages.getMessage("application.mail.member.body", new Object[] {login}, Swedish.LOCALE));
+                messages.getMessage("application.mail.member.body", new Object[] {login}, Swedish.LOCALE),
+                MailLife.untilSent());
     }
 
     /// Follows a confirmation link. The application is deleted whatever the

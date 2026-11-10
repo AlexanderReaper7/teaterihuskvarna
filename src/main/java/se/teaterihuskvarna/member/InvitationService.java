@@ -12,6 +12,7 @@ import org.springframework.validation.annotation.Validated;
 import se.teaterihuskvarna.Swedish;
 import se.teaterihuskvarna.login.Email;
 import se.teaterihuskvarna.login.Lifetimes;
+import se.teaterihuskvarna.login.MailLife;
 import se.teaterihuskvarna.login.MailSettings;
 import se.teaterihuskvarna.login.Mailer;
 import se.teaterihuskvarna.login.Tokens;
@@ -140,6 +141,6 @@ public class InvitationService {
                         new Object[] {member.getFullName(), mail.link(PATH, token), lifetime, email.value()},
                         Swedish.LOCALE),
                 // Not sent once the invitation, and so the link, has expired.
-                expires);
+                MailLife.until(expires));
     }
 }
