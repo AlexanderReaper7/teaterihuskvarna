@@ -1,6 +1,7 @@
 package se.teaterihuskvarna.member;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.tuple;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.not;
@@ -15,20 +16,31 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.nio.charset.StandardCharsets;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneOffset;
+import java.util.List;
 import java.util.Map;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 
 /// Proves the fee rules (R013, R019): what a member sees for this year, how an
 /// administrator marks and undoes a payment through both adapters, and the
 /// household rule, that a member is paid by a payment of their own or by a
 /// household payment for the household they are in now. A household payment
 /// made before the payer has a household is for the one the payer gains.
+///
+/// The fee year is the year in Sweden by the application's clock. The tests
+/// of the turn of the year stop that clock on New Year's night, in a ledger
+/// made by hand, as `ShiftIT` does for its service.
 ///
 /// Erik and Maria share a household, Johan is in none.
 class FeeIT extends MemberRegisterSupport {
@@ -37,8 +49,32 @@ class FeeIT extends MemberRegisterSupport {
     private static final String MARIA_EMAIL = "maria@example.test";
     private static final String JOHAN_EMAIL = "johan@example.test";
 
+    /// 23:30 on 31 December in Sweden, which is 22:30 UTC.
+    private static final Instant BEFORE_MIDNIGHT_IN_SWEDEN = Instant.parse("2026-12-31T22:30:00Z");
+
+    /// 00:30 on 1 January in Sweden, while the UTC date is still 31 December.
+    private static final Instant AFTER_MIDNIGHT_IN_SWEDEN = Instant.parse("2026-12-31T23:30:00Z");
+
     @Autowired
     private FeeService fees;
+
+    @Autowired
+    private FeeRepository feeRepository;
+
+    @Autowired
+    private AccountRepository accountRepository;
+
+    @Autowired
+    private MemberRepository memberRepository;
+
+    @Autowired
+    private AssociationSettings association;
+
+    @Autowired
+    private ApplicationEventPublisher events;
+
+    @Autowired
+    private PlatformTransactionManager transactions;
 
     private long erikAccount;
     private long mariaAccount;
@@ -414,6 +450,85 @@ class FeeIT extends MemberRegisterSupport {
         assertPaid(mariaAccount, MARIA_EMAIL, true);
     }
 
+    /// Payment does not carry forward. A member whose only payment is last
+    /// year's, their own or their household's, is unpaid this year everywhere
+    /// the status shows, and their Brevo contact keeps last year.
+    @Test
+    void lastYearsPaymentDoesNotCountForThisYear() throws Exception {
+        insertFee(johan, "INDIVIDUAL", thisYear() - 1);
+        insertFee(erik, "HOUSEHOLD", thisYear() - 1);
+
+        assertUnpaid(johanAccount, JOHAN_EMAIL);
+        assertUnpaid(erikAccount, ERIK_EMAIL);
+        assertUnpaid(mariaAccount, MARIA_EMAIL);
+        mockMvc.perform(get("/api/admin/members").param("fee", "UNPAID").with(asAdministrator()))
+                .andExpect(jsonPath("$.members[*].fullName",
+                        containsInAnyOrder("Erik Lindqvist", "Johan Bergström", "Maria Lindqvist")));
+        mockMvc.perform(get("/api/admin/fees").with(asAdministrator()))
+                .andExpect(jsonPath("$.year").value(thisYear()))
+                .andExpect(jsonPath("$.paid").value(0))
+                .andExpect(jsonPath("$.unpaid").value(3));
+        mockMvc.perform(get("/api/admin/members/" + johan).with(asAdministrator()))
+                .andExpect(jsonPath("$.fees.length()").value(2))
+                .andExpect(jsonPath("$.fees[0].year").value(thisYear()))
+                .andExpect(jsonPath("$.fees[0].paidAt").doesNotExist())
+                .andExpect(jsonPath("$.fees[1].year").value(thisYear() - 1))
+                .andExpect(jsonPath("$.fees[1].paidAt").isNotEmpty());
+        assertThat(fees.latestPaidYear(johan)).isEqualTo(thisYear() - 1);
+        assertThat(fees.latestPaidYear(maria)).isEqualTo(thisYear() - 1);
+    }
+
+    /// Midnight in Sweden is 23:00 UTC in winter, so the fee year turns an
+    /// hour before the UTC year does.
+    @Test
+    void theFeeYearTurnsAtMidnightInSweden() {
+        assertThat(ledgerAt(Instant.parse("2026-12-31T22:59:59Z")).currentYear()).isEqualTo(2026);
+        assertThat(ledgerAt(Instant.parse("2026-12-31T23:00:00Z")).currentYear()).isEqualTo(2027);
+        assertThat(ledgerAt(AFTER_MIDNIGHT_IN_SWEDEN).currentYear()).isEqualTo(2027);
+    }
+
+    /// A payment for 2026 covers the member and the household until
+    /// midnight in Sweden. Half an hour later they are unpaid for 2027, and
+    /// 2026 is history.
+    @Test
+    void aPaymentForTheOldYearStopsCountingWhenTheYearTurnsInSweden() {
+        insertFee(johan, "INDIVIDUAL", 2026);
+        insertFee(erik, "HOUSEHOLD", 2026);
+
+        new TransactionTemplate(transactions).executeWithoutResult(status -> {
+            List<Member> both = List.of(memberRepository.findById(johan).orElseThrow(),
+                    memberRepository.findById(maria).orElseThrow());
+            assertThat(ledgerAt(BEFORE_MIDNIGHT_IN_SWEDEN).thisYear(both))
+                    .extracting(FeeStatus::year, FeeStatus::paid, FeeStatus::throughHousehold)
+                    .containsExactly(tuple(2026, true, false), tuple(2026, true, true));
+
+            FeeLedger newYear = ledgerAt(AFTER_MIDNIGHT_IN_SWEDEN);
+            assertThat(newYear.thisYear(both))
+                    .extracting(FeeStatus::year, FeeStatus::paid)
+                    .containsExactly(tuple(2027, false), tuple(2027, false));
+            assertThat(newYear.history(both.getFirst()))
+                    .extracting(FeeStatus::year, FeeStatus::paid)
+                    .containsExactly(tuple(2027, false), tuple(2026, true));
+        });
+    }
+
+    /// A mark made at 00:30 on 1 January in Sweden is for the new year,
+    /// beside the old year's payment, and undoing it leaves the old year's.
+    @Test
+    void aFeeMarkedJustAfterMidnightInSwedenIsForTheNewYear() {
+        insertFee(johan, "INDIVIDUAL", 2026);
+        FeeService stopped = new FeeService(feeRepository, memberRepository, ledgerAt(AFTER_MIDNIGHT_IN_SWEDEN),
+                association, events);
+        TransactionTemplate transaction = new TransactionTemplate(transactions);
+
+        transaction.executeWithoutResult(status -> stopped.markPaid(johan, new FeeMark(FeeKind.INDIVIDUAL, null),
+                firstAdministratorId()));
+        assertThat(yearsPaidBy(johan)).containsExactly(2026, 2027);
+
+        transaction.executeWithoutResult(status -> stopped.undo(johan));
+        assertThat(yearsPaidBy(johan)).containsExactly(2026);
+    }
+
     @Test
     void theAdministratorPageShowsHouseholdCoverageAndHistory() throws Exception {
         insertFee(erik, "HOUSEHOLD");
@@ -517,6 +632,18 @@ class FeeIT extends MemberRegisterSupport {
                 .param(member)
                 .query()
                 .singleRow();
+    }
+
+    /// A ledger whose clock is stopped at `time`. The clock is in UTC, as the
+    /// application's is, so the ledger has to find the year in Sweden itself.
+    private FeeLedger ledgerAt(Instant time) {
+        return new FeeLedger(feeRepository, accountRepository, memberRepository, association, events,
+                Clock.fixed(time, ZoneOffset.UTC));
+    }
+
+    private List<@Nullable Integer> yearsPaidBy(long member) {
+        return jdbc.sql("SELECT year FROM fee WHERE member_id = ? ORDER BY year").param(member)
+                .query(Integer.class).list();
     }
 
     /// An administrator marks a household fee through the API, as the member's

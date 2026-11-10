@@ -43,12 +43,19 @@ abstract class MemberRegisterSupport extends IntegrationTestSupport {
     /// @param memberId the member who paid
     /// @param kind     `INDIVIDUAL` or `HOUSEHOLD`
     protected void insertFee(long memberId, String kind) {
+        insertFee(memberId, kind, thisYear());
+    }
+
+    /// @param memberId the member who paid
+    /// @param kind     `INDIVIDUAL` or `HOUSEHOLD`
+    /// @param year     the year the payment is for
+    protected void insertFee(long memberId, String kind, int year) {
         jdbc.sql("""
                 INSERT INTO fee (member_id, year, kind, amount_ore, paid_at, household_id)
                 SELECT id, ?, ?, 5000, now(), CASE WHEN ? = 'HOUSEHOLD' THEN household_id END
                 FROM member WHERE id = ?
                 """)
-                .params(thisYear(), kind, kind, memberId)
+                .params(year, kind, kind, memberId)
                 .update();
     }
 
