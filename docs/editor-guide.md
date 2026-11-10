@@ -9,17 +9,19 @@ description: Step-by-step guide in Swedish for the association's volunteer edito
 Den här guiden är till för föreningens redaktörer. Den är skriven på svenska av samma skäl, se [decisions/0001](decisions/0001-language-policy.md).
 
 ## Logga in
+
 Innan du kan logga in måste du ha blivit inbjuden till Sanity-projektet. Be en administratör bjuda in dig.
 
 1. Öppna Studio i webbläsaren. Adressen är: *adress läggs till när den publicerade Studion finns*.
 2. Välj hur du vill logga in: **GitHub**, **Google** eller **E-mail / password**.
 
-   ![Inloggningssidan i Sanity med valen GitHub, Google och E-mail / password](editor-guide/logga-in.png)
+   ![Inloggningssidan i Sanity med valen Google, GitHub och E-mail / password](editor-guide/logga-in.png)
 
 3. Om du väljer e-post och det är första gången, skickar Sanity en kod med fyra siffror till din e-postadress. Skriv in koden. Du behöver bara göra det en gång.
 4. När du är inloggad ser du listan **Innehåll** till vänster med Evenemang, Nyheter, Serier, Sidor, Produktioner, Styrelsen, Ludde-priser och Partners.
 
 ## Skapa och publicera ett evenemang
+ 
 1. Klicka på **Evenemang** i listan **Innehåll** till vänster och sedan på **Kommande evenemang**. Där visas evenemangen som inte har hänt än.
 2. Klicka på plustecknet (**+**) högst upp i den mittersta kolumnen. Ett nytt, tomt formulär öppnas till höger.
 
@@ -28,9 +30,9 @@ Innan du kan logga in måste du ha blivit inbjuden till Sanity-projektet. Be en 
 3. Fyll i fälten uppifrån och ned. Formuläret är längre än fönstret, så **rulla nedåt** med musen för att se alla fält.
 
    | Fält | Vad du gör                                                                                                                                                                                     |
-      |------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+   |------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
    | **Titel** | Skriv evenemangets namn.                                                                                                                                                                       |
-   | **Adress** | Klicka på **Generera** så skapas adressen av titeln. Hela adressen blir till exempel `/evenemang/exempelfoerestaellning`. Å, ä och ö ersätts med andra bokstäver, och det är normalt.          |
+   | **Adress** | Klicka på **Generera** så skapas adressen av titeln. Hela adressen blir till exempel `/evenemang/exempelforestallning`. Å, ä och ö ersätts med andra bokstäver, och det är normalt. |          |
    | **Datum och tid** | Välj när evenemanget börjar.                                                                                                                                                                   |
    | **Plats** | Skriv var evenemanget hålls.                                                                                                                                                                   |
    | **Serie** | Skriv i fältet för att söka efter serien och välj den, till exempel Kaffe med drömmar. Du kan också klicka på **Skapa ny** för att skapa en ny serie. Lämna tomt för ett fristående evenemang. |
@@ -52,6 +54,7 @@ Innan du kan logga in måste du ha blivit inbjuden till Sanity-projektet. Be en 
 5. Kontrollera att fliken **Publicerad** nu är markerad högst upp. Då är evenemanget publicerat och syns på webbplatsen inom en minut.
 
 ## Skapa och publicera en nyhet
+
 1. Klicka på **Nyheter** i listan **Innehåll** till vänster.
 2. Klicka på plustecknet (**+**) högst upp i den mittersta kolumnen. Ett nytt, tomt formulär öppnas till höger.
 
@@ -60,7 +63,7 @@ Innan du kan logga in måste du ha blivit inbjuden till Sanity-projektet. Be en 
 3. Fyll i fälten uppifrån och ned. Formuläret är längre än fönstret, så **rulla nedåt** med musen för att se alla fält.
 
    | Fält | Vad du gör                                                                                     |
-      |------|------------------------------------------------------------------------------------------------|
+   |------|------------------------------------------------------------------------------------------------|
    | **Rubrik** | Skriv nyhetens rubrik.                                                                         |
    | **Adress** | Klicka på **Generera** så skapas adressen av rubriken.                                         |
    | **Publiceringsdatum** | Välj datum och tid då nyheten ska börja synas på webbplatsen.                                  |
@@ -78,6 +81,7 @@ Innan du kan logga in måste du ha blivit inbjuden till Sanity-projektet. Be en 
 5. Kontrollera att fliken **Publicerad** nu är markerad högst upp. Då är nyheten publicerad och syns på webbplatsen inom en minut.
 
 ## Redigera en fast sida
+
 De fasta sidorna är **Om föreningen**, **Styrelsen**, **Produktioner**, **Ludde-priser** och **Kontakt**. Du ändrar texten på dem, men skapar inga nya sidor.
 
 1. Klicka på **Sidor** i listan **Innehåll** till vänster. De fasta sidorna visas i mittenkolumnen.
@@ -88,7 +92,7 @@ De fasta sidorna är **Om föreningen**, **Styrelsen**, **Produktioner**, **Ludd
 3. Ändra det du vill i formuläret. Det är längre än fönstret, så **rulla nedåt** för att se alla fält.
 
    | Fält | Vad du gör |
-      |------|------------|
+   |------|------------|
    | **Rubrik** | Ändra inte. Webbplatsen använder den för att hitta rätt sida. |
    | **Vilken sida** | Ändra inte. Det finns bara fem sidor, och adressen måste vara en av dem. |
    | **Bild överst** | Klicka på **Ladda upp** för att välja en bild från datorn, eller **Välj** för att välja en bild som redan finns. Du kan också dra eller klistra in en bild. |
@@ -103,6 +107,7 @@ De fasta sidorna är **Om föreningen**, **Styrelsen**, **Produktioner**, **Ludd
 Har du ändrat något som du inte vill publicera kan du kassera ändringarna. Det beskrivs i avsnittet **Avpublicera, ta bort och ångra** längre ned.
 
 ## Lägg till eller ändra en partner
+
 Partnerna visas på sidan `/partners` på webbplatsen.
 
 ### Lägg till en ny partner
@@ -117,7 +122,7 @@ Partnerna visas på sidan `/partners` på webbplatsen.
 3. Fyll i fälten uppifrån och ned.
 
    | Fält | Vad du gör |
-      |------|------------|
+   |------|------------|
    | **Namn** | Skriv partnerns namn. |
    | **Logotyp** | Klicka på **Ladda upp** för att välja en bild från datorn, eller **Välj** för att välja en bild som redan finns. Du kan också dra eller klistra in en bild. |
    | **Alternativ text** | Beskriv bilden för den som inte ser den, till exempel "Logotyp för Exempelpartner". Du måste fylla i den när du har lagt till en bild. |
