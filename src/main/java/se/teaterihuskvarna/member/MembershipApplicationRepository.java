@@ -3,6 +3,7 @@ package se.teaterihuskvarna.member;
 import jakarta.persistence.LockModeType;
 import java.time.Instant;
 import java.util.Optional;
+import org.jspecify.annotations.Nullable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Modifying;
@@ -22,20 +23,22 @@ interface MembershipApplicationRepository extends JpaRepository<MembershipApplic
     /// for a submission that worked. `ON CONFLICT` makes the second request wait
     /// for the first and then overwrite its row.
     ///
-    /// @param fullName   the applicant's name
-    /// @param email      the address, already normalised
-    /// @param contact    the phone and postal address, parts of it null where not given
-    /// @param tokenHash  [se.teaterihuskvarna.login.Tokens#hash] of the token in the mailed link
-    /// @param createdAt  when the application was made
-    /// @param expiresAt  when the link stops working and the row may be deleted
+    /// @param fullName    the applicant's name
+    /// @param email       the address, already normalised
+    /// @param contact     the phone and postal address, parts of it null where not given
+    /// @param tokenHash   [se.teaterihuskvarna.login.Tokens#hash] of the token in the mailed link
+    /// @param browserHash [se.teaterihuskvarna.login.Tokens#hash] of the login cookie the form set, or null
+    /// @param createdAt   when the application was made
+    /// @param expiresAt   when the link stops working and the row may be deleted
     /// @return the number of rows written, always 1
     @Modifying
     @Query(nativeQuery = true, value = """
             INSERT INTO membership_application
-                (full_name, email, phone, address, postal_code, city, token_hash, created_at, expires_at)
+                (full_name, email, phone, address, postal_code, city, token_hash, browser_hash, created_at,
+                 expires_at)
             VALUES
                 (:fullName, :email, :#{#contact.phone()}, :#{#contact.address()}, :#{#contact.postalCode()},
-                 :#{#contact.city()}, :tokenHash, :createdAt, :expiresAt)
+                 :#{#contact.city()}, :tokenHash, :browserHash, :createdAt, :expiresAt)
             ON CONFLICT ((LOWER(email))) DO UPDATE SET
                 full_name = EXCLUDED.full_name,
                 email = EXCLUDED.email,
@@ -44,6 +47,7 @@ interface MembershipApplicationRepository extends JpaRepository<MembershipApplic
                 postal_code = EXCLUDED.postal_code,
                 city = EXCLUDED.city,
                 token_hash = EXCLUDED.token_hash,
+                browser_hash = EXCLUDED.browser_hash,
                 created_at = EXCLUDED.created_at,
                 expires_at = EXCLUDED.expires_at
             """)
@@ -52,6 +56,7 @@ interface MembershipApplicationRepository extends JpaRepository<MembershipApplic
             @Param("email") String email,
             @Param("contact") ContactDetails contact,
             @Param("tokenHash") String tokenHash,
+            @Param("browserHash") @Nullable String browserHash,
             @Param("createdAt") Instant createdAt,
             @Param("expiresAt") Instant expiresAt);
 

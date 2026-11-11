@@ -76,7 +76,7 @@ public class LoginPagesController {
     /// @param csrf     the hidden field of the page's form
     /// @param feedback what the request before left for this page
     /// @return the page with the button that logs in, the page saying to open the link where it was asked for,
-    ///         or the address form with an error
+    ///         the address form, or the address form with an error
     @GetMapping("/logga-in/lank")
     public View memberLink(
             @RequestParam(required = false) @Nullable String token,
@@ -90,7 +90,7 @@ public class LoginPagesController {
     /// @param csrf     the hidden field of the page's form
     /// @param feedback what the request before left for this page
     /// @return the page with the button that logs in, the page saying to open the link where it was asked for,
-    ///         or the address form with an error
+    ///         the address form, or the address form with an error
     @GetMapping("/admin/logga-in/lank")
     public View administratorLink(
             @RequestParam(required = false) @Nullable String token,
@@ -116,7 +116,10 @@ public class LoginPagesController {
     ///
     /// A link opened in another browser than the one that asked for it gets a
     /// page saying so, rather than a button that would fail. The token stays
-    /// usable where it was asked for, and so does the code.
+    /// usable where it was asked for, and so does the code. A link from the
+    /// welcome page after a membership confirmation has no code, so in another
+    /// browser it leads to the login page instead, where the person asks for a
+    /// link as they did before the welcome page had one.
     ///
     /// The page's script presses the button for the person. After a press
     /// that was refused as stale the page leaves it to them, so a browser
@@ -126,6 +129,7 @@ public class LoginPagesController {
         return switch (links.open(page.kind(), token, browser)) {
             case HERE -> HtmlPage.of(templates.loginLink(copy, csrf, page, token, feedback));
             case ELSEWHERE -> HtmlPage.of(templates.loginElsewhere(copy, page));
+            case ELSEWHERE_WITHOUT_CODE -> Redirect.to(page.path());
             case UNUSABLE -> Redirect.to(page.failurePath());
         };
     }

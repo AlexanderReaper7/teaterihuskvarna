@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.View;
+import se.teaterihuskvarna.login.LoginBrowser;
 import se.teaterihuskvarna.member.ApplicationForm;
 import se.teaterihuskvarna.member.AssociationSettings;
 import se.teaterihuskvarna.member.MembershipApplicationService;
@@ -50,7 +51,8 @@ public class MembershipApplicationPageController {
     /// The client address is the one the servlet container reports. Behind the
     /// proxy that is the visitor's address only because `application.yaml` tells
     /// the container to trust the proxy's forwarded header; this class does not read
-    /// the header itself.
+    /// the header itself. The login cookie is the one the security filters set on
+    /// this request, so the welcome page can log the applicant in, in this browser.
     ///
     /// @param form     the submitted fields, bound by name
     /// @param request  the request, for the client address the rate limit counts
@@ -61,7 +63,7 @@ public class MembershipApplicationPageController {
     public View apply(@ModelAttribute("form") ApplicationForm form, HttpServletRequest request, CsrfField csrf,
             Feedback feedback) {
         try {
-            applications.apply(form, request.getRemoteAddr());
+            applications.apply(form, request.getRemoteAddr(), LoginBrowser.read(request));
         } catch (ConstraintViolationException e) {
             return formPage(form, FieldErrors.of(e), csrf, feedback);
         }
@@ -93,8 +95,8 @@ public class MembershipApplicationPageController {
     }
 
     /// @param token the token the confirm button posted
-    /// @return the welcome page with the new member's name, address and the payment instruction, or the
-    ///         expired page
+    /// @return the welcome page with the new member's name, address, the payment instruction and a login
+    ///         that works in the browser that applied, or the expired page
     @PostMapping("/bli-medlem/bekrafta")
     public View confirm(@RequestParam String token) {
         Optional<Welcome> welcome = applications.confirm(token);

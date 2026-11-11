@@ -75,7 +75,8 @@ final class HashedTokenService implements OneTimeTokenService {
     /// A code first takes one of its five tries, in the same `UPDATE` that finds
     /// the rows, so requests racing with guesses cannot get more than five
     /// between them. The rows are every unexpired link this browser asked for on
-    /// this page, since an older mail's code works as its link does. A match
+    /// this page, since an older mail's code works as its link does, except a
+    /// link made at a membership confirmation, which has no code. A match
     /// deletes that row the way a link does.
     ///
     /// @param authenticationToken the POSTed form, as a [BoundLogin]
@@ -111,6 +112,7 @@ final class HashedTokenService implements OneTimeTokenService {
         List<Candidate> candidates = jdbc.sql("""
                         UPDATE one_time_token SET code_tries = code_tries + 1
                         WHERE browser_hash = ? AND kind = ? AND code_tries < ? AND expires_at > now()
+                            AND code_hash IS NOT NULL
                         RETURNING token_hash, code_hash""")
                 .param(browser)
                 .param(kind.code())

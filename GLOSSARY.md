@@ -28,7 +28,7 @@ A member's login. It holds the email address that login links and mailings go to
 
 ### Login link | Inloggningslänk
 
-A link mailed to the address of an account or an administrator account, which logs its holder in once, within a limited time, and only in the browser that asked for it. Asking again sends a new link and leaves the older ones working.
+A link mailed to the address of an account or an administrator account, which logs its holder in once, within a limited time, and only in the browser that asked for it. Asking again sends a new link and leaves the older ones working. The welcome page after a confirmed membership application has one too, never mailed and without a code, which works only in the browser that sent the application.
 
 ### Login code | Kod
 
@@ -88,7 +88,7 @@ An offer of an account to a member who has none, sent to an email address by an 
 
 ### Membership application | Ansökan om medlemskap
 
-A visitor's request to enter the member register, for themselves alone. It becomes a member with an account, without a paid fee, when the applicant confirms their email address, and it is deleted if they have not confirmed within 24 hours. Household members are added afterwards, not through the application. Provisional until the customer decides, see C9 in [open-questions.md](docs/open-questions.md#for-the-customer-deferred).
+A visitor's request to enter the member register, for themselves alone. It becomes a member with an account, without a paid fee, when the applicant confirms their email address, and it is deleted if they have not confirmed within 24 hours. Confirming in the browser that sent the application lets the applicant log in from the welcome page without a mail. Household members are added afterwards, not through the application. Provisional until the customer decides, see C9 in [open-questions.md](docs/open-questions.md#for-the-customer-deferred).
 
 ### Membership fee | Medlemsavgift
 

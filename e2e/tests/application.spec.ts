@@ -1,9 +1,9 @@
 // The membership application, from the form to the welcome page.
 import { expect, test, type Page } from "@playwright/test";
-import { linkLogin } from "../support/auth";
+import { linkLogin, logOut } from "../support/auth";
 import { text } from "../support/copy";
 import { clearLinkRequests, expireApplication, sql } from "../support/db";
-import { clearMail, waitForMail } from "../support/mail";
+import { clearMail, mailCountAfterWait, waitForMail } from "../support/mail";
 import { freshAddress, MEMBERS, PATHS } from "../support/site";
 
 test.beforeEach(clearLinkRequests);
@@ -52,7 +52,9 @@ async function opensExpired(page: Page, link: string): Promise<void> {
 }
 
 test.describe("what works", () => {
-  test("a visitor applies, confirms, and can then log in as a member", async ({ page }) => {
+  test("a visitor applies, confirms, and the welcome page's Logga in logs them in without a mail", async ({ page }) => {
+    // #47: the browser that sent the form is the one the login works in, as
+    // for a login link. docs/decisions/0015, "Logging in from the welcome page".
     const email = freshAddress("sokande");
     const link = await applyForLink(page, {
       fullName: "Åsa Öberg", email, phone: "070-123 45 67", address: "Storgatan 1", postalCode: "561 31",
@@ -67,8 +69,22 @@ test.describe("what works", () => {
       .toBeVisible();
     await expect(page.getByText(text("application.welcome.login", email))).toBeVisible();
 
-    await linkLogin(page, "member", email);
+    await page.getByRole("link", { name: text("application.welcome.loginLink") }).click();
+    await expect(page).toHaveURL(PATHS.member.home);
     await expect(page.getByText("Åsa Öberg", { exact: true })).toBeVisible();
+    // Only the confirmation mail: the login needed none.
+    expect(await mailCountAfterWait(email)).toBe(1);
+  });
+
+  test("a member who logged in from the welcome page can log in again later by link", async ({ page }) => {
+    const email = freshAddress("senare");
+    await confirm(page, await applyForLink(page, { fullName: "Senare Inloggning", email }));
+    await page.getByRole("link", { name: text("application.welcome.loginLink") }).click();
+    await expect(page).toHaveURL(PATHS.member.home);
+    await logOut(page, "member");
+
+    await linkLogin(page, "member", email);
+    await expect(page.getByText("Senare Inloggning", { exact: true })).toBeVisible();
   });
 
   test("opening the confirmation link does not confirm by itself", async ({ page }) => {
@@ -155,6 +171,41 @@ test.describe("what a person might get wrong", () => {
     await confirm(page, second);
     await expect(page.getByRole("heading", { name: text("application.welcome.heading", "Andra Försöket") }))
       .toBeVisible();
+  });
+
+  test("a confirmation link opened in another browser confirms there, and its Logga in asks for the address",
+    async ({ page, browser }) => {
+      // Someone who applies with their own address and passes the link on must
+      // not get the other person logged in to the new account, the login CSRF
+      // that binding login links to a browser closed: docs/decisions/0015.
+      const email = freshAddress("vidare");
+      const link = await applyForLink(page, { fullName: "Vidare Skickad", email });
+      const other = await browser.newContext();
+      const otherPage = await other.newPage();
+      await confirm(otherPage, link);
+      await expect(otherPage.getByRole("heading", { name: text("application.welcome.heading", "Vidare Skickad") }))
+        .toBeVisible();
+
+      await otherPage.getByRole("link", { name: text("application.welcome.loginLink") }).click();
+      await expect(otherPage).toHaveURL(PATHS.member.login);
+      await expect(otherPage.locator("#email")).toBeVisible();
+      await expect(otherPage.getByRole("alert").filter({ hasText: text("login.failed") })).toHaveCount(0);
+      await otherPage.goto(PATHS.member.home);
+      await expect(otherPage).toHaveURL(PATHS.member.login);
+      await other.close();
+    });
+
+  test("the welcome page's Logga in does not log in once the browser's login cookie is gone", async ({
+    page, context,
+  }) => {
+    // The cookie lasts as long as a login link, an hour from the form, so
+    // confirming later in the same browser confirms without logging in.
+    const email = freshAddress("utgangen");
+    const link = await applyForLink(page, { fullName: "Utgången Kaka", email });
+    await context.clearCookies({ name: "login-browser" });
+    await confirm(page, link);
+    await page.getByRole("link", { name: text("application.welcome.loginLink") }).click();
+    await expect(page).toHaveURL(PATHS.member.login);
   });
 
   test("a member who applies again is pointed to the login page, with no login link", async ({ page }) => {

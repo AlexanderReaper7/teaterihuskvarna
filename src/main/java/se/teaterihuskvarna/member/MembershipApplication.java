@@ -43,6 +43,9 @@ public class MembershipApplication {
     @Column(name = "token_hash", nullable = false, length = 64)
     private String tokenHash;
 
+    @Column(name = "browser_hash", length = 64)
+    private @Nullable String browserHash;
+
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
@@ -77,6 +80,12 @@ public class MembershipApplication {
 
     public String getTokenHash() {
         return tokenHash;
+    }
+
+    /// @return [se.teaterihuskvarna.login.Tokens#hash] of the login cookie the form set, or null for an
+    ///         application sent before the form set one
+    public @Nullable String getBrowserHash() {
+        return browserHash;
     }
 
     public Instant getCreatedAt() {

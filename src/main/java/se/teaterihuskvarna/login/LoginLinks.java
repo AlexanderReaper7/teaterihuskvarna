@@ -76,21 +76,56 @@ public class LoginLinks {
         if (token == null || token.isBlank()) {
             return LinkOpening.UNUSABLE;
         }
-        Optional<String> boundTo = jdbc.sql("""
-                        SELECT browser_hash FROM one_time_token
+        Optional<Bound> found = jdbc.sql("""
+                        SELECT browser_hash, code_hash IS NOT NULL AS has_code FROM one_time_token
                         WHERE token_hash = ? AND kind = ? AND expires_at > now()""")
                 .param(Tokens.hash(token))
                 .param(kind.code())
-                .query(String.class)
+                .query((row, number) -> new Bound(row.getString("browser_hash"), row.getBoolean("has_code")))
                 .optional();
-        if (boundTo.isEmpty()) {
+        if (found.isEmpty()) {
             return LinkOpening.UNUSABLE;
         }
         boolean here = browser != null && LoginBrowser.isWellFormed(browser)
                 && MessageDigest.isEqual(
-                        boundTo.get().getBytes(StandardCharsets.US_ASCII),
+                        found.get().browserHash().getBytes(StandardCharsets.US_ASCII),
                         Tokens.hash(browser).getBytes(StandardCharsets.US_ASCII));
-        return here ? LinkOpening.HERE : LinkOpening.ELSEWHERE;
+        if (here) {
+            return LinkOpening.HERE;
+        }
+        return found.get().hasCode() ? LinkOpening.ELSEWHERE : LinkOpening.ELSEWHERE_WITHOUT_CODE;
+    }
+
+    /// Creates a login link for an account a confirmed membership application
+    /// just made, and mails nothing: the welcome page shows it. It works only
+    /// in the browser whose login cookie hashes to `browserHash`, the one that
+    /// sent the application. It has no code, since no mail carries one, so
+    /// nothing typed in another browser redeems it either. Otherwise it is a
+    /// login link like a mailed one: it works once, for as long as a mailed
+    /// one does.
+    ///
+    /// Runs in the caller's transaction, so the link exists only if the
+    /// account does.
+    ///
+    /// @param kind        the login the link is for
+    /// @param email       the address of the new account
+    /// @param browserHash [Tokens#hash] of the login cookie the application form set
+    /// @return the token, for the welcome page to link to
+    public String createUnmailed(LoginKind kind, String email, String browserHash) {
+        String token = Tokens.newToken();
+        jdbc.sql("""
+                        INSERT INTO one_time_token (token_hash, kind, email, expires_at, browser_hash)
+                        VALUES (?, ?, ?, ?, ?)""")
+                .param(Tokens.hash(token))
+                .param(kind.code())
+                .param(new Email(email).value())
+                .param(OffsetDateTime.now(clock).plus(settings.linkLifetime()))
+                .param(browserHash)
+                .update();
+        return token;
+    }
+
+    private record Bound(String browserHash, boolean hasCode) {
     }
 
     private void create(LoginKind kind, Email address, String browser) {

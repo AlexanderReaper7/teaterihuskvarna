@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import se.teaterihuskvarna.login.LoginBrowser;
 import se.teaterihuskvarna.member.ApplicationForm;
 import se.teaterihuskvarna.member.MembershipApplicationService;
 import se.teaterihuskvarna.member.Welcome;
@@ -28,14 +29,16 @@ public class MembershipApplicationsController {
     }
 
     /// Always 202 when the form is valid, whether or not the address already has
-    /// an account, so the response does not tell who is a member.
+    /// an account, so the response does not tell who is a member. The response
+    /// sets the member login cookie, which the client keeps for the confirmation's
+    /// `loginToken`, as it would for a login link.
     ///
     /// @param form    the applicant's details
-    /// @param request the request, for the client address the rate limit counts
+    /// @param request the request, for the client address the rate limit counts and the login cookie
     @PostMapping("/api/membership-applications")
     @ResponseStatus(HttpStatus.ACCEPTED)
     public void apply(@RequestBody ApplicationForm form, HttpServletRequest request) {
-        applications.apply(form, request.getRemoteAddr());
+        applications.apply(form, request.getRemoteAddr(), LoginBrowser.read(request));
     }
 
     /// Looks, and uses nothing up: the token still works afterwards.
@@ -51,7 +54,8 @@ public class MembershipApplicationsController {
     }
 
     /// @param confirmation the token from the mailed link
-    /// @return 200 with what the welcome page shows, or 404 when the token is
+    /// @return 200 with what the welcome page shows, `loginToken` included, which logs in when posted to
+    ///         `/logga-in/lank` with the login cookie the application set, or 404 when the token is
     ///         unknown, expired or already used
     @PostMapping("/api/membership-applications/confirmation")
     public ResponseEntity<Welcome> confirm(@RequestBody @Valid Confirmation confirmation) {

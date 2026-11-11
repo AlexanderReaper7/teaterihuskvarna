@@ -10,6 +10,11 @@ public enum LinkOpening {
     /// point to the code.
     ELSEWHERE,
 
+    /// The link works, but only in the browser that sent the membership
+    /// application it was made for, and it has no code, because the welcome
+    /// page showed it and no mail carried it: send the person to the login page.
+    ELSEWHERE_WITHOUT_CODE,
+
     /// The link is unknown, used, expired or another kind's.
     UNUSABLE
 }
