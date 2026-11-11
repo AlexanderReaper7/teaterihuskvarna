@@ -14,7 +14,7 @@
 5. Every glossary entry's heading reads "English | Swedish". The Swedish word is
    the one the site's copy uses, and an entry added without one looks finished.
 6. Every document under docs/, GLOSSARY.md, AGENTS.md and design/ says who
-   stands behind it, user, agent or unreviewed, see decisions/0019. Decision
+   stands behind it, user, reviewed, agent or unreviewed, see decisions/0019. Decision
    records say so in front matter with a creation date and a description. Any
    other document may use front matter too, or a "Provenance:" line in its
    first ten lines, which may be an HTML comment so that readers do not see
@@ -233,7 +233,8 @@ def check_glossary():
             problems.append(f"GLOSSARY.md:{number}: heading {line!r} is not 'English | Swedish'")
 
 
-PROVENANCE = re.compile(r"(?:<!-- )?Provenance: (user|agent|unreviewed)\.")
+PROVENANCES = ("user", "reviewed", "agent", "unreviewed")
+PROVENANCE = re.compile(rf"(?:<!-- )?Provenance: ({'|'.join(PROVENANCES)})\.")
 # The customer's own words, which must not change, not even by one line.
 FROZEN = {"docs/projektplan-original.md", "docs/projektplan-original.en.md"}
 FIELDS = {"created", "provenance", "description", "superseded_by"}
@@ -275,8 +276,8 @@ def check_front_matter(md, rel, fields):
     except ValueError:
         if "created" in fields:
             problems.append(f"{rel}: created {fields['created']!r} is not a YYYY-MM-DD date")
-    if fields.get("provenance", "user") not in ("user", "agent", "unreviewed"):
-        problems.append(f"{rel}: provenance {fields['provenance']!r} is not user, agent or unreviewed")
+    if fields.get("provenance", "user") not in PROVENANCES:
+        problems.append(f"{rel}: provenance {fields['provenance']!r} is not user, reviewed, agent or unreviewed")
     if "superseded_by" in fields and not (md.parent / fields["superseded_by"]).is_file():
         problems.append(f"{rel}: superseded_by {fields['superseded_by']!r} points at nothing")
 
@@ -303,7 +304,7 @@ def check_provenance():
         elif rel.startswith(IN_FRONT_MATTER):
             problems.append(f"{rel}: needs front matter with {sorted(REQUIRED)}")
         elif len(lines) != 1:
-            problems.append(f"{rel}: needs front matter, or exactly one 'Provenance: user|agent|unreviewed.' line in its first ten lines, has {len(lines)}")
+            problems.append(f"{rel}: needs front matter, or exactly one 'Provenance: {'|'.join(PROVENANCES)}.' line in its first ten lines, has {len(lines)}")
         else:
             unreviewed += PROVENANCE.match(lines[0])[1] == "unreviewed"
     return unreviewed
