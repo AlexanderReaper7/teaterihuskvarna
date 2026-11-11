@@ -96,33 +96,34 @@ public class LoginLinks {
         return found.get().hasCode() ? LinkOpening.ELSEWHERE : LinkOpening.ELSEWHERE_WITHOUT_CODE;
     }
 
-    /// Creates a login link for an account a confirmed membership application
-    /// just made, and mails nothing: the welcome page shows it. It works only
-    /// in the browser whose login cookie hashes to `browserHash`, the one that
-    /// sent the application. It has no code, since no mail carries one, so
-    /// nothing typed in another browser redeems it either. Otherwise it is a
-    /// login link like a mailed one: it works once, for as long as a mailed
-    /// one does.
+    /// Creates a login link for an account, bound to the browser that sent a
+    /// membership application, and mails nothing: the caller shows it on the
+    /// welcome page or puts it in its own mail. It works only in the browser
+    /// whose login cookie hashes to `browserHash`. It has no code, because the
+    /// page that takes a code is the login page's, which the applicant never
+    /// saw, so nothing typed in another browser redeems it either. Otherwise
+    /// it is a login link like the login page's: it works once, for as long.
     ///
-    /// Runs in the caller's transaction, so the link exists only if the
-    /// account does.
+    /// Runs in the caller's transaction, so the link exists only if what the
+    /// caller writes with it does.
     ///
     /// @param kind        the login the link is for
-    /// @param email       the address of the new account
+    /// @param email       the address of the account
     /// @param browserHash [Tokens#hash] of the login cookie the application form set
-    /// @return the token, for the welcome page to link to
-    public String createUnmailed(LoginKind kind, String email, String browserHash) {
+    /// @return the token and when it expires
+    public CodelessLink createWithoutCode(LoginKind kind, String email, String browserHash) {
         String token = Tokens.newToken();
+        OffsetDateTime expires = OffsetDateTime.now(clock).plus(settings.linkLifetime());
         jdbc.sql("""
                         INSERT INTO one_time_token (token_hash, kind, email, expires_at, browser_hash)
                         VALUES (?, ?, ?, ?, ?)""")
                 .param(Tokens.hash(token))
                 .param(kind.code())
                 .param(new Email(email).value())
-                .param(OffsetDateTime.now(clock).plus(settings.linkLifetime()))
+                .param(expires)
                 .param(browserHash)
                 .update();
-        return token;
+        return new CodelessLink(token, expires.toInstant());
     }
 
     private record Bound(String browserHash, boolean hasCode) {

@@ -28,7 +28,7 @@ A member's login. It holds the email address that login links and mailings go to
 
 ### Login link | Inloggningslänk
 
-A link mailed to the address of an account or an administrator account, which logs its holder in once, within a limited time, and only in the browser that asked for it. Asking again sends a new link and leaves the older ones working. The welcome page after a confirmed membership application has one too, never mailed and without a code, which works only in the browser that sent the application.
+A link mailed to the address of an account or an administrator account, which logs its holder in once, within a limited time, and only in the browser that asked for it. Asking again sends a new link and leaves the older ones working. A link without a code works only in the browser that sent a membership application: the welcome page after confirming shows one, and the mail to a member who applied again carries one.
 
 ### Login code | Kod
 
