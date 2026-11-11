@@ -157,6 +157,27 @@ När du skapar eller ändrar något sparas det först som ett **utkast**. Besök
 
 ![Ett utkast som aldrig har publicerats, med fliken Utkast markerad och en orange ring i listan. De två andra evenemangen har både orange ring och grön prick.](editor-guide/utkast-flikar.png)
 
+### Förhandsgranska innan du publicerar
+
+1. Klicka på **Presentation** i raden högst upp i Studio.
+2. Webbplatsen visas med dina utkast. Överst står en svart banner med texten "Förhandsgranskning: sidan visar utkast som inte är publicerade". Klicka på **Kalender** i menyn för att se ett utkast till ett evenemang.
+
+   ![Förhandsgranskning av kalendern med bannern Förhandsgranskning och ett utkast](editor-guide/forhandsgranska.png)
+
+3. Medan **Redigera** är på får texter och bilder en ram när du håller muspekaren över dem. Klicka på en text så öppnas fältet i redigeraren bredvid sidan, och du kan ändra det direkt.
+4. Sidan laddas om en kort stund efter att du har ändrat något.
+5. När du är nöjd klickar du på **Structure** högst upp och sedan på **Publicera**.
+
+Medan **Redigera** är på öppnar ett klick på en text med ram redigeraren i stället för att följa länken. Slå av **Redigera** om du vill följa en länk.
+
+Sidorna **Bli medlem** och **Mina sidor** går inte att förhandsgranska, eftersom de visar personuppgifter. Då visas ett fel och sidan laddas inte. Klicka på **Försök igen** så öppnas startsidan.
+
+Klickar du på **Avsluta förhandsgranskningen** medan du är i **Presentation** försvinner bannern en stund, och Studio visar felet "Kunde inte ansluta till förhandsgranskningen". Klicka på **Försök igen** så startar förhandsgranskningen på nytt.
+
+Vill du sluta förhandsgranska helt, öppna webbplatsen i en vanlig flik och klicka på **Avsluta förhandsgranskningen** i bannern där. Då försvinner bannern och dina utkast.
+
+Medan förhandsgranskningen är på visar webbplatsen dina utkast även utanför Studio, i den webbläsaren. Vill du se vad besökarna ser, öppna webbplatsen i ett privat fönster (**Ctrl + Shift + N**).
+
 ## Avpublicera, ta bort och ångra
 
 ### Se vad du har ändrat
