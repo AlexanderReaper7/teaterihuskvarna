@@ -15,6 +15,7 @@ import se.teaterihuskvarna.login.Email;
 import se.teaterihuskvarna.login.Lifetimes;
 import se.teaterihuskvarna.login.LinkRequestLimiter;
 import se.teaterihuskvarna.login.LoginKind;
+import se.teaterihuskvarna.login.LoginLinks;
 import se.teaterihuskvarna.login.LoginSettings;
 import se.teaterihuskvarna.login.LoginUrls;
 import se.teaterihuskvarna.login.MailLife;
@@ -42,6 +43,7 @@ public class MembershipApplicationService {
     private final LinkRequestLimiter limiter;
     private final Background background;
     private final Mailer mailer;
+    private final LoginLinks links;
     private final MessageSource messages;
     private final LoginSettings login;
     private final MailSettings mail;
@@ -56,6 +58,7 @@ public class MembershipApplicationService {
             LinkRequestLimiter limiter,
             Background background,
             Mailer mailer,
+            LoginLinks links,
             MessageSource messages,
             LoginSettings login,
             MailSettings mail,
@@ -68,6 +71,7 @@ public class MembershipApplicationService {
         this.limiter = limiter;
         this.background = background;
         this.mailer = mailer;
+        this.links = links;
         this.messages = messages;
         this.login = login;
         this.mail = mail;
@@ -89,19 +93,25 @@ public class MembershipApplicationService {
     /// thread does the same work in every case and the response time does not
     /// tell the cases apart either.
     ///
+    /// The application keeps the hash of the browser's login cookie, so that
+    /// [#confirm] can make a login link that works only in this browser.
+    ///
     /// @param form          what the visitor filled in
     /// @param clientAddress the client's IP address, for the rate limit
+    /// @param browser       the login cookie the request set ([se.teaterihuskvarna.login.LoginBrowser]), or
+    ///                      null if it set none, which makes an application that confirms without a login
     /// @throws jakarta.validation.ConstraintViolationException if the form breaks a constraint
     @Transactional
-    public void apply(@Valid ApplicationForm form, String clientAddress) {
+    public void apply(@Valid ApplicationForm form, String clientAddress, @Nullable String browser) {
         Email email = new Email(form.email());
         if (!limiter.tryAcquire(email.value(), clientAddress)) {
             return;
         }
-        background.run(() -> receive(form, email));
+        String browserHash = browser == null ? null : Tokens.hash(browser);
+        background.run(() -> receive(form, email, browserHash));
     }
 
-    private void receive(ApplicationForm form, Email email) {
+    private void receive(ApplicationForm form, Email email, @Nullable String browserHash) {
         if (accounts.findByEmailIgnoreCase(email.value()).isPresent()) {
             alreadyMember(email);
             return;
@@ -120,6 +130,7 @@ public class MembershipApplicationService {
                         blankToNull(form.postalCode()),
                         blankToNull(form.city())),
                 Tokens.hash(token),
+                browserHash,
                 now,
                 expires);
 
@@ -134,11 +145,10 @@ public class MembershipApplicationService {
                 MailLife.until(expires));
     }
 
-    /// Points a member who applied again to the login page, with no token. A
-    /// login link here would work in any browser, since the application form
-    /// sets no login cookie, and would reopen what [se.teaterihuskvarna.login.LoginBrowser]
-    /// closes: anyone applying with their own address could pass the link on.
-    /// Nothing in the mail expires, so it is retried until it is sent.
+    /// Points a member who applied again to the login page, with no token, as
+    /// `docs/decisions/0015` records under "Bli medlem from an address that
+    /// already has an account". Nothing in the mail expires, so it is retried
+    /// until it is sent.
     private void alreadyMember(Email email) {
         String login = mail.link(LoginUrls.of(LoginKind.MEMBER).page(), null);
         mailer.send(
@@ -161,6 +171,13 @@ public class MembershipApplicationService {
 
     /// Follows a confirmation link. The application is deleted whatever the
     /// outcome, so a link works once at most.
+    ///
+    /// The welcome carries a login link for the new account that works only in
+    /// the browser that sent the application ([LoginLinks#createUnmailed]). The
+    /// confirmation link proves only that someone read the mail, and works in
+    /// any browser, so a login at confirmation that was not bound to the
+    /// applying browser would log in whoever the applicant passed the link to:
+    /// `docs/decisions/0015`, "Logging in from the welcome page".
     ///
     /// @param token the token from the link
     /// @return the new member's welcome, or empty if the link is unknown, used, or
@@ -196,8 +213,12 @@ public class MembershipApplicationService {
                 .filter(status -> status.year() == year)
                 .findFirst()
                 .orElseThrow();
+        String browserHash = application.getBrowserHash();
+        String loginToken = browserHash == null
+                ? null
+                : links.createUnmailed(LoginKind.MEMBER, application.getEmail(), browserHash);
         return Optional.of(new Welcome(member.getFullName(), application.getEmail(), association.bankgiro(),
-                association.feeIndividualOre(), association.feeHouseholdOre(), fee));
+                association.feeIndividualOre(), association.feeHouseholdOre(), fee, loginToken));
     }
 
     /// An application can become a member until it expires, and as long as no

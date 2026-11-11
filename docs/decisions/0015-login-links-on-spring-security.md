@@ -6,6 +6,8 @@ description: How members and administrators log in.
 
 # 0015: Login links on Spring Security
 
+Amended on 2026-11-11, the choice the user's and the design an agent's. Confirming a membership application in the browser that sent the form logs the new member in from the welcome page (#47), under "Logging in from the welcome page".
+
 Amended by an agent on 2026-11-11. The page a link opens says "Du loggas in" and shows its button only when it is still there after 5 seconds, or at once without JavaScript (#214).
 
 Amended by an agent on 2026-11-10. Deleting a member removes an account, so the member chain runs the active-login check too.
@@ -82,7 +84,25 @@ Since 2026-11-10 those numbers hold for an attacker on one IP address. One who a
 
 ### Bli medlem from an address that already has an account
 
-Before this change, the form mailed such an address a login link. The form sets no `login-browser` cookie, so that link would be bound to nobody, and it cannot be bound to the browser that filled in the form without reopening the attack: anyone could apply with their own address and pass the link on. Since 2026-09-23 the mail says the address already belongs to a member and links to the plain login page, `/logga-in`, with no token. The user chose this that day. The cost is one extra step for a member who applied again: type the address on the login page.
+Before 2026-09-23, the form mailed such an address a login link. The form set no `login-browser` cookie then, so that link was bound to nobody. Since 2026-09-23 the mail says the address already belongs to a member and links to the plain login page, `/logga-in`, with no token. The user chose this that day. The cost is one extra step for a member who applied again: type the address on the login page.
+
+Since 2026-11-11 the form sets the cookie ("Logging in from the welcome page"), so a login link in this mail could now be bound to the browser that filled in the form, as a link from the login page is. Nobody has decided to change the mail.
+
+### Logging in from the welcome page
+
+Since 2026-11-11 (#47). That day the user chose, from options an agent gave, that confirming a membership application logs the new member in when it happens in the browser that sent the form, in the same pull request as #214. The rest of this section is the agent's.
+
+The welcome page after Bekräfta used to link to `/logga-in`, where the new member typed the address again and waited for a login mail. The confirmation link alone cannot log anyone in. It proves only that someone read the mail within 24 hours, and it works in any browser. Logging in on it would bring back the login CSRF above, through the form: someone applies with their own address and passes the confirmation link on, and whoever confirms is logged in to the sender's new account and types their own details into it.
+
+So the form sets the member `login-browser` cookie, in both adapters and in every case, as a request for a login link does (`LoginBrowserFilter`), and the application stores the cookie's hash in `membership_application.browser_hash` (V18). Confirming creates a login link for the new account bound to that hash (`LoginLinks.createUnmailed`). No mail carries it, and it has no code. The welcome page's "Logga in" opens it on the page a mailed link opens:
+
+- In the browser that applied, that page logs in as it does for a mailed link, through Spring's filter.
+- In any other browser, or once the cookie has expired, `LoginLinks.open` answers `ELSEWHERE_WITHOUT_CODE`, and the page sends the person to `/logga-in`, as the welcome page did before. The page that says to open the link where it was asked for would point to a code that does not exist.
+- The REST adapter returns the token as `loginToken` in the confirmation's answer. A client posts it to `/logga-in/lank` with the cookie the application set, as it does a mailed token.
+
+The login proves what a mailed link proves: someone read the mailbox, in the browser that asked, once. The cookie lasts as long as a login link, an hour from the form, so a confirmation more than an hour after applying confirms without logging in, and the link itself lasts an hour from the confirmation. A code typed on the "link sent" page never matches it, because `HashedTokenService` skips rows without a code.
+
+The cost is a member login link waiting in the same browser. The form's request does not carry the cookie, whose path is the login page's, so the form sets a new value, and a member login link that browser asked for earlier stops working there. An application sent before V18 has no browser hash, and its welcome page links to `/logga-in` as before.
 
 ## Sessions in PostgreSQL
 
@@ -178,4 +198,4 @@ The user chose on 2026-11-10 to give each client IP address its own allowance pe
 
 ## What it costs to undo
 
-Swapping the token store for Spring's means a table rename and accepting plaintext tokens. Unbinding links from the browser means dropping `LoginBrowserFilter`, the browser condition in `HashedTokenService` and the code, and brings back login CSRF. Going back to in-memory sessions means deleting one dependency and V3's tables through a new migration, and losing the list of logged-in devices, which reads the session table. Going back to sessions that slide with use means dropping `LoginExpiryFilter`, the countdown and the extend endpoints; the two attributes can stay. Dropping Spring's flow for one written here means owning everything listed under "Why Spring's flow".
+Swapping the token store for Spring's means a table rename and accepting plaintext tokens. Unbinding links from the browser means dropping `LoginBrowserFilter`, the browser condition in `HashedTokenService` and the code, and brings back login CSRF. Dropping the welcome page's login means dropping the cookie on the application paths, `LoginLinks.createUnmailed` and `ELSEWHERE_WITHOUT_CODE`; the column and the nullable code can stay. Going back to in-memory sessions means deleting one dependency and V3's tables through a new migration, and losing the list of logged-in devices, which reads the session table. Going back to sessions that slide with use means dropping `LoginExpiryFilter`, the countdown and the extend endpoints; the two attributes can stay. Dropping Spring's flow for one written here means owning everything listed under "Why Spring's flow".

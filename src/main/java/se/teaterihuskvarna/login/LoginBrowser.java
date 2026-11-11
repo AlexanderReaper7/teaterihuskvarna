@@ -18,6 +18,11 @@ import org.springframework.http.ResponseCookie;
 /// The value is a random token like the one in a link, and the database keeps
 /// its hash. A browser that asks again keeps its value, so an older link from
 /// the same browser still works.
+///
+/// The membership application form sets it too, so that confirming the
+/// application can log the new member in, in this browser only. That request
+/// does not carry the cookie, whose path is the login page's, so it gets a new
+/// value, and a member link this browser asked for earlier stops working here.
 public final class LoginBrowser {
 
     /// The cookie's name, for a page that reads it with `@CookieValue`.
@@ -58,10 +63,10 @@ public final class LoginBrowser {
         return value;
     }
 
-    /// @param request a request to a login page
+    /// @param request a request to a login page, or a membership application
     /// @return the value [#issue] set earlier in this request, or else the one the browser sent,
     ///         or null if there is neither
-    static @Nullable String read(HttpServletRequest request) {
+    public static @Nullable String read(HttpServletRequest request) {
         return request.getAttribute(ATTRIBUTE) instanceof String issued ? issued : fromCookie(request);
     }
 

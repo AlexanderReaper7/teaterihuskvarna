@@ -296,6 +296,17 @@ class SecurityConfiguration {
                 """);
     }
 
+    /// Where a membership application is posted, by the page and by the REST
+    /// adapter. It sets the member login cookie, so that confirming it can log
+    /// the new member in from the welcome page: `docs/decisions/0015`, "Logging
+    /// in from the welcome page".
+    private static List<String> applications(LoginKind kind) {
+        return switch (kind) {
+            case MEMBER -> List.of("/bli-medlem", "/api/membership-applications");
+            case ADMINISTRATOR -> List.of();
+        };
+    }
+
     /// The one-time-token login, passkeys, the rate limit, the end of a login,
     /// logout, the entry point, the refusals and the session at login, all of
     /// which differ between the two chains only by kind.
@@ -323,7 +334,8 @@ class SecurityConfiguration {
                 Customizer.withDefaults());
         http.addFilterBefore(new LoginExpiryFilter(clock), AuthorizationFilter.class);
         http.addFilterBefore(new LinkRequestLimitFilter(limiter, urls), GenerateOneTimeTokenFilter.class);
-        http.addFilterBefore(new LoginBrowserFilter(urls, settings.linkLifetime()), LinkRequestLimitFilter.class);
+        http.addFilterBefore(new LoginBrowserFilter(urls, settings.linkLifetime(), applications(kind)),
+                LinkRequestLimitFilter.class);
         http.logout(logout -> logout
                 .logoutUrl(urls.logout())
                 .logoutSuccessUrl(urls.loggedOut()));
