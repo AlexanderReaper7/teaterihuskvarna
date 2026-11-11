@@ -164,17 +164,21 @@ När du skapar eller ändrar något sparas det först som ett **utkast**. Besök
 
    ![Förhandsgranskning av kalendern med bannern Förhandsgranskning och ett utkast](editor-guide/forhandsgranska.png)
 
-3. Medan **Redigera** är på får texter och bilder en ram när du håller muspekaren över dem. Klicka på en text så öppnas fältet i redigeraren bredvid sidan, och du kan ändra det direkt.
+3. Medan **Redigera** är på får texter och bilder en ram när du håller muspekaren över dem. Klicka på en text så öppnas fältet i redigeraren bredvid sidan, och du kan ändra det direkt. Ett klick på en text med ram följer alltså inte länken. Slå av **Redigera** om du vill följa en länk.
 4. Sidan laddas om en kort stund efter att du har ändrat något.
 5. När du är nöjd klickar du på **Structure** högst upp och sedan på **Publicera**.
 
-Medan **Redigera** är på öppnar ett klick på en text med ram redigeraren i stället för att följa länken. Slå av **Redigera** om du vill följa en länk.
+### Sidor som inte går att förhandsgranska
 
 Sidorna **Bli medlem** och **Mina sidor** går inte att förhandsgranska, eftersom de visar personuppgifter. Då visas ett fel och sidan laddas inte. Klicka på **Försök igen** så öppnas startsidan.
+
+### Avsluta förhandsgranskningen
 
 Klickar du på **Avsluta förhandsgranskningen** medan du är i **Presentation** försvinner bannern en stund, och Studio visar felet "Kunde inte ansluta till förhandsgranskningen". Klicka på **Försök igen** så startar förhandsgranskningen på nytt.
 
 Vill du sluta förhandsgranska helt, öppna webbplatsen i en vanlig flik och klicka på **Avsluta förhandsgranskningen** i bannern där. Då försvinner bannern och dina utkast.
+
+### Se vad besökarna ser
 
 Medan förhandsgranskningen är på visar webbplatsen dina utkast även utanför Studio, i den webbläsaren. Vill du se vad besökarna ser, öppna webbplatsen i ett privat fönster (**Ctrl + Shift + N**).
 
@@ -230,6 +234,8 @@ Om ändringen inte syns:
 2. Ladda om sidan med **Ctrl + Shift + R**.
 3. Kontrollera i Studio att fliken **Publicerad** är markerad. Om bara **Utkast** är markerad är ändringen inte publicerad. Klicka på **Publicera**.
 4. Syns det fortfarande inte, kontakta systemets förvaltare enligt nästa avsnitt.
+
+Kontrollera webbplatsen i ett privat fönster (**Ctrl + Shift + N**), så att du ser det besökarna ser och inte dina utkast.
 
 ## Vem kontaktar du om något går fel?
 
