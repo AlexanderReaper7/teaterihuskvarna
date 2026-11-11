@@ -208,21 +208,34 @@ test.describe("what a person might get wrong", () => {
     await expect(page).toHaveURL(PATHS.member.login);
   });
 
-  test("a member who applies again is pointed to the login page, with no login link", async ({ page }) => {
-    // 0015, "A link works only in the browser that asked for it": the form sets
-    // no login cookie, so a login link here would work in any browser.
+  test("a member who applies again gets a login link that works only in the browser they applied in", async ({
+    page, browser,
+  }) => {
+    // 0015, "Bli medlem from an address that already has an account": the
+    // form set the login cookie, and the link is bound to it, as a link from
+    // the login page is. It has no code, so another device gets the login page.
     await clearMail(MEMBERS.erik);
     await apply(page, { fullName: "Erik Lindqvist", email: "Erik.Lindqvist@Example.test" });
     await expect(page).toHaveURL("/bli-medlem/skickat");
     const mail = await waitForMail(MEMBERS.erik);
     expect(mail.subject).toBe(text("application.mail.member.subject"));
-    expect(mail.link).toBe(`http://localhost:55556${PATHS.member.login}`);
-    expect(mail.text).not.toContain("token=");
+    expect(mail.link).toMatch(/^http:\/\/localhost:55556\/logga-in\/lank\?token=/);
+    expect(mail.text.split(/\r?\n/)).toContain(`http://localhost:55556${PATHS.member.login}`);
+    expect(mail.code).toBeUndefined();
+
+    const other = await browser.newContext();
+    const otherPage = await other.newPage();
+    await otherPage.goto(mail.link);
+    await expect(otherPage).toHaveURL(PATHS.member.login);
+    await expect(otherPage.locator("#email")).toBeVisible();
+    await other.close();
+
     await page.goto(mail.link);
-    await expect(page.locator("#email")).toBeVisible();
+    await expect(page).toHaveURL(PATHS.member.home);
+    await expect(page.getByText("Erik Lindqvist", { exact: true })).toBeVisible();
   });
 
-  test("a new member who applies once more after confirming is pointed to the login page", async ({ page }) => {
+  test("a new member who applies once more after confirming gets the mail for a member", async ({ page }) => {
     const email = freshAddress("igen");
     await confirm(page, await applyForLink(page, { fullName: "Redan Medlem", email }));
     await clearMail(email);

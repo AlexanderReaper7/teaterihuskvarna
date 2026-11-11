@@ -75,6 +75,9 @@ class MembershipApplicationIT extends IntegrationTestSupport {
     @Autowired
     private LoginSettings login;
 
+    @Autowired
+    private MembershipApplicationService applications;
+
     @Test
     void anApplicationMailsAConfirmationLinkAndStoresNoMember() throws Exception {
         MvcResult applied = apply("Karin Karlsson", KARIN);
@@ -350,31 +353,48 @@ class MembershipApplicationIT extends IntegrationTestSupport {
                 .isEqualTo(instantFrom("SELECT expires_at FROM membership_application"));
     }
 
-    /// It carries no link that expires, only the login page's address, so it
-    /// is retried until it is sent.
+    /// It carries a login link, and is worth nothing once the link has expired.
     @Test
-    void theMailToAnAddressWithAnAccountIsRetriedUntilItIsSent() throws Exception {
+    void theMailToAnAddressWithAnAccountIsNotSentAfterItsLinkExpires() throws Exception {
         insertAccount("Karin Karlsson", KARIN);
         refuseEveryMail();
 
         apply("Karin Karlsson", KARIN);
         awaitMails(1);
 
-        assertThat(notAfterOfTheMailInTheOutbox()).isNull();
+        assertThat(notAfterOfTheMailInTheOutbox())
+                .isEqualTo(instantFrom("SELECT expires_at FROM one_time_token"));
+    }
+
+    /// Without a login cookie there is no browser to bind a link to, so the
+    /// mail points to the login page only, and is retried until it is sent.
+    /// Both adapters always pass the cookie the security filters set; this is
+    /// the service's answer to a caller that has none.
+    @Test
+    void theMailToAnAddressWithAnAccountHasNoLinkWithoutALoginCookie() throws Exception {
+        insertAccount("Karin Karlsson", KARIN);
+
+        applications.apply(new ApplicationForm("Karin K", KARIN, null, null, null, null), "192.0.2.1", null);
+        SimpleMailMessage mail = awaitMail();
+
+        assertThat(mail.getText()).doesNotContain("token=").contains(siteUrl + "/logga-in\n");
+        assertThat(rowsIn("one_time_token")).isZero();
     }
 
     /// The form must not reveal that an address is already a member's, so the
-    /// response matches a new address's, login cookie included. The mail points
-    /// to the login page and carries no login link: `docs/decisions/0015`,
+    /// response matches a new address's, login cookie included. The mail
+    /// carries a login link bound to the browser that filled in the form, with
+    /// no code, and the login page for any other device: `docs/decisions/0015`,
     /// "Bli medlem from an address that already has an account".
     @Test
-    void anAddressWithAnAccountIsPointedToTheLoginPage() throws Exception {
+    void anAddressWithAnAccountGetsALoginLinkForTheBrowserThatApplied() throws Exception {
         insertAccount("Karin Karlsson", KARIN);
 
         MvcResult fresh = apply("Nils Nilsson", "nils@example.test");
         awaitMail();
         forgetMails();
         MvcResult existing = apply("Karin K", "Karin@Example.test");
+        Cookie applicant = requireNonNull(existing.getResponse().getCookie(LoginBrowser.COOKIE));
         SimpleMailMessage mail = awaitMail();
 
         assertRedirect(existing, "/bli-medlem/skickat");
@@ -382,12 +402,18 @@ class MembershipApplicationIT extends IntegrationTestSupport {
         assertThat(mail.getTo()).containsExactly(KARIN);
         assertThat(mail.getText())
                 .doesNotContain(CONFIRMATION)
-                .doesNotContain("token=")
                 .contains(siteUrl + "/logga-in\n");
-        assertThat(rowsIn("one_time_token")).isZero();
         assertThat(jdbc.sql("SELECT email FROM membership_application").query(String.class).list())
                 .containsExactly("nils@example.test");
         assertThat(rowsIn("account")).isEqualTo(1);
+        assertThat(jdbc.sql("SELECT code_hash FROM one_time_token").query(String.class).list())
+                .containsExactly((String) null);
+
+        String login = tokenIn(mail, linkPath(LoginKind.MEMBER));
+        assertRedirect(mockMvc.perform(get("/logga-in/lank").param("token", login)).andReturn(), "/logga-in");
+        assertRedirect(followLink(LoginKind.MEMBER, login), "/logga-in?fel");
+        assertRedirect(mockMvc.perform(post("/logga-in/lank").param("token", login).cookie(applicant)
+                .with(csrf())).andReturn(), "/medlem");
     }
 
     /// Without the limit the form would mail anyone as often as it was posted,

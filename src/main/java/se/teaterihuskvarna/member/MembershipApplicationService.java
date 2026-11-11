@@ -11,6 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.validation.annotation.Validated;
 import se.teaterihuskvarna.Swedish;
 import se.teaterihuskvarna.login.Background;
+import se.teaterihuskvarna.login.CodelessLink;
 import se.teaterihuskvarna.login.Email;
 import se.teaterihuskvarna.login.Lifetimes;
 import se.teaterihuskvarna.login.LinkRequestLimiter;
@@ -113,7 +114,7 @@ public class MembershipApplicationService {
 
     private void receive(ApplicationForm form, Email email, @Nullable String browserHash) {
         if (accounts.findByEmailIgnoreCase(email.value()).isPresent()) {
-            alreadyMember(email);
+            alreadyMember(email, browserHash);
             return;
         }
 
@@ -145,17 +146,33 @@ public class MembershipApplicationService {
                 MailLife.until(expires));
     }
 
-    /// Points a member who applied again to the login page, with no token, as
-    /// `docs/decisions/0015` records under "Bli medlem from an address that
-    /// already has an account". Nothing in the mail expires, so it is retried
-    /// until it is sent.
-    private void alreadyMember(Email email) {
-        String login = mail.link(LoginUrls.of(LoginKind.MEMBER).page(), null);
-        mailer.send(
-                email,
-                messages.getMessage("application.mail.member.subject", null, Swedish.LOCALE),
-                messages.getMessage("application.mail.member.body", new Object[] {login}, Swedish.LOCALE),
-                MailLife.untilSent());
+    /// Tells a member who applied again that the address already has an
+    /// account, with a login link bound to the browser that filled in the form
+    /// and the login page for any other device: `docs/decisions/0015`, "Bli
+    /// medlem from an address that already has an account". The link is the
+    /// login page's, minus the code, so the form gives nobody more than the
+    /// login page does. The mail is worth nothing once the link has expired.
+    ///
+    /// Without a login cookie there is no browser to bind to, and the mail
+    /// points to the login page only. Nothing in it expires then, so it is
+    /// retried until it is sent.
+    private void alreadyMember(Email email, @Nullable String browserHash) {
+        String page = mail.link(LoginUrls.of(LoginKind.MEMBER).page(), null);
+        String subject = messages.getMessage("application.mail.member.subject", null, Swedish.LOCALE);
+        if (browserHash == null) {
+            mailer.send(email, subject,
+                    messages.getMessage("application.mail.member.body", new Object[] {page}, Swedish.LOCALE),
+                    MailLife.untilSent());
+            return;
+        }
+        CodelessLink link = links.createWithoutCode(LoginKind.MEMBER, email.value(), browserHash);
+        Object[] arguments = {
+            mail.link(LoginUrls.of(LoginKind.MEMBER).link(), link.token()),
+            page,
+            Lifetimes.describe(messages, login.linkLifetime())};
+        mailer.send(email, subject,
+                messages.getMessage("application.mail.member.link.body", arguments, Swedish.LOCALE),
+                MailLife.until(link.expires()));
     }
 
     /// What the page behind a confirmation link should show. A lookup and
@@ -173,7 +190,7 @@ public class MembershipApplicationService {
     /// outcome, so a link works once at most.
     ///
     /// The welcome carries a login link for the new account that works only in
-    /// the browser that sent the application ([LoginLinks#createUnmailed]). The
+    /// the browser that sent the application ([LoginLinks#createWithoutCode]). The
     /// confirmation link proves only that someone read the mail, and works in
     /// any browser, so a login at confirmation that was not bound to the
     /// applying browser would log in whoever the applicant passed the link to:
@@ -216,7 +233,7 @@ public class MembershipApplicationService {
         String browserHash = application.getBrowserHash();
         String loginToken = browserHash == null
                 ? null
-                : links.createUnmailed(LoginKind.MEMBER, application.getEmail(), browserHash);
+                : links.createWithoutCode(LoginKind.MEMBER, application.getEmail(), browserHash).token();
         return Optional.of(new Welcome(member.getFullName(), application.getEmail(), association.bankgiro(),
                 association.feeIndividualOre(), association.feeHouseholdOre(), fee, loginToken));
     }
