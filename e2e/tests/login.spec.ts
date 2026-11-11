@@ -15,6 +15,23 @@ test.beforeEach(async () => {
 /// because the passkey section has an alert of its own.
 const linkFailed = (page: Page) => page.getByRole("alert").filter({ hasText: text("login.failed") });
 
+/// Holds the link page's script until `release` is called, so a test can look
+/// at the link page while the person would be waiting on it. The script only
+/// sends the form, and the person sees the same page until the answer to that
+/// POST comes back: about a second on a phone. On 2026-11-11 it was 960 ms in
+/// Chromium with 150 ms latency, 1.6 Mbit/s and an empty cache, from the link
+/// page's first paint to the home page's. The POST itself cannot be held
+/// instead, because Playwright's locators wait for the navigation it starts.
+async function holdScript(page: Page): Promise<() => void> {
+  let release!: () => void;
+  const held = new Promise<void>((resolve) => (release = resolve));
+  await page.route("**/js/login-link.js", async (route) => {
+    await held;
+    await route.continue();
+  });
+  return release;
+}
+
 test.describe("what works", () => {
   test("a member logs in with the mailed link and sees their own details", async ({ page }) => {
     await clearMail(MEMBERS.erik);
@@ -43,6 +60,50 @@ test.describe("what works", () => {
     await expect(page.getByText(text("admin.signedInAs", "Gunnar Wik"))).toBeVisible();
   });
 
+  for (const [kind, email] of [["member", MEMBERS.erik], ["administrator", ADMINISTRATORS.gunnar]] as const) {
+    test(`the ${kind}'s link shows that the person is being logged in, not a login page`, async ({ page }) => {
+      // #214: the link page is on screen until the login's POST and the next
+      // page come back. It was headed "Logga in" and had a "Logga in" button,
+      // so for that moment the person saw what looked like the login page.
+      const link = await mailedLink(page, kind, email);
+      const release = await holdScript(page);
+      await page.goto(link, { waitUntil: "commit" });
+
+      const heading = page.getByRole("heading", { level: 1 });
+      await expect(heading).not.toHaveText(text("login.member.heading"));
+      await expect(heading).not.toHaveText(text("login.administrator.heading"));
+      await expect(page.getByRole("button", { name: text("login.link.submit") })).toBeHidden();
+      await expect(heading).toHaveText(text("login.link.heading"));
+
+      release();
+      await expect(page).toHaveURL(PATHS[kind].home);
+    });
+  }
+
+  test("a link page whose script never runs offers its button after a few seconds", async ({ page }) => {
+    // A blocked or failed script must not leave the person on "Du loggas in"
+    // for good. The button appears from the stylesheet alone.
+    const link = await mailedLink(page, "member", MEMBERS.maria);
+    await page.route("**/js/login-link.js", (route) => route.abort());
+    await page.goto(link);
+    const button = page.getByRole("button", { name: text("login.link.submit") });
+    await expect(button).toBeHidden();
+    await expect(page.getByText(text("login.link.fallback"))).toBeVisible({ timeout: 10_000 });
+    await button.click();
+    await expect(page).toHaveURL(PATHS.member.home);
+  });
+
+  test("a link page that came back stale shows its button at once, under the login heading", async ({ page }) => {
+    // The page's script does not press the button again after a stale press,
+    // so the person has to, and should not wait for it.
+    const link = await mailedLink(page, "member", MEMBERS.sara);
+    await page.goto(`${link}&gammal`);
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText(text("login.member.heading"));
+    await expect(page.getByRole("alert")).toHaveText(text("form.stale"));
+    await page.getByRole("button", { name: text("login.link.submit") }).click({ timeout: 1_000 });
+    await expect(page).toHaveURL(PATHS.member.home);
+  });
+
   test("logging out ends the session", async ({ page }) => {
     await linkLogin(page, "member", MEMBERS.maria);
     await logOut(page, "member");
@@ -55,9 +116,10 @@ test.describe("what works", () => {
     const page = await context.newPage();
     const link = await mailedLink(page, "member", MEMBERS.johan);
     await page.goto(link);
-    // Without the script the page waits for the person.
+    // Without the script the page waits for the person, and shows the button
+    // at once rather than after the delay a page with scripts has.
     await expect(page).toHaveURL(/\/logga-in\/lank\?token=/);
-    await page.getByRole("button", { name: text("login.link.submit") }).click();
+    await page.getByRole("button", { name: text("login.link.submit") }).click({ timeout: 1_000 });
     await expect(page).toHaveURL(PATHS.member.home);
     await context.close();
   });
