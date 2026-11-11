@@ -747,6 +747,31 @@ input[type="file"]::file-selector-button:hover {
   margin-bottom: 0;
 }
 
+/* The form on the page a mailed login link opens, which /js/login-link.js
+ * sends as soon as the page has loaded. Its line and button would make the
+ * page look like the login page for the second the login takes (#214), so
+ * they stay hidden for 5 s and show only if the page is still there by then:
+ * the script was blocked or failed, or the answer is slow. Hidden rather than
+ * left out, so they take their space from the start and nothing moves when
+ * they appear. Without JavaScript nothing sends the form, so they show at
+ * once, except in a browser older than the scripting feature (Firefox 113,
+ * Chrome 120, Safari 17), which waits the 5 s too. */
+form[data-auto-submit] {
+  animation: appear-late 0s 5s backwards;
+}
+
+@media (scripting: none) {
+  form[data-auto-submit] {
+    animation: none;
+  }
+}
+
+@keyframes appear-late {
+  from {
+    visibility: hidden;
+  }
+}
+
 /* Tables */
 
 table {

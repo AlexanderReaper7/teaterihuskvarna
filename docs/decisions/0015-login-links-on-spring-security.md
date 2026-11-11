@@ -6,6 +6,8 @@ description: How members and administrators log in.
 
 # 0015: Login links on Spring Security
 
+Amended by an agent on 2026-11-11. The page a link opens says "Du loggas in" and shows its button only when it is still there after 5 seconds, or at once without JavaScript (#214).
+
 Amended by an agent on 2026-11-10. Deleting a member removes an account, so the member chain runs the active-login check too.
 
 Amended by the user on 2026-11-10. Each client IP address has its own allowance of link requests per address, under "What each limit counts".
@@ -41,6 +43,8 @@ The request thread does only what every request does: the CSRF check, the rate l
 The link in the mail opens a page with a form that POSTs the token. Mail scanners follow GET links to check them, and a link that logged in on GET would be spent before its owner clicked it.
 
 2026-09-23: a script on that page, [`static/js/login-link.js`](../../src/main/resources/static/js/login-link.js), submits the form as soon as the page loads, so a person who follows the link is logged in without pressing anything. The button stays for browsers without JavaScript. This keeps out scanners that only fetch the HTML. Some gateways open links in a headless browser that runs JavaScript, and those will still spend the token; for such a mailbox the page behaves as if the server logged in on GET. Logging in on GET was rejected for that reason: it would lose every scanned mailbox rather than only those. The script is a file rather than inline, so a later Content-Security-Policy need not allow inline script.
+
+The page stays on screen until the answer to that POST comes back: 960 ms on 2026-11-11 in Chromium with 150 ms latency, 1.6 Mbit/s down and an empty cache, 20 to 50 ms on the local stack. Headed "Logga in" with a "Logga in" button, it looked like the login page for that moment (#214). Since 2026-11-11 it is headed "Du loggas in", and [`site.css`](../../src/main/resources/static/css/site.css) keeps the line "Händer inget? Tryck på knappen." and the button hidden for 5 seconds, so they show only if the script was blocked or failed or the answer is slow. Under `@media (scripting: none)` they show at once. A page that came back stale keeps the login heading and shows the button at once, since its script does not press it. An agent chose the wording and the 5 seconds.
 
 ## A link works only in the browser that asked for it
 
