@@ -132,9 +132,39 @@ class AdministratorIT extends IntegrationTestSupport {
         mockMvc.perform(get(API).with(asFirstAdministrator()))
                 .andExpect(jsonPath("$[*].email", not(hasItem(BO))));
     }
+/// Three adminstrator, so the removal is allowed. The log is written in
+/// the same  transaction as the removal, and `actor_id` names the administrator
+/// whoremoved, not the one removed.
+    @Test
+    void aRemovalIsLogged() throws Exception {
+        long bo = insertAdministrator(BO, "Bo Berg");
+        insertAdministrator(CILLA, "Cilla Carlsson");
 
-    /// Three administrators, so the refusal comes from the rule against removing
-    /// oneself and not from the minimum of two.
+        mockMvc.perform(removeByApi(bo)).andExpect(status().isNoContent());
+        assertThat(jdbc.sql("SELECT actor_id FROM administrator_removal_log"
+        + " WHERE administrator_id = ? AND event = 'Removed'")
+                .param(bo)
+                .query(Long.class)
+                .list())
+                .containsExactly(firstAdministratorId());
+    }
+/// Two administrators, so the removal is refused. The refusal comes before
+/// the log row is written, so nothing is logged.
+    @Test
+    void aRefusedRemovalIsNotLogged() throws Exception {
+        long bo = insertAdministrator(BO, "Bo Berg");
+
+        mockMvc.perform(removeByApi(bo)).andExpect(status().isConflict());
+
+        assertThat(jdbc.sql("SELECT COUNT(*) FROM administrator_removal_log"
+       + " WHERE administrator_id = ?")
+                .param(bo)
+                .query(Long.class)
+                .single())
+                .isZero();
+    }
+ /// Three administrators, so the refusal comes from the rule against removing
+/// oneself and not from the minimum of two.
     @Test
     void anAdministratorCannotRemoveThemselves() throws Exception {
         insertAdministrator(BO, "Bo Berg");
@@ -193,7 +223,22 @@ class AdministratorIT extends IntegrationTestSupport {
         mockMvc.perform(get(API).with(asFirstAdministrator()))
                 .andExpect(jsonPath("$[*].email", hasItem(equalToIgnoringCase(BO))));
     }
+    /// re-adding clears `removedAt`and `removedBy`, so the log is the only recoed
+    /// that the administrator was removed. It holds one row for each event.
+    @Test
+    void aReactivationIsLogged() throws Exception {
+        long bo = insertAdministrator(BO, "Bo Berg");
+        insertAdministrator(CILLA, "Cilla Carlsson");
+        mockMvc.perform(removeByApi(bo)).andExpect(status().isNoContent());
+        mockMvc.perform(addByApi(BO, "Bo Berg")).andExpect(status().isCreated());
 
+        assertThat(jdbc.sql("SELECT event FROM administrator_removal_log"
+                + " WHERE administrator_id = ? ORDER BY id")
+                .param(bo)
+                .query(String.class)
+                .list())
+                .containsExactly("Removed", "Restored");
+    }
     /// Without this a removed administrator keeps a working session until it
     /// expires. The first request proves the session worked before the removal,
     /// so the last one fails because of the removal and not for another reason.

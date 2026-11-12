@@ -11,6 +11,7 @@ import se.teaterihuskvarna.login.LoginKind;
 import se.teaterihuskvarna.login.PasskeyService;
 import se.teaterihuskvarna.login.Sessions;
 
+
 /// Administrators adding and removing each other. The first administrator comes
 /// from configuration ([FirstAdministrator]); every one after that is added
 /// here. Removal is refused while two or fewer remain: `docs/projektplan.md`.
@@ -25,11 +26,14 @@ public class AdministratorService {
     private final AdministratorRepository administrators;
     private final Sessions sessions;
     private final PasskeyService passkeys;
+    private final AdminRemovalLogService removalLog;
 
-    AdministratorService(AdministratorRepository administrators, Sessions sessions, PasskeyService passkeys) {
+    AdministratorService(AdministratorRepository administrators, Sessions sessions, PasskeyService passkeys,
+         AdminRemovalLogService removalLog) {
         this.administrators = administrators;
         this.sessions = sessions;
         this.passkeys = passkeys;
+        this.removalLog = removalLog;
     }
 
     /// @return the administrators who can log in, by name
@@ -38,7 +42,8 @@ public class AdministratorService {
     }
 
     /// Adds an administrator, or makes a removed one active again if the address
-    /// was used before. The row is reused because `administrator_email_key`
+    /// was used before. A re-activition is written to the removal log.
+    // The row is reused because `administrator_email_key`
     /// spans removed rows too, so a second row for the address cannot exist.
     ///
     /// @param form    the new administrator's address and name
@@ -59,6 +64,9 @@ public class AdministratorService {
             throw new AdministratorAlreadyExists();
         }
         administrator.reactivate(fullName, addedBy);
+        // reactive() clears removedAt and removedBy, so the removal log is the
+        // only record that this administrator was ever removed.
+        removalLog.recordRestore(administrator.getId(), addedBy);
         return AdministratorDetails.of(administrator);
     }
 
@@ -91,6 +99,7 @@ public class AdministratorService {
             throw new TooFewAdministrators();
         }
         administrator.remove(removedBy);
+        removalLog.recordRemoval(id, removedBy);
         passkeys.removeAll(LoginKind.ADMINISTRATOR, id);
         sessions.end(LoginKind.ADMINISTRATOR, id);
     }
