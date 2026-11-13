@@ -33,9 +33,9 @@ Innan du kan logga in måste du ha blivit inbjuden till Sanity-projektet. Be en 
    |------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
    | **Titel** | Skriv evenemangets namn.                                                                                                                                                                       |
    | **Adress** | Klicka på **Generera** så skapas adressen av titeln. Hela adressen blir till exempel `/evenemang/exempelforestallning`. Å, ä och ö ersätts med andra bokstäver, och det är normalt. |          |
-   | **Datum och tid** | Välj när evenemanget börjar.                                                                                                                                                                   |
+   | **Datum och tid** | Skriv datum och klockslag, till exempel `2026-12-16 19:00`, eller klicka på kalenderikonen till höger i fältet och välj. Glöm inte klockslaget. |
    | **Plats** | Skriv var evenemanget hålls.                                                                                                                                                                   |
-   | **Serie** | Skriv i fältet för att söka efter serien och välj den, till exempel Kaffe med drömmar. Du kan också klicka på **Skapa ny** för att skapa en ny serie. Lämna tomt för ett fristående evenemang. |
+   | **Serie** | Valfritt. Hör evenemanget inte till en serie, hoppa över fältet. Hör det till en serie, skriv i fältet och välj serien i listan, till exempel Kaffe med drömmar. Klicka på **Skapa ny** bara om serien inte finns. Då skapas en ny serie. |
    | **Ingress** | Skriv en eller två meningar. De visas i kalendern och på startsidan.                                                                                                                           |
    | **Huvudbild** | Klicka på **Ladda upp** för att välja en bild från datorn, eller dra eller klistra in en bild. Bilden visas överst på evenemangets sida och i kalendern.                                       |
    | **Alternativ text** | Beskriv bilden för den som inte ser den, till exempel "Tre skådespelare på scenen". Du måste fylla i den när du har lagt till en bild.                                                         |
@@ -46,6 +46,8 @@ Innan du kan logga in måste du ha blivit inbjuden till Sanity-projektet. Be en 
    Du måste fylla i **Titel**, **Adress** och **Datum och tid** för att kunna publicera.
 
    Om ett obligatoriskt fält är tomt går det inte att publicera. Fältet får en röd ram och ett rött utropstecken, och över knappen **Publicera** står "Det finns valideringsfel som måste åtgärdas innan detta dokument kan publiceras". Fyll i fältet och klicka på **Publicera** igen.
+
+   Studio sparar det du skriver automatiskt som ett utkast. Det finns ingen sparaknapp. När du är klar klickar du på **Publicera**.
 
 4. Klicka på knappen **Publicera** längst ned till höger.
 
@@ -76,6 +78,8 @@ Innan du kan logga in måste du ha blivit inbjuden till Sanity-projektet. Be en 
    Du måste fylla i **Rubrik** och **Adress** för att kunna publicera.
 
    Om ett obligatoriskt fält är tomt går det inte att publicera. Fältet får en röd ram och ett rött utropstecken, och över knappen **Publicera** står "Det finns valideringsfel som måste åtgärdas innan detta dokument kan publiceras". Fyll i fältet och klicka på **Publicera** igen.
+
+   Studio sparar det du skriver automatiskt som ett utkast. Det finns ingen sparaknapp. När du är klar klickar du på **Publicera**.
 
 4. Klicka på knappen **Publicera** längst ned till höger.
 5. Kontrollera att fliken **Publicerad** nu är markerad högst upp. Då är nyheten publicerad och syns på webbplatsen inom en minut.
