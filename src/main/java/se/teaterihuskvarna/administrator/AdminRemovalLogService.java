@@ -1,14 +1,13 @@
 package se.teaterihuskvarna.administrator;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import se.teaterihuskvarna.login.ActingDevice;
 /// Write the history of administrator removals: one row per removal and per
 /// restore. Names and device are copied into the row, not looked up when the log
 /// is read, becuase `administrator.rectivate()` can change a name and a log must
 /// not change afterwards.
 @Service
 public class AdminRemovalLogService{
-
-    private static final String UNKNOWN_DEVICE = "unknown";
 
     private final AdminRemovalLogRepository repository;
     private final AdministratorRepository administrators;
@@ -33,6 +32,6 @@ public class AdminRemovalLogService{
         Administrator actor = administrators.findActiveById(actorId)
             .orElseThrow(NoSuchAdministrator::new);
         repository.save(new AdminRemovalLog(
-                subject.getId(), subject.getFullName(), actorId, actor.getFullName(), event, UNKNOWN_DEVICE ));
+                subject.getId(), subject.getFullName(), actorId, actor.getFullName(), event, ActingDevice.name()));
     }
 }

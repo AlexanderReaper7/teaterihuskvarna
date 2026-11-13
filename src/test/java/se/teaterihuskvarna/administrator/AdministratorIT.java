@@ -164,6 +164,23 @@ class AdministratorIT extends IntegrationTestSupport {
             .single())
                 .isEqualTo("Bo Berg/Ada Admin/unknown");
     }
+/// Aremoval made from a real login stores the device name of that login,
+/// read from the session of the request.
+    @Test
+    void aRemovallogRowHoldsTheDeviceOfTheLogin() throws Exception {
+        long bo = insertAdministrator(BO, "Bo Berg");
+        insertAdministrator(CILLA, "Cilla Carlsson");
+
+        MvcResult login = logInByLink(LoginKind.ADMINISTRATOR, firstAdministratorEmail);
+        mockMvc.perform(delete(API + "/" + bo).with(sessionOf(login)).with(csrf()))
+            .andExpect(status().isNoContent());
+
+        assertThat(jdbc.sql("SELECT device FROM administrator_removal_log WHERE administrator_id = ?")
+                    .param(bo)
+                    .query(String.class)
+                    .single())
+                .isNotEqualTo("unknown");
+    }
 /// Two administrators, so the removal is refused. The refusal comes before
 /// the log row is written, so nothing is logged.
     @Test
