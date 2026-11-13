@@ -41,16 +41,32 @@ public class AdminRemovalLog {
     @Column(name="occurred_at", nullable = false)
     private Instant occurredAt= Instant.now();
 
+    @Column(name="administrator_name", nullable = false, length = 100)
+    private String administratorName;
+
+    @Column(name="actor_name", nullable = false, length = 100)
+    private String actorName;
+
+    @Column(name="device", nullable = false, length = 100)
+    private String device;
+
     protected AdminRemovalLog() {
         //for JPA
     }
 /// @param administratorId the administrator the event is about
+/// @param administratorName the administrator the event is about
 /// @param actorId         the administrator who did it
+/// @param actorName       the administrator who did it
 /// @param event           what happened, at most 30 characters
-    public AdminRemovalLog(Long administratorId, Long actorId, String event) {
+/// @param device          the device used
+    public AdminRemovalLog(Long administratorId, String administratorName, Long actorId, String actorName,
+         String event, String device) {
         this.administratorId = administratorId;
+        this.administratorName = administratorName;
         this.actorId = actorId;
+        this.actorName = actorName;
         this.event = event;
+        this.device = device;
     }
 
     public long getId() {
@@ -61,8 +77,15 @@ public class AdminRemovalLog {
         return administratorId;
     }
 
+    public String getAdministratorName() {
+        return administratorName;
+    }
+
     public Long getActorId() {
         return actorId;
+    }
+    public String getActorName() {
+        return actorName;
     }
 
     public String getEvent() {
@@ -71,5 +94,8 @@ public class AdminRemovalLog {
 
     public Instant getOccurredAt() {
         return occurredAt;
+    }
+    public String getDevice() {
+        return device;
     }
 }

@@ -148,6 +148,22 @@ class AdministratorIT extends IntegrationTestSupport {
                 .list())
                 .containsExactly(firstAdministratorId());
     }
+/// The names are copied into the row, so alater rename dose not change the
+/// log. The device is `unkown` until a device is passed on.
+    @Test
+    void aRemovalLogRowHoldsNamesAndDevice() throws Exception {
+        long bo = insertAdministrator(BO, "Bo Berg");
+        insertAdministrator(CILLA, "Cilla Carlsson");
+
+        mockMvc.perform(removeByApi(bo)).andExpect(status().isNoContent());
+
+        assertThat(jdbc.sql("SELECT administrator_name || '/' || actor_name || '/' || device "
+            + " FROM administrator_removal_log WHERE administrator_id = ? ")
+            .param(bo)
+            .query(String.class)
+            .single())
+                .isEqualTo("Bo Berg/Ada Admin/unknown");
+    }
 /// Two administrators, so the removal is refused. The refusal comes before
 /// the log row is written, so nothing is logged.
     @Test

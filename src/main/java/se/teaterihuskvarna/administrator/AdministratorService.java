@@ -29,7 +29,7 @@ public class AdministratorService {
     private final AdminRemovalLogService removalLog;
 
     AdministratorService(AdministratorRepository administrators, Sessions sessions, PasskeyService passkeys,
-         AdminRemovalLogService removalLog) {
+            AdminRemovalLogService removalLog) {
         this.administrators = administrators;
         this.sessions = sessions;
         this.passkeys = passkeys;
@@ -66,7 +66,7 @@ public class AdministratorService {
         administrator.reactivate(fullName, addedBy);
         // reactive() clears removedAt and removedBy, so the removal log is the
         // only record that this administrator was ever removed.
-        removalLog.recordRestore(administrator.getId(), addedBy);
+        removalLog.recordRestore(administrator, addedBy);
         return AdministratorDetails.of(administrator);
     }
 
@@ -99,7 +99,7 @@ public class AdministratorService {
             throw new TooFewAdministrators();
         }
         administrator.remove(removedBy);
-        removalLog.recordRemoval(id, removedBy);
+        removalLog.recordRemoval(administrator, removedBy);
         passkeys.removeAll(LoginKind.ADMINISTRATOR, id);
         sessions.end(LoginKind.ADMINISTRATOR, id);
     }
