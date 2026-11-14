@@ -201,6 +201,8 @@ was costed and not taken.
 
 ## How the code is arranged
 
+The [architecture description](docs/architecture.md) maps the running services, packages and stored data, with diagrams of login, publishing, mailings and membership applications.
+
 Every capability is a method on an application service in a domain package such
 as `se.teaterihuskvarna.member`. Two adapters sit over it as peers: `web` holds
 the JTE controllers, `api` holds the REST endpoints, and both call the same
