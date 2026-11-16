@@ -180,6 +180,27 @@ class AdministratorIT extends IntegrationTestSupport {
                   .extracting(AdminRemovalLogEntry::event)
                   .containsExactly("Restored", "Removed");
     }
+/// An administrator can read the log over HTTP newest first, with yhe names
+/// kept in each row. A removal is made first so that there is a row to read.
+    @Test
+    void theApiListesTheRemovalLog() throws Exception {
+        long bo = insertAdministrator(BO, "Bo Berg");
+        insertAdministrator(CILLA, "Cilla Carlsson");
+
+        mockMvc.perform(removeByApi(bo)).andExpect(status().isNoContent());
+        mockMvc.perform(get(API + "/removal-log").with(asFirstAdministrator()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].event").value("Removed"))
+                .andExpect(jsonPath("$[0].administratorName").value("Bo Berg"));
+    }
+/// The removal log names who was removed and by whom, so a member must not
+/// read it. The rule that keeps members out of '/api/admin**' is the one
+/// 'aMembercanNotusetheAdministratorApi' already proves for the list.
+    @Test
+    void aMembercannotreadTheremovalLog() throws Exception{
+        RequestPostProcessor member = user(new SignedIn(LoginKind.MEMBER, 1, "karin@example.test", "Karin"));
+        mockMvc.perform(get(API + "/removal-Log").with(member)).andExpect(status().isForbidden());
+    }
 /// A removal made from a real login stores the device name of that login,
 /// read from the session of the request.
     @Test
