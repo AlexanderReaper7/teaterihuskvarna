@@ -2,6 +2,7 @@ package se.teaterihuskvarna.administrator;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import se.teaterihuskvarna.login.ActingDevice;
+import java.util.List;
 /// Write the history of administrator removals: one row per removal and per
 /// restore. Names and device are copied into the row, not looked up when the log
 /// is read, becuase `administrator.rectivate()` can change a name and a log must
@@ -33,5 +34,18 @@ public class AdminRemovalLogService{
             .orElseThrow(NoSuchAdministrator::new);
         repository.save(new AdminRemovalLog(
                 subject.getId(), subject.getFullName(), actorId, actor.getFullName(), event, ActingDevice.name()));
+    }
+    /// @return the whole log, newest first
+    @Transactional(readOnly = true)
+    public List<AdminRemovalLogEntry> entries() {
+        return repository.findAllByOrderByOccurredAtDesc().stream()
+                .map(row -> new AdminRemovalLogEntry(
+                    row.getId(),
+                    row.getAdministratorName(),
+                    row.getActorName(),
+                    row.getEvent(),
+                    row.getOccurredAt(),
+                    row.getDevice()))
+    .toList();
     }
 }

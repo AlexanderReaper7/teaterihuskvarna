@@ -63,6 +63,9 @@ class AdministratorIT extends IntegrationTestSupport {
     @Autowired
     private Copy copy;
 
+    @Autowired
+    private AdminRemovalLogService removalLog;
+
     @Test
     void theListShowsActiveAdministratorsOnly() throws Exception {
         insertAdministrator("removed@example.test", "Rut Removed");
@@ -164,7 +167,20 @@ class AdministratorIT extends IntegrationTestSupport {
             .single())
                 .isEqualTo("Bo Berg/Ada Admin/unknown");
     }
-/// Aremoval made from a real login stores the device name of that login,
+/// The log is listed newest first, with the names and the event of each row.
+    @Test
+    void theLogIsListedNewestFirst() throws Exception{
+        long bo = insertAdministrator(BO, "Bo berg");
+        insertAdministrator(CILLA, "Cilla Carlsson");
+
+        mockMvc.perform(removeByApi(bo)).andExpect(status().isNoContent());
+        mockMvc.perform(addByApi(BO,"Bo Berg")).andExpect(status().isCreated());
+
+        assertThat(removalLog.entries())
+                  .extracting(AdminRemovalLogEntry::event)
+                  .containsExactly("Restored", "Removed");
+    }
+/// A removal made from a real login stores the device name of that login,
 /// read from the session of the request.
     @Test
     void aRemovallogRowHoldsTheDeviceOfTheLogin() throws Exception {
