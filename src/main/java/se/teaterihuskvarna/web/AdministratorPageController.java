@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+import se.teaterihuskvarna.administrator.AdminRemovalLogService;
 import se.teaterihuskvarna.administrator.AdministratorAlreadyExists;
 import se.teaterihuskvarna.administrator.AdministratorDetails;
 import se.teaterihuskvarna.administrator.AdministratorService;
@@ -43,10 +44,12 @@ public class AdministratorPageController {
     private final Copy copy;
     private final PasskeySection passkeys;
     private final DeviceSection devices;
+    private final AdminRemovalLogService removalLog;
 
-    AdministratorPageController(AdministratorService administrators, Copy copy, PasskeySection passkeys,
-            DeviceSection devices) {
+    AdministratorPageController(AdministratorService administrators, AdminRemovalLogService removalLog, Copy copy,
+         PasskeySection passkeys, DeviceSection devices) {
         this.administrators = administrators;
+        this.removalLog=removalLog;
         this.copy = copy;
         this.passkeys = passkeys;
         this.devices = devices;
@@ -164,6 +167,7 @@ public class AdministratorPageController {
         passkeys.addTo(model, signedIn, offerPasskey);
         devices.addTo(model, signedIn, session);
         model.addAttribute("administrators", administrators.list());
+        model.addAttribute("removalLog", removalLog.entries());
         model.addAttribute("form", form);
         model.addAttribute("errors", errors);
         if (error != null) {

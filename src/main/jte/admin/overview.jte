@@ -10,11 +10,13 @@
 @import se.teaterihuskvarna.web.CsrfField
 @import se.teaterihuskvarna.web.DeviceUrls
 @import se.teaterihuskvarna.web.FieldErrors
+@import se.teaterihuskvarna.administrator.AdminRemovalLogEntry
 @param String studioUrl = null
 @param Copy copy
 @param CsrfField csrf
 @param SignedIn signedIn
 @param List<AdministratorDetails> administrators
+@param List<AdminRemovalLogEntry> removalLog
 @param NewAdministrator form
 @param FieldErrors errors
 @param String error
@@ -82,7 +84,36 @@
             @endfor
         </tbody>
     </table>
-
+    <details>
+        <summary>${copy.text("admin.log.show")}</summary>
+        @if(removalLog.isEmpty())
+            <p>${copy.text("admin.log.empty")}</p>
+        @else
+        <table>
+            <caption>${copy.text("admin.log.heading")}</caption>
+            <thead>
+                <tr>
+                    <th scope="col">${copy.text("admin.log.time")}</th>
+                    <th scope="col">${copy.text("admin.log.event")}</th>
+                    <th scope="col">${copy.text("admin.log.administrator")}</th>
+                    <th scope="col">${copy.text("admin.log.actor")}</th>
+                    <th scope="col">${copy.text("admin.log.device")}</th>
+                </tr>
+            </thead>
+            <tbody>
+                @for(AdminRemovalLogEntry entry : removalLog)
+                    <tr>
+                        <td>${copy.dateTime(entry.occurredAt())}</td>
+                        <td>${copy.text("admin.log.event." + entry.event())}</td>
+                        <td>${entry.administratorName()}</td>
+                        <td>${entry.actorName()}</td>
+                        <td>${entry.device()}</td>
+                    </tr>
+                @endfor
+            </tbody>
+        </table>
+        @endif
+    </details>
     <h2>${copy.text("admin.add.heading")}</h2>
     @template.tag.errors(copy = copy, errors = errors)
     <form method="post" action="/admin/administratorer">
