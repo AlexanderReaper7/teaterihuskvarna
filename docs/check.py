@@ -63,7 +63,7 @@ PRIORITY = {"M": "MUST", "B": "SHOULD", "K": "COULD"}
 # table wins over the row's own letter. requirements.md says why for each.
 # Keyed by the frozen source's id.
 OVERRIDES = {"V1": "MUST"}
-EXPECTED_TOTALS = {"MUST": 21, "SHOULD": 3, "COULD": 1}
+EXPECTED_TOTALS = {"MUST": 21, "SHOULD": 4, "COULD": 1}
 # The frozen source's ids, and the working copy's, which follow its row order.
 ORIGINAL_ID = re.compile(r"[PRIMVAU]\d")
 REQ_ID = re.compile(r"R\d{3}")
