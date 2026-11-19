@@ -24,10 +24,13 @@ import org.springframework.validation.annotation.Validated;
 /// @param webhookSecret the secret Sanity signs its webhook with, from `SANITY_WEBHOOK_SECRET`
 /// @param maxAge        how long a fetched document list is shown before it is fetched again.
 ///                      R008 allows a minute at most, and the webhook usually clears it sooner
+/// @param retryAfter    how long the next fetch waits after one that failed, while the last copy is
+///                      shown. `application.yaml` says why the default is what it is
 /// @param fixture       the classpath file the `fixture` source reads
 /// @param studioUrl     the Studio's address, such as `https://teaterihuskvarna.sanity.studio`, from
 ///                      `SANITY_STUDIO_URL`. Public pages allow only it to show them in a frame, for
-///                      the Presentation preview. Null or blank allows no other site
+///                      the Presentation preview, and a preview's `data-sanity` attributes name it.
+///                      Null or blank allows no other site and writes no attributes
 @Validated
 @ConfigurationProperties("teaterihuskvarna.content")
 public record ContentSettings(
@@ -37,8 +40,14 @@ public record ContentSettings(
         @Nullable String token,
         @Nullable String webhookSecret,
         @NotNull @DurationMin(seconds = 1) @DurationMax(seconds = 60) Duration maxAge,
+        @NotNull @DurationMin(seconds = 1) @DurationMax(seconds = 60) Duration retryAfter,
         @Nullable String fixture,
         @Nullable @Pattern(regexp = "(https?://[^/?#\\s]+(?:/[^?#\\s]*)?)?") String studioUrl) {
+
+    /// @return the editor's address for a link to it, or null when none is configured
+    public @Nullable String studioLink() {
+        return studioUrl == null || studioUrl.isBlank() ? null : studioUrl;
+    }
 
     /// @return the editor's origin for frame permissions, without its path, or null
     public @Nullable String studioOrigin() {

@@ -5,5 +5,5 @@ package se.teaterihuskvarna.member;
 /// @param memberId the member's identifier
 /// @param fullName the member's name, for the greeting
 /// @param email    the account's address
-public record Recipient(long memberId, String fullName, String email) {
+public record Recipient(MemberId memberId, String fullName, String email) {
 }

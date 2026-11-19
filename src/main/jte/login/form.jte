@@ -1,9 +1,10 @@
 @import se.teaterihuskvarna.web.Copy
 @import se.teaterihuskvarna.web.CsrfField
 @import se.teaterihuskvarna.web.LoginPage
+@import se.teaterihuskvarna.web.Feedback
 @param Copy copy
 @param CsrfField csrf
-@param boolean stale
+@param Feedback feedback
 @param LoginPage page
 @param boolean failed
 @template.layout(copy = copy, title = copy.text(page.headingKey()), content = @`
@@ -14,9 +15,7 @@
             <a href="${LoginPage.MEMBER.path()}">${copy.text("login.administrator.member")}</a>
         </p>
     @endif
-    @if(stale)
-        <p role="alert">${copy.text("form.stale")}</p>
-    @endif
+    @template.tag.feedback(copy = copy, feedback = feedback)
     @if(failed)
         <p role="alert">${copy.text("login.failed")}</p>
     @endif

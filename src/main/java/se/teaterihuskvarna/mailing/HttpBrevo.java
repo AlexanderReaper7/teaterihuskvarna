@@ -16,17 +16,19 @@ import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
+import se.teaterihuskvarna.member.MemberId;
 import tools.jackson.databind.JsonNode;
 
 /// Brevo's v3 HTTP API, authenticated with the `api-key` header. Every call
-/// follows Brevo's API reference as read on 2026-09-28; none has been made
-/// against a real account.
+/// follows Brevo's API reference as read on 2026-09-28. The checks against a
+/// real account are recorded in issue #60.
 final class HttpBrevo implements Brevo {
 
     /// Every status Brevo's documentation lists for a campaign, each with a
     /// Swedish name in `adminMailings.status.*`. Another one is treated as no
     /// answer, so the log keeps the last known status and the warning names it.
-    private static final Set<String> STATUSES = Set.of("draft", "sent", "archive", "queued", "suspended",
+    /// Package private so `MailingIT` can render each one.
+    static final Set<String> STATUSES = Set.of("draft", "sent", "archive", "queued", "suspended",
             "in_process", "in_review", "cancelling", "cancelled");
 
     /// The contact attributes [Contact] fills, and their Brevo types. PAID_YEAR
@@ -38,6 +40,8 @@ final class HttpBrevo implements Brevo {
     private static final Duration TIMEOUT = Duration.ofSeconds(10);
     private static final int SEGMENT_PAGE = 50;
     private static final int CONTACT_PAGE = 1000;
+    /// Brevo answers 400 to a larger page, measured on 2026-11-06.
+    private static final int CAMPAIGN_PAGE = 100;
 
     private final RestClient client;
     private final BrevoSettings settings;
@@ -105,7 +109,7 @@ final class HttpBrevo implements Brevo {
         JsonNode existing;
         try {
             existing = client.get()
-                    .uri("/contacts/{id}?identifierType=ext_id", contact.memberId())
+                    .uri("/contacts/{id}?identifierType=ext_id", contact.memberId().value())
                     .retrieve()
                     .body(JsonNode.class);
         } catch (HttpClientErrorException.NotFound ignored) {
@@ -116,7 +120,7 @@ final class HttpBrevo implements Brevo {
         if (existing == null) {
             post("/contacts", Map.of(
                     "email", contact.email(),
-                    "ext_id", String.valueOf(contact.memberId()),
+                    "ext_id", String.valueOf(contact.memberId().value()),
                     "attributes", attributes(contact),
                     "listIds", List.of(listId),
                     "updateEnabled", true));
@@ -135,7 +139,7 @@ final class HttpBrevo implements Brevo {
         }
         try {
             client.put()
-                    .uri("/contacts/{id}?identifierType=ext_id", contact.memberId())
+                    .uri("/contacts/{id}?identifierType=ext_id", contact.memberId().value())
                     .contentType(MediaType.APPLICATION_JSON)
                     .body(body)
                     .retrieve()
@@ -147,10 +151,10 @@ final class HttpBrevo implements Brevo {
     }
 
     @Override
-    public void deleteContact(long memberId) {
+    public void deleteContact(MemberId memberId) {
         try {
             client.delete()
-                    .uri("/contacts/{id}?identifierType=ext_id", memberId)
+                    .uri("/contacts/{id}?identifierType=ext_id", memberId.value())
                     .retrieve()
                     .toBodilessEntity();
         } catch (HttpClientErrorException.NotFound ignored) {
@@ -190,7 +194,9 @@ final class HttpBrevo implements Brevo {
 
     /// Reads every contact in the segment, or on the list, a thousand at a
     /// time, Brevo's largest page, and counts them by whether they are on the
-    /// members' list and have not unsubscribed.
+    /// members' list and have not unsubscribed. An account that unsubscribes
+    /// per list names those lists in `listUnsubscribed`, and a contact that
+    /// left the members' list that way is not counted as reached either.
     @Override
     public MailingReach reach(@Nullable Long segmentId) {
         long members = 0;
@@ -215,13 +221,10 @@ final class HttpBrevo implements Brevo {
                 throw new BrevoUnavailable("Brevo listed contacts without a contacts array");
             }
             for (JsonNode contact : page) {
-                boolean onList = false;
-                for (JsonNode id : contact.path("listIds")) {
-                    onList |= id.asLong() == listId;
-                }
-                if (!onList) {
+                if (!names(contact.path("listIds"), listId)) {
                     nonMembers++;
-                } else if (!contact.path("emailBlacklisted").asBoolean(false)) {
+                } else if (!contact.path("emailBlacklisted").asBoolean(false)
+                        && !names(contact.path("listUnsubscribed"), listId)) {
                     members++;
                 }
             }
@@ -244,6 +247,36 @@ final class HttpBrevo implements Brevo {
                 "htmlContent", campaign.html(),
                 "recipients", recipients);
         return id(post("/emailCampaigns", body), "campaign");
+    }
+
+    /// A name is the only mark the application can put on a campaign: an
+    /// account on Brevo's free plan answers a campaign tag with 405. Brevo
+    /// keeps a name exactly as sent, `#`, quotes and å, ä, ö included, and an
+    /// account without campaigns answers with an empty `campaigns`, all
+    /// measured on 2026-11-06. So a missing array is no answer.
+    @Override
+    public List<Long> campaignsNamed(String name) {
+        JsonNode body;
+        try {
+            body = client.get()
+                    .uri("/emailCampaigns?limit={limit}&offset=0&sort=desc&excludeHtmlContent=true", CAMPAIGN_PAGE)
+                    .retrieve()
+                    .body(JsonNode.class);
+        } catch (RestClientException e) {
+            throw new BrevoUnavailable("Brevo did not list its campaigns: " + e.getMessage(), e);
+        }
+        JsonNode page = body == null ? null : body.path("campaigns");
+        if (page == null || !page.isArray()) {
+            throw new BrevoUnavailable("Brevo listed campaigns without a campaigns array");
+        }
+        List<Long> named = new ArrayList<>();
+        for (JsonNode listed : page) {
+            if (listed.path("id").canConvertToLong() && listed.path("name").isString()
+                    && listed.path("name").stringValue().equals(name)) {
+                named.add(listed.path("id").asLong());
+            }
+        }
+        return named;
     }
 
     @Override
@@ -318,6 +351,15 @@ final class HttpBrevo implements Brevo {
         return attributes;
     }
 
+    private static boolean names(JsonNode ids, long id) {
+        for (JsonNode each : ids) {
+            if (each.asLong() == id) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     private static List<Segment> sorted(List<Segment> segments) {
         return segments.stream().sorted((a, b) -> a.name().compareToIgnoreCase(b.name())).toList();
     }
@@ -337,8 +379,11 @@ final class HttpBrevo implements Brevo {
                     .body(body)
                     .retrieve()
                     .body(JsonNode.class);
+        } catch (HttpClientErrorException e) {
+            throw new BrevoRefused("Brevo refused POST " + path + ": " + e.getMessage(), e);
         } catch (RestClientException e) {
-            throw new BrevoUnavailable("Brevo refused POST " + path + ": " + e.getMessage(), e);
+            throw new BrevoUnavailable("Brevo failed POST " + path + ", so whether it acted is unknown: "
+                    + e.getMessage(), e);
         }
     }
 

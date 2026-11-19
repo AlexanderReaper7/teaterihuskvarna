@@ -2,21 +2,15 @@
 @import se.teaterihuskvarna.volunteer.MemberShift
 @import se.teaterihuskvarna.web.Copy
 @import se.teaterihuskvarna.web.CsrfField
+@import se.teaterihuskvarna.web.Feedback
 @param Copy copy
 @param CsrfField csrf
 @param List<MemberShift> shifts
-@param String error
-@param String notice
+@param Feedback feedback
 @template.member.layout(copy = copy, title = copy.text("shifts.heading"), content = @`
     <h1>${copy.text("shifts.heading")}</h1>
-    <p><a href="/medlem">${copy.text("member.toOverview")}</a></p>
     <p>${copy.text("shifts.intro")}</p>
-    @if(error != null)
-        <p role="alert">${error}</p>
-    @endif
-    @if(notice != null)
-        <p role="status">${notice}</p>
-    @endif
+    @template.tag.feedback(copy = copy, feedback = feedback)
     @if(shifts.isEmpty())
         <p>${copy.text("shifts.none")}</p>
     @else
@@ -33,7 +27,7 @@
             </thead>
             <tbody>
                 @for(MemberShift shift : shifts)
-                    <tr>
+                    <tr id="pass-${shift.id()}">
                         <th scope="row"><a href="/evenemang/${shift.eventSlug()}">${shift.eventTitle()}</a></th>
                         <td>${copy.text("shift.task." + shift.task().name())}</td>
                         <td>${copy.text("shifts.between", copy.dateTime(shift.startsAt()), copy.time(shift.endsAt()))}</td>
@@ -42,12 +36,12 @@
                             @if(shift.booked())
                                 <form method="post" action="/medlem/volontar/${shift.id()}/avboka">
                                     @template.tag.csrf(csrf = csrf)
-                                    <button type="submit" class="button-secondary">${copy.text("shifts.cancel")}</button>
+                                    <button type="submit" class="button-secondary">@template.icon.calendarX() ${copy.text("shifts.cancel")}</button>
                                 </form>
                             @elseif(shift.placesLeft() > 0)
                                 <form method="post" action="/medlem/volontar/${shift.id()}/boka">
                                     @template.tag.csrf(csrf = csrf)
-                                    <button type="submit">${copy.text("shifts.book")}</button>
+                                    <button type="submit">@template.icon.calendarPlus() ${copy.text("shifts.book")}</button>
                                 </form>
                             @else
                                 ${copy.text("shifts.full")}

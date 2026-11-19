@@ -1,5 +1,6 @@
 package se.teaterihuskvarna.login;
 
+import java.time.Instant;
 import org.springframework.stereotype.Component;
 import se.teaterihuskvarna.outbox.Outbox;
 import tools.jackson.databind.json.JsonMapper;
@@ -20,6 +21,14 @@ import tools.jackson.databind.json.JsonMapper;
 /// mail with a link whose token was rolled back would lead to a login that
 /// cannot work, and a mail sent before a commit that then fails is one nobody
 /// can take back. A send that fails is tried again later ([MailDelivery]).
+///
+/// Every mail is one of two kinds, and [#send] makes the caller say which
+/// with a [MailLife]. A mail whose text stays true is retried until it is
+/// sent, which is what the user decided for mail. A mail whose text stops
+/// being true, a link or a code that expires or a day named as tomorrow, is
+/// given that moment and is not sent after it, the exception the user decided
+/// on 2026-11-10. The table of which mail is which is in
+/// `docs/decisions/0026-outbox-and-brevo-contacts.md`.
 @Component
 public class Mailer {
 
@@ -36,7 +45,17 @@ public class Mailer {
     /// @param to      the recipient's address
     /// @param subject the subject line
     /// @param body    the plain text body
-    public void send(Email to, String subject, String body) {
-        outbox.add(MailDelivery.KIND, JSON.writeValueAsString(new MailDelivery.Payload(to.value(), subject, body)));
+    /// @param life    whether the mail is sent however late, or not after a moment
+    public void send(Email to, String subject, String body, MailLife life) {
+        Instant notAfter = life.notAfter();
+        if (notAfter == null) {
+            outbox.add(MailDelivery.KIND, payload(to, subject, body));
+        } else {
+            outbox.add(MailDelivery.KIND, payload(to, subject, body), notAfter);
+        }
+    }
+
+    private static String payload(Email to, String subject, String body) {
+        return JSON.writeValueAsString(new MailDelivery.Payload(to.value(), subject, body));
     }
 }

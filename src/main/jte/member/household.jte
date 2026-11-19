@@ -1,0 +1,60 @@
+@import se.teaterihuskvarna.member.HouseholdDetails
+@import se.teaterihuskvarna.member.HouseholdMember
+@import se.teaterihuskvarna.member.MemberId
+@import se.teaterihuskvarna.member.NewHousehold
+@import se.teaterihuskvarna.web.Copy
+@import se.teaterihuskvarna.web.CsrfField
+@import se.teaterihuskvarna.web.FieldErrors
+@import se.teaterihuskvarna.web.Feedback
+@param Copy copy
+@param CsrfField csrf
+@param HouseholdDetails household
+@param MemberId ownMemberId
+@param NewHousehold form
+@param FieldErrors errors
+@param Feedback feedback
+@template.member.layout(copy = copy, title = copy.text("member.household.manage"), content = @`
+    <h1>${copy.text(household == null ? "household.create" : "member.household.manage")}</h1>
+    @template.tag.feedback(copy = copy, feedback = feedback)
+    @template.tag.errors(copy = copy, errors = errors)
+    @if(household == null || household.ownedBy(ownMemberId))
+    <form method="post" action="${household == null ? "/medlem/hushall" : "/medlem/hushall/namn"}">
+        @template.tag.csrf(csrf = csrf)
+        @template.tag.field(copy = copy, name = "name", label = copy.text("household.name"), type = "text",
+                autocomplete = "off", value = form.name(), error = errors.message("name"), required = true)
+        <button type="submit">@if(household == null)@template.icon.plus()@else@template.icon.save()@endif ${copy.text(household == null ? "household.create.submit" : "member.household.rename")}</button>
+    </form>
+    @else
+        <p>${household.name()}</p>
+    @endif
+    @if(household != null)
+        <h2>${copy.text("member.household.members")}</h2>
+        <p>${copy.text(household.ownerMemberId() == null ? "member.household.adminPermissions" : "member.household.permissions")}</p>
+        <ul>
+            @for(HouseholdMember member : household.members())
+                <li>
+                    ${member.fullName()}
+                    @if(member.id().equals(household.ownerMemberId()))
+                        ${copy.text("household.isOwner")}
+                    @endif
+                    @if(member.hasAccount())
+                        ${copy.text("household.hasAccount")}
+                    @endif
+                    @if(household.ownedBy(ownMemberId))
+                        <a href="/medlem/hushall/medlemmar/${member.id().value()}">@template.icon.pencil() ${copy.text("member.household.edit", member.fullName())}</a>
+                    @endif
+                    @if(household.ownedBy(ownMemberId) || member.id().equals(ownMemberId))
+                    <a href="/medlem/hushall/medlemmar/${member.id().value()}/ta-bort">@if(member.id().equals(ownMemberId))@template.icon.doorOpen()@else@template.icon.trash2()@endif ${copy.text(member.id().equals(ownMemberId)
+                            ? "member.household.leave" : "member.household.remove", member.fullName())}</a>
+                    @endif
+                </li>
+            @endfor
+        </ul>
+        @if(household.ownedBy(ownMemberId))
+            <p><a href="/medlem/hushall/ny">@template.icon.plus() ${copy.text("member.household.add")}</a></p>
+            <p>${copy.text("member.household.invitationNote")}</p>
+        @endif
+    @else
+        <p>${copy.text("member.household.createNote")}</p>
+    @endif
+`)

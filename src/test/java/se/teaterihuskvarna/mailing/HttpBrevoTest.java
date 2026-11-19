@@ -14,6 +14,7 @@ import java.net.URI;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpMethod;
@@ -21,6 +22,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
+import se.teaterihuskvarna.member.MemberId;
 
 /// The requests [HttpBrevo] sends, checked against Brevo's API reference as
 /// read on 2026-09-28. Nothing here reaches a real Brevo account, so a field
@@ -30,6 +32,7 @@ import org.springframework.web.client.RestClient;
 class HttpBrevoTest {
 
     private static final String API = "https://api.brevo.test/v3";
+    private static final MemberId KARIN = new MemberId(42);
 
     private MockRestServiceServer server;
     private HttpBrevo brevo;
@@ -71,9 +74,9 @@ class HttpBrevoTest {
                          "listIds":[7]}""", true))
                 .andRespond(withStatus(HttpStatus.NO_CONTENT));
 
-        brevo.saveContact(new Brevo.Contact(42, "KARIN@example.test", "Karin Holm", 2026,
+        brevo.saveContact(new Brevo.Contact(KARIN, "KARIN@example.test", "Karin Holm", 2026,
                 LocalDate.of(2026, 9, 20), List.of(3L, 5L)));
-        brevo.saveContact(new Brevo.Contact(42, "karin@example.test", "Karin Holm", null, null, List.of()));
+        brevo.saveContact(new Brevo.Contact(KARIN, "karin@example.test", "Karin Holm", null, null, List.of()));
         server.verify();
     }
 
@@ -100,8 +103,8 @@ class HttpBrevoTest {
                          "listIds":[7]}""", true))
                 .andRespond(withStatus(HttpStatus.NO_CONTENT));
 
-        brevo.saveContact(new Brevo.Contact(42, "ny@example.test", "Karin Holm", null, null, List.of()));
-        brevo.saveContact(new Brevo.Contact(42, "karin@example.test", "Karin Holm", null, null, List.of()));
+        brevo.saveContact(new Brevo.Contact(KARIN, "ny@example.test", "Karin Holm", null, null, List.of()));
+        brevo.saveContact(new Brevo.Contact(KARIN, "karin@example.test", "Karin Holm", null, null, List.of()));
         server.verify();
     }
 
@@ -120,7 +123,7 @@ class HttpBrevoTest {
                 .andRespond(withStatus(HttpStatus.CREATED).contentType(MediaType.APPLICATION_JSON)
                         .body("{\"id\":5}"));
 
-        brevo.saveContact(new Brevo.Contact(42, "karin@example.test", "Karin Holm", null, null, List.of()));
+        brevo.saveContact(new Brevo.Contact(KARIN, "karin@example.test", "Karin Holm", null, null, List.of()));
         server.verify();
     }
 
@@ -133,8 +136,8 @@ class HttpBrevoTest {
                 .andExpect(method(HttpMethod.DELETE))
                 .andRespond(withStatus(HttpStatus.NOT_FOUND));
 
-        brevo.deleteContact(42);
-        brevo.deleteContact(43);
+        brevo.deleteContact(KARIN);
+        brevo.deleteContact(new MemberId(43));
         server.verify();
     }
 
@@ -188,6 +191,27 @@ class HttpBrevoTest {
         assertThat(brevo.reach(null)).isEqualTo(new MailingReach(1, 0));
     }
 
+    /// The list in the live check on #60, whose only contact had unsubscribed.
+    @Test
+    void aListWhoseOnlyContactUnsubscribedReachesNoOne() {
+        server.expect(requestTo(API + "/contacts?listIds=7&limit=1000&offset=0"))
+                .andRespond(withSuccess("{\"contacts\":[{\"id\":1,\"listIds\":[7],\"emailBlacklisted\":true}]}",
+                        MediaType.APPLICATION_JSON));
+
+        assertThat(brevo.reach(null)).isEqualTo(new MailingReach(0, 0));
+    }
+
+    /// Only an account that unsubscribes per list gives `listUnsubscribed`.
+    @Test
+    void aMemberWhoLeftTheMembersListIsNotReached() {
+        server.expect(requestTo(API + "/contacts?listIds=7&limit=1000&offset=0"))
+                .andRespond(withSuccess("""
+                        {"contacts":[{"id":1,"listIds":[7],"listUnsubscribed":[7]},
+                          {"id":2,"listIds":[7],"listUnsubscribed":[9]}]}""", MediaType.APPLICATION_JSON));
+
+        assertThat(brevo.reach(null)).isEqualTo(new MailingReach(1, 0));
+    }
+
     @Test
     void aDraftGoesToTheListOrToASegmentFromTheSender() {
         server.expect(requestTo(API + "/emailCampaigns"))
@@ -205,9 +229,59 @@ class HttpBrevoTest {
                 .andRespond(withStatus(HttpStatus.CREATED)
                         .contentType(MediaType.APPLICATION_JSON).body("{\"id\":301}"));
 
-        assertThat(brevo.createDraft(new Brevo.Campaign("Utskick", "Höst", "<p>Hej</p>", null))).isEqualTo(300);
-        assertThat(brevo.createDraft(new Brevo.Campaign("Utskick", "Höst", "<p>Hej</p>", 12L))).isEqualTo(301);
+        assertThat(brevo.createDraft(new Brevo.Campaign("Utskick", "Höst", "<p>Hej</p>", null)))
+                .isEqualTo(300);
+        assertThat(brevo.createDraft(new Brevo.Campaign("Utskick", "Höst", "<p>Hej</p>", 12L)))
+                .isEqualTo(301);
         server.verify();
+    }
+
+    @Test
+    void findsTheNewestCampaignsWithExactlyTheName() {
+        server.expect(requestTo(API + "/emailCampaigns?limit=100&offset=0&sort=desc&excludeHtmlContent=true"))
+                .andExpect(method(HttpMethod.GET))
+                .andRespond(withSuccess("""
+                        {"count":4,"campaigns":[{"id":304,"name":"Utskick 2026-11-06 Höst #12"},
+                          {"id":303,"name":"Utskick 2026-11-06 Höst #120"},
+                          {"id":302,"name":"utskick 2026-11-06 höst #12"},
+                          {"id":301,"name":"Utskick 2026-11-06 Höst #12"}]}""", MediaType.APPLICATION_JSON));
+
+        assertThat(brevo.campaignsNamed("Utskick 2026-11-06 Höst #12")).containsExactly(304L, 301L);
+        server.verify();
+    }
+
+    @Test
+    void anAccountWithoutCampaignsHasNoneNamed() {
+        server.expect(requestTo(API + "/emailCampaigns?limit=100&offset=0&sort=desc&excludeHtmlContent=true"))
+                .andRespond(withSuccess("{\"campaigns\":[],\"count\":0}", MediaType.APPLICATION_JSON));
+
+        assertThat(brevo.campaignsNamed("Utskick 2026-11-06 Höst #12")).isEmpty();
+    }
+
+    @Test
+    void campaignsWithoutTheListAreNoAnswer() {
+        for (String body : List.of("{}", "{\"count\":0}", "{\"campaigns\":{\"id\":304}}")) {
+            server.reset();
+            server.expect(requestTo(API + "/emailCampaigns?limit=100&offset=0&sort=desc&excludeHtmlContent=true"))
+                    .andRespond(withSuccess(body, MediaType.APPLICATION_JSON));
+
+            assertThatThrownBy(() -> brevo.campaignsNamed("Utskick")).as(body)
+                    .isInstanceOf(BrevoUnavailable.class);
+        }
+    }
+
+    @Test
+    void aDraftBrevoAnswersWithAnErrorIsRefusedAndOneItFailsOnIsUnknown() {
+        Brevo.Campaign campaign = new Brevo.Campaign("Utskick", "Höst", "<p>Hej</p>", null);
+        server.expect(requestTo(API + "/emailCampaigns"))
+                .andRespond(withBadRequest().contentType(MediaType.APPLICATION_JSON)
+                        .body("{\"code\":\"invalid_parameter\"}"));
+        assertThatThrownBy(() -> brevo.createDraft(campaign)).isInstanceOf(BrevoRefused.class);
+
+        server.reset();
+        server.expect(requestTo(API + "/emailCampaigns")).andRespond(withStatus(HttpStatus.BAD_GATEWAY));
+        assertThatThrownBy(() -> brevo.createDraft(campaign)).isInstanceOf(BrevoUnavailable.class)
+                .isNotInstanceOf(BrevoRefused.class);
     }
 
     @Test
@@ -264,7 +338,7 @@ class HttpBrevoTest {
                         .body("{\"code\":\"duplicate_parameter\"}"));
 
         assertThatThrownBy(() -> brevo.saveContact(
-                new Brevo.Contact(42, "karin@example.test", "Karin Holm", null, null, List.of())))
+                new Brevo.Contact(KARIN, "karin@example.test", "Karin Holm", null, null, List.of())))
                 .isInstanceOf(BrevoUnavailable.class);
     }
 
@@ -289,7 +363,7 @@ class HttpBrevoTest {
         }
     }
 
-    private static BrevoSettings settings(String key, Long folder, Long testList) {
+    private static BrevoSettings settings(String key, @Nullable Long folder, @Nullable Long testList) {
         return new BrevoSettings(BrevoSettings.Api.HTTP, key, URI.create(API), folder, testList,
                 "Teater i Huskvarna", "utskick@example.test");
     }

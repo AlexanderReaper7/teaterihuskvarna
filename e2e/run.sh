@@ -58,8 +58,14 @@ done
 # runs as first.
 cache=teaterihuskvarna-cache
 # The image's tag must match @playwright/test in e2e/package.json, or the
-# browsers it carries are not the ones the library expects.
-playwright=mcr.microsoft.com/playwright:v1.63.0-noble
+# browsers it carries are not the ones the library expects. It is read from
+# there, so a Dependabot update of the library moves the image with it.
+version=$(sed -n 's/.*"@playwright\/test": *"\([0-9.]*\)".*/\1/p' e2e/package.json)
+if [ -z "$version" ]; then
+  echo "no exact @playwright/test version in e2e/package.json" >&2
+  exit 1
+fi
+playwright="mcr.microsoft.com/playwright:v$version-noble"
 docker run --rm -v "$cache":/cache "$playwright" chown "$(id -u):$(id -g)" /cache
 
 docker run --rm --network "container:$(compose ps -q app)" --ipc=host --init \

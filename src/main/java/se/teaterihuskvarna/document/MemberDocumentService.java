@@ -2,13 +2,16 @@ package se.teaterihuskvarna.document;
 
 import jakarta.validation.Valid;
 import java.nio.charset.StandardCharsets;
+import java.time.Clock;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 import org.jspecify.annotations.Nullable;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.validation.annotation.Validated;
+import se.teaterihuskvarna.login.AdministratorId;
 
 /// Annual meeting documents and member letters, R015.
 ///
@@ -30,14 +33,23 @@ public class MemberDocumentService {
     private static final byte[] PDF_HEADER = "%PDF-".getBytes(StandardCharsets.US_ASCII);
 
     private final MemberDocumentRepository documents;
+    private final Clock clock;
 
-    MemberDocumentService(MemberDocumentRepository documents) {
+    MemberDocumentService(MemberDocumentRepository documents, Clock clock) {
         this.documents = documents;
+        this.clock = clock;
     }
 
     /// @return every document without its file, grouped by kind, newest first within a kind
     public List<DocumentSummary> list() {
         return documents.findSummaries();
+    }
+
+    /// @param id the document
+    /// @return the document without its file, for the page that asks before a delete
+    /// @throws NoSuchDocument if no document has the id
+    public DocumentSummary summary(long id) {
+        return documents.findSummary(id).orElseThrow(NoSuchDocument::new);
     }
 
     /// Stores a PDF. The file must start with `%PDF-`; the type the upload
@@ -53,7 +65,7 @@ public class MemberDocumentService {
     /// @throws jakarta.validation.ConstraintViolationException if the form breaks a constraint
     @Transactional
     public DocumentSummary upload(@Valid DocumentForm form, @Nullable String filename, byte @Nullable [] content,
-            long uploadedBy) {
+            AdministratorId uploadedBy) {
         if (content == null || content.length < PDF_HEADER.length
                 || !Arrays.equals(content, 0, PDF_HEADER.length, PDF_HEADER, 0, PDF_HEADER.length)) {
             throw new NotAPdf();
@@ -61,8 +73,10 @@ public class MemberDocumentService {
         if (content.length > MAX_BYTES) {
             throw new FileTooLarge();
         }
-        MemberDocument document = documents.save(new MemberDocument(form.title().strip(), form.kind(),
-                form.publishedOn(), DocumentFilenames.sanitize(filename), content, uploadedBy));
+        MemberDocument document = documents.save(new MemberDocument(form.title().strip(),
+                Objects.requireNonNull(form.kind()),
+                Objects.requireNonNull(form.publishedOn()), DocumentFilenames.sanitize(filename), content, uploadedBy,
+                clock.instant()));
         return new DocumentSummary(document.getId(), document.getTitle(), document.getKind(),
                 document.getFilename(), document.getSizeBytes(), document.getPublishedOn(),
                 document.getUploadedAt());

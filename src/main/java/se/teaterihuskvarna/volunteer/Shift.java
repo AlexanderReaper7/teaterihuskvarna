@@ -9,11 +9,11 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.Instant;
+import org.jspecify.annotations.Nullable;
 
 /// One volunteer shift at one event.
 ///
-/// Column lengths mirror `V9__volunteer_shifts.sql` by hand, because
-/// `ddl-auto: validate` does not compare them:
+/// Column lengths mirror `V9__volunteer_shifts.sql`, which `EntityColumnsIT` checks:
 /// `docs/decisions/0012-jpa-over-a-schema-flyway-owns.md`.
 @Entity
 @Table(name = "volunteer_shift")
@@ -21,7 +21,7 @@ public class Shift {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private @Nullable Long id;
 
     @Column(name = "event_id", nullable = false, length = 100)
     private String eventId;
@@ -67,7 +67,12 @@ public class Shift {
         this.createdAt = now;
     }
 
+    /// @return the ID assigned by Hibernate
+    /// @throws IllegalStateException if this entity has not been persisted
     public Long getId() {
+        if (id == null) {
+            throw new IllegalStateException("Entity has not been persisted");
+        }
         return id;
     }
 

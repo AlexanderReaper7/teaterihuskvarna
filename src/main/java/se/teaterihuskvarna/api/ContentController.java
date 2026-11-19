@@ -1,6 +1,7 @@
 package se.teaterihuskvarna.api;
 
 import jakarta.servlet.http.HttpServletRequest;
+import java.io.IOException;
 import java.util.List;
 import org.jspecify.annotations.Nullable;
 import org.springframework.http.HttpStatus;
@@ -12,13 +13,16 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import se.teaterihuskvarna.content.BoardMember;
 import se.teaterihuskvarna.content.ContentService;
 import se.teaterihuskvarna.content.Event;
+import se.teaterihuskvarna.content.LuddePrize;
 import se.teaterihuskvarna.content.NewsItem;
 import se.teaterihuskvarna.content.Page;
 import se.teaterihuskvarna.content.Partner;
 import se.teaterihuskvarna.content.PreviewPass;
 import se.teaterihuskvarna.content.Previews;
+import se.teaterihuskvarna.content.Production;
 import se.teaterihuskvarna.content.Series;
 
 /// The public content, as the public pages show it, and Sanity's webhook.
@@ -32,6 +36,13 @@ public class ContentController {
 
     /// The header a pass from [#preview] goes in.
     static final String PASS = "Preview-Pass";
+
+    /// The most bytes [#webhook] reads of a body, 64 KB. Sanity sends the whole
+    /// changed document, because the webhook `studio/README.md` describes has
+    /// no projection. The largest of the 57 documents in the `dev` dataset,
+    /// which holds the old site's content, was 6 583 bytes as JSON on
+    /// 2026-11-10, so this leaves room for a text ten times as long.
+    static final int WEBHOOK_BODY_LIMIT = 64 * 1024;
 
     private final ContentService content;
     private final Previews previews;
@@ -114,24 +125,66 @@ public class ContentController {
     }
 
     /// @param pass a pass from [#preview], or none
+    /// @return every production, the latest year first
+    @GetMapping("/api/content/productions")
+    public List<Production> productions(@RequestHeader(name = PASS, required = false) @Nullable String pass) {
+        return content.productions(previews.perspective(pass));
+    }
+
+    /// @param pass a pass from [#preview], or none
+    /// @return the board, in the editors' order
+    @GetMapping("/api/content/board")
+    public List<BoardMember> board(@RequestHeader(name = PASS, required = false) @Nullable String pass) {
+        return content.board(previews.perspective(pass));
+    }
+
+    /// @param pass a pass from [#preview], or none
+    /// @return every Ludde prize, the latest year first
+    @GetMapping("/api/content/ludde-prizes")
+    public List<LuddePrize> luddePrizes(@RequestHeader(name = PASS, required = false) @Nullable String pass) {
+        return content.luddePrizes(previews.perspective(pass));
+    }
+
+    /// @param pass a pass from [#preview], or none
     /// @return every partner, by name
     @GetMapping("/api/content/partners")
     public List<Partner> partners(@RequestHeader(name = PASS, required = false) @Nullable String pass) {
         return content.partners(previews.perspective(pass));
     }
 
+    /// @return the same published public paths as the XML sitemap
+    @GetMapping("/api/content/public-paths")
+    public List<String> publicPaths() {
+        return content.publicPaths();
+    }
+
     /// Sanity calls this when a document is published, changed or unpublished,
     /// with a body it signs: R008. Configured in Sanity's project settings,
     /// as `docs/decisions/0021-content-from-sanity.md` describes.
     ///
+    ///
+    /// Anyone can call this, and the signature can only be checked once the
+    /// whole body is in memory, so the body is read here and not by Spring,
+    /// which would take any length. A body over [#WEBHOOK_BODY_LIMIT] is
+    /// refused: by its `Content-Length` before any of it is read, and without
+    /// one, as in a chunked request, after one byte more than the limit.
+    ///
     /// @param signature the `sanity-webhook-signature` header
-    /// @param body      the body as sent, which the signature covers
-    /// @return 204, or 401 if the signature does not match
+    /// @param request   supplies the body as sent, which the signature covers
+    /// @return 204, 401 if the signature does not match, or 413 for a body over the limit
+    /// @throws IOException if the body cannot be read
     @PostMapping("/api/sanity/webhook")
     public ResponseEntity<Void> webhook(
             @RequestHeader(name = "sanity-webhook-signature", required = false) @Nullable String signature,
-            @RequestBody(required = false) byte @Nullable [] body) {
-        content.published(signature, body == null ? new byte[0] : body);
+            HttpServletRequest request) throws IOException {
+        if (request.getContentLengthLong() > WEBHOOK_BODY_LIMIT) {
+            return ResponseEntity.status(HttpStatus.CONTENT_TOO_LARGE).build();
+        }
+        byte[] body = request.getInputStream().readNBytes(WEBHOOK_BODY_LIMIT + 1);
+        if (body.length > WEBHOOK_BODY_LIMIT) {
+            return ResponseEntity.status(HttpStatus.CONTENT_TOO_LARGE).build();
+        }
+        content.published(signature, body);
         return ResponseEntity.noContent().build();
     }
 }

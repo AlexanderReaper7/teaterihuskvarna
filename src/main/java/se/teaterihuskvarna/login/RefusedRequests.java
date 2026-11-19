@@ -4,6 +4,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.util.Objects;
 import org.jspecify.annotations.Nullable;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -26,7 +27,7 @@ import org.springframework.web.util.UriComponentsBuilder;
 /// it again. That happens when the browser restarted, or the session timed out,
 /// while the page stayed open. The page is the `Referer`, taken only when it
 /// names this host and a path on it; without one the chain's login page stands
-/// in. `se.teaterihuskvarna.web.PageModel` reads the same parameter name.
+/// in. `se.teaterihuskvarna.web.Feedback` reads the same parameter name.
 ///
 /// A file upload over the size limit, which [OversizeUploadFilter] stops,
 /// goes back to its page with `forstor` added to the query, so the page can
@@ -89,7 +90,8 @@ final class RefusedRequests implements AccessDeniedHandler {
         UriComponents page = sameHostPage(request);
         UriComponentsBuilder target = page == null
                 ? UriComponentsBuilder.fromPath(urls.page())
-                : UriComponentsBuilder.fromPath(page.getPath()).query(page.getQuery());
+                : UriComponentsBuilder.fromPath(Objects.requireNonNull(page.getPath()))
+                        .query(Objects.requireNonNullElse(page.getQuery(), ""));
         return target.replaceQueryParam(STALE).replaceQueryParam(TOO_LARGE).queryParam(flag).build().toUriString();
     }
 

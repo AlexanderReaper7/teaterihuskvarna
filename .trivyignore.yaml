@@ -1,0 +1,14 @@
+# Findings the image scan accepts: .github/workflows/image-scan.yml.
+#
+# Every entry needs a statement saying why the finding cannot reach this
+# application or why it has to wait, and an expired_at no more than three
+# months out. After that date Trivy stops ignoring it and the check fails
+# again, so an exception is looked at again instead of staying forever.
+# Prefer a fix: most findings go away by raising the FROM tags in Dockerfile or
+# a version in pom.xml.
+#
+# vulnerabilities:
+#   - id: CVE-2026-00000
+#     statement: Only reachable through XML parsing, and nothing here parses XML.
+#     expired_at: 2027-01-31
+vulnerabilities: []

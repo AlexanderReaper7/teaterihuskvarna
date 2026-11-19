@@ -1,11 +1,13 @@
 package se.teaterihuskvarna.login;
 
+import java.time.Clock;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.List;
 import org.springframework.boot.servlet.autoconfigure.MultipartProperties;
 import org.springframework.boot.session.autoconfigure.DefaultCookieSerializerCustomizer;
 import org.springframework.context.MessageSource;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
@@ -77,6 +79,7 @@ class SecurityConfiguration {
     private final UserCredentialRepository passkeys;
     private final DeviceNames devices;
     private final ContentSettings content;
+    private final ObjectProvider<DevelopmentLogin> development;
 
     /// The public pages with content from Sanity, which anyone may read and the
     /// Studio may show in its Presentation preview (R009). `/forhandsgranska`
@@ -84,6 +87,8 @@ class SecurityConfiguration {
     private static final String[] CONTENT_PAGES = {
         "/",
         "/kalender",
+        "/sitemap.xml",
+        "/robots.txt",
         "/evenemang/**",
         "/nyheter",
         "/nyheter/**",
@@ -96,14 +101,32 @@ class SecurityConfiguration {
         "/forhandsgranska/**",
     };
 
+    /// The mail in a mailing's preview (R023), which
+    /// `AdministratorMailingPageController` serves for the frame on the preview
+    /// page.
+    private static final String PREVIEWED_MAIL = "/admin/utskick/forhandsgranska/*";
+
+    /// What the previewed mail may do, which is show itself. `sandbox` with no
+    /// allowance gives the document an origin of its own and no script. The
+    /// frame's `sandbox` attribute does the same, but only inside the frame,
+    /// and this also holds when the address is opened in a tab. The mail
+    /// carries its styles inline and its pictures by `https` address, so those
+    /// two load and nothing else does. `frame-ancestors 'self'` lets this
+    /// site's pages frame it and no other site's.
+    private static final String PREVIEWED_MAIL_POLICY = "sandbox; default-src 'none'; img-src https:; "
+            + "style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'; frame-ancestors 'self'";
+
     /// The largest upload request, from `spring.servlet.multipart.max-request-size`.
     private final long largestRequest;
+    private final Clock clock;
 
     SecurityConfiguration(LoginLinks links, LinkRequestLimiter limiter, JdbcClient jdbc, LoginSettings settings,
             List<LoginDirectory> directories, WebAuthnRelyingPartyOperations relyingParty,
             UserCredentialRepository passkeys, MessageSource messages, ContentSettings content,
-            MultipartProperties multipart) {
+            MultipartProperties multipart, ObjectProvider<DevelopmentLogin> development, Clock clock) {
+        this.clock = clock;
         this.content = content;
+        this.development = development;
         this.largestRequest = multipart.getMaxRequestSize().toBytes();
         this.links = links;
         this.limiter = limiter;
@@ -126,6 +149,7 @@ class SecurityConfiguration {
                 .requestMatchers(urls.page(), urls.page() + "/**").permitAll()
                 .anyRequest().hasRole("ADMINISTRATOR"));
         login(http, LoginKind.ADMINISTRATOR, settings.administratorSession());
+        previewedMail(http);
         http.addFilterBefore(new ActiveLoginFilter(Directories.of(LoginKind.ADMINISTRATOR, directories)),
                 AuthorizationFilter.class);
         return http.build();
@@ -154,6 +178,7 @@ class SecurityConfiguration {
                         // Only the dev profile maps anything here; elsewhere
                         // these paths answer 404.
                         "/dev",
+                        "/dev/login",
                         "/api/development/**",
                         "/error").permitAll()
                 // The stylesheet, fonts, logo, favicon and scripts under
@@ -165,6 +190,7 @@ class SecurityConfiguration {
                 .requestMatchers("/medlem", "/medlem/**", "/api/member", "/api/member/**").hasRole("MEMBER")
                 .anyRequest().access(UnknownPaths.denied()));
         login(http, LoginKind.MEMBER, settings.memberSession());
+        development.ifAvailable(configurer -> http.with(configurer, Customizer.withDefaults()));
         // Sanity signs the webhook instead, and cannot fetch a CSRF token first.
         http.csrf(csrf -> csrf.ignoringRequestMatchers(
                 PathPatternRequestMatcher.withDefaults().matcher(HttpMethod.POST, "/api/sanity/webhook")));
@@ -176,9 +202,9 @@ class SecurityConfiguration {
         return http.build();
     }
 
-    /// No page may be shown in a frame, except that the Studio may show a
-    /// content page in its Presentation preview. Spring's `X-Frame-Options:
-    /// DENY` cannot name another site, so a content page gets
+    /// No page of the member chain may be shown in a frame, except that the
+    /// Studio may show a content page in its Presentation preview. Spring's
+    /// `X-Frame-Options: DENY` cannot name another site, so a content page gets
     /// `Content-Security-Policy: frame-ancestors` instead, which browsers obey
     /// in its place. Without a configured Studio, the content pages allow only
     /// this site itself.
@@ -193,6 +219,24 @@ class SecurityConfiguration {
                 .addHeaderWriter(new DelegatingRequestMatcherHeaderWriter(contentPage,
                         new StaticHeadersWriter("Content-Security-Policy", "frame-ancestors " + ancestors)))
                 .addHeaderWriter(new DelegatingRequestMatcherHeaderWriter(new NegatedRequestMatcher(contentPage),
+                        new XFrameOptionsHeaderWriter(XFrameOptionsHeaderWriter.XFrameOptionsMode.DENY))));
+    }
+
+    /// No administrator page may be shown in a frame, except that the mailing
+    /// preview shows the previewed mail in one. That response gets
+    /// `X-Frame-Options: SAMEORIGIN` and [#PREVIEWED_MAIL_POLICY], and every
+    /// other one keeps Spring's `DENY`. `X-Content-Type-Options: nosniff` and
+    /// `Cache-Control: no-store` are Spring's defaults on every response of the
+    /// chain, the mail included.
+    private static void previewedMail(HttpSecurity http) {
+        RequestMatcher mail = PathPatternRequestMatcher.withDefaults().matcher(HttpMethod.GET, PREVIEWED_MAIL);
+        http.headers(headers -> headers
+                .frameOptions(options -> options.disable())
+                .addHeaderWriter(new DelegatingRequestMatcherHeaderWriter(mail,
+                        new StaticHeadersWriter("Content-Security-Policy", PREVIEWED_MAIL_POLICY)))
+                .addHeaderWriter(new DelegatingRequestMatcherHeaderWriter(mail,
+                        new XFrameOptionsHeaderWriter(XFrameOptionsHeaderWriter.XFrameOptionsMode.SAMEORIGIN)))
+                .addHeaderWriter(new DelegatingRequestMatcherHeaderWriter(new NegatedRequestMatcher(mail),
                         new XFrameOptionsHeaderWriter(XFrameOptionsHeaderWriter.XFrameOptionsMode.DENY))));
     }
 
@@ -252,12 +296,23 @@ class SecurityConfiguration {
                 """);
     }
 
+    /// Where a membership application is posted, by the page and by the REST
+    /// adapter. It sets the member login cookie, so that confirming it can log
+    /// the new member in from the welcome page: `docs/decisions/0015`, "Logging
+    /// in from the welcome page".
+    private static List<String> applications(LoginKind kind) {
+        return switch (kind) {
+            case MEMBER -> List.of("/bli-medlem", "/api/membership-applications");
+            case ADMINISTRATOR -> List.of();
+        };
+    }
+
     /// The one-time-token login, passkeys, the rate limit, the end of a login,
     /// logout, the entry point, the refusals and the session at login, all of
     /// which differ between the two chains only by kind.
     private void login(HttpSecurity http, LoginKind kind, Duration sessionLifetime) {
         LoginUrls urls = LoginUrls.of(kind);
-        HashedTokenService tokens = new HashedTokenService(kind, links, jdbc);
+        HashedTokenService tokens = new HashedTokenService(kind, links, jdbc, clock);
         LoginDirectory directory = Directories.of(kind, directories);
         DirectoryUserDetails users = new DirectoryUserDetails(directory);
         http.oneTimeTokenLogin(login -> login
@@ -272,13 +327,15 @@ class SecurityConfiguration {
                 .generateRequestResolver(emailField(settings.linkLifetime()))
                 .tokenGenerationSuccessHandler(new RedirectOneTimeTokenGenerationSuccessHandler(urls.sent()))
                 .authenticationConverter(BoundLogin::from)
-                .authenticationSuccessHandler(LoginSuccessHandler.byLink(sessionLifetime, devices, urls.success()))
+                .authenticationSuccessHandler(
+                        LoginSuccessHandler.byLink(clock, sessionLifetime, devices, urls.success()))
                 .authenticationFailureHandler(failure(urls)));
-        http.with(new PasskeyLogin(kind, relyingParty, passkeys, directory, sessionLifetime, devices),
+        http.with(new PasskeyLogin(kind, relyingParty, passkeys, directory, sessionLifetime, devices, clock),
                 Customizer.withDefaults());
-        http.addFilterBefore(new LoginExpiryFilter(), AuthorizationFilter.class);
+        http.addFilterBefore(new LoginExpiryFilter(clock), AuthorizationFilter.class);
         http.addFilterBefore(new LinkRequestLimitFilter(limiter, urls), GenerateOneTimeTokenFilter.class);
-        http.addFilterBefore(new LoginBrowserFilter(urls, settings.linkLifetime()), LinkRequestLimitFilter.class);
+        http.addFilterBefore(new LoginBrowserFilter(urls, settings.linkLifetime(), applications(kind)),
+                LinkRequestLimitFilter.class);
         http.logout(logout -> logout
                 .logoutUrl(urls.logout())
                 .logoutSuccessUrl(urls.loggedOut()));

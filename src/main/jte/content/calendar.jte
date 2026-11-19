@@ -1,14 +1,18 @@
 @import java.util.List
+@import se.teaterihuskvarna.content.EditAttributes
 @import se.teaterihuskvarna.content.Event
 @import se.teaterihuskvarna.content.Perspective
 @import se.teaterihuskvarna.content.Series
 @import se.teaterihuskvarna.web.Copy
+@import se.teaterihuskvarna.web.PageMetadata
 @param Copy copy
+@param PageMetadata metadata
 @param Perspective perspective
+@param EditAttributes edit
 @param List<Event> events
 @param List<Series> series
 @param String chosen
-@template.layout(copy = copy, title = copy.text("calendar.title"), preview = perspective == Perspective.DRAFTS, content = @`
+@template.layout(metadata = metadata, copy = copy, title = copy.text("calendar.title"), preview = perspective == Perspective.DRAFTS, content = @`
     <h1>${copy.text("calendar.title")}</h1>
     @if(!series.isEmpty())
         <form method="get" action="/kalender" class="filter">
@@ -27,7 +31,7 @@
     @else
         <div class="cards">
         @for(Event event : events)
-            @template.tag.eventCard(copy = copy, event = event, level = 2)
+            @template.tag.eventCard(copy = copy, event = event, edit = edit, level = 2)
         @endfor
         </div>
     @endif

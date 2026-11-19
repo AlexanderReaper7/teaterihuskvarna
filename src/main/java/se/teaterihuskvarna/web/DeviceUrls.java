@@ -3,8 +3,9 @@ package se.teaterihuskvarna.web;
 import se.teaterihuskvarna.login.LoginKind;
 import se.teaterihuskvarna.login.LoginUrls;
 
-/// The paths the devices section and the login's countdown use on `/medlem`
-/// and `/admin`. The forms post to the page controllers. The countdown's script
+/// The paths the devices section uses on `/medlem` and `/admin`, and the
+/// login's countdown on every logged-in page ([LoginCountdown]). The forms
+/// post to the page controllers. The countdown's script
 /// asks the REST API, since it wants JSON and the API already answers for the
 /// same session and the same service methods (`se.teaterihuskvarna.api.DevicesController`).
 ///

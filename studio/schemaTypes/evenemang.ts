@@ -1,4 +1,5 @@
 import {defineField, defineType} from 'sanity'
+import {swedishSlug} from '../slug'
 import {imageField} from './image'
 
 /** An event: the start page (R001), the calendar (R002) and /evenemang/<adress>. */
@@ -13,7 +14,7 @@ export default defineType({
       title: 'Adress',
       description: 'Sidans adress, /evenemang/<adress>.',
       type: 'slug',
-      options: {source: 'title', maxLength: 96},
+      options: {source: 'title', maxLength: 96, slugify: (input: string) => swedishSlug(input)},
       validation: (rule) => rule.required(),
     }),
     defineField({
@@ -59,7 +60,7 @@ export default defineType({
     select: {title: 'title', datumTid: 'datumTid', media: 'huvudbild'},
     prepare: ({title, datumTid, media}) => ({
       title,
-      subtitle: datumTid ? new Date(datumTid).toLocaleString('sv-SE') : '',
+      subtitle: datumTid ? new Date(datumTid).toLocaleString('sv-SE', {dateStyle: 'short', timeStyle: 'short'}) : '',
       media,
     }),
   },

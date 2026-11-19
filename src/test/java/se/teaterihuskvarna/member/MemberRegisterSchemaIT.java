@@ -3,8 +3,10 @@ package se.teaterihuskvarna.member;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import se.teaterihuskvarna.IntegrationTestSupport;
@@ -29,7 +31,8 @@ class MemberRegisterSchemaIT extends IntegrationTestSupport {
 
     @Test
     void migrationsCreateEveryTable() {
-        List<String> tables = jdbc.sql("SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'")
+        List<@Nullable String> tables = jdbc.sql(
+                "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'")
                 .query(String.class)
                 .list();
 
@@ -48,7 +51,7 @@ class MemberRegisterSchemaIT extends IntegrationTestSupport {
 
     @Test
     void aMemberSurvivesARoundTripThroughJpa() {
-        Member saved = members.save(new Member("Karin Karlsson"));
+        Member saved = members.save(new Member("Karin Karlsson", Instant.now()));
 
         Optional<Member> found = members.findById(saved.getId());
 

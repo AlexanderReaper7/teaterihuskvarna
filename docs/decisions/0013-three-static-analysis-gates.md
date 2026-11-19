@@ -10,7 +10,9 @@ description: Which static analysis fails the build, and how Java doc comments ar
 
 Checkstyle, SpotBugs and PMD run on every build and all three fail it. Checkstyle runs at `validate`, before anything compiles, so `docker build` runs it too. SpotBugs and PMD need bytecode and run at `verify`, after the tests, which puts them outside the image build. `./mvnw verify` is the command that runs all three; that is what CI runs.
 
-Doc comments are `///` Markdown (JEP 467), never `/** */`. Checkstyle enforces the style. Nothing enforces the contents, and the reason is below.
+Nullability additionally fails compilation under [0027](0027-compile-time-nullability.md), decided by the user on 2026-10-01.
+
+Doc comments are `///` Markdown (JEP 467), never `/** */`. Checkstyle enforces the style. [`DocCommentsTest`](../../src/test/java/se/teaterihuskvarna/architecture/DocCommentsTest.java) checks the `@param` and `@return` tags of a comment that exists. Nothing requires a comment, and the reason is below.
 
 ## Where this came from
 
@@ -18,11 +20,11 @@ Doc comments are `///` Markdown (JEP 467), never `/** */`. Checkstyle enforces t
 
 Its own argument for doing this early applies harder here. Eight Java files is the smallest this codebase will ever be. The member register alone adds fees, offers, registrations, volunteer bookings and login tokens; retrofitting a ruleset across those later is a day of work instead of the hour it took now.
 
-Versions were resolved from Maven Central on 2026-09-22 rather than copied: `maven-checkstyle-plugin` 3.6.0 with Checkstyle 14.1.0, `spotbugs-maven-plugin` 4.10.4.1, `maven-pmd-plugin` 3.28.0 with PMD pinned to 7.27.0.
+Versions were resolved from Maven Central rather than copied from the reference project, and [`pom.xml`](../../pom.xml) holds them.
 
 ## PMD is pinned ahead of the plugin
 
-`maven-pmd-plugin` 3.28.0 bundles PMD 7.17, which cannot read Java 25 class files. The failure is quiet: PMD resolves types from the compiled classes on the auxclasspath, every lookup fails down to `java/lang/Object`, syntactic rules still fire, and the build looks healthy while every type-aware rule checks nothing. `pmd-core` and `pmd-java` are pinned to 7.27.0 in the plugin's own `<dependencies>`, and `pmd.target.jdk` is tied to `java.version` so a Java upgrade cannot leave PMD behind.
+`maven-pmd-plugin` 3.28.0 bundles PMD 7.17, which cannot read Java 25 class files. The failure is quiet: PMD resolves types from the compiled classes on the auxclasspath, every lookup fails down to `java/lang/Object`, syntactic rules still fire, and the build looks healthy while every type-aware rule checks nothing. `pmd-core` and `pmd-java` are pinned to a newer PMD in the plugin's own `<dependencies>`, and `pmd.target.jdk` is tied to `java.version` so a Java upgrade cannot leave PMD behind.
 
 The two pins must move together. This is the other project's [0014](https://github.com/AlexanderReaper7/Lexicon-flight-reservation/blob/main/docs/decisions/0014-pin-pmd-ahead-of-the-plugin.md), carried over before it could cost a second debugging session.
 
@@ -30,7 +32,7 @@ The two pins must move together. This is the other project's [0014](https://gith
 
 This is the one place the port does not work, and it is the reason this record exists rather than a commit message.
 
-The reference ruleset keeps `JavadocMethod` with `allowMissingParamTags=false` and calls it the expensive half, kept on purpose. Checkstyle 14.1.0 has no Markdown Javadoc parser. It reads a `///` comment as an ordinary comment and validates nothing inside it.
+The reference ruleset keeps `JavadocMethod` with `allowMissingParamTags=false` and calls it the expensive half, kept on purpose. Checkstyle has no Markdown Javadoc parser, measured on 14.1.0 and again on 14.3.0 on 2026-10-31, where `JavadocMethod` with `allowMissingParamTags=false` reported two errors on a method documented with `/** */` and none on the same method documented with `///`. It reads a `///` comment as an ordinary comment and validates nothing inside it.
 
 Measured on 2026-09-22, same constructor, same missing tag, same ruleset:
 
@@ -46,7 +48,7 @@ public Household(String name)
 
 Both are removed. A rule that reports success while checking nothing is worse than no rule, because the green result gets taken as evidence. The same conclusion PMD's version pin is about.
 
-What replaces them is narrower and honest: a `RegexpSingleline` that rejects `/** */`, so the comment style itself is a gate. `@param` and `@return` discipline is now convention, checked at review, not by the build.
+What replaces them is narrower and honest: a `RegexpSingleline` that rejects `/** */`, so the comment style itself is a gate. `@param` and `@return` were a convention checked at review from then until 2026-11-10, when a test took that over, as the last part of this section says.
 
 **This finding applies to the reference project too.** Its `JavadocMethod` rule has been inert since its sources moved to `///`, and its 0010 still describes it as the expensive half being kept. Worth telling that repository.
 
@@ -57,6 +59,16 @@ What replaces them is narrower and honest: a `RegexpSingleline` that rejects `/*
 It is not used because doclint puts "this method has no comment" and "this comment omits a `@param`" in the same `missing` group, with no way to take the second without the first. Against the current sources that is 45 warnings, mostly `no comment` on entity getters and `no main description` on comments that are only a `@param` line. That is a stricter regime than the reference project has, and adopting it by accident while trying to match that project is the wrong way to arrive at it.
 
 Reopening this means turning on `-Xdoclint:all -Werror` in `maven-compiler-plugin` and documenting every public member. The measurement above is what to weigh it against.
+
+### What checks the tags instead
+
+Written by an agent on 2026-11-10, after the user asked that the code make the right thing easy and the wrong thing hard, and called instruction files a crutch.
+
+[`DocCommentsTest`](../../src/test/java/se/teaterihuskvarna/architecture/DocCommentsTest.java) parses every file under [`src/main/java`](../../src/main/java) with the JDK's own parser, `com.sun.source.util.DocTrees`, which reads a `///` comment as `javadoc` does. For a public method, a public constructor, a method of an interface and a record that has a comment, it fails when a parameter or a component has no `@param`, when a `@param` names nothing that exists, when a method that returns a value has no `@return`, and when one that returns nothing has one. A member without a comment passes, which is the half of doclint's `missing` group this project declined above.
+
+Two kinds of member are left out, because their tags live elsewhere. A method marked `@Override` takes them from the method it overrides. A record's canonical constructor takes them from the record's comment.
+
+Measured on 2026-11-10: the first run, without the two exceptions, reported 41 findings, 35 missing `@param` and 6 missing `@return`. All 41 were on canonical constructors and on methods marked `@Override`. With the exceptions the sources had none, so the convention had held while only review kept it.
 
 ## The one SpotBugs exclusion
 

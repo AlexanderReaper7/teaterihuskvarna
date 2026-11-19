@@ -2,15 +2,18 @@
 @import se.teaterihuskvarna.mailing.MailingReach
 @import se.teaterihuskvarna.web.Copy
 @import se.teaterihuskvarna.web.CsrfField
+@import se.teaterihuskvarna.web.Feedback
 @param Copy copy
 @param CsrfField csrf
 @param MailingForm form
-@param String html
+@param String mailKey
 @param String audienceName
 @param MailingReach reach
+@param Feedback feedback
 @template.admin.layout(copy = copy, title = copy.text("adminMailings.preview.heading"), content = @`
     <h1>${copy.text("adminMailings.preview.heading")}</h1>
     <p><a href="/admin/utskick">${copy.text("adminMailings.back")}</a></p>
+    @template.tag.feedback(copy = copy, feedback = feedback)
     <dl>
         <dt>${copy.text("adminMailings.form.audience")}</dt>
         <dd>${audienceName}</dd>
@@ -21,10 +24,12 @@
     </dl>
     @if(reach != null && reach.nonMembers() > 0)
         <p role="alert">${copy.text("adminMailings.error.nonMembers", reach.nonMembers())}</p>
+    @elseif(reach != null && reach.members() == 0)
+        <p role="alert">${copy.text("adminMailings.error.noRecipients")}</p>
     @endif
     <p>${copy.text("adminMailings.preview.unsubscribe")}</p>
-    <iframe title="${copy.text("adminMailings.preview.frame")}" sandbox srcdoc="${html}"
-            style="width:100%;height:70vh;border:1px solid currentColor;background:#fff;"></iframe>
+    <iframe class="mail-preview" title="${copy.text("adminMailings.preview.frame")}" sandbox
+            src="/admin/utskick/forhandsgranska/${mailKey}"></iframe>
     <p>${copy.text("adminMailings.preview.next")}</p>
     <form method="post">
         @template.tag.csrf(csrf = csrf)
@@ -37,9 +42,11 @@
         @for(String slug : form.newsSlugs())
             <input type="hidden" name="news" value="${slug}">
         @endfor
-        @if(reach == null || reach.nonMembers() == 0)
-            <button type="submit" formaction="/admin/utskick">${copy.text("adminMailings.preview.prepare")}</button>
-        @endif
-        <button type="submit" formaction="/admin/utskick/andra" class="button-secondary">${copy.text("adminMailings.preview.change")}</button>
+        <div class="buttons">
+            @if(reach == null || (reach.nonMembers() == 0 && reach.members() > 0))
+                <button type="submit" formaction="/admin/utskick">@template.icon.plus() ${copy.text("adminMailings.preview.prepare")}</button>
+            @endif
+            <button type="submit" formaction="/admin/utskick/andra" class="button-secondary">@template.icon.pencil() ${copy.text("adminMailings.preview.change")}</button>
+        </div>
     </form>
 `)

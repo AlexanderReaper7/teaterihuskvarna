@@ -1,6 +1,7 @@
 package se.teaterihuskvarna.member;
 
 import jakarta.validation.Valid;
+import java.time.Clock;
 import java.time.Instant;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -10,7 +11,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import org.jspecify.annotations.Nullable;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.MessageSource;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Limit;
@@ -19,8 +19,8 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.validation.annotation.Validated;
 import se.teaterihuskvarna.Swedish;
 import se.teaterihuskvarna.export.Csv;
+import se.teaterihuskvarna.login.AccountId;
 import se.teaterihuskvarna.login.Email;
-import se.teaterihuskvarna.login.LoginKind;
 import se.teaterihuskvarna.login.PasskeyService;
 import se.teaterihuskvarna.login.Sessions;
 
@@ -56,7 +56,7 @@ public class MemberService {
     private final PasskeyService passkeys;
     private final Sessions sessions;
     private final MessageSource messages;
-    private final ApplicationEventPublisher events;
+    private final Clock clock;
 
     MemberService(
             MemberRepository members,
@@ -67,7 +67,7 @@ public class MemberService {
             PasskeyService passkeys,
             Sessions sessions,
             MessageSource messages,
-            ApplicationEventPublisher events) {
+            Clock clock) {
         this.members = members;
         this.accounts = accounts;
         this.households = households;
@@ -76,7 +76,7 @@ public class MemberService {
         this.passkeys = passkeys;
         this.sessions = sessions;
         this.messages = messages;
-        this.events = events;
+        this.clock = clock;
     }
 
     /// Looks up the member a logged-in account belongs to. The id comes from
@@ -85,8 +85,8 @@ public class MemberService {
     ///
     /// @param accountId the logged-in account's id
     /// @return the member that account belongs to, or empty if the account is gone
-    public Optional<MemberDetails> findByAccount(long accountId) {
-        return accounts.findById(accountId).map(account -> details(account.getMember(), account));
+    public Optional<MemberDetails> findByAccount(AccountId accountId) {
+        return accounts.findById(accountId.value()).map(account -> details(account.getMember(), account));
     }
 
     /// A member changes their own name, phone and postal address (R012). The
@@ -99,35 +99,48 @@ public class MemberService {
     /// @throws jakarta.validation.ConstraintViolationException if the form breaks a constraint
     /// @throws NoSuchMember if the account is gone
     @Transactional
-    public MemberDetails updateContact(long accountId, @Valid ContactForm form) {
-        Account account = accounts.findById(accountId).orElseThrow(NoSuchMember::new);
+    public MemberDetails updateContact(AccountId accountId, @Valid ContactForm form) {
+        Account account = accounts.findById(accountId.value()).orElseThrow(NoSuchMember::new);
         Member member = account.getMember();
         member.setFullName(form.fullName().strip());
         member.setContact(form.contact());
-        events.publishEvent(new MemberChanged(member.getId()));
         return details(member, account);
     }
 
     /// Searches the register by name, account address, phone and city, as a
-    /// case insensitive substring of any of them. A blank query lists everyone.
+    /// case insensitive substring of any of them, and keeps the members whose
+    /// fee this year the filter admits. A blank query lists everyone.
+    ///
+    /// The fee status is computed, not stored, so a filtered search reads every
+    /// match before it counts to [#SEARCH_LIMIT].
     ///
     /// @param query what the administrator typed, or null
+    /// @param fee   which members to keep, by this year's fee
     /// @return the first [#SEARCH_LIMIT] matches by name, and whether there were more
-    public MemberList search(@Nullable String query) {
+    public MemberList search(@Nullable String query, FeeFilter fee) {
         String typed = query == null ? "" : query.strip().toLowerCase(Swedish.LOCALE);
         String pattern = "%" + typed.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%";
-        List<Member> found = members.search(pattern, Limit.of(SEARCH_LIMIT + 1));
+        Limit limit = fee == FeeFilter.ALL ? Limit.of(SEARCH_LIMIT + 1) : Limit.unlimited();
+        List<MemberDetails> found = detailsOf(members.search(pattern, limit)).stream()
+                .filter(member -> fee.admits(member.fee()))
+                .toList();
         boolean more = found.size() > SEARCH_LIMIT;
-        List<Member> shown = more ? found.subList(0, SEARCH_LIMIT) : found;
-        return new MemberList(detailsOf(shown), more);
+        return new MemberList(more ? found.subList(0, SEARCH_LIMIT) : found, more);
+    }
+
+    /// @return how many members have and have not paid this year's fee
+    public FeeCount feeCount() {
+        List<MemberDetails> all = detailsOf(members.findAll());
+        long paid = all.stream().filter(member -> member.fee().paid()).count();
+        return new FeeCount(ledger.currentYear(), paid, all.size() - paid);
     }
 
     /// @param memberId a member
     /// @return everything an administrator sees about the member
     /// @throws NoSuchMember if there is no such member
-    public MemberFile find(long memberId) {
-        Member member = members.findById(memberId).orElseThrow(NoSuchMember::new);
-        Account account = accounts.findByMember(memberId).orElse(null);
+    public MemberFile find(MemberId memberId) {
+        Member member = members.findById(memberId.value()).orElseThrow(NoSuchMember::new);
+        Account account = accounts.findByMember(memberId.value()).orElse(null);
         List<FeeStatus> fees = ledger.history(member);
         HouseholdDetails household = null;
         Household current = member.getHousehold();
@@ -135,7 +148,7 @@ public class MemberService {
             household = HouseholdService.details(current, members.findByHousehold(current.getId()), accounts,
                     invitations);
         }
-        Instant invitation = invitations.findByMemberIdIn(List.of(memberId)).stream()
+        Instant invitation = invitations.findByMemberIdIn(List.of(memberId.value())).stream()
                 .map(Invitation::getExpiresAt)
                 .findFirst()
                 .orElse(null);
@@ -154,24 +167,25 @@ public class MemberService {
     /// @throws NoSuchHousehold if the chosen household does not exist
     @Transactional
     public MemberDetails add(@Valid MemberForm form) {
-        Member member = new Member(form.fullName().strip());
+        Member member = new Member(form.fullName().strip(), clock.instant());
         member.setContact(form.contact());
-        member.setHousehold(household(form.householdId()));
+        member.startIn(household(form.householdId()));
         members.save(member);
         String email = Blank.toNull(form.email());
         Account account = null;
         if (email != null) {
             refuseTaken(new Email(email), null);
-            account = accounts.save(new Account(member, new Email(email)));
+            account = accounts.save(new Account(member, new Email(email), clock.instant()));
         }
         flush();
-        events.publishEvent(new MemberChanged(member.getId()));
         return details(member, account);
     }
 
     /// Changes every field of a member, the address and the household included
     /// (R018, R019). An address on a member without an account creates one, and
-    /// withdraws any open invitation, since its link would now fail.
+    /// withdraws any open invitation, since its link would now fail. A
+    /// household fee the member paid for this year while in no household
+    /// covers the household they are placed in: [FeeLedger#join].
     ///
     /// @param memberId the member to change
     /// @param form     the new values
@@ -182,28 +196,37 @@ public class MemberService {
     /// @throws AccountNeedsEmail if the address is blank and the member has an account
     /// @throws NoSuchHousehold if the chosen household does not exist
     @Transactional
-    public MemberDetails update(long memberId, @Valid MemberForm form) {
-        Member member = members.findById(memberId).orElseThrow(NoSuchMember::new);
-        Account account = accounts.findByMember(memberId).orElse(null);
+    public MemberDetails update(MemberId memberId, @Valid MemberForm form) {
+        Member member = members.findById(memberId.value()).orElseThrow(NoSuchMember::new);
+        Account account = accounts.findByMember(memberId.value()).orElse(null);
         String email = Blank.toNull(form.email());
         if (email == null && account != null) {
             throw new AccountNeedsEmail();
         }
         member.setFullName(form.fullName().strip());
         member.setContact(form.contact());
-        member.setHousehold(household(form.householdId()));
+        Household previous = member.getHousehold();
+        Household next = household(form.householdId());
+        if (previous != null && member.id().equals(previous.getOwnerMemberId())
+                && (next == null || !previous.getId().equals(next.getId()))) {
+            previous.setOwnerMemberId(null);
+        }
+        if (next == null) {
+            member.leaveHousehold();
+        } else if (previous == null || !previous.getId().equals(next.getId())) {
+            ledger.join(member, next);
+        }
         if (email != null) {
             Email address = new Email(email);
             refuseTaken(address, account);
             if (account == null) {
-                account = accounts.save(new Account(member, address));
-                invitations.deleteByMember(memberId);
+                account = accounts.save(new Account(member, address, clock.instant()));
+                invitations.deleteByMember(memberId.value());
             } else {
                 account.setEmail(address);
             }
         }
         flush();
-        events.publishEvent(new MemberChanged(memberId));
         return details(member, account);
     }
 
@@ -218,18 +241,17 @@ public class MemberService {
     /// @param memberId the member to delete
     /// @throws NoSuchMember if there is no such member
     @Transactional
-    public void delete(long memberId) {
-        Member member = members.findById(memberId).orElseThrow(NoSuchMember::new);
-        Optional<Account> account = accounts.findByMember(memberId);
+    public void delete(MemberId memberId) {
+        Member member = members.findById(memberId.value()).orElseThrow(NoSuchMember::new);
+        Optional<Account> account = accounts.findByMember(memberId.value());
         if (account.isPresent()) {
-            long accountId = account.get().getId();
-            passkeys.removeAll(LoginKind.MEMBER, accountId);
+            AccountId accountId = account.get().id();
+            passkeys.removeAll(accountId);
             accounts.delete(account.get());
-            sessions.end(LoginKind.MEMBER, accountId);
+            sessions.end(accountId);
         }
         members.delete(member);
         members.flush();
-        events.publishEvent(new MemberChanged(memberId));
     }
 
     /// The whole register as a CSV file for a spreadsheet (R021), in the format
@@ -270,27 +292,28 @@ public class MemberService {
     ///
     /// @param memberId a member, who may have been deleted
     /// @return the member's name and address, or empty without a member or an account
-    public Optional<Recipient> recipient(long memberId) {
-        return members.findById(memberId).flatMap(member -> accounts.findByMember(memberId)
+    public Optional<Recipient> recipient(MemberId memberId) {
+        return members.findById(memberId.value()).flatMap(member -> accounts.findByMember(memberId.value())
                 .map(account -> new Recipient(memberId, member.getFullName(), account.getEmail())));
     }
 
     private MemberDetails details(Member member, @Nullable Account account) {
-        return MemberDetails.of(member, account, ledger.year(ledger.currentYear()).status(member));
+        return MemberDetails.of(member, account, ledger.thisYear(List.of(member)).getFirst());
     }
 
     private List<MemberDetails> detailsOf(List<Member> found) {
-        Map<Long, Account> byMember = new HashMap<>();
-        List<Long> ids = found.stream().map(Member::getId).toList();
+        Map<MemberId, Account> byMember = new HashMap<>();
+        List<Long> ids = found.stream().map(member -> member.getId()).toList();
         if (!ids.isEmpty()) {
             for (Account account : accounts.findByMembers(ids)) {
-                byMember.put(account.getMember().getId(), account);
+                byMember.put(account.getMember().id(), account);
             }
         }
-        FeeLedger.Payments year = ledger.year(ledger.currentYear());
+        List<FeeStatus> fees = ledger.thisYear(found);
         List<MemberDetails> details = new ArrayList<>();
-        for (Member member : found) {
-            details.add(MemberDetails.of(member, byMember.get(member.getId()), year.status(member)));
+        for (int i = 0; i < found.size(); i++) {
+            Member member = found.get(i);
+            details.add(MemberDetails.of(member, byMember.get(member.id()), fees.get(i)));
         }
         return details;
     }

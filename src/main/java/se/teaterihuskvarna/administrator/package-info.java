@@ -8,4 +8,7 @@
 /// The first administrator comes from configuration on a fresh database
 /// ([FirstAdministrator]). After that, [AdministratorService] refuses any
 /// removal that would leave fewer than two: `docs/projektplan.md`.
+@NullMarked
 package se.teaterihuskvarna.administrator;
+
+import org.jspecify.annotations.NullMarked;

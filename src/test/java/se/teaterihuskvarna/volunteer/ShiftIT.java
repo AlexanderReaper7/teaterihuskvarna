@@ -1,6 +1,8 @@
 package se.teaterihuskvarna.volunteer;
 
+import static java.util.Objects.requireNonNull;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.containsString;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
@@ -24,7 +26,6 @@ import java.util.List;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.MessageSource;
 import org.springframework.http.MediaType;
 import org.springframework.mail.SimpleMailMessage;
@@ -33,10 +34,12 @@ import org.springframework.test.web.servlet.request.RequestPostProcessor;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 import se.teaterihuskvarna.IntegrationTestSupport;
+import se.teaterihuskvarna.Swedish;
 import se.teaterihuskvarna.content.ContentService;
 import se.teaterihuskvarna.login.LoginKind;
 import se.teaterihuskvarna.login.Mailer;
 import se.teaterihuskvarna.login.SignedIn;
+import se.teaterihuskvarna.member.MemberId;
 
 /// Proves volunteer shifts (R016, R017, R020) through both adapters.
 ///
@@ -47,7 +50,10 @@ import se.teaterihuskvarna.login.SignedIn;
 ///   and cancelling gives the place back.
 /// - The reminder goes once, the day before, to each booked member's address,
 ///   at once to a booking made after the day's last run for a shift tomorrow,
-///   and on the day itself to a booking the runs missed.
+///   and on the day itself to a booking the runs missed, with a text that
+///   says today.
+/// - A reminder that says tomorrow is not sent once that day has come, and
+///   one that says today not once the shift has started.
 /// - A past shift leaves the list of upcoming ones for the list of past ones.
 /// - A member's last shift is the latest booked one that has started.
 /// - The CSV file lists who booked, with a byte order mark.
@@ -74,8 +80,6 @@ class ShiftIT extends IntegrationTestSupport {
     @Autowired
     private MessageSource messages;
 
-    @Autowired
-    private ApplicationEventPublisher events;
 
     @Autowired
     private PlatformTransactionManager transactions;
@@ -142,6 +146,60 @@ class ShiftIT extends IntegrationTestSupport {
         assertThat(rowsIn("volunteer_shift")).isOne();
     }
 
+    /// A number of places no `int` holds, a year of five digits and a task that
+    /// does not exist never become a `ShiftForm`. They are errors on their
+    /// fields, and the page keeps what was typed.
+    @Test
+    void theFormShowsAValueItCannotReadOnItsField() throws Exception {
+        LocalDate day = LocalDate.now(SWEDEN).plusDays(10);
+
+        String page = bodyOf(mockMvc.perform(post("/admin/volontarpass").with(asAdministrator()).with(csrf())
+                        .param("eventId", EVENT)
+                        .param("task", "GARDEROB")
+                        .param("startsAt", day + "T17:00")
+                        .param("endsAt", "1" + day + "T21:30")
+                        .param("places", "99999999999"))
+                .andExpect(status().isOk())
+                .andReturn());
+
+        assertUnreadable(page, "places", "99999999999", text("shift.places.invalid"));
+        assertUnreadable(page, "endsAt", "1" + day + "T21:30", text("shift.endsAt.invalid"));
+        assertThat(page).contains("<option value=\"" + EVENT + "\" selected>", "value=\"GARDEROB\" required checked>",
+                        "value=\"" + day + "T17:00\"")
+                .doesNotContain("startsAt-error");
+
+        String noSuchTask = bodyOf(mockMvc.perform(post("/admin/volontarpass").with(asAdministrator())
+                        .with(csrf())
+                        .param("eventId", EVENT)
+                        .param("task", "DISKA")
+                        .param("startsAt", day + "T17:00")
+                        .param("endsAt", day + "T21:30")
+                        .param("places", "3"))
+                .andExpect(status().isOk())
+                .andReturn());
+
+        assertThat(noSuchTask).contains("<li><a href=\"#task\">" + text("shift.task.invalid") + "</a></li>",
+                "<span class=\"field-error\">" + text("shift.task.invalid") + "</span>", "value=\"3\"");
+        mockMvc.perform(post("/api/admin/shifts").with(asAdministrator()).with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"eventId": "%s", "task": "GARDEROB",
+                                 "startsAt": "%sT17:00", "endsAt": "%sT21:00", "places": 99999999999}
+                                """.formatted(EVENT, day, day)))
+                .andExpect(status().isBadRequest());
+
+        assertThat(rowsIn("volunteer_shift")).isZero();
+    }
+
+    /// The browser stops a number over the limit before it is sent, with the
+    /// same limit the service has.
+    @Test
+    void thePlacesFieldCarriesTheLimitTheServiceHas() throws Exception {
+        mockMvc.perform(get("/admin/volontarpass").with(asAdministrator()))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("max=\"" + ShiftForm.PLACES_MAX + "\"")));
+    }
+
     @Test
     void bookingIsIdempotentAndCancellingGivesThePlaceBack() throws Exception {
         long id = insertShift(Instant.now().plus(Duration.ofDays(3)), 1);
@@ -193,8 +251,11 @@ class ShiftIT extends IntegrationTestSupport {
         long tomorrow = insertShift(tomorrowEvening, 3);
         long later = insertShift(tomorrowEvening.plus(Duration.ofDays(2)), 3);
         long karin = memberOf(insertAccount("Karin Holm", "karin@example.test"));
-        shifts.book(tomorrow, karin);
-        shifts.book(later, karin);
+        // Booked at noon, before the day's last run. A booking after it is
+        // reminded at once, so on the real clock this failed from 21:00.
+        LocalDateTime noon = LocalDate.now(SWEDEN).atTime(12, 0);
+        book(noon, tomorrow, karin);
+        book(noon, later, karin);
 
         assertThat(shifts.sendReminders()).isOne();
         SimpleMailMessage mail = awaitMail();
@@ -246,6 +307,43 @@ class ShiftIT extends IntegrationTestSupport {
         assertThat(awaitMail().getTo()).containsExactly("karin@example.test");
     }
 
+    /// "i morgon" is wrong from midnight, so the outbox deletes the mail
+    /// unsent from then.
+    @Test
+    void aReminderThatSaysTomorrowIsNotSentOnTheShiftsOwnDay() {
+        LocalDate today = LocalDate.now(SWEDEN);
+        long shift = insertShift(today.plusDays(1).atTime(18, 0).atZone(SWEDEN).toInstant(), 3);
+        long karin = memberOf(insertAccount("Karin Holm", "karin@example.test"));
+        book(today.atTime(12, 0), shift, karin);
+        refuseEveryMail();
+
+        assertThat(sendReminders(today.atTime(13, 0))).isOne();
+        SimpleMailMessage mail = awaitMails(1).getFirst();
+
+        assertThat(mail.getSubject()).contains("i morgon");
+        assertThat(mail.getText()).contains("volontärpass i morgon.");
+        assertThat(notAfterOfTheMailInTheOutbox()).isEqualTo(today.plusDays(1).atStartOfDay(SWEDEN).toInstant());
+    }
+
+    /// The runs missed the booking the day before. The clock stands on the
+    /// morning of the shift's own day.
+    @Test
+    void aReminderOnTheShiftsOwnDaySaysTodayAndIsNotSentAfterTheShiftStarts() {
+        LocalDate shiftDay = LocalDate.now(SWEDEN).plusDays(1);
+        Instant startsAt = shiftDay.atTime(18, 0).atZone(SWEDEN).toInstant();
+        long shift = insertShift(startsAt, 3);
+        long karin = memberOf(insertAccount("Karin Holm", "karin@example.test"));
+        insertBooking(shift, karin, shiftDay.atStartOfDay(SWEDEN).toInstant().minus(Duration.ofHours(3)));
+        refuseEveryMail();
+
+        assertThat(sendReminders(shiftDay.atTime(9, 0))).isOne();
+        SimpleMailMessage mail = awaitMails(1).getFirst();
+
+        assertThat(mail.getSubject()).contains("i dag").doesNotContain("i morgon");
+        assertThat(mail.getText()).contains("volontärpass i dag.").contains("18:00").doesNotContain("i morgon");
+        assertThat(notAfterOfTheMailInTheOutbox()).isEqualTo(startsAt);
+    }
+
     @Test
     void aPastShiftMovesToThePastListInBothAdapters() throws Exception {
         long yesterday = insertShift(Instant.now().minus(Duration.ofDays(1)).minus(Duration.ofHours(1)), 3);
@@ -262,6 +360,51 @@ class ShiftIT extends IntegrationTestSupport {
     }
 
     @Test
+    void theUpcomingShiftsHaveAHeadingAsThePastOnesDo() throws Exception {
+        String empty = mockMvc.perform(get("/admin/volontarpass").with(asAdministrator()))
+                .andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
+        long upcoming = insertShift(Instant.now().plus(Duration.ofDays(3)), 3);
+        String listed = mockMvc.perform(get("/admin/volontarpass").with(asAdministrator()))
+                .andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
+
+        assertThat(empty.replaceAll("\\s+", " "))
+                .containsSubsequence("<h2>Kommande pass</h2> <p>Inga kommande pass.</p>", "<h2>Tidigare pass</h2>");
+        assertThat(listed).containsSubsequence("<h2>Kommande pass</h2>", "/admin/volontarpass/" + upcoming,
+                "<h2>Lägg till ett pass</h2>", "<h2>Tidigare pass</h2>");
+    }
+
+    @Test
+    void theAdministratorStartPageListsOnlyUpcomingShiftsWithFreePlaces() throws Exception {
+        long full = insertShift(Instant.now().plus(Duration.ofDays(2)), 1);
+        long open = insertShift(Instant.now().plus(Duration.ofDays(3)), 3);
+        long past = insertShift(Instant.now().minus(Duration.ofDays(2)), 3);
+        // Started earlier today: the shift list starts at midnight, so only the
+        // start time keeps this one off.
+        Instant midnight = LocalDate.now(SWEDEN).atStartOfDay(SWEDEN).toInstant();
+        Instant anHourAgo = Instant.now().minus(Duration.ofHours(1));
+        long startedToday = insertShift(anHourAgo.isAfter(midnight) ? anHourAgo : midnight, 3);
+        long anna = memberOf(insertAccount("Anna Först", "anna@example.test"));
+        insertBooking(full, anna, Instant.now());
+        insertBooking(open, anna, Instant.now());
+
+        String page = mockMvc.perform(get("/admin").with(asAdministrator())).andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
+        assertThat(page).contains("/admin/volontarpass/" + open + "\"", "1 av 3")
+                .doesNotContain("/admin/volontarpass/" + full + "\"")
+                .doesNotContain("/admin/volontarpass/" + past + "\"")
+                .doesNotContain("/admin/volontarpass/" + startedToday + "\"");
+        mockMvc.perform(get("/api/admin/shifts/needing-volunteers").with(asAdministrator()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].id").value(open));
+
+        insertBooking(open, memberOf(insertAccount("Bo Andra", "bo@example.test")), Instant.now());
+        insertBooking(open, memberOf(insertAccount("Cia Tredje", "cia@example.test")), Instant.now());
+        mockMvc.perform(get("/admin").with(asAdministrator()))
+                .andExpect(content().string(containsString("Inget kommande pass saknar volontärer.")));
+    }
+
+    @Test
     void theLastShiftIsTheLatestThatHasStarted() {
         Instant past = Instant.now().minus(Duration.ofDays(20));
         long earlier = insertShift(past.minus(Duration.ofDays(30)), 3);
@@ -274,14 +417,58 @@ class ShiftIT extends IntegrationTestSupport {
         insertBooking(future, karin, Instant.now());
         insertBooking(future, nils, Instant.now());
 
-        assertThat(shifts.lastShift(karin)).isEqualTo(LocalDate.ofInstant(past, SWEDEN));
-        assertThat(shifts.lastShift(nils)).isNull();
+        assertThat(shifts.lastShift(new MemberId(karin))).isEqualTo(LocalDate.ofInstant(past, SWEDEN));
+        assertThat(shifts.lastShift(new MemberId(nils))).isNull();
+    }
+
+    @Test
+    void theDeletionWarningCountsTheBookings() throws Exception {
+        long id = insertShift(Instant.now().plus(Duration.ofDays(3)), 3);
+        assertThat(deletePage(id)).contains("Passet tas bort. Ingen har bokat det.");
+
+        insertBooking(id, memberOf(insertAccount("Anna Först", "anna@example.test")), Instant.now());
+        assertThat(deletePage(id)).contains("Passet och dess bokning tas bort. Volontären får inget meddelande.");
+
+        insertBooking(id, memberOf(insertAccount("Karin Holm", "karin@example.test")), Instant.now());
+        assertThat(deletePage(id))
+                .contains("Passet och dess 2 bokningar tas bort. Volontärerna får inget meddelande.");
+    }
+
+    /// The shift's page has a link, not a button that deletes. The page it leads
+    /// to says which shift goes, and only its button deletes.
+    @Test
+    void deletingOnThePageAsksFirst() throws Exception {
+        long id = insertShift(Instant.now().plus(Duration.ofDays(3)), 3);
+        insertBooking(id, memberOf(insertAccount("Anna Först", "anna@example.test")), Instant.now());
+        String path = "/admin/volontarpass/" + id + "/ta-bort";
+
+        assertThat(bodyOf(mockMvc.perform(get("/admin/volontarpass/" + id).with(asAdministrator())).andReturn()))
+                .contains("<a href=\"" + path + "\">")
+                .doesNotContain("action=\"" + path + "\"");
+
+        String page = deletePage(id);
+        assertThat(page).contains(
+                "<h1>" + text("adminShifts.delete") + "</h1>",
+                "Garderob, Kulturnatten på torget",
+                "<form method=\"post\" action=\"" + path + "\">",
+                "<a href=\"/admin/volontarpass/" + id + "\">" + text("adminShifts.delete.cancel") + "</a>");
+        assertThat(rowsIn("volunteer_shift")).isOne();
+        assertThat(rowsIn("volunteer_booking")).isOne();
+        mockMvc.perform(get("/admin/volontarpass/999999/ta-bort").with(asAdministrator()))
+                .andExpect(status().isNotFound());
+        assertRedirect(mockMvc.perform(get(path).with(asMember(insertAccount("Karin Holm", "karin@example.test"))))
+                .andReturn(), "/admin/logga-in");
+
+        mockMvc.perform(post(path).with(asAdministrator()).with(csrf()))
+                .andExpect(flash().attribute("notice", text("adminShifts.deleted")));
+        assertThat(rowsIn("volunteer_shift")).isZero();
+        assertThat(rowsIn("volunteer_booking")).isZero();
     }
 
     @Test
     void theCsvFileListsWhoBookedTheSameThroughBothAdapters() throws Exception {
         long id = insertShift(Instant.now().plus(Duration.ofDays(3)), 3);
-        shifts.book(id, memberOf(insertAccount("=Karin Holm", "karin@example.test")));
+        shifts.book(id, new MemberId(memberOf(insertAccount("=Karin Holm", "karin@example.test"))));
 
         MvcResult page = mockMvc.perform(get("/admin/volontarpass/" + id + "/bokningar.csv")
                         .with(asAdministrator()))
@@ -297,6 +484,43 @@ class ShiftIT extends IntegrationTestSupport {
         List<String> lines = new String(bytes, StandardCharsets.UTF_8).substring(1).lines().toList();
         assertThat(lines.get(0)).isEqualTo("Namn;E-post;Telefon;Bokat");
         assertThat(lines.get(1)).startsWith("'=Karin Holm;karin@example.test;");
+    }
+
+    @Test
+    void theStartPageListsOnlyTheShiftsTheMemberBooked() throws Exception {
+        long booked = insertShift(Instant.now().plus(Duration.ofDays(3)), 2);
+        insertShift(Instant.now().plus(Duration.ofDays(5)), 2);
+        long account = insertAccount("Karin Holm", "karin@example.test");
+        RequestPostProcessor member = asMember(account);
+        String none = messages.getMessage("member.shifts.none", null, Swedish.LOCALE);
+
+        String before = mockMvc.perform(get("/medlem").with(member)).andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
+        assertThat(before).contains(none).doesNotContain("Kulturnatten på torget");
+
+        insertBooking(booked, memberOf(account), Instant.now());
+        String after = mockMvc.perform(get("/medlem").with(member)).andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
+        assertThat(after).doesNotContain(none).contains("href=\"/medlem/volontar#pass-" + booked + "\"");
+        assertThat(after.split("Kulturnatten på torget", -1)).hasSize(2);
+        mockMvc.perform(get("/api/member/shifts/booked").with(member))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[*].id", contains((int) booked)));
+
+        String shiftsPage = mockMvc.perform(get("/medlem/volontar").with(member)).andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
+        assertThat(shiftsPage).contains("id=\"pass-" + booked + "\"")
+                .contains("href=\"/medlem\" aria-current=\"true\">Mina sidor</a>").doesNotContain("Översikt");
+    }
+
+    private String text(String key) {
+        return messages.getMessage(key, null, Swedish.LOCALE);
+    }
+
+    private String deletePage(long id) throws Exception {
+        return bodyOf(mockMvc.perform(get("/admin/volontarpass/" + id + "/ta-bort").with(asAdministrator()))
+                .andExpect(status().isOk())
+                .andReturn());
     }
 
     private long insertShift(Instant startsAt, int places) {
@@ -317,9 +541,20 @@ class ShiftIT extends IntegrationTestSupport {
     /// Books through a service whose clock is stopped at `time` in Sweden. Made
     /// by hand, it has no transaction of its own, so the test gives it one.
     private void book(LocalDateTime time, long shiftId, long memberId) {
-        ShiftService stopped = new ShiftService(shiftRepository, bookingRepository, content, mailer, messages,
-                Clock.fixed(time.atZone(SWEDEN).toInstant(), SWEDEN), events);
-        new TransactionTemplate(transactions).executeWithoutResult(status -> stopped.book(shiftId, memberId));
+        ShiftService stopped = stoppedAt(time);
+        new TransactionTemplate(transactions)
+                .executeWithoutResult(status -> stopped.book(shiftId, new MemberId(memberId)));
+    }
+
+    /// @return how many reminders the job queued, run with the clock stopped at `time` in Sweden
+    private int sendReminders(LocalDateTime time) {
+        ShiftService stopped = stoppedAt(time);
+        return requireNonNull(new TransactionTemplate(transactions).execute(status -> stopped.sendReminders()));
+    }
+
+    private ShiftService stoppedAt(LocalDateTime time) {
+        return new ShiftService(shiftRepository, bookingRepository, content, mailer, messages,
+                Clock.fixed(time.atZone(SWEDEN).toInstant(), SWEDEN));
     }
 
     private void insertBooking(long shiftId, long memberId, Instant createdAt) {

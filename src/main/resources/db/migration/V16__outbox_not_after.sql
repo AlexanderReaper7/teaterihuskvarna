@@ -1,0 +1,16 @@
+-- Work whose content expires is neither kept nor done past that moment:
+-- docs/decisions/0026-outbox-and-brevo-contacts.md.
+--
+-- A row with not_after is deleted undone once that time has passed, by the
+-- attempt that finds it or by the retry job within a minute, and is never
+-- attempted after it. A mail with a login link has the link's own expiry
+-- here. A row without not_after is retried until it is done, as before.
+--
+-- V12 says a login link sits in the table "at most as long as the link
+-- lives". Before this column that did not hold: a mail that kept failing
+-- stayed, link and all, for as long as it failed, and went out after the link
+-- had expired. With the column it holds to within the retry job's minute, or
+-- the length of an attempt that is under way.
+--
+-- Rows from before this migration have no not_after and are retried until done.
+ALTER TABLE outbox ADD COLUMN not_after TIMESTAMPTZ;

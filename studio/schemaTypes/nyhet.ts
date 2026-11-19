@@ -1,4 +1,5 @@
 import {defineField, defineType} from 'sanity'
+import {swedishSlug} from '../slug'
 import {imageField} from './image'
 
 /** A news item: /nyheter (R003). One with a publishing date in the future stays hidden until then. */
@@ -13,7 +14,7 @@ export default defineType({
       title: 'Adress',
       description: 'Sidans adress, /nyheter/<adress>.',
       type: 'slug',
-      options: {source: 'title', maxLength: 96},
+      options: {source: 'title', maxLength: 96, slugify: (input: string) => swedishSlug(input)},
       validation: (rule) => rule.required(),
     }),
     defineField({
@@ -40,9 +41,14 @@ export default defineType({
   ],
   preview: {
     select: {title: 'title', date: 'publiceringsdatum', media: 'huvudbild'},
+    // A news item dated in the future is hidden on the site until then.
     prepare: ({title, date, media}) => ({
       title,
-      subtitle: date ? new Date(date).toLocaleDateString('sv-SE') : '',
+      subtitle: !date
+        ? ''
+        : new Date(date) > new Date()
+          ? `Visas från ${new Date(date).toLocaleString('sv-SE', {dateStyle: 'short', timeStyle: 'short'})}`
+          : new Date(date).toLocaleDateString('sv-SE'),
       media,
     }),
   },

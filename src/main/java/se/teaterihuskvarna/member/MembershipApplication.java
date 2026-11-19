@@ -8,6 +8,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.Instant;
+import org.jspecify.annotations.Nullable;
 
 /// A Bli medlem submission nobody has confirmed yet. It becomes a [Member] with
 /// an [Account] when the applicant follows the link in the confirmation mail,
@@ -20,15 +21,15 @@ import java.time.Instant;
 /// with SQL, because a second application for the same address has to replace
 /// the first in one statement: see that method.
 ///
-/// Column lengths mirror `V2__login.sql` by hand, here and in [ContactDetails], because `ddl-auto: validate`
-/// does not compare them: `docs/decisions/0012-jpa-over-a-schema-flyway-owns.md`.
+/// Column lengths mirror `V2__login.sql`, here and in [ContactDetails], which `EntityColumnsIT` checks:
+/// `docs/decisions/0012-jpa-over-a-schema-flyway-owns.md`.
 @Entity
 @Table(name = "membership_application")
 public class MembershipApplication {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private @Nullable Long id;
 
     @Column(name = "full_name", nullable = false, length = 100)
     private String fullName;
@@ -37,10 +38,13 @@ public class MembershipApplication {
     private String email;
 
     @Embedded
-    private ContactDetails contact;
+    private @Nullable ContactDetails contact;
 
     @Column(name = "token_hash", nullable = false, length = 64)
     private String tokenHash;
+
+    @Column(name = "browser_hash", length = 64)
+    private @Nullable String browserHash;
 
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
@@ -52,7 +56,12 @@ public class MembershipApplication {
         // for JPA
     }
 
+    /// @return the ID assigned by Hibernate
+    /// @throws IllegalStateException if this entity has not been persisted
     public Long getId() {
+        if (id == null) {
+            throw new IllegalStateException("Entity has not been persisted");
+        }
         return id;
     }
 
@@ -71,6 +80,12 @@ public class MembershipApplication {
 
     public String getTokenHash() {
         return tokenHash;
+    }
+
+    /// @return [se.teaterihuskvarna.login.Tokens#hash] of the login cookie the form set, or null for an
+    ///         application sent before the form set one
+    public @Nullable String getBrowserHash() {
+        return browserHash;
     }
 
     public Instant getCreatedAt() {

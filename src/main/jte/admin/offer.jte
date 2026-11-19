@@ -5,23 +5,18 @@
 @import se.teaterihuskvarna.web.Copy
 @import se.teaterihuskvarna.web.CsrfField
 @import se.teaterihuskvarna.web.FieldErrors
+@import se.teaterihuskvarna.web.Feedback
 @param Copy copy
 @param CsrfField csrf
 @param OfferDetails offer
 @param OfferForm form
 @param FieldErrors errors
 @param List<Registrant> registrations
-@param String error
-@param String notice
+@param Feedback feedback
 @template.admin.layout(copy = copy, title = offer.title(), content = @`
     <h1>${offer.title()}</h1>
     <p><a href="/admin/erbjudanden">${copy.text("adminOffers.back")}</a></p>
-    @if(error != null)
-        <p role="alert">${error}</p>
-    @endif
-    @if(notice != null)
-        <p role="status">${notice}</p>
-    @endif
+    @template.tag.feedback(copy = copy, feedback = feedback)
     <dl>
         <dt>${copy.text("adminOffers.list.state")}</dt>
         <dd>@if(offer.published())${copy.text("adminOffers.state.published")}@else${copy.text("adminOffers.state.draft")}@endif</dd>
@@ -34,12 +29,12 @@
         @if(offer.published())
             <form method="post" action="/admin/erbjudanden/${offer.id()}/avpublicera">
                 @template.tag.csrf(csrf = csrf)
-                <button type="submit" class="button-secondary">${copy.text("adminOffers.unpublish")}</button>
+                <button type="submit" class="button-secondary">@template.icon.eyeOff() ${copy.text("adminOffers.unpublish")}</button>
             </form>
         @else
             <form method="post" action="/admin/erbjudanden/${offer.id()}/publicera">
                 @template.tag.csrf(csrf = csrf)
-                <button type="submit">${copy.text("adminOffers.publish")}</button>
+                <button type="submit">@template.icon.eye() ${copy.text("adminOffers.publish")}</button>
             </form>
         @endif
     </div>
@@ -49,7 +44,7 @@
     @if(registrations.isEmpty())
         <p>${copy.text("adminOffers.registrations.none")}</p>
     @else
-        <p><a href="/admin/erbjudanden/${offer.id()}/anmalningar.csv">${copy.text("adminOffers.registrations.csv")}</a></p>
+        <p><a href="/admin/erbjudanden/${offer.id()}/anmalningar.csv">@template.icon.download() ${copy.text("adminOffers.registrations.csv")}</a></p>
         <table>
             <caption>${copy.text("adminOffers.registrations.caption", offer.title())}</caption>
             <thead>
@@ -65,7 +60,7 @@
                     <tr>
                         <th scope="row">${registrant.fullName()}</th>
                         <td>@if(registrant.email() != null)${registrant.email()}@endif</td>
-                        <td>@if(registrant.phone() != null)${registrant.phone()}@endif</td>
+                        <td class="tel">@if(registrant.phone() != null)${registrant.phone()}@endif</td>
                         <td>${copy.dateTime(registrant.registeredAt())}</td>
                     </tr>
                 @endfor
@@ -75,8 +70,9 @@
 
     <h2>${copy.text("adminOffers.edit.heading")}</h2>
     @template.tag.offerForm(copy = copy, csrf = csrf, form = form, errors = errors,
-            action = "/admin/erbjudanden/" + offer.id(), submit = copy.text("adminOffers.edit.submit"))
+            action = "/admin/erbjudanden/" + offer.id(), submit = copy.text("adminOffers.edit.submit"),
+            icon = @`@template.icon.save()`)
 
     <h2>${copy.text("adminOffers.delete.heading")}</h2>
-    <p><a href="/admin/erbjudanden/${offer.id()}/ta-bort">${copy.text("adminOffers.delete.link")}</a></p>
+    <p><a href="/admin/erbjudanden/${offer.id()}/ta-bort">@template.icon.trash2() ${copy.text("adminOffers.delete.link")}</a></p>
 `)

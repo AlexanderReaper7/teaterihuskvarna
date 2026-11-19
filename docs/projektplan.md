@@ -64,11 +64,13 @@ flowchart LR
     app <--> db[(PostgreSQL)]
     app -->|login links and campaign drafts| brevo[Brevo]
     app <-->|published content| sanity
-    github[GitHub Actions and GHCR] -->|tested image| host[EU container host]
+    github[GitHub Actions and GHCR] -.->|tested image, decided and not built| host[EU container host]
     host --- proxy
     host --- app
     host --- db
 ```
+
+The dashed arrow is decided in [0008](decisions/0008-everything-in-containers.md) and not built as of 2026-11-10. GitHub Actions tests the code and builds the image, and nothing pushes the image to GHCR or brings it to a host.
 
 The development Compose stack also runs Sanity Studio; association editors use Sanity hosting, per [0021](decisions/0021-content-from-sanity.md). Both editors connect to Sanity's hosted content database. The development application reads the same `dev` dataset as Studio; automated tests use fixture content.
 
@@ -82,13 +84,13 @@ The member submits an email address and receives a short-lived, single-use login
 
 A login link is valid for one hour by default, and the lifetime is configurable. Tests must prove expiry, one-time use, that a link or code from another browser does not log in, and identical user-visible responses for known and unknown addresses. [0015](decisions/0015-login-links-on-spring-security.md) records why links are bound to a browser.
 
-Members and administrators log in on separate pages, because one email address may belong to both an account and an administrator account, and each page looks the address up only among its own kind. A member login lasts 30 days and an administrator login 8 hours, since an administrator can read the whole register. The time counts from the login, not from the last use, so a stolen session cookie stops working on a known day. Two minutes before the end the page beeps, counts down and offers to start the full period again with one click. A login that ends leaves the page in place with a link to the login page. Each person's own page lists the devices they are logged in on, with a device name, when it logged in and when it was last used, and logs out one of them or all but the current one. The REST adapter accepts the same session cookie, with CSRF protection on changes, so both adapters authenticate the same way. Rate limits count recent requests per address and per IP address in PostgreSQL, next to the tokens, and the IP addresses are deleted along with expired tokens.
+Members and administrators log in on separate pages, because one email address may belong to both an account and an administrator account, and each page looks the address up only among its own kind. A member login lasts 30 days and an administrator login 8 hours, since an administrator can read the whole register. The time counts from the login, not from the last use, so a stolen session cookie stops working on a known day. Two minutes before the end every logged-in page beeps, counts down and offers to start the full period again with one click, without loading the page again, so a half-written form keeps its text. A login that ends leaves the page in place with a link to the login page. Each person's own page lists the devices they are logged in on, with a device name, when it logged in and when it was last used, and logs out one of them or all but the current one. The REST adapter accepts the same session cookie, with CSRF protection on changes, so both adapters authenticate the same way. Rate limits count recent requests in PostgreSQL, next to the tokens: per address the requests that were let through, counted for one IP address and for all of them, and per IP address every request, and the IP addresses are deleted along with expired tokens.
 
 Members and administrators may also add passkeys on their own page and log in with one, which the requirement table does not ask for. A login link keeps working for everyone. The passkey login asks for no address, so it cannot reveal one either. [0016](decisions/0016-passkeys-beside-links.md) records the design.
 
 The first administrator account comes from configuration at startup, when none exists. After that, administrators create and remove each other in the application, and nobody removes themselves: a last active administrator removing their own account would lock the association out. Removal is refused while two or fewer administrators remain, which is how the application enforces the two-administrator rule under [ownership](#ownership-and-maintenance-are-release-work) without refusing to start with one.
 
-A membership application (R005) registers one person. The applicant gets a confirmation link, and the application becomes a member with an account when they follow it. An application nobody confirms is deleted after 24 hours. The page gives the same response when the address already belongs to an account; that account gets a mail pointing to the login page instead of a confirmation link, with no login link in it. The form therefore falls under the same rate limit as the login page. What R005 creates is provisional, see [open-questions.md](open-questions.md).
+A membership application (R005) registers one person. The applicant gets a confirmation link, and the application becomes a member with an account when they follow it. In the browser that sent the application, the welcome page then logs them in without a login mail; anywhere else it leads to the login page, because the confirmation link works in any browser and a login link must not ([0015](decisions/0015-login-links-on-spring-security.md)). An application nobody confirms is deleted after 24 hours. The page gives the same response when the address already belongs to an account; that account gets a mail with a login link instead of a confirmation link, which works only in the browser that filled in the form, and the login page for any other device. The form therefore falls under the same rate limit as the login page. What R005 creates is provisional, see [open-questions.md](open-questions.md).
 
 An invitation is valid for 7 days by default, and the lifetime is configurable. It is longer than an application's 24 hours because a logged-in member or an administrator sends it, so the bot argument does not apply, and the recipient may not read their mail for days. The sender can send it again.
 
@@ -102,6 +104,8 @@ Every member with an account is a contact on one Brevo list, updated on every ch
 
 The register stores name, phone, address and household for every member, and an email address for each account. A member added to a household has no account, and so no email address, until they accept an invitation sent by an administrator or by a member with an account in that household. Mailings therefore reach only members with an account. The register does not store a personal identity number. Development and test environments use invented data.
 
+A member without a household can create one. The creator becomes its first owner. Only the current owner can rename it, add people, edit its members' contact details and remove other people, even when those people have accounts. Administrators can change ownership. Any member can leave; an owner first chooses a successor with an account, or administrators take over when no account holder remains. Removal preserves membership and login access; the existing fee rules determine coverage afterwards. Login email changes remain administrator-only. The user's 2026-09-30 and 2026-10-01 decisions are in [0025](decisions/0025-member-register-in-the-application.md).
+
 The current fee rule is:
 
 - one fee record belongs to one member account and one year;
@@ -111,6 +115,8 @@ The current fee rule is:
 - a member without a household has no household identifier;
 - amounts use integer öre rather than a fixed 50 or 100 kr value;
 - the record identifies the administrator who marked it paid.
+
+A member pays the fee by bankgiro with their account's email address as the payment message, because the email address is unique and a name is not. Only members with an account pay. A member without an account is covered through the household fee and is shown no payment instruction. Decided by the user on 2026-10-09. Whether banks let a payer type an email address in the message is not established, see [research/bankgiro-payment-message.md](research/bankgiro-payment-message.md).
 
 Before building reconciliation, compare this rule with real anonymised bankgiro examples. A payer's name may differ from the covered member's name. If the examples break the rule, update the model and record the reason before implementation.
 
@@ -131,11 +137,11 @@ Swedish is the visitor and member language. English is used for code and project
 - Only administrators can read the member register.
 - Login and mail endpoints have rate limits.
 - Login tokens are short-lived, single-use and stored in PostgreSQL.
-- The database is backed up daily to encrypted storage on another machine in an EU region.
+- The database must be backed up daily to encrypted storage on another machine in an EU region ([0007](decisions/0007-postgres-in-a-container.md)). This is not built as of 2026-11-10. [`scripts/backup.sh`](../scripts/backup.sh) writes an unencrypted dump into `backups/` in the checkout when someone runs it, and nothing in the repository schedules it or copies the dump to another machine.
 - A restore into an empty database must succeed before launch.
-- Container images use immutable commit tags so the deployed revision and rollback target are known.
+- Container images must use immutable commit tags so the deployed revision and rollback target are known ([0008](decisions/0008-everything-in-containers.md)). This is not built as of 2026-11-10. CI tags the image it builds with the commit and pushes it nowhere, and [`compose.yaml`](../compose.yaml) runs `${APP_IMAGE:-teaterihuskvarna:dev}`, which it builds on the host.
 
-Java 25 LTS and Spring Boot 4.1.1 are the committed runtime versions. GitHub Actions tests and builds the image. A successful build of `main` pushes the image to GHCR and deploys it over SSH.
+Java 25 LTS and Spring Boot 4.1.2 are the committed runtime versions. GitHub Actions tests the code and builds the image on every pull request and on `main`. The decision in [0008](decisions/0008-everything-in-containers.md) is that a successful build of `main` pushes the image to GHCR and deploys it over SSH. That is not built as of 2026-11-10. No workflow logs in to a registry, pushes an image or opens an SSH connection, and the repository has no Actions secrets, no environments and no tags.
 
 ## The association remains responsible for personal data
 

@@ -5,16 +5,15 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import java.time.Duration;
+import java.util.List;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
 import org.springframework.stereotype.Component;
-import org.springframework.ui.Model;
-import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import se.teaterihuskvarna.login.LoginUrls;
 import se.teaterihuskvarna.login.NoSuchPasskey;
+import se.teaterihuskvarna.login.PasskeyDetails;
 import se.teaterihuskvarna.login.PasskeyOffer;
 import se.teaterihuskvarna.login.PasskeyService;
-import se.teaterihuskvarna.login.PasskeyUrls;
 import se.teaterihuskvarna.login.SignedIn;
 
 /// The passkey section of `/medlem` and `/admin`, which differ only in whose
@@ -42,13 +41,10 @@ class PasskeySection {
         this.copy = copy;
     }
 
-    /// @param model    receives `passkeys`, `passkeyUrls` and `offerPasskey`
     /// @param signedIn whose passkeys to list
-    /// @param offer    whether to ask if they want to add one, as [se.teaterihuskvarna.login.PasskeyOffer] says
-    void addTo(Model model, SignedIn signedIn, boolean offer) {
-        model.addAttribute("passkeys", passkeys.list(signedIn));
-        model.addAttribute("passkeyUrls", PasskeyUrls.of(signedIn.kind()));
-        model.addAttribute("offerPasskey", offer);
+    /// @return their passkeys
+    List<PasskeyDetails> list(SignedIn signedIn) {
+        return passkeys.list(signedIn);
     }
 
     /// @param session  holds whether a link login just happened
@@ -89,16 +85,16 @@ class PasskeySection {
         return false;
     }
 
-    /// @param signedIn   whose passkey to remove
-    /// @param id         the passkey's id
-    /// @param redirected receives the outcome, shown after the redirect
-    void remove(SignedIn signedIn, String id, RedirectAttributes redirected) {
+    /// @param signedIn whose passkey to remove
+    /// @param id       the passkey's id
+    /// @param page     the redirect back to the page
+    /// @return the redirect with the outcome
+    Redirect remove(SignedIn signedIn, String id, Redirect page) {
         try {
             passkeys.remove(signedIn, id);
         } catch (NoSuchPasskey e) {
-            redirected.addFlashAttribute("error", copy.text("passkey.error.noSuch"));
-            return;
+            return page.error(copy.text("passkey.error.noSuch"));
         }
-        redirected.addFlashAttribute("notice", copy.text("passkey.removed"));
+        return page.notice(copy.text("passkey.removed"));
     }
 }

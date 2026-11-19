@@ -1,5 +1,6 @@
 package se.teaterihuskvarna.content;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.atLeastOnce;
@@ -16,6 +17,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.jayway.jsonpath.JsonPath;
+import jakarta.servlet.http.Cookie;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
@@ -44,6 +46,10 @@ class ContentPreviewApiIT extends IntegrationTestSupport {
                 .andExpect(jsonPath("$.expiresAt").isString())
                 .andReturn().getResponse().getContentAsString();
         String pass = JsonPath.read(body, "$.value");
+        String preview = mockMvc.perform(get("/").cookie(new Cookie(Previews.COOKIE, pass)))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        assertThat(preview).contains("<meta name=\"robots\" content=\"noindex, nofollow\">");
+
 
         clearInvocations(source);
         mockMvc.perform(get("/api/content/news").header("Preview-Pass", pass)).andExpect(status().isOk());

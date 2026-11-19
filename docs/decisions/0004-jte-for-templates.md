@@ -6,15 +6,17 @@ description: Which template engine renders the HTML.
 
 # 0004: JTE rather than Thymeleaf for templates
 
+Amended by an agent on 2026-11-10. The record said there were no students, and there are now. Amended by an agent on 2026-11-10 again: the templates are reached through generated methods and no longer through JTE's Spring Boot starter, see "How a handler reaches a template" in the agent notes.
+
 ## Decision
 
-The application renders HTML with [JTE](https://jte.gg/), through `gg.jte:jte-spring-boot-starter-4` 3.2.4. Not Thymeleaf, which the produktägare's document names under "Teknikval" and which the system sketch shows inside the application box.
+The application renders HTML with [JTE](https://jte.gg/) 3.2.5. Not Thymeleaf, which the produktägare's document names under "Teknikval" and which the system sketch shows inside the application box.
 
 Swedish visitor-facing text does not live in template files. It lives in [`messages_sv.properties`](../../src/main/resources/messages_sv.properties) and in Sanity. Templates hold markup and message keys.
 
 ## Why not Thymeleaf, given the plan says Thymeleaf
 
-The document's reason is that Spring Boot and Thymeleaf are "studenternas utbildningsspråk", the students' course material. There are no students. That reason does not survive the change, so the choice was reopened on its merits rather than inherited.
+The document's reason is that Spring Boot and Thymeleaf are "studenternas utbildningsspråk", the students' course material. When this was written, on 2026-09-22, the record said there were no students, so that reason did not survive the change and the choice was reopened on its merits rather than inherited. The premise no longer holds. On 2026-11-10 five accounts besides the owner have write access to the repository, and [0018](0018-kanban-with-weekly-syncs.md) and [0020](0020-pull-requests-and-merging.md) write their rules for students. This record has not been reopened on that ground.
 
 Both engines are healthy and both support Boot 4.1.1, so this was never about one being abandoned:
 
@@ -55,3 +57,25 @@ So the requirement was restated: **a non-developer can change everything they wo
 ## What it costs to undo
 
 Templates are the only thing affected, and they are rewritten rather than ported. There is no data migration and no API change. The cost scales with how many templates exist, which is the reason to decide now rather than at template twenty.
+
+## Agent notes
+
+Written by an agent on 2026-11-10.
+
+The version went from 3.2.4 to 3.2.5 on 2026-11-10. The table above is what was read on 2026-09-22 and still says 3.2.4. 3.2.5 was the newest release on Maven Central that day, published 2026-11-01, and its notes list three security fixes in the output escaping:
+
+- `<script>` and `on…` attributes are recognised in any letter case ([GHSA-2hfm-x4p2-r9hw](https://github.com/casid/jte/security/advisories/GHSA-2hfm-x4p2-r9hw)). No template here spells either with a capital. The only capitals in a tag or attribute name are `viewBox` on the icons.
+- A `javascript:` address is dropped also when a tab or a line break sits inside the word ([GHSA-mw9h-prf3-cr4h](https://github.com/casid/jte/security/advisories/GHSA-mw9h-prf3-cr4h)).
+- A dynamic `srcdoc` on an `<iframe>` is written as empty, and `javascript:` and `data:` addresses are dropped from `<a href>`, `<area href>`, `<base href>`, `<iframe src>`, `<form action>`, `<button formaction>` and `<input formaction>` ([GHSA-hvg6-pc44-97gv](https://github.com/casid/jte/security/advisories/GHSA-hvg6-pc44-97gv)).
+
+What this means for a template: JTE drops such a value without an error, at render time, so the compile-time argument above does not cover it. The mailing preview used `srcdoc` and showed an empty frame under 3.2.5 until it was rebuilt ([0026](0026-outbox-and-brevo-contacts.md), "The mailing preview"). Every other dynamic address in the templates on 2026-11-10 is a path the application builds, a configured address, or a Sanity address that [`ContentService`](../../src/main/java/se/teaterihuskvarna/content/ContentService.java) keeps only when it starts with `http://` or `https://`, so the guards drop nothing there.
+
+### How a handler reaches a template
+
+The reasoning above stops at the template's edge. Inside a template the compiler checks every field and every type. Between a handler and its template nothing did: the handler returned the template's name as a string and filled a model, a map from a name to any object, and the template declared the same names with `@param`. A name spelled differently on the two sides, a value left out, or a template renamed, compiled and drew a page with a hole in it, or failed when the page was first asked for.
+
+Since 2026-11-10 the build generates one method per page on `gg.jte.generated.precompiled.Templates`, with the template's `@param` lines as the method's parameters, through `jte-maven-plugin`'s `generate` goal and `gg.jte:jte-models` ([`pom.xml`](../../pom.xml)). A handler answers with `HtmlPage.of(templates.memberHousehold(..))` or with a `Redirect`, and the three mistakes fail the compile. [`PageRulesTest`](../../src/test/java/se/teaterihuskvarna/architecture/PageRulesTest.java) fails the build on a handler that returns a view's name or takes a model, and the package comment in [`se.teaterihuskvarna.web`](../../src/main/java/se/teaterihuskvarna/web/package-info.java) says how the pieces fit.
+
+`gg.jte:jte-spring-boot-starter-4` is gone with it. Its job was to find a template by a view's name and hand it the model. The table above still lists it, as what was compared on 2026-09-22.
+
+What the compiler still cannot see: the arguments are positional, so two parameters of the same type next to each other can be passed in the wrong order. [`admin/shifts.jte`](../../src/main/jte/admin/shifts.jte) takes the upcoming shifts and the past ones as two lists, and [`admin/mailingPreview.jte`](../../src/main/jte/admin/mailingPreview.jte) takes two strings. And a redirect names its page by a path, which is a string.

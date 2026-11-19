@@ -1,5 +1,4 @@
 @import java.util.List
-@import java.util.Objects
 @import se.teaterihuskvarna.content.Event
 @import se.teaterihuskvarna.volunteer.ShiftDetails
 @import se.teaterihuskvarna.volunteer.ShiftForm
@@ -7,6 +6,7 @@
 @import se.teaterihuskvarna.web.Copy
 @import se.teaterihuskvarna.web.CsrfField
 @import se.teaterihuskvarna.web.FieldErrors
+@import se.teaterihuskvarna.web.Feedback
 @param Copy copy
 @param CsrfField csrf
 @param List<ShiftDetails> shifts
@@ -14,20 +14,14 @@
 @param List<Event> events
 @param ShiftForm form
 @param FieldErrors errors
-@param String error
-@param String notice
+@param Feedback feedback
 !{String eventError = errors.message("eventId");}
 !{String taskError = errors.message("task");}
 !{String timesError = errors.message("endsAfterStart");}
 @template.admin.layout(copy = copy, title = copy.text("adminShifts.heading"), content = @`
     <h1>${copy.text("adminShifts.heading")}</h1>
-    <p><a href="/admin">${copy.text("admin.toOverview")}</a></p>
-    @if(error != null)
-        <p role="alert">${error}</p>
-    @endif
-    @if(notice != null)
-        <p role="status">${notice}</p>
-    @endif
+    @template.tag.feedback(copy = copy, feedback = feedback)
+    <h2>${copy.text("adminShifts.upcoming")}</h2>
     @if(shifts.isEmpty())
         <p>${copy.text("adminShifts.none")}</p>
     @else
@@ -63,18 +57,18 @@
                     <span class="field-error">${taskError}</span>
                 @endif
             </fieldset>
-            @template.tag.field(name = "startsAt", label = copy.text("adminShifts.form.startsAt"), type = "datetime-local",
-                    autocomplete = "off", value = Objects.toString(form.startsAt(), null),
+            @template.tag.field(copy = copy, name = "startsAt", label = copy.text("adminShifts.form.startsAt"), type = "datetime-local",
+                    autocomplete = "off", value = errors.value("startsAt", form.startsAt()),
                     error = errors.message("startsAt"), required = true)
             <div id="endsAfterStart">
-            @template.tag.field(name = "endsAt", label = copy.text("adminShifts.form.endsAt"), type = "datetime-local",
-                    autocomplete = "off", value = Objects.toString(form.endsAt(), null),
+            @template.tag.field(copy = copy, name = "endsAt", label = copy.text("adminShifts.form.endsAt"), type = "datetime-local",
+                    autocomplete = "off", value = errors.value("endsAt", form.endsAt()),
                     error = timesError != null ? timesError : errors.message("endsAt"), required = true)
             </div>
-            @template.tag.field(name = "places", label = copy.text("adminShifts.form.places"), type = "number",
-                    autocomplete = "off", value = Objects.toString(form.places(), null),
-                    error = errors.message("places"), required = true)
-            <button type="submit">${copy.text("adminShifts.form.submit")}</button>
+            @template.tag.field(copy = copy, name = "places", label = copy.text("adminShifts.form.places"), type = "number",
+                    autocomplete = "off", value = errors.value("places", form.places()),
+                    error = errors.message("places"), required = true, max = String.valueOf(ShiftForm.PLACES_MAX))
+            <button type="submit">@template.icon.plus() ${copy.text("adminShifts.form.submit")}</button>
         </form>
     @endif
 

@@ -45,6 +45,88 @@ class PortableTextTest {
         assertThat(html).isEqualTo("<ul><li>a<ul><li>b</li></ul></li><li>c</li></ul><p>slut</p>");
     }
 
+    /// In a preview, a click on a paragraph opens that paragraph in the Studio,
+    /// so every block carries its own key. The value is escaped like any text.
+    @Test
+    void aPreviewMarksEachBlockWithItsKey() {
+        JsonNode blocks = MAPPER.readTree("["
+                + "{\"_type\":\"block\",\"_key\":\"p\",\"style\":\"normal\",\"children\":"
+                + "[{\"_type\":\"span\",\"text\":\"a\",\"marks\":[]}]},"
+                + "{\"_type\":\"block\",\"_key\":\"l\",\"style\":\"normal\",\"listItem\":\"bullet\",\"level\":1,"
+                + "\"children\":[{\"_type\":\"span\",\"text\":\"b\",\"marks\":[]}]},"
+                + "{\"_type\":\"image\",\"_key\":\"i\",\"alt\":\"c\","
+                + "\"asset\":{\"_ref\":\"image-abc-10x20-png\"}}]");
+
+        String html = portableText.html(blocks, key -> "k=\"" + key + "\"");
+
+        assertThat(html).isEqualTo("<p data-sanity=\"k=&quot;p&quot;\">a</p>"
+                + "<ul><li data-sanity=\"k=&quot;l&quot;\">b</li></ul>"
+                + "<figure data-sanity=\"k=&quot;i&quot;\"><img src=\"https://cdn.sanity.io/images/proj/prod/"
+                + "abc-10x20.png?w=10&amp;auto=format\" alt=\"c\" width=\"10\" height=\"20\""
+                + " loading=\"lazy\"></figure>");
+        assertThat(portableText.html(blocks)).doesNotContain("data-sanity");
+    }
+
+    /// Portable Text stores the space between a bold word and an italic word
+    /// as a span of its own, with no marks.
+    @Test
+    void theSpaceBetweenTwoFormattedWordsStays() {
+        assertThat(render(paragraph(span("fet", "strong") + "," + span(" ") + "," + span("kursiv", "em"))))
+                .isEqualTo("<p><strong>fet</strong> <em>kursiv</em></p>");
+    }
+
+    @Test
+    void aSpaceOfItsOwnInsideARunningMarkStays() {
+        assertThat(render(paragraph(span("a", "strong") + "," + span(" ", "strong") + ","
+                + span("b", "strong", "em"))))
+                .isEqualTo("<p><strong>a <em>b</em></strong></p>");
+    }
+
+    @Test
+    void aLineBreakOfItsOwnBetweenTwoFormattedWordsStays() {
+        assertThat(render(paragraph(span("rad ett", "strong") + "," + span("\\n") + "," + span("rad två", "em"))))
+                .isEqualTo("<p><strong>rad ett</strong><br><em>rad två</em></p>");
+    }
+
+    /// What an article moved from the old site can end a paragraph in: a span
+    /// of only line breaks, or a line break after the last word.
+    @Test
+    void theLineBreaksThatEndABlockAreLeftOut() {
+        assertThat(render(paragraph(span("sista ordet") + "," + span("\\n\\n\\n"))))
+                .isEqualTo("<p>sista ordet</p>");
+        assertThat(render(paragraph(span("rad ett\\nrad två\\n \\n"))))
+                .isEqualTo("<p>rad ett<br>rad två</p>");
+        assertThat(render("[" + item("bullet", 1, "punkt\\n") + "]"))
+                .isEqualTo("<ul><li>punkt</li></ul>");
+    }
+
+    /// A mark on a span that only ended the block has nothing left to mark.
+    @Test
+    void aMarkAroundOnlyTheEndOfABlockDoesNotOpen() {
+        assertThat(render(paragraph(span("ord", "strong") + "," + span(" \\n", "em") + "," + span("\\n"))))
+                .isEqualTo("<p><strong>ord</strong></p>");
+        assertThat(render(paragraph(span("a", "strong") + "," + span("b \\n", "strong", "em"))))
+                .isEqualTo("<p><strong>a<em>b</em></strong></p>");
+    }
+
+    @Test
+    void thePlainTextKeepsTheSpaceBetweenTwoFormattedWords() {
+        JsonNode blocks = MAPPER.readTree(paragraph(span("fet", "strong") + "," + span(" ") + ","
+                + span("kursiv", "em")));
+
+        assertThat(PortableText.plain(blocks)).isEqualTo("fet kursiv");
+    }
+
+    /// An editor's empty line, or one with a stray space, is no paragraph.
+    @Test
+    void aParagraphOfOnlySpacesIsLeftOut() {
+        String json = "[" + block(span("")) + "," + block(span(" ")) + "," + block(span("  ", "strong")) + ","
+                + block(span("a")) + "]";
+
+        assertThat(render(json)).isEqualTo("<p>a</p>");
+        assertThat(PortableText.plain(MAPPER.readTree(json))).isEqualTo("a");
+    }
+
     @Test
     void nothingRendersAsNothing() {
         assertThat(portableText.html(null)).isEmpty();
@@ -53,6 +135,19 @@ class PortableTextTest {
     private static String item(String kind, int level, String text) {
         return "{\"_type\":\"block\",\"style\":\"normal\",\"listItem\":\"" + kind + "\",\"level\":" + level
                 + ",\"children\":[{\"_type\":\"span\",\"text\":\"" + text + "\",\"marks\":[]}]}";
+    }
+
+    private static String paragraph(String spans) {
+        return "[" + block(spans) + "]";
+    }
+
+    private static String block(String spans) {
+        return "{\"_type\":\"block\",\"style\":\"normal\",\"children\":[" + spans + "]}";
+    }
+
+    private static String span(String text, String... marks) {
+        String list = marks.length == 0 ? "" : "\"" + String.join("\",\"", marks) + "\"";
+        return "{\"_type\":\"span\",\"text\":\"" + text + "\",\"marks\":[" + list + "]}";
     }
 
     private String render(String json) {

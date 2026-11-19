@@ -5,35 +5,42 @@
 @import se.teaterihuskvarna.web.Copy
 @import se.teaterihuskvarna.web.CsrfField
 @import se.teaterihuskvarna.web.FieldErrors
+@import se.teaterihuskvarna.web.Feedback
 @param Copy copy
 @param CsrfField csrf
 @param List<HouseholdDetails> households
 @param NewHousehold form
 @param FieldErrors errors
-@param String notice
-@param boolean stale
+@param Feedback feedback
 @template.admin.layout(copy = copy, title = copy.text("household.heading"), content = @`
     <h1>${copy.text("household.heading")}</h1>
-    <p><a href="/admin/medlemmar">${copy.text("register.toList")}</a></p>
-    @if(stale)
-        <p role="alert">${copy.text("form.stale")}</p>
-    @endif
-    @if(notice != null)
-        <p role="status">${notice}</p>
-    @endif
+    @template.tag.feedback(copy = copy, feedback = feedback)
     <p>${copy.text("household.intro")}</p>
     @if(households.isEmpty())
         <p>${copy.text("household.none")}</p>
     @endif
     @for(HouseholdDetails household : households)
         <h2>${household.name()}</h2>
+        <form method="post" action="/admin/hushall/${household.id()}/agare">
+            @template.tag.csrf(csrf = csrf)
+            <label for="owner-${household.id()}">${copy.text("household.owner.label")}</label>
+            <select id="owner-${household.id()}" name="memberId">
+                <option value="" selected="${household.ownerMemberId() == null}">${copy.text("household.owner.admin")}</option>
+                @for(HouseholdMember member : household.members())
+                    @if(member.hasAccount())
+                        <option value="${member.id().value()}" selected="${member.id().equals(household.ownerMemberId())}">${member.fullName()}</option>
+                    @endif
+                @endfor
+            </select>
+            <button type="submit">@template.icon.save() ${copy.text("household.owner.save")}</button>
+        </form>
         @if(household.members().isEmpty())
             <p>${copy.text("household.empty")}</p>
         @else
             <ul>
                 @for(HouseholdMember member : household.members())
                     <li>
-                        <a href="/admin/medlemmar/${member.id()}">${member.fullName()}</a>
+                        <a href="/admin/medlemmar/${member.id().value()}">${member.fullName()}</a>
                         @if(member.hasAccount())
                             ${copy.text("household.hasAccount")}
                         @endif
@@ -47,8 +54,8 @@
     @template.tag.errors(copy = copy, errors = errors)
     <form method="post" action="/admin/hushall">
         @template.tag.csrf(csrf = csrf)
-        @template.tag.field(name = "name", label = copy.text("household.name"), type = "text",
+        @template.tag.field(copy = copy, name = "name", label = copy.text("household.name"), type = "text",
                 autocomplete = "off", value = form.name(), error = errors.message("name"), required = true)
-        <button type="submit">${copy.text("household.create.submit")}</button>
+        <button type="submit">@template.icon.plus() ${copy.text("household.create.submit")}</button>
     </form>
 `)

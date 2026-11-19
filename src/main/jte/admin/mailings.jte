@@ -9,7 +9,8 @@
 @import se.teaterihuskvarna.web.Copy
 @import se.teaterihuskvarna.web.CsrfField
 @import se.teaterihuskvarna.web.FieldErrors
-@param String studioUrl = null
+@import se.teaterihuskvarna.web.Feedback
+@param String studioUrl
 @param Copy copy
 @param CsrfField csrf
 @param MailingForm form
@@ -17,26 +18,19 @@
 @param MailingAudiences audiences
 @param MailingContent content
 @param List<MailingDetails> log
-@param String error
-@param String notice
+@param Feedback feedback
 !{String audienceError = errors.message("audience");}
 !{String introError = errors.message("intro");}
 @template.admin.layout(copy = copy, title = copy.text("adminMailings.heading"), content = @`
     <h1>${copy.text("adminMailings.heading")}</h1>
-    <p><a href="/admin">${copy.text("admin.toOverview")}</a></p>
-    @if(error != null)
-        <p role="alert">${error}</p>
-    @endif
-    @if(notice != null)
-        <p role="status">${notice}</p>
-    @endif
+    @template.tag.feedback(copy = copy, feedback = feedback)
 
     <h2>${copy.text("adminMailings.new")}</h2>
     <p>${copy.text("adminMailings.how")}</p>
     @if(studioUrl != null)
-        <p><a href="${studioUrl}">${copy.text("adminMailings.content.open")}</a></p>
+        <p><a href="${studioUrl}">@template.icon.externalLink() ${copy.text("adminMailings.content.open")}</a></p>
     @else
-        <p>${copy.text("admin.content.unavailable")} <a href="https://www.sanity.io/manage">${copy.text("admin.content.manage")}</a></p>
+        <p>${copy.text("admin.content.unavailable")} <a href="https://www.sanity.io/manage">@template.icon.externalLink() ${copy.text("admin.content.manage")}</a></p>
     @endif
     @template.tag.errors(copy = copy, errors = errors)
     <form method="post" action="/admin/utskick/forhandsgranska">
@@ -54,14 +48,14 @@
                 <span id="audience-error" class="field-error">${audienceError}</span>
             @endif
         </p>
-        <p id="audience-hint">${copy.text("adminMailings.segments")} <a href="https://app.brevo.com/contact/segment">${copy.text("adminMailings.segments.open")}</a></p>
+        <p id="audience-hint">${copy.text("adminMailings.segments")} <a href="https://app.brevo.com/contact/segment">@template.icon.externalLink() ${copy.text("adminMailings.segments.open")}</a></p>
         @if(audiences.segmentsUnavailable())
             <p role="alert">${copy.text("adminMailings.segmentsUnavailable")}</p>
         @endif
-        @template.tag.field(name = "subject", label = copy.text("adminMailings.form.subject"), type = "text",
+        @template.tag.field(copy = copy, name = "subject", label = copy.text("adminMailings.form.subject"), type = "text",
                 autocomplete = "off", value = form.subject(), error = errors.message("subject"), required = true)
         <p>
-            <label for="intro">${copy.text("adminMailings.form.intro")}</label>
+            <label for="intro">${copy.text("adminMailings.form.intro")} ${copy.text("form.optional")}</label>
             <textarea id="intro" name="intro" rows="8" aria-invalid="${introError == null ? null : "true"}"
                       aria-describedby="${introError == null ? "intro-hint" : "intro-hint intro-error"}">${form.intro()}</textarea>
             <span id="intro-hint">${copy.text("adminMailings.form.introHint")}</span>
@@ -76,7 +70,7 @@
             @endif
             @for(Event event : content.events())
                 <label><input type="checkbox" name="events" value="${event.slug()}"
-                              checked="${form.eventSlugs().contains(event.slug())}"> ${event.title()}, ${copy.dateTime(event.startsAt())}</label><br>
+                              checked="${form.eventSlugs().contains(event.slug())}"> ${event.title()} (${copy.dateTime(event.startsAt())})</label>
             @endfor
         </fieldset>
         <fieldset>
@@ -86,10 +80,10 @@
             @endif
             @for(NewsItem item : content.news())
                 <label><input type="checkbox" name="news" value="${item.slug()}"
-                              checked="${form.newsSlugs().contains(item.slug())}"> ${item.title()}, ${copy.date(item.publishedAt())}</label><br>
+                              checked="${form.newsSlugs().contains(item.slug())}"> ${item.title()} (${copy.date(item.publishedAt())})</label>
             @endfor
         </fieldset>
-        <button type="submit">${copy.text("adminMailings.form.preview")}</button>
+        <button type="submit">@template.icon.eye() ${copy.text("adminMailings.form.preview")}</button>
     </form>
 
     <h2>${copy.text("adminMailings.log")}</h2>

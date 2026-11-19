@@ -1,5 +1,6 @@
 package se.teaterihuskvarna.login;
 
+import java.time.Clock;
 import java.time.Duration;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.ProviderManager;
@@ -48,6 +49,7 @@ final class PasskeyLogin extends AbstractHttpConfigurer<PasskeyLogin, HttpSecuri
     private final LoginDirectory directory;
     private final Duration sessionLifetime;
     private final DeviceNames devices;
+    private final Clock clock;
 
     /// @param kind            the login these filters serve
     /// @param relyingParty    Spring's passkey logic, shared by both kinds
@@ -55,8 +57,10 @@ final class PasskeyLogin extends AbstractHttpConfigurer<PasskeyLogin, HttpSecuri
     /// @param directory       the lookup for this kind of login
     /// @param sessionLifetime how long a login lasts
     /// @param devices         names the device a login happens on
+    /// @param clock           the application's clock, which a login's end is counted from
     PasskeyLogin(LoginKind kind, WebAuthnRelyingPartyOperations relyingParty, UserCredentialRepository passkeys,
-            LoginDirectory directory, Duration sessionLifetime, DeviceNames devices) {
+            LoginDirectory directory, Duration sessionLifetime, DeviceNames devices, Clock clock) {
+        this.clock = clock;
         this.kind = kind;
         this.relyingParty = relyingParty;
         this.passkeys = passkeys;
@@ -84,7 +88,7 @@ final class PasskeyLogin extends AbstractHttpConfigurer<PasskeyLogin, HttpSecuri
         login.setAuthenticationManager(
                 new ProviderManager(new PasskeyAuthenticationProvider(kind, relyingParty, directory)));
         login.setAuthenticationSuccessHandler(
-                LoginSuccessHandler.byPasskey(sessionLifetime, devices, LoginUrls.of(kind).success()));
+                LoginSuccessHandler.byPasskey(clock, sessionLifetime, devices, LoginUrls.of(kind).success()));
         SessionAuthenticationStrategy sessions = http.getSharedObject(SessionAuthenticationStrategy.class);
         if (sessions == null) {
             throw new IllegalStateException(

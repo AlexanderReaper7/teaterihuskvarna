@@ -6,6 +6,8 @@ description: How the system sends mail, and which part Brevo does.
 
 # 0005: The app drafts mailings, Brevo sends them
 
+Amended by [0026](0026-outbox-and-brevo-contacts.md) (An outbox for mail and Brevo, and members as Brevo contacts), which the user decided on 2026-09-28. Every member with an account is a contact on one Brevo list, and a mailing goes to that list or to a segment of it. An agent brought this record in line with it on 2026-11-10.
+
 ## Decision
 
 Brevo stays, and mail keeps two separate jobs.
@@ -37,9 +39,9 @@ It would be a bad one. Brevo's editor has template management, previews across m
 Handing Brevo a draft keeps what the requirements actually wanted:
 
 - R022, the mailing is based on CMS content, so the text is written once. The application still builds the HTML, so this is unchanged.
-- R023, preview and test send to yourself. Brevo's, which is better than ours would be.
+- R023, preview and test send to yourself. The application shows the HTML before anything reaches Brevo, and asks Brevo to send a test of the draft to the administrator's own address (`MailingService.preview` and `sendTest`).
 - R024, an unsubscribe link in every mailing. Brevo manages the unsubscribe list, which also means an unsubscribe is honoured across every future campaign rather than depending on our own bookkeeping being right. This is the one with legal consequences if it goes wrong.
-- R025, a log of what was sent. Brevo's campaign history, with open and bounce data the application would not otherwise have.
+- R025, a log of what was sent. The application lists the mailings it prepared and asks Brevo for each campaign's status and numbers (`MailingService.log`), so the history is still Brevo's, with open and bounce data the application would not otherwise have.
 
 The requirement text in [requirements.md](../requirements.md) is a verbatim quotation and does not change. What changes is which component satisfies it.
 
@@ -49,7 +51,7 @@ An administrator learns a second tool, and the send button lives somewhere other
 
 Set against it: the association gets deliverability management, and a member who unsubscribes stays unsubscribed without anyone here writing that code correctly.
 
-The audience selection stays in the application, because it is the only component that knows who has paid. It resolves the audience to a list and passes it to Brevo with the draft.
+The administrator still picks the audience in the application, and the application no longer resolves it. Under [0026](0026-outbox-and-brevo-contacts.md) every member with an account is a contact on one Brevo list, with the paid year as an attribute, and the audience is that list or a segment the association saves in Brevo. Before a draft goes to a segment, the application checks in Brevo that every contact in it is on the members' list.
 
 ## What it costs to undo
 

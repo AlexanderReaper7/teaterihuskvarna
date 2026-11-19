@@ -1,22 +1,25 @@
 package se.teaterihuskvarna.member;
 
 import jakarta.validation.Valid;
+import java.time.Clock;
 import java.time.Instant;
 import java.util.Optional;
 import org.jspecify.annotations.Nullable;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.MessageSource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.validation.annotation.Validated;
 import se.teaterihuskvarna.Swedish;
 import se.teaterihuskvarna.login.Background;
+import se.teaterihuskvarna.login.CodelessLink;
 import se.teaterihuskvarna.login.Email;
 import se.teaterihuskvarna.login.Lifetimes;
 import se.teaterihuskvarna.login.LinkRequestLimiter;
 import se.teaterihuskvarna.login.LoginKind;
+import se.teaterihuskvarna.login.LoginLinks;
 import se.teaterihuskvarna.login.LoginSettings;
 import se.teaterihuskvarna.login.LoginUrls;
+import se.teaterihuskvarna.login.MailLife;
 import se.teaterihuskvarna.login.MailSettings;
 import se.teaterihuskvarna.login.Mailer;
 import se.teaterihuskvarna.login.Tokens;
@@ -41,11 +44,13 @@ public class MembershipApplicationService {
     private final LinkRequestLimiter limiter;
     private final Background background;
     private final Mailer mailer;
+    private final LoginLinks links;
     private final MessageSource messages;
     private final LoginSettings login;
     private final MailSettings mail;
     private final AssociationSettings association;
-    private final ApplicationEventPublisher events;
+    private final FeeLedger ledger;
+    private final Clock clock;
 
     MembershipApplicationService(
             MembershipApplicationRepository applications,
@@ -54,22 +59,26 @@ public class MembershipApplicationService {
             LinkRequestLimiter limiter,
             Background background,
             Mailer mailer,
+            LoginLinks links,
             MessageSource messages,
             LoginSettings login,
             MailSettings mail,
             AssociationSettings association,
-            ApplicationEventPublisher events) {
+            FeeLedger ledger,
+            Clock clock) {
         this.applications = applications;
         this.accounts = accounts;
         this.members = members;
         this.limiter = limiter;
         this.background = background;
         this.mailer = mailer;
+        this.links = links;
         this.messages = messages;
         this.login = login;
         this.mail = mail;
         this.association = association;
-        this.events = events;
+        this.ledger = ledger;
+        this.clock = clock;
     }
 
     /// Receives a Bli medlem form. Returns nothing, and returns the same way in
@@ -85,27 +94,34 @@ public class MembershipApplicationService {
     /// thread does the same work in every case and the response time does not
     /// tell the cases apart either.
     ///
+    /// The application keeps the hash of the browser's login cookie, so that
+    /// [#confirm] can make a login link that works only in this browser.
+    ///
     /// @param form          what the visitor filled in
     /// @param clientAddress the client's IP address, for the rate limit
+    /// @param browser       the login cookie the request set ([se.teaterihuskvarna.login.LoginBrowser]), or
+    ///                      null if it set none, which makes an application that confirms without a login
     /// @throws jakarta.validation.ConstraintViolationException if the form breaks a constraint
     @Transactional
-    public void apply(@Valid ApplicationForm form, String clientAddress) {
+    public void apply(@Valid ApplicationForm form, String clientAddress, @Nullable String browser) {
         Email email = new Email(form.email());
         if (!limiter.tryAcquire(email.value(), clientAddress)) {
             return;
         }
-        background.run(() -> receive(form, email));
+        String browserHash = browser == null ? null : Tokens.hash(browser);
+        background.run(() -> receive(form, email, browserHash));
     }
 
-    private void receive(ApplicationForm form, Email email) {
+    private void receive(ApplicationForm form, Email email, @Nullable String browserHash) {
         if (accounts.findByEmailIgnoreCase(email.value()).isPresent()) {
-            alreadyMember(email);
+            alreadyMember(email, browserHash);
             return;
         }
 
         String fullName = form.fullName().strip();
         String token = Tokens.newToken();
-        Instant now = Instant.now();
+        Instant now = clock.instant();
+        Instant expires = now.plus(login.applicationLifetime());
         applications.replace(
                 fullName,
                 email.value(),
@@ -115,32 +131,70 @@ public class MembershipApplicationService {
                         blankToNull(form.postalCode()),
                         blankToNull(form.city())),
                 Tokens.hash(token),
+                browserHash,
                 now,
-                now.plus(login.applicationLifetime()));
+                expires);
 
         String link = mail.link(CONFIRMATION_PATH, token);
         String lifetime = Lifetimes.describe(messages, login.applicationLifetime());
+        // Not sent once the application, and so the link, has expired.
         mailer.send(
                 email,
                 messages.getMessage("application.mail.subject", null, Swedish.LOCALE),
                 messages.getMessage("application.mail.body", new Object[] {fullName, link, lifetime},
-                        Swedish.LOCALE));
+                        Swedish.LOCALE),
+                MailLife.until(expires));
     }
 
-    /// Points a member who applied again to the login page, with no token. A
-    /// login link here would work in any browser, since the application form
-    /// sets no login cookie, and would reopen what [se.teaterihuskvarna.login.LoginBrowser]
-    /// closes: anyone applying with their own address could pass the link on.
-    private void alreadyMember(Email email) {
-        String login = mail.link(LoginUrls.of(LoginKind.MEMBER).page(), null);
-        mailer.send(
-                email,
-                messages.getMessage("application.mail.member.subject", null, Swedish.LOCALE),
-                messages.getMessage("application.mail.member.body", new Object[] {login}, Swedish.LOCALE));
+    /// Tells a member who applied again that the address already has an
+    /// account, with a login link bound to the browser that filled in the form
+    /// and the login page for any other device: `docs/decisions/0015`, "Bli
+    /// medlem from an address that already has an account". The link is the
+    /// login page's, minus the code, so the form gives nobody more than the
+    /// login page does. The mail is worth nothing once the link has expired.
+    ///
+    /// Without a login cookie there is no browser to bind to, and the mail
+    /// points to the login page only. Nothing in it expires then, so it is
+    /// retried until it is sent.
+    private void alreadyMember(Email email, @Nullable String browserHash) {
+        String page = mail.link(LoginUrls.of(LoginKind.MEMBER).page(), null);
+        String subject = messages.getMessage("application.mail.member.subject", null, Swedish.LOCALE);
+        if (browserHash == null) {
+            mailer.send(email, subject,
+                    messages.getMessage("application.mail.member.body", new Object[] {page}, Swedish.LOCALE),
+                    MailLife.untilSent());
+            return;
+        }
+        CodelessLink link = links.createWithoutCode(LoginKind.MEMBER, email.value(), browserHash);
+        Object[] arguments = {
+            mail.link(LoginUrls.of(LoginKind.MEMBER).link(), link.token()),
+            page,
+            Lifetimes.describe(messages, login.linkLifetime())};
+        mailer.send(email, subject,
+                messages.getMessage("application.mail.member.link.body", arguments, Swedish.LOCALE),
+                MailLife.until(link.expires()));
+    }
+
+    /// What the page behind a confirmation link should show. A lookup and
+    /// nothing more: mail scanners open every link, so opening one must not
+    /// spend it.
+    ///
+    /// @param token the token from the link
+    /// @return whether [#confirm] would make a member of the application now
+    public boolean confirmable(@Nullable String token) {
+        return token != null && !token.isBlank()
+                && applications.readByTokenHash(Tokens.hash(token)).filter(this::usable).isPresent();
     }
 
     /// Follows a confirmation link. The application is deleted whatever the
     /// outcome, so a link works once at most.
+    ///
+    /// The welcome carries a login link for the new account that works only in
+    /// the browser that sent the application ([LoginLinks#createWithoutCode]). The
+    /// confirmation link proves only that someone read the mail, and works in
+    /// any browser, so a login at confirmation that was not bound to the
+    /// applying browser would log in whoever the applicant passed the link to:
+    /// `docs/decisions/0015`, "Logging in from the welcome page".
     ///
     /// @param token the token from the link
     /// @return the new member's welcome, or empty if the link is unknown, used, or
@@ -159,24 +213,38 @@ public class MembershipApplicationService {
         }
         MembershipApplication application = found.get();
         applications.delete(application);
-
-        if (!application.getExpiresAt().isAfter(Instant.now())) {
-            return Optional.empty();
-        }
-        // An invitation, or another application confirmed first, may have given
-        // this address an account since the mail went out.
-        if (accounts.findByEmailIgnoreCase(application.getEmail()).isPresent()) {
+        if (!usable(application)) {
             return Optional.empty();
         }
 
-        Member member = new Member(application.getFullName());
+        Member member = new Member(application.getFullName(), clock.instant());
         member.setContact(application.getContact());
         members.save(member);
-        accounts.save(new Account(member, new Email(application.getEmail())));
-        events.publishEvent(new MemberChanged(member.getId()));
+        accounts.save(new Account(member, new Email(application.getEmail()), clock.instant()));
 
+        // Read from the ledger like every other fee status rather than written
+        // as unpaid here, so R005's "ej betald" is the status the member page
+        // and the register show too.
+        int year = ledger.currentYear();
+        FeeStatus fee = ledger.history(member).stream()
+                .filter(status -> status.year() == year)
+                .findFirst()
+                .orElseThrow();
+        String browserHash = application.getBrowserHash();
+        String loginToken = browserHash == null
+                ? null
+                : links.createWithoutCode(LoginKind.MEMBER, application.getEmail(), browserHash).token();
         return Optional.of(new Welcome(member.getFullName(), application.getEmail(), association.bankgiro(),
-                association.feeIndividualOre(), association.feeHouseholdOre()));
+                association.feeIndividualOre(), association.feeHouseholdOre(), fee, loginToken));
+    }
+
+    /// An application can become a member until it expires, and as long as no
+    /// account has its address. An invitation, or another application
+    /// confirmed first, may have given the address an account since the mail
+    /// went out.
+    private boolean usable(MembershipApplication application) {
+        return application.getExpiresAt().isAfter(clock.instant())
+                && accounts.findByEmailIgnoreCase(application.getEmail()).isEmpty();
     }
 
     private static @Nullable String blankToNull(@Nullable String value) {

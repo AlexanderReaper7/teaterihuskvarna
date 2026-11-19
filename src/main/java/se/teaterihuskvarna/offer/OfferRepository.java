@@ -37,6 +37,22 @@ interface OfferRepository extends JpaRepository<Offer, Long> {
             """)
     List<Offer> findOpen(@Param("now") Instant now);
 
+    /// Published offers the member is registered for that have not started, in
+    /// the order they happen, with undated ones last. Unlike [#findOpen] this
+    /// keeps an offer whose registration has closed.
+    ///
+    /// @param memberId the member
+    /// @param now      the moment to ask about
+    /// @return the offers the member is going to
+    @Query("""
+            select o from Offer o
+            where o.published = true
+              and (o.startsAt is null or o.startsAt > :now)
+              and o.id in (select r.offerId from OfferRegistration r where r.memberId = :memberId)
+            order by o.startsAt asc nulls last, o.id asc
+            """)
+    List<Offer> findUpcomingRegisteredBy(@Param("memberId") long memberId, @Param("now") Instant now);
+
     /// @return every offer, newest first
     @Query("select o from Offer o order by o.createdAt desc, o.id desc")
     List<Offer> findAllNewestFirst();

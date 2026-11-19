@@ -28,7 +28,7 @@ A member's login. It holds the email address that login links and mailings go to
 
 ### Login link | Inloggningslänk
 
-A link mailed to the address of an account or an administrator account, which logs its holder in once, within a limited time, and only in the browser that asked for it. Asking again sends a new link and leaves the older ones working.
+A link mailed to the address of an account or an administrator account, which logs its holder in once, within a limited time, and only in the browser that asked for it. Asking again sends a new link and leaves the older ones working. A link without a code works only in the browser that sent a membership application: the welcome page after confirming shows one, and the mail to a member who applied again carries one.
 
 ### Login code | Kod
 
@@ -70,13 +70,21 @@ The record of when an administrator was removed or added again, by whom, and fro
 
 The association's authoritative collection of members, contact details, household membership and annual fee records.
 
+### Street address | Gatuadress
+
+The street and number in a member's contact details, such as Storgatan 1. Postnummer and Ort are fields of their own. Every form, its error message and the register's export use the one name Gatuadress, the name the join form already had (#180).
+
 ### Household | Hushåll
 
-A grouping used to let one household fee cover several members. A household is not itself a member.
+A grouping used to let one household fee cover several members. A household is not itself a member. The member owner can manage the household, and every member with an account can leave it. Removal from a household preserves the person's membership and account ([decisions/0025](docs/decisions/0025-member-register-in-the-application.md)).
+
+### Household owner | Hushållsägare
+
+The member allowed to rename a household, add people, and edit or remove other household members. The creator becomes its first owner, and administrators can change the owner. An owner leaving must choose another household member with an account. If no account holder remains, administrators take over ([decisions/0025](docs/decisions/0025-member-register-in-the-application.md)).
 
 ### Household member addition | Tillägg i hushållet
 
-An administrator adding a person to a household. It creates a member without an account. A member cannot add people, only invite those already in the household ([decisions/0025](docs/decisions/0025-member-register-in-the-application.md)).
+An administrator or the member owner of the household adding a person to it. It creates a member without an account, who can receive an invitation afterwards ([decisions/0025](docs/decisions/0025-member-register-in-the-application.md)).
 
 ### Invitation | Inbjudan
 
@@ -84,7 +92,7 @@ An offer of an account to a member who has none, sent to an email address by an 
 
 ### Membership application | Ansökan om medlemskap
 
-A visitor's request to enter the member register, for themselves alone. It becomes a member with an account, without a paid fee, when the applicant confirms their email address, and it is deleted if they have not confirmed within 24 hours. Household members are added afterwards, not through the application. Provisional until the customer decides, see C9 in [open-questions.md](docs/open-questions.md#for-the-customer-deferred).
+A visitor's request to enter the member register, for themselves alone. It becomes a member with an account, without a paid fee, when the applicant confirms their email address, and it is deleted if they have not confirmed within 24 hours. Confirming in the browser that sent the application lets the applicant log in from the welcome page without a mail. Household members are added afterwards, not through the application. Provisional until the customer decides, see C9 in [open-questions.md](docs/open-questions.md#for-the-customer-deferred).
 
 ### Membership fee | Medlemsavgift
 
@@ -101,6 +109,10 @@ A membership fee that covers the payer and whoever is in the household it was pa
 ### Fee status | Avgiftsstatus
 
 Whether a member is covered by a paid membership fee for a stated year.
+
+### Payment message | Meddelande
+
+What a member writes in the message of a bankgiro payment so that an administrator can match the payment to them. It is the email address of the paying member's account. Decided by the user on 2026-10-09 ([system plan](docs/projektplan.md#the-member-model-records-only-data-the-confirmed-workflows-need)).
 
 ## Content and participation
 
@@ -123,6 +135,18 @@ The site as it looks with an editor's unpublished drafts, shown inside Sanity's 
 ### Fixed page | Sida
 
 One of the pages R004 names, such as Styrelsen, written in Sanity as a `sida` document whose slug is the page's address.
+
+### Production | Produktion
+
+A play or programme the association has staged or arranged, with the year it opened and, for one that ran several seasons, the last year. A `produktion` document in Sanity, listed newest first on `/produktioner` under that page's own text.
+
+### Board member | Styrelseledamot
+
+A person on the association's board, with a role such as Ordförande or Kassör. A `styrelseledamot` document in Sanity, listed on `/styrelsen` by its order number. It holds no contact details, because Sanity's datasets answer anonymous queries.
+
+### Ludde prize | Luddepriset
+
+The prize the association gives for a notable cultural contribution in the municipality, named after Ludde in Bara tusen korta år. A `luddepris` document in Sanity is one year's recipient, listed newest first on `/ludde-priser`.
 
 ### Offer | Erbjudande
 
@@ -255,4 +279,3 @@ A member who has not renewed, with the exact transition and retention period sti
 ### Member-only offer detail | Erbjudandeinformation för medlemmar
 
 Offer information that a visitor must not read, if the board decides that offers contain such information.
-

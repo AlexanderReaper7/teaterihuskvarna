@@ -2,8 +2,8 @@ package se.teaterihuskvarna.login;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
+import java.time.Clock;
 import java.time.OffsetDateTime;
-import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
 import org.jspecify.annotations.Nullable;
@@ -38,9 +38,10 @@ public class LoginLinks {
     private final MessageSource messages;
     private final LoginSettings settings;
     private final MailSettings mail;
+    private final Clock clock;
 
     LoginLinks(List<LoginDirectory> directories, JdbcClient jdbc, Mailer mailer, Background background,
-            MessageSource messages, LoginSettings settings, MailSettings mail) {
+            MessageSource messages, LoginSettings settings, MailSettings mail, Clock clock) {
         this.directories = List.copyOf(directories);
         this.background = background;
         this.jdbc = jdbc;
@@ -48,6 +49,7 @@ public class LoginLinks {
         this.messages = messages;
         this.settings = settings;
         this.mail = mail;
+        this.clock = clock;
     }
 
     /// Mails a login link and code if the address belongs to a login of this
@@ -74,21 +76,57 @@ public class LoginLinks {
         if (token == null || token.isBlank()) {
             return LinkOpening.UNUSABLE;
         }
-        Optional<String> boundTo = jdbc.sql("""
-                        SELECT browser_hash FROM one_time_token
+        Optional<Bound> found = jdbc.sql("""
+                        SELECT browser_hash, code_hash IS NOT NULL AS has_code FROM one_time_token
                         WHERE token_hash = ? AND kind = ? AND expires_at > now()""")
                 .param(Tokens.hash(token))
                 .param(kind.code())
-                .query(String.class)
+                .query((row, number) -> new Bound(row.getString("browser_hash"), row.getBoolean("has_code")))
                 .optional();
-        if (boundTo.isEmpty()) {
+        if (found.isEmpty()) {
             return LinkOpening.UNUSABLE;
         }
         boolean here = browser != null && LoginBrowser.isWellFormed(browser)
                 && MessageDigest.isEqual(
-                        boundTo.get().getBytes(StandardCharsets.US_ASCII),
+                        found.get().browserHash().getBytes(StandardCharsets.US_ASCII),
                         Tokens.hash(browser).getBytes(StandardCharsets.US_ASCII));
-        return here ? LinkOpening.HERE : LinkOpening.ELSEWHERE;
+        if (here) {
+            return LinkOpening.HERE;
+        }
+        return found.get().hasCode() ? LinkOpening.ELSEWHERE : LinkOpening.ELSEWHERE_WITHOUT_CODE;
+    }
+
+    /// Creates a login link for an account, bound to the browser that sent a
+    /// membership application, and mails nothing: the caller shows it on the
+    /// welcome page or puts it in its own mail. It works only in the browser
+    /// whose login cookie hashes to `browserHash`. It has no code, because the
+    /// page that takes a code is the login page's, which the applicant never
+    /// saw, so nothing typed in another browser redeems it either. Otherwise
+    /// it is a login link like the login page's: it works once, for as long.
+    ///
+    /// Runs in the caller's transaction, so the link exists only if what the
+    /// caller writes with it does.
+    ///
+    /// @param kind        the login the link is for
+    /// @param email       the address of the account
+    /// @param browserHash [Tokens#hash] of the login cookie the application form set
+    /// @return the token and when it expires
+    public CodelessLink createWithoutCode(LoginKind kind, String email, String browserHash) {
+        String token = Tokens.newToken();
+        OffsetDateTime expires = OffsetDateTime.now(clock).plus(settings.linkLifetime());
+        jdbc.sql("""
+                        INSERT INTO one_time_token (token_hash, kind, email, expires_at, browser_hash)
+                        VALUES (?, ?, ?, ?, ?)""")
+                .param(Tokens.hash(token))
+                .param(kind.code())
+                .param(new Email(email).value())
+                .param(expires)
+                .param(browserHash)
+                .update();
+        return new CodelessLink(token, expires.toInstant());
+    }
+
+    private record Bound(String browserHash, boolean hasCode) {
     }
 
     private void create(LoginKind kind, Email address, String browser) {
@@ -98,13 +136,14 @@ public class LoginLinks {
         }
         String token = Tokens.newToken();
         String code = Tokens.newCode();
+        OffsetDateTime expires = OffsetDateTime.now(clock).plus(settings.linkLifetime());
         jdbc.sql("""
                         INSERT INTO one_time_token (token_hash, kind, email, expires_at, browser_hash, code_hash)
                         VALUES (?, ?, ?, ?, ?, ?)""")
                 .param(Tokens.hash(token))
                 .param(kind.code())
                 .param(address.value())
-                .param(OffsetDateTime.now(ZoneOffset.UTC).plus(settings.linkLifetime()))
+                .param(expires)
                 .param(Tokens.hash(browser))
                 .param(Tokens.hash(code))
                 .update();
@@ -112,9 +151,12 @@ public class LoginLinks {
         Object[] arguments = {
             link, Lifetimes.describe(messages, settings.linkLifetime()), found.get().fullName(), code};
         String prefix = "login.mail." + kind.code();
+        // The mail is worth nothing once the link and the code have expired,
+        // so the outbox deletes it unsent from then.
         mailer.send(
                 address,
                 messages.getMessage(prefix + ".subject", null, Swedish.LOCALE),
-                messages.getMessage(prefix + ".body", arguments, Swedish.LOCALE));
+                messages.getMessage(prefix + ".body", arguments, Swedish.LOCALE),
+                MailLife.until(expires.toInstant()));
     }
 }

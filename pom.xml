@@ -7,7 +7,7 @@
   <parent>
     <groupId>org.springframework.boot</groupId>
     <artifactId>spring-boot-starter-parent</artifactId>
-    <version>4.1.1</version>
+    <version>4.1.2</version>
     <relativePath/>
   </parent>
 
@@ -19,32 +19,43 @@
 
   <properties>
     <java.version>25</java.version>
-    <!-- Versions newer than the ones Spring Boot 4.1.1 manages. Checked against
-         Maven Central on 2026-09-22; see docs/decisions/0010 and 0011. -->
-    <jte.version>3.2.4</jte.version>
-    <flyway.version>13.7.0</flyway.version>
-    <testcontainers.version>1.21.4</testcontainers.version>
-    <!-- Boot 4.1.1 manages 9.2.0. 10.0.1 is Maven Central's latest, checked on
+    <java.sourceDirectory>${project.basedir}/src/main/java</java.sourceDirectory>
+    <!-- Latest stable releases checked against Maven Central on 2026-10-31. -->
+    <jspecify.version>1.0.1</jspecify.version>
+    <error-prone.version>2.52.0</error-prone.version>
+    <nullaway.version>0.14.3</nullaway.version>
+    <!-- Versions newer than the ones Spring Boot 4.1.2 manages. Checked against
+         Maven Central on 2026-10-31; see docs/decisions/0010. JTE 3.2.5 is
+         Maven Central's latest, checked on 2026-11-10; what its output guards
+         drop is in docs/decisions/0004. -->
+    <jte.version>3.2.5</jte.version>
+    <flyway.version>13.12.0</flyway.version>
+    <!-- Boot 4.1.2 manages 9.2.0. 10.0.1 is Maven Central's latest, checked on
          2026-09-23. -->
     <git-commit-id-maven-plugin.version>10.0.1</git-commit-id-maven-plugin.version>
     <!-- The three static analysis gates: docs/decisions/0013. Checked against
          Maven Central on 2026-09-22; each is the latest release. -->
     <checkstyle.plugin.version>3.6.0</checkstyle.plugin.version>
-    <checkstyle.version>14.1.0</checkstyle.version>
-    <spotbugs.plugin.version>4.10.4.1</spotbugs.plugin.version>
+    <checkstyle.version>14.4.0</checkstyle.version>
+    <spotbugs.plugin.version>4.10.5.0</spotbugs.plugin.version>
     <pmd.plugin.version>3.28.0</pmd.plugin.version>
-    <pmd.version>7.27.0</pmd.version>
+    <pmd.version>7.29.0</pmd.version>
     <!-- Tie PMD's analysis target to the compiler target, so a Java upgrade
          cannot leave PMD reading class files it does not understand. -->
     <pmd.target.jdk>${java.version}</pmd.target.jdk>
-    <archunit.version>1.5.0</archunit.version>
+    <archunit.version>1.5.1</archunit.version>
     <!-- spring-security-webauthn 7.1.1 asks for 0.31.9.RELEASE, and Boot does
-         not manage it. 0.31.10.RELEASE is Maven Central's latest, checked on
-         2026-09-23. The test emulator is pinned to the same release. -->
-    <webauthn4j.version>0.31.10.RELEASE</webauthn4j.version>
+         not manage it. The pin is newer, and the test emulator is pinned to
+         the same release. -->
+    <webauthn4j.version>0.32.0.RELEASE</webauthn4j.version>
   </properties>
 
   <dependencies>
+    <dependency>
+      <groupId>org.jspecify</groupId>
+      <artifactId>jspecify</artifactId>
+      <version>${jspecify.version}</version>
+    </dependency>
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-web</artifactId>
@@ -89,9 +100,13 @@
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-validation</artifactId>
     </dependency>
+    <!-- What the generated templates run on: JteModel, which a method on
+         Templates returns, and with it jte-runtime. JTE's Spring Boot starter
+         is not here. It resolves a view by a name and hands the template a
+         map, which is the string a handler no longer returns. -->
     <dependency>
       <groupId>gg.jte</groupId>
-      <artifactId>jte-spring-boot-starter-4</artifactId>
+      <artifactId>jte-models-runtime</artifactId>
       <version>${jte.version}</version>
     </dependency>
     <!-- Boot 4 moved Flyway auto-configuration out of spring-boot-autoconfigure
@@ -101,14 +116,19 @@
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-flyway</artifactId>
     </dependency>
+    <!-- Boot's dependency management already reads flyway.version. Naming it
+         here is for Dependabot: on 2026-10-27, while only the BOM read the
+         property, it proposed none of Flyway 13.8 to 13.10. -->
     <dependency>
       <groupId>org.flywaydb</groupId>
       <artifactId>flyway-database-postgresql</artifactId>
+      <version>${flyway.version}</version>
     </dependency>
+    <!-- Compile scope, not runtime, for one class: OutboxNotifications reads
+         PostgreSQL's notifications, which JDBC has no interface for. -->
     <dependency>
       <groupId>org.postgresql</groupId>
       <artifactId>postgresql</artifactId>
-      <scope>runtime</scope>
     </dependency>
 
     <dependency>
@@ -150,20 +170,63 @@
       <artifactId>spring-boot-testcontainers</artifactId>
       <scope>test</scope>
     </dependency>
+    <!-- Testcontainers 2 renamed its modules, so the old artifact ids stop at
+         1.21.4. Spring Boot manages the version. -->
     <dependency>
       <groupId>org.testcontainers</groupId>
-      <artifactId>junit-jupiter</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.testcontainers</groupId>
-      <artifactId>postgresql</artifactId>
+      <artifactId>testcontainers-postgresql</artifactId>
       <scope>test</scope>
     </dependency>
   </dependencies>
 
   <build>
+    <sourceDirectory>${java.sourceDirectory}</sourceDirectory>
     <plugins>
+      <!-- Nullability is checked by javac, including test compilation. -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>3.16.0</version>
+        <configuration>
+          <fork>true</fork>
+          <compilerArgs>
+            <arg>-XDcompilePolicy=simple</arg>
+            <arg>--should-stop=ifError=FLOW</arg>
+            <arg>-J--add-exports=jdk.compiler/com.sun.tools.javac.api=ALL-UNNAMED</arg>
+            <arg>-J--add-exports=jdk.compiler/com.sun.tools.javac.file=ALL-UNNAMED</arg>
+            <arg>-J--add-exports=jdk.compiler/com.sun.tools.javac.main=ALL-UNNAMED</arg>
+            <arg>-J--add-exports=jdk.compiler/com.sun.tools.javac.model=ALL-UNNAMED</arg>
+            <arg>-J--add-exports=jdk.compiler/com.sun.tools.javac.parser=ALL-UNNAMED</arg>
+            <arg>-J--add-exports=jdk.compiler/com.sun.tools.javac.processing=ALL-UNNAMED</arg>
+            <arg>-J--add-exports=jdk.compiler/com.sun.tools.javac.tree=ALL-UNNAMED</arg>
+            <arg>-J--add-exports=jdk.compiler/com.sun.tools.javac.util=ALL-UNNAMED</arg>
+            <arg>-J--add-opens=jdk.compiler/com.sun.tools.javac.code=ALL-UNNAMED</arg>
+            <arg>-J--add-opens=jdk.compiler/com.sun.tools.javac.comp=ALL-UNNAMED</arg>
+            <!-- Keep plugin options in one argument without embedded newlines.
+                 EqualsIncompatibleType, CollectionIncompatibleType and
+                 ReferenceEquality are on for the id types (MemberId,
+                 AccountId, AdministratorId). equals, Map.get and contains
+                 take any Object, so comparing an id with a number, or with
+                 another kind of id, compiles and is always false, and == on
+                 two ids compares the objects and not the numbers. These three
+                 checks refuse all of it. -->
+            <arg>-Xplugin:ErrorProne -XepExcludedPaths:.*/target/generated-sources/.* -XepDisableAllChecks -Xep:NullAway:ERROR -Xep:EqualsIncompatibleType:ERROR -Xep:CollectionIncompatibleType:ERROR -Xep:ReferenceEquality:ERROR -Xep:RequireExplicitNullMarking:ERROR -Xep:JSpecifyUnrecognizedAnnotationLocation:ERROR -XepOpt:NullAway:OnlyNullMarked=true -XepOpt:NullAway:JSpecifyMode=true -XepOpt:NullAway:ExternalInitAnnotations=jakarta.persistence.Entity -XepOpt:NullAway:HandleTestAssertionLibraries=true</arg>
+          </compilerArgs>
+          <annotationProcessorPaths>
+            <path>
+              <groupId>com.google.errorprone</groupId>
+              <artifactId>error_prone_core</artifactId>
+              <version>${error-prone.version}</version>
+            </path>
+            <path>
+              <groupId>com.uber.nullaway</groupId>
+              <artifactId>nullaway</artifactId>
+              <version>${nullaway.version}</version>
+            </path>
+          </annotationProcessorPaths>
+        </configuration>
+      </plugin>
+
       <!-- build-info writes META-INF/build-info.properties, and the git plugin
            writes git.properties, so the development index can show which build
            and which commit is running. Boot's parent configures the git plugin;
@@ -208,25 +271,50 @@
           </includeOnlyProperties>
         </configuration>
       </plugin>
-      <!-- Compiles every .jte template to a Java class. This is the whole reason
-           0004 chose JTE: a renamed field fails the build rather than a page. -->
+      <!-- Turns every .jte template into a Java class, and the pages among
+           them into methods on gg.jte.generated.precompiled.Templates, one
+           per page, with the page's @param lines as the method's parameters.
+           A handler shows a page by calling its method, so a page that does
+           not exist, a missing value and a value of the wrong type fail the
+           compile. 0004 chose JTE for that inside a template. This carries it
+           across the line between a handler and its template, where a view
+           name and a model were strings.
+
+           The sources land in target/generated-sources/jte and compile with
+           the rest of main. A tag, an icon or a layout is called from a
+           template and gets no method. -->
       <plugin>
         <groupId>gg.jte</groupId>
         <artifactId>jte-maven-plugin</artifactId>
         <version>${jte.version}</version>
         <configuration>
           <sourceDirectory>${project.basedir}/src/main/jte</sourceDirectory>
-          <targetDirectory>${project.build.outputDirectory}</targetDirectory>
           <contentType>Html</contentType>
           <binaryStaticContent>true</binaryStaticContent>
+          <targetResourceDirectory>${project.build.outputDirectory}</targetResourceDirectory>
+          <extensions>
+            <extension>
+              <className>gg.jte.models.generator.ModelExtension</className>
+              <settings>
+                <excludePattern>.*\.(tag|icon)\..*|.*\.JtelayoutGenerated</excludePattern>
+              </settings>
+            </extension>
+          </extensions>
         </configuration>
         <executions>
           <execution>
-            <id>precompile</id>
-            <phase>process-classes</phase>
-            <goals><goal>precompile</goal></goals>
+            <id>generate</id>
+            <phase>generate-sources</phase>
+            <goals><goal>generate</goal></goals>
           </execution>
         </executions>
+        <dependencies>
+          <dependency>
+            <groupId>gg.jte</groupId>
+            <artifactId>jte-models</artifactId>
+            <version>${jte.version}</version>
+          </dependency>
+        </dependencies>
       </plugin>
       <!-- Copies the hooks in .githooks into .git/hooks, so any clone that
            builds gets them with no setup step. core.hooksPath would need a git
@@ -355,6 +443,14 @@
           <failOnViolation>true</failOnViolation>
           <printFailingErrors>true</printFailingErrors>
           <targetJdk>${pmd.target.jdk}</targetJdk>
+          <!-- The classes the JTE plugin writes from the templates. PMD reads
+               sources, and until the pages were generated as sources it never
+               saw a template, so this leaves out nothing it used to check. It
+               finds only unused imports and full names there, which nobody
+               can fix: the files are written again on every build. -->
+          <excludeRoots>
+            <excludeRoot>${project.build.directory}/generated-sources/jte</excludeRoot>
+          </excludeRoots>
         </configuration>
         <executions>
           <execution>
@@ -394,4 +490,16 @@
       </plugin>
     </plugins>
   </build>
+  <profiles>
+    <!-- The probes use the normal compiler settings, with isolated sources and output. -->
+    <profile>
+      <id>nullability-probe</id>
+      <properties>
+        <java.sourceDirectory>${project.build.directory}/src</java.sourceDirectory>
+      </properties>
+      <build>
+        <directory>${project.basedir}/target/nullability-probe</directory>
+      </build>
+    </profile>
+  </profiles>
 </project>

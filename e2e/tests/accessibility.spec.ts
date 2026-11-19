@@ -6,6 +6,7 @@ import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
 import { linkLogin } from "../support/auth";
 import { clearLinkRequests, resetAdministrators } from "../support/db";
+import { bookedShift, confirmations } from "../support/pages";
 import { ADMINISTRATORS, MEMBERS } from "../support/site";
 
 test.beforeEach(async () => {
@@ -23,9 +24,48 @@ async function violations(page: Page): Promise<string[]> {
     v.nodes.map((n) => `${v.id} (${v.impact}): ${n.target.join(" ")}: ${n.failureSummary ?? v.help}`));
 }
 
+/// A control's accessible name, from the first line of its ARIA snapshot, such
+/// as `- button "Spara"`. The line goes on after the name when the name is not
+/// the text, as in `- button "Ta bort Gunnar Wik": Ta bort`, and Playwright puts
+/// the role and name in single quotes when the name holds ": ", as YAML needs:
+/// `- 'button "Betald, enskild: Erik Lindqvist"': Betald, enskild`.
+function snapshotName(snapshot: string): string {
+  let line = snapshot.split("\n")[0].replace(/^- /, "");
+  const quoted = /^'((?:[^']|'')*)'/.exec(line);
+  if (quoted) {
+    line = quoted[1].replaceAll("''", "'");
+  }
+  return /^[a-z]+ "((?:[^"\\]|\\.)*)"/.exec(line)?.[1]?.replaceAll('\\"', '"') ?? "";
+}
+
+/// An icon is decoration beside a control's text: hidden from screen readers,
+/// so every visible link or button that carries one is still named by its own
+/// text, or by its aria-label where it has one.
+async function iconProblems(page: Page): Promise<string[]> {
+  const found = await page.locator("svg.icon").evaluateAll((icons) => icons
+    .filter((icon) => icon.getAttribute("aria-hidden") !== "true" || icon.getAttribute("focusable") !== "false")
+    .map((icon) => `the icon in ${JSON.stringify(icon.parentElement?.textContent?.trim() ?? "")}`
+      + " is not hidden from screen readers"));
+  for (const control of await page.locator("a:has(svg.icon), button:has(svg.icon)").all()) {
+    if (!(await control.isVisible())) {
+      continue;
+    }
+    const text = (await control.innerText()).trim();
+    const expected = (await control.getAttribute("aria-label")) ?? text;
+    const name = snapshotName(await control.ariaSnapshot());
+    if (!text) {
+      found.push("a control shows an icon and no text");
+    } else if (name !== expected) {
+      found.push(`${JSON.stringify(text)} is named ${JSON.stringify(name)}`);
+    }
+  }
+  return found;
+}
+
 async function scan(page: Page, path: string): Promise<void> {
   await page.goto(path);
   expect(await violations(page), path).toEqual([]);
+  expect(await iconProblems(page), path).toEqual([]);
 }
 
 /// The first link on `list` whose address starts with `prefix` and continues
@@ -45,6 +85,17 @@ async function firstDetail(page: Page, list: string, prefix: string): Promise<st
 test("the scan reports an image without a text alternative", async ({ page }) => {
   await page.setContent('<html lang="sv"><title>t</title><main><img src="data:,"></main></html>');
   expect(await violations(page)).toEqual([expect.stringMatching(/^image-alt \(critical\)/)]);
+});
+
+// Proves the icon check can fail: an icon a screen reader reaches, whose title
+// then becomes part of the button's name.
+test("the icon check reports an icon a screen reader reaches", async ({ page }) => {
+  await page.setContent('<html lang="sv"><title>t</title><main><button><svg class="icon" focusable="false">'
+    + "<title>Diskett</title></svg> Spara</button></main></html>");
+  expect(await iconProblems(page)).toEqual([
+    'the icon in "Diskett Spara" is not hidden from screen readers',
+    '"Spara" is named "Diskett Spara"',
+  ]);
 });
 
 const PUBLIC = [
@@ -90,4 +141,11 @@ test("the administrator pages pass axe", async ({ page }) => {
   }
   await scan(page, await firstDetail(page, "/admin/medlemmar", "/admin/medlemmar/"));
   await scan(page, await firstDetail(page, "/admin/erbjudanden", "/admin/erbjudanden/"));
+  await bookedShift();
+  const shift = await firstDetail(page, "/admin/volontarpass", "/admin/volontarpass/");
+  await scan(page, shift);
+  // The pages that ask before a document, an administrator and a shift is deleted.
+  for (const path of await confirmations(page, [shift])) {
+    await scan(page, path);
+  }
 });

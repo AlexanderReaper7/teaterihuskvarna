@@ -1,6 +1,7 @@
 package se.teaterihuskvarna.offer;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.not;
@@ -39,6 +40,7 @@ import org.springframework.test.web.servlet.request.RequestPostProcessor;
 import se.teaterihuskvarna.IntegrationTestSupport;
 import se.teaterihuskvarna.login.LoginKind;
 import se.teaterihuskvarna.login.SignedIn;
+import se.teaterihuskvarna.member.MemberId;
 import se.teaterihuskvarna.web.Copy;
 
 /// Proves the offer rules (R014) and the registration export (R020) through
@@ -318,6 +320,87 @@ class OfferIT extends IntegrationTestSupport {
         assertThat(rowsIn("offer")).isZero();
     }
 
+    /// A capacity no `int` holds and a year of five digits never become an
+    /// `OfferForm`. They are errors on their fields, as a blank title is, and the
+    /// page keeps what was typed.
+    @Test
+    void theCreateFormShowsAValueItCannotReadOnItsField() throws Exception {
+        String page = bodyOf(mockMvc.perform(post("/admin/erbjudanden")
+                        .param("title", "Sminkkurs")
+                        .param("description", "Ta med egen spegel.")
+                        .param("startsAt", "12030-05-01T18:30")
+                        .param("registrationClosesAt", "2030-04-28T12:00")
+                        .param("capacity", "99999999999")
+                        .with(asAdministrator())
+                        .with(csrf()))
+                .andExpect(status().isOk())
+                .andReturn());
+
+        assertUnreadable(page, "capacity", "99999999999", copy.text("offer.capacity.invalid"));
+        assertUnreadable(page, "startsAt", "12030-05-01T18:30", copy.text("offer.startsAt.invalid"));
+        assertThat(page).contains("value=\"Sminkkurs\"", "Ta med egen spegel.</textarea>",
+                        "value=\"2030-04-28T12:00\"")
+                .doesNotContain("registrationClosesAt-error");
+        mockMvc.perform(post("/api/admin/offers")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"title\":\"Sminkkurs\",\"capacity\":99999999999}")
+                        .with(asAdministrator())
+                        .with(csrf()))
+                .andExpect(status().isBadRequest());
+        mockMvc.perform(post("/api/admin/offers")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"title\":\"Sminkkurs\",\"startsAt\":\"12030-05-01T18:30\"}")
+                        .with(asAdministrator())
+                        .with(csrf()))
+                .andExpect(status().isBadRequest());
+
+        assertThat(rowsIn("offer")).isZero();
+    }
+
+    @Test
+    void theEditFormShowsAValueItCannotReadOnItsField() throws Exception {
+        long id = insertOffer("Verkstad", true, 12, IN_A_MONTH, null);
+
+        String page = bodyOf(mockMvc.perform(post("/admin/erbjudanden/" + id)
+                        .param("title", "Verkstad i ateljén")
+                        .param("description", "")
+                        .param("startsAt", "2030-05-01T18:30")
+                        .param("registrationClosesAt", "i morgon")
+                        .param("capacity", "tolv")
+                        .with(asAdministrator())
+                        .with(csrf()))
+                .andExpect(status().isOk())
+                .andReturn());
+
+        assertUnreadable(page, "capacity", "tolv", copy.text("offer.capacity.invalid"));
+        assertUnreadable(page, "registrationClosesAt", "i morgon",
+                copy.text("offer.registrationClosesAt.invalid"));
+        assertThat(page).contains("<h1>Verkstad</h1>", "value=\"Verkstad i ateljén\"",
+                "value=\"2030-05-01T18:30\"");
+        mockMvc.perform(put("/api/admin/offers/" + id)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"title\":\"Verkstad i ateljén\",\"capacity\":\"tolv\"}")
+                        .with(asAdministrator())
+                        .with(csrf()))
+                .andExpect(status().isBadRequest());
+
+        assertThat(jdbc.sql("SELECT title FROM offer").query(String.class).single()).isEqualTo("Verkstad");
+        assertThat(jdbc.sql("SELECT capacity FROM offer").query(Integer.class).single()).isEqualTo(12);
+    }
+
+    /// The browser stops a number over the limit before it is sent, with the
+    /// same limit the service has. No other field of the form gets a limit.
+    @Test
+    void theCapacityFieldCarriesTheLimitTheServiceHas() throws Exception {
+        String page = bodyOf(mockMvc.perform(get("/admin/erbjudanden/nytt").with(asAdministrator()))
+                .andExpect(status().isOk())
+                .andReturn());
+
+        assertThat(page).contains("name=\"capacity\" type=\"number\" autocomplete=\"off\" max=\""
+                + OfferForm.CAPACITY_MAX + "\"");
+        assertThat(page.split(" max=\"", -1)).hasSize(2);
+    }
+
     @Test
     void anOfferIsCreatedAsADraftAndPublishedLater() throws Exception {
         MvcResult created = mockMvc.perform(post("/admin/erbjudanden")
@@ -402,6 +485,39 @@ class OfferIT extends IntegrationTestSupport {
                 .andExpect(jsonPath("$[0].phone").value("070-111 22 33"));
     }
 
+    /// A `datetime-local` field drops a value with more than three decimals, and
+    /// the form would then send the times empty: #184.
+    @Test
+    void theEditFormGivesTheTimesToTheMinuteAsItsFieldsTakeThem() throws Exception {
+        long id = insertOffer("Verkstad", true, null, Instant.parse("2027-03-14T17:32:27.812329Z"),
+                Instant.parse("2027-03-10T10:05:59.500Z"));
+
+        mockMvc.perform(get("/admin/erbjudanden/" + id).with(asAdministrator()))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("value=\"2027-03-14T18:32\"")))
+                .andExpect(content().string(containsString("value=\"2027-03-10T11:05\"")));
+    }
+
+    @Test
+    void theAdministratorStartPageListsUpcomingOffersSoonestFirst() throws Exception {
+        long later = insertOffer("Sommarläger", true, 10, IN_A_MONTH, null);
+        long sooner = insertOffer("Höstverkstad", false, null, IN_A_WEEK, null);
+        long past = insertOffer("Gammal kurs", true, null, YESTERDAY, null);
+        register(later, insertAccount("Anna Först", "anna@example.test"));
+
+        String page = mockMvc.perform(get("/admin").with(asAdministrator())).andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
+        assertThat(page).contains("1 av 10", "Nej, utkast").doesNotContain("/admin/erbjudanden/" + past + "\"");
+        assertThat(page.indexOf("/admin/erbjudanden/" + sooner + "\"")).isPositive()
+                .isLessThan(page.indexOf("/admin/erbjudanden/" + later + "\""));
+        assertThat(page.replaceAll("\\s+", " ")).contains("Platser kvar", "<td>9</td>", "<td>Obegränsat</td>");
+        mockMvc.perform(get("/api/admin/offers/upcoming").with(asAdministrator()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(2))
+                .andExpect(jsonPath("$[0].id").value(sooner))
+                .andExpect(jsonPath("$[1].id").value(later));
+    }
+
     @Test
     void deletingAsksFirstAndTakesTheRegistrations() throws Exception {
         long id = insertOffer("Verkstad", true, null, IN_A_MONTH, null);
@@ -424,6 +540,22 @@ class OfferIT extends IntegrationTestSupport {
                 .andExpect(status().isNotFound());
         mockMvc.perform(get("/admin/erbjudanden/" + other).with(asAdministrator()))
                 .andExpect(status().isNotFound());
+    }
+
+    /// A form refused as stale comes back to the page it was on with `gammal`
+    /// in the query. These two took no `Feedback` and showed the form again
+    /// with nothing said.
+    @Test
+    void theNewOfferPageAndTheDeletePageSayThatAFormWasStale() throws Exception {
+        long id = insertOffer("Verkstad", true, null, IN_A_MONTH, null);
+
+        for (String page : List.of("/admin/erbjudanden/nytt", "/admin/erbjudanden/" + id + "/ta-bort")) {
+            mockMvc.perform(get(page).param("gammal", "").with(asAdministrator()))
+                    .andExpect(status().isOk())
+                    .andExpect(content().string(containsString(copy.text("form.stale"))));
+            mockMvc.perform(get(page).with(asAdministrator()))
+                    .andExpect(content().string(not(containsString(copy.text("form.stale")))));
+        }
     }
 
     @Test
@@ -487,7 +619,52 @@ class OfferIT extends IntegrationTestSupport {
         register(second, anna);
         register(first, anna);
 
-        assertThat(offers.offerIdsOf(memberOf(anna))).containsExactly(first, second);
+        assertThat(offers.offerIdsOf(new MemberId(memberOf(anna)))).containsExactly(first, second);
+    }
+
+    @Test
+    void theStartPageListsUpcomingRegistrationsAlsoAfterRegistrationCloses() throws Exception {
+        long open = insertOffer("Öppen verkstad", true, null, IN_A_MONTH, null);
+        long closed = insertOffer("Stängd läsning", true, null, IN_A_MONTH, YESTERDAY);
+        long past = insertOffer("Gammal utflykt", true, null, YESTERDAY, null);
+        long draft = insertOffer("Hemligt utkast", false, null, IN_A_MONTH, null);
+        long others = insertOffer("Annans kurs", true, null, IN_A_MONTH, null);
+        long karin = insertAccount("Karin Holm", "karin@example.test");
+        register(open, karin);
+        for (long offer : new long[] {closed, past, draft}) {
+            jdbc.sql("INSERT INTO offer_registration (offer_id, member_id, created_at) VALUES (?, ?, now())")
+                    .param(offer)
+                    .param(memberOf(karin))
+                    .update();
+        }
+        register(others, insertAccount("Bo Sen", "bo@example.test"));
+        RequestPostProcessor member = asMember(karin);
+
+        mockMvc.perform(get("/api/member/registrations").with(member))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[*].id", contains((int) open, (int) closed)))
+                .andExpect(jsonPath("$[1].open").value(false));
+        mockMvc.perform(get("/medlem").with(member))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("/medlem/erbjudanden/" + open + "\"")))
+                .andExpect(content().string(containsString("Stängd läsning")))
+                .andExpect(content().string(not(containsString("Gammal utflykt"))))
+                .andExpect(content().string(not(containsString("Hemligt utkast"))))
+                .andExpect(content().string(not(containsString("Annans kurs"))));
+    }
+
+    @Test
+    void theStartPageSaysWhereToSignUpWhenNothingIs() throws Exception {
+        insertOffer("Verkstad", true, null, IN_A_MONTH, null);
+        RequestPostProcessor member = asMember(insertAccount("Karin Holm", "karin@example.test"));
+
+        mockMvc.perform(get("/api/member/registrations").with(member))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(0));
+        mockMvc.perform(get("/medlem").with(member))
+                .andExpect(content().string(containsString(copy.text("member.registrations.none"))))
+                .andExpect(content().string(containsString(copy.text("member.shifts.none"))));
+        mockMvc.perform(get("/api/member/registrations")).andExpect(status().isUnauthorized());
     }
 
     // Helpers
@@ -514,7 +691,8 @@ class OfferIT extends IntegrationTestSupport {
     }
 
     private void register(long offerId, long accountId) {
-        assertThat(offers.register(offerId, memberOf(accountId))).isEqualTo(RegistrationOutcome.REGISTERED);
+        assertThat(offers.register(offerId, new MemberId(memberOf(accountId))))
+                .isEqualTo(RegistrationOutcome.REGISTERED);
     }
 
     private RequestPostProcessor asMember(long accountId) {
@@ -536,7 +714,7 @@ class OfferIT extends IntegrationTestSupport {
                 return "NOT STARTED";
             }
             try {
-                return offers.register(offerId, memberId).name();
+                return offers.register(offerId, new MemberId(memberId)).name();
             } catch (OfferFull e) {
                 return "FULL";
             }

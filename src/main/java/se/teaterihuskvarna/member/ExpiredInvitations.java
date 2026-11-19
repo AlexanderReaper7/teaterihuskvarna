@@ -1,6 +1,6 @@
 package se.teaterihuskvarna.member;
 
-import java.time.Instant;
+import java.time.Clock;
 import java.util.concurrent.TimeUnit;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
@@ -15,14 +15,16 @@ import org.springframework.transaction.annotation.Transactional;
 class ExpiredInvitations {
 
     private final InvitationRepository invitations;
+    private final Clock clock;
 
-    ExpiredInvitations(InvitationRepository invitations) {
+    ExpiredInvitations(InvitationRepository invitations, Clock clock) {
         this.invitations = invitations;
+        this.clock = clock;
     }
 
     @Scheduled(fixedDelay = 1, timeUnit = TimeUnit.HOURS)
     @Transactional
     public void delete() {
-        invitations.deleteExpired(Instant.now());
+        invitations.deleteExpired(clock.instant());
     }
 }

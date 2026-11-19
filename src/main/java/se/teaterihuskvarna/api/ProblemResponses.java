@@ -6,6 +6,8 @@ import java.util.Map;
 import java.util.TreeMap;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
+import org.springframework.validation.FieldError;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import se.teaterihuskvarna.Violations;
@@ -19,17 +21,22 @@ import se.teaterihuskvarna.document.NotAPdf;
 import se.teaterihuskvarna.login.NoSuchDevice;
 import se.teaterihuskvarna.login.NoSuchPasskey;
 import se.teaterihuskvarna.mailing.BrevoUnavailable;
+import se.teaterihuskvarna.mailing.EarlierAttemptPending;
 import se.teaterihuskvarna.mailing.AudienceHasNonMembers;
+import se.teaterihuskvarna.mailing.EmptyAudience;
 import se.teaterihuskvarna.mailing.EmptyMailing;
 import se.teaterihuskvarna.mailing.NoSuchMailing;
 import se.teaterihuskvarna.mailing.UnknownAudience;
 import se.teaterihuskvarna.mailing.UnknownContent;
 import se.teaterihuskvarna.member.AccountNeedsEmail;
+import se.teaterihuskvarna.member.AlreadyInHousehold;
 import se.teaterihuskvarna.member.EmailTaken;
 import se.teaterihuskvarna.member.FeeAlreadyMarked;
 import se.teaterihuskvarna.member.MemberHasAccount;
 import se.teaterihuskvarna.member.NoSuchFee;
 import se.teaterihuskvarna.member.NoSuchHousehold;
+import se.teaterihuskvarna.member.HouseholdOwnerRequired;
+import se.teaterihuskvarna.member.HouseholdSuccessorRequired;
 import se.teaterihuskvarna.member.NoSuchMember;
 import se.teaterihuskvarna.offer.NoSuchOffer;
 import se.teaterihuskvarna.offer.OfferFull;
@@ -46,6 +53,13 @@ import se.teaterihuskvarna.volunteer.ShiftStarted;
 @RestControllerAdvice(basePackageClasses = ProblemResponses.class)
 public class ProblemResponses {
 
+    /// @param exception the member already belonging to a household
+    /// @return 409
+    @ExceptionHandler
+    public ProblemDetail alreadyInHousehold(AlreadyInHousehold exception) {
+        return problem(HttpStatus.CONFLICT, "Already in a household", exception);
+    }
+
     /// The `errors` property maps each field to its message, which the validator
     /// already resolved to Swedish. The field is the last node of the violation's
     /// path, so `apply.form.fullName` becomes `fullName`, the name the JSON used.
@@ -57,6 +71,26 @@ public class ProblemResponses {
         Map<String, String> errors = new TreeMap<>();
         for (ConstraintViolation<?> violation : exception.getConstraintViolations()) {
             errors.merge(Violations.field(violation), violation.getMessage(),
+                    (first, second) -> first + " " + second);
+        }
+        ProblemDetail problem = ProblemDetail.forStatus(HttpStatus.BAD_REQUEST);
+        problem.setTitle("Invalid input");
+        problem.setProperty("errors", errors);
+        return problem;
+    }
+
+    /// A body the adapter checks itself with `@Valid`, because it reaches no
+    /// service method that would. The answer is the one a service's
+    /// constraints get, so a client reads both the same way. Without this
+    /// handler Spring answers 400 and names no field.
+    ///
+    /// @param exception what Spring threw before the handler method ran
+    /// @return 400, with the message for each invalid field
+    @ExceptionHandler
+    public ProblemDetail invalidBody(MethodArgumentNotValidException exception) {
+        Map<String, String> errors = new TreeMap<>();
+        for (FieldError error : exception.getBindingResult().getFieldErrors()) {
+            errors.merge(error.getField(), String.valueOf(error.getDefaultMessage()),
                     (first, second) -> first + " " + second);
         }
         ProblemDetail problem = ProblemDetail.forStatus(HttpStatus.BAD_REQUEST);
@@ -256,6 +290,20 @@ public class ProblemResponses {
         return problem(HttpStatus.CONFLICT, "Audience has non-members", exception);
     }
 
+    /// @param exception an audience in which no member can receive a mailing
+    /// @return 409
+    @ExceptionHandler
+    public ProblemDetail noRecipients(EmptyAudience exception) {
+        return problem(HttpStatus.CONFLICT, "Audience reaches no one", exception);
+    }
+
+    /// @param exception a mailing prepared while an earlier one still waits for Brevo's draft
+    /// @return 409
+    @ExceptionHandler
+    public ProblemDetail attemptPending(EarlierAttemptPending exception) {
+        return problem(HttpStatus.CONFLICT, "Earlier mailing pending", exception);
+    }
+
     /// @param exception an event or news item that is not published
     /// @return 400
     @ExceptionHandler
@@ -268,6 +316,20 @@ public class ProblemResponses {
     @ExceptionHandler
     public ProblemDetail brevo(BrevoUnavailable exception) {
         return problem(HttpStatus.BAD_GATEWAY, "Brevo unavailable", exception);
+    }
+
+    /// @param exception a household edit by a member who does not own it
+    /// @return 403
+    @ExceptionHandler
+    public ProblemDetail ownerRequired(HouseholdOwnerRequired exception) {
+        return problem(HttpStatus.FORBIDDEN, "Household owner required", exception);
+    }
+
+    /// @param exception an owner leaving without choosing another account holder
+    /// @return 409
+    @ExceptionHandler
+    public ProblemDetail successorRequired(HouseholdSuccessorRequired exception) {
+        return problem(HttpStatus.CONFLICT, "Household successor required", exception);
     }
 
     private static ProblemDetail problem(HttpStatus status, String title, RuntimeException exception) {

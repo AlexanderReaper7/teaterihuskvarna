@@ -1,6 +1,9 @@
 package se.teaterihuskvarna.member;
 
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.LockModeType;
 import jakarta.validation.Valid;
+import java.time.Clock;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -9,14 +12,15 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import org.jspecify.annotations.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.validation.annotation.Validated;
+import se.teaterihuskvarna.login.AccountId;
 
-/// Households (R019): an administrator creates one and lists them, and a member
-/// sees their own. Moving a member into or out of a household is part of
-/// editing the member, [MemberService#update], and adding a member straight
-/// into a household is part of [MemberService#add].
+/// Households (R019): administrators manage the register, and members create
+/// and manage their own household. Member operations derive the household
+/// from the signed-in account and never accept a household id from the caller.
 @Service
 @Validated
 @Transactional(readOnly = true)
@@ -26,13 +30,20 @@ public class HouseholdService {
     private final MemberRepository members;
     private final AccountRepository accounts;
     private final InvitationRepository invitations;
+    private final FeeLedger ledger;
+    private final EntityManager entityManager;
+    private final Clock clock;
 
     HouseholdService(HouseholdRepository households, MemberRepository members, AccountRepository accounts,
-            InvitationRepository invitations) {
+            InvitationRepository invitations, FeeLedger ledger,
+            EntityManager entityManager, Clock clock) {
         this.households = households;
         this.members = members;
         this.accounts = accounts;
         this.invitations = invitations;
+        this.ledger = ledger;
+        this.entityManager = entityManager;
+        this.clock = clock;
     }
 
     /// @return every household by name, each with its members
@@ -49,8 +60,8 @@ public class HouseholdService {
     /// @throws jakarta.validation.ConstraintViolationException if the form breaks a constraint
     @Transactional
     public HouseholdDetails create(@Valid NewHousehold form) {
-        Household household = households.save(new Household(form.name().strip()));
-        return new HouseholdDetails(household.getId(), household.getName(), List.of());
+        Household household = households.save(new Household(form.name().strip(), clock.instant()));
+        return new HouseholdDetails(household.getId(), household.getName(), household.getOwnerMemberId(), List.of());
     }
 
     /// The household of the logged-in member, for `/medlem`.
@@ -58,21 +69,206 @@ public class HouseholdService {
     /// @param accountId the logged-in account's id
     /// @return the member's household with its members, or empty when the
     ///         member is in none or the account is gone
-    public Optional<HouseholdDetails> forAccount(long accountId) {
-        return accounts.findById(accountId)
+    public Optional<HouseholdDetails> forAccount(AccountId accountId) {
+        return accounts.findById(accountId.value())
                 .map(account -> account.getMember().getHousehold())
                 .map(household -> details(household, members.findByHousehold(household.getId()), accounts,
                         invitations));
     }
 
+    /// Creates a household and puts the signed-in member in it atomically. A
+    /// household fee the member has already paid for this year covers the
+    /// new household from now on.
+    ///
+    /// @param accountId the signed-in account
+    /// @param form the household name
+    /// @return the household with the caller as its first member
+    /// @throws AlreadyInHousehold if the caller already belongs to a household
+    @Transactional
+    public HouseholdDetails createForAccount(AccountId accountId, @Valid NewHousehold form) {
+        Account account = accounts.findById(accountId.value()).orElseThrow(NoSuchMember::new);
+        Member member = members.findForUpdate(account.getMember().getId()).orElseThrow(NoSuchMember::new);
+        if (member.getHousehold() != null) {
+            throw new AlreadyInHousehold();
+        }
+        Household household = households.save(new Household(form.name().strip(), clock.instant()));
+        household.setOwnerMemberId(member.id());
+        ledger.join(member, household);
+        return ownDetails(household);
+    }
+
+    /// @param accountId the signed-in account
+    /// @param form the household's new name
+    /// @return the renamed household
+    @Transactional
+    public HouseholdDetails renameForAccount(AccountId accountId, @Valid NewHousehold form) {
+        lockOwnHousehold(accountId);
+        Household household = ownedHousehold(accountId);
+        household.setName(form.name().strip());
+        return ownDetails(household);
+    }
+
+    /// Adds a person without an account. An invitation can give them one later.
+    ///
+    /// @param accountId the signed-in account
+    /// @param form the new member's name and contact details
+    /// @return the new member's id
+    @Transactional
+    public MemberId addForAccount(AccountId accountId, @Valid ContactForm form) {
+        lockOwnHousehold(accountId);
+        Household household = ownedHousehold(accountId);
+        Member member = new Member(form.fullName().strip(), clock.instant());
+        member.setContact(form.contact());
+        member.startIn(household);
+        members.save(member);
+        return member.id();
+    }
+
+    /// @param accountId the signed-in account
+    /// @param memberId a member of the caller's household
+    /// @return the member's editable contact details, without login email
+    public ContactForm memberForAccount(AccountId accountId, MemberId memberId) {
+        Member member = householdMember(accountId, memberId);
+        requireOwnerOrSelf(accountId, member);
+        return contact(member);
+    }
+
+    /// Edits a household member even when they have an account. Login email
+    /// remains under administrator control.
+    ///
+    /// @param accountId the signed-in account
+    /// @param memberId a member of the caller's household
+    /// @param form the new name and contact details
+    /// @return the saved contact details
+    @Transactional
+    public ContactForm updateForAccount(AccountId accountId, MemberId memberId, @Valid ContactForm form) {
+        lockOwnHousehold(accountId);
+        ownedHousehold(accountId);
+        Member member = householdMember(accountId, memberId);
+        member.setFullName(form.fullName().strip());
+        member.setContact(form.contact());
+        return contact(member);
+    }
+
+    /// Removes household membership only. The member, account, sessions and
+    /// fee history remain. The caller may leave their own household too.
+    ///
+    /// @param accountId the signed-in account
+    /// @param memberId a member of the caller's household
+    /// @param successorMemberId the next owner when the caller leaves, or null
+    @Transactional
+    public void removeForAccount(AccountId accountId, MemberId memberId, @Nullable MemberId successorMemberId) {
+        lockOwnHousehold(accountId);
+        Member member = householdMember(accountId, memberId);
+        requireOwnerOrSelf(accountId, member);
+        Household household = ownHousehold(accountId);
+        if (memberId.equals(household.getOwnerMemberId())) {
+            boolean remainingAccounts = !accounts.findByMembers(members.findByHousehold(household.getId()).stream()
+                    .map(Member::id).filter(id -> !id.equals(memberId)).map(MemberId::value).toList()).isEmpty();
+            if (remainingAccounts && successorMemberId == null) {
+                throw new HouseholdSuccessorRequired();
+            }
+            if (successorMemberId != null) {
+                requireSuccessor(household, successorMemberId);
+                if (successorMemberId.equals(memberId)) {
+                    throw new NoSuchMember();
+                }
+            }
+            household.setOwnerMemberId(successorMemberId);
+        } else if (successorMemberId != null) {
+            throw new HouseholdOwnerRequired();
+        }
+        member.leaveHousehold();
+    }
+
+    /// Administrators assign a member owner or take over management.
+    ///
+    /// @param householdId the household to change
+    /// @param form the next owner, who must belong to it and have an account, or null for administrators
+    /// @return the household with its new owner
+    @Transactional
+    public HouseholdDetails changeOwner(long householdId, @Valid HouseholdOwnerForm form) {
+        Household household = households.findById(householdId).orElseThrow(NoSuchHousehold::new);
+        entityManager.refresh(household, LockModeType.PESSIMISTIC_WRITE);
+        MemberId nextOwner = form.memberId();
+        if (nextOwner != null) {
+            requireSuccessor(household, nextOwner);
+        }
+        household.setOwnerMemberId(nextOwner);
+        return ownDetails(household);
+    }
+
+    private void requireSuccessor(Household household, MemberId memberId) {
+        Member member = members.findById(memberId.value()).orElseThrow(NoSuchMember::new);
+        Household current = member.getHousehold();
+        if (current == null || !household.getId().equals(current.getId())
+                || accounts.findByMember(memberId.value()).isEmpty()) {
+            throw new NoSuchMember();
+        }
+    }
+
+    private Household ownedHousehold(AccountId accountId) {
+        Household household = ownHousehold(accountId);
+        MemberId memberId = accounts.findById(accountId.value()).orElseThrow(NoSuchMember::new).getMember().id();
+        if (!memberId.equals(household.getOwnerMemberId())) {
+            throw new HouseholdOwnerRequired();
+        }
+        return household;
+    }
+
+    private void requireOwnerOrSelf(AccountId accountId, Member target) {
+        MemberId memberId = accounts.findById(accountId.value()).orElseThrow(NoSuchMember::new).getMember().id();
+        if (!memberId.equals(target.id())) {
+            ownedHousehold(accountId);
+        }
+    }
+
+    /// Serialises ownership and membership changes per household. Without it,
+    /// an owner naming a successor and that successor leaving at the same time
+    /// both commit, and the household ends up owned by someone outside it.
+    /// `refresh` rather than a locking query, because the household may already
+    /// be loaded in this transaction, and a query would return that stale copy.
+    private void lockOwnHousehold(AccountId accountId) {
+        entityManager.refresh(ownHousehold(accountId), LockModeType.PESSIMISTIC_WRITE);
+    }
+
+    private Household ownHousehold(AccountId accountId) {
+        Account account = accounts.findById(accountId.value()).orElseThrow(NoSuchMember::new);
+        Household household = account.getMember().getHousehold();
+        if (household == null) {
+            throw new NoSuchHousehold();
+        }
+        return household;
+    }
+
+    private Member householdMember(AccountId accountId, MemberId memberId) {
+        Household household = ownHousehold(accountId);
+        Member member = members.findById(memberId.value()).orElseThrow(NoSuchMember::new);
+        Household current = member.getHousehold();
+        if (current == null || !household.getId().equals(current.getId())) {
+            throw new NoSuchMember();
+        }
+        return member;
+    }
+
+    private HouseholdDetails ownDetails(Household household) {
+        return details(household, members.findByHousehold(household.getId()), accounts, invitations);
+    }
+
+    private static ContactForm contact(Member member) {
+        ContactDetails contact = member.getContact();
+        return new ContactForm(member.getFullName(), contact.phone(), contact.address(), contact.postalCode(),
+                contact.city());
+    }
+
     static HouseholdDetails details(Household household, List<Member> inIt, AccountRepository accounts,
             InvitationRepository invitations) {
-        List<Long> ids = inIt.stream().map(Member::getId).toList();
-        Set<Long> withAccount = new HashSet<>();
-        Map<Long, Instant> invited = new HashMap<>();
+        List<Long> ids = inIt.stream().map(member -> member.getId()).toList();
+        Set<MemberId> withAccount = new HashSet<>();
+        Map<MemberId, Instant> invited = new HashMap<>();
         if (!ids.isEmpty()) {
             for (Account account : accounts.findByMembers(ids)) {
-                withAccount.add(account.getMember().getId());
+                withAccount.add(account.getMember().id());
             }
             for (Invitation invitation : invitations.findByMemberIdIn(ids)) {
                 invited.put(invitation.getMemberId(), invitation.getExpiresAt());
@@ -80,9 +276,9 @@ public class HouseholdService {
         }
         List<HouseholdMember> list = new ArrayList<>();
         for (Member member : inIt) {
-            list.add(new HouseholdMember(member.getId(), member.getFullName(), withAccount.contains(member.getId()),
-                    invited.get(member.getId())));
+            list.add(new HouseholdMember(member.id(), member.getFullName(), withAccount.contains(member.id()),
+                    invited.get(member.id())));
         }
-        return new HouseholdDetails(household.getId(), household.getName(), list);
+        return new HouseholdDetails(household.getId(), household.getName(), household.getOwnerMemberId(), list);
     }
 }

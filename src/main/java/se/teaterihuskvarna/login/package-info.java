@@ -9,4 +9,7 @@
 ///
 /// Passkeys are the second way in, on Spring's WebAuthn filters wired once per
 /// kind of login: `docs/decisions/0016-passkeys-beside-links.md`.
+@NullMarked
 package se.teaterihuskvarna.login;
+
+import org.jspecify.annotations.NullMarked;

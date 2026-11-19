@@ -5,7 +5,6 @@
 @param List<MemberOffer> offers
 @template.member.layout(copy = copy, title = copy.text("offers.heading"), content = @`
     <h1>${copy.text("offers.heading")}</h1>
-    <p><a href="/medlem">${copy.text("member.toOverview")}</a></p>
     @if(offers.isEmpty())
         <p>${copy.text("offers.none")}</p>
     @else

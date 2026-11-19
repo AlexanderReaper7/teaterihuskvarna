@@ -28,7 +28,7 @@ final class Images {
                 + UriUtils.encodePathSegment(dataset, "UTF-8") + "/";
     }
 
-    /// @param image a Sanity image field, with `asset._ref` and maybe `alt`
+    /// @param image a Sanity image field, with `asset._ref` and maybe `alt`, and `_key` in an array
     /// @return the picture, or null when the field holds no usable reference
     @Nullable Image of(@Nullable JsonNode image) {
         if (image == null) {
@@ -52,6 +52,6 @@ final class Images {
         String url = base + parts.group(1) + "-" + width + "x" + height + "." + parts.group(4)
                 + "?w=" + shownWidth + "&auto=format";
         String alt = Json.text(image, "alt");
-        return new Image(url, alt == null ? "" : alt, shownWidth, shownHeight);
+        return new Image(url, alt == null ? "" : alt, shownWidth, shownHeight, Json.text(image, "_key"));
     }
 }

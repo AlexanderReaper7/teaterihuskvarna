@@ -1,5 +1,6 @@
 package se.teaterihuskvarna.login;
 
+import static java.util.Objects.requireNonNull;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.not;
@@ -22,7 +23,10 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.mail.SimpleMailMessage;
@@ -39,7 +43,8 @@ import se.teaterihuskvarna.IntegrationTestSupport;
 /// - each login page looks an address up among its own kind only, and a link
 ///   works only on the page of its own kind;
 /// - the database holds the SHA-256 of a token, never the token;
-/// - a link expires after the configured lifetime, one hour by default;
+/// - a link expires after the configured lifetime, one hour by default, and
+///   the mail that carries it is not kept or sent after that;
 /// - opening a link logs nobody in, pressing its button does, and only once;
 /// - a link and its code work only in the browser that asked for them, and a
 ///   code allows five tries;
@@ -114,9 +119,9 @@ class LoginIT extends IntegrationTestSupport {
         requestLink(LoginKind.MEMBER, KARIN);
         SimpleMailMessage mail = awaitMail();
         String token = tokenIn(mail, linkPath(LoginKind.MEMBER));
-        String browser = browserCookie(LoginKind.MEMBER).getValue();
+        String browser = requireNonNull(browserCookie(LoginKind.MEMBER)).getValue();
 
-        List<Map<String, Object>> rows = jdbc.sql("SELECT * FROM one_time_token").query().listOfRows();
+        List<Map<String, @Nullable Object>> rows = jdbc.sql("SELECT * FROM one_time_token").query().listOfRows();
 
         assertThat(rows).hasSize(1);
         assertThat(rows.getFirst().get("token_hash")).isEqualTo(sha256Hex(token));
@@ -143,8 +148,8 @@ class LoginIT extends IntegrationTestSupport {
                 .contains("Max-Age=" + settings.linkLifetime().toSeconds())
                 .contains("HttpOnly")
                 .contains("SameSite=Lax");
-        assertThat(again.getResponse().getCookie(LoginBrowser.COOKIE).getValue())
-                .isEqualTo(first.getResponse().getCookie(LoginBrowser.COOKIE).getValue());
+        assertThat(requireNonNull(again.getResponse().getCookie(LoginBrowser.COOKIE)).getValue())
+                .isEqualTo(requireNonNull(first.getResponse().getCookie(LoginBrowser.COOKIE)).getValue());
         assertThat(requestLink(LoginKind.ADMINISTRATOR, NOBODY).getResponse().getHeader("Set-Cookie"))
                 .contains("Path=/admin/logga-in");
     }
@@ -194,7 +199,7 @@ class LoginIT extends IntegrationTestSupport {
         insertAccount("Karin Karlsson", KARIN);
         requestLink(LoginKind.MEMBER, KARIN);
         String token = tokenIn(awaitMail(), linkPath(LoginKind.MEMBER));
-        Cookie here = browserCookie(LoginKind.MEMBER);
+        Cookie here = requireNonNull(browserCookie(LoginKind.MEMBER));
         assertThat(here).isNotNull();
 
         mockMvc.perform(get("/api/login-links").param("kind", "MEMBER").param("token", token).cookie(here))
@@ -313,7 +318,7 @@ class LoginIT extends IntegrationTestSupport {
         String token = tokenIn(awaitMail(), linkPath(LoginKind.MEMBER));
 
         MvcResult page = mockMvc.perform(get("/logga-in/lank").param("token", token)
-                        .cookie(browserCookie(LoginKind.MEMBER)))
+                        .cookie(requireNonNull(browserCookie(LoginKind.MEMBER))))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString(token)))
                 .andExpect(content().string(containsString("data-auto-submit")))
@@ -323,6 +328,39 @@ class LoginIT extends IntegrationTestSupport {
         assertRedirect(mockMvc.perform(get("/medlem").with(sessionOf(page))).andReturn(), "/logga-in");
         assertThat(rowsIn("one_time_token")).isEqualTo(1);
         assertRedirect(followLink(LoginKind.MEMBER, token), "/medlem");
+    }
+
+    /// The link page's script presses the button. When that press is refused
+    /// as stale the page comes back marked `gammal`, says so and leaves the
+    /// button to the person: a script that pressed again would send a
+    /// browser that loses its session every time round in a circle.
+    @Test
+    void aLinkPageThatCameBackStaleSaysSoAndDoesNotPressItsOwnButton() throws Exception {
+        insertAccount("Karin Karlsson", KARIN);
+        requestLink(LoginKind.MEMBER, KARIN);
+        String token = tokenIn(awaitMail(), linkPath(LoginKind.MEMBER));
+
+        mockMvc.perform(get("/logga-in/lank").param("token", token).param("gammal", "")
+                        .cookie(requireNonNull(browserCookie(LoginKind.MEMBER))))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("Sidan hade stått öppen för länge")))
+                .andExpect(content().string(containsString(token)))
+                .andExpect(content().string(not(containsString("data-auto-submit"))));
+        assertRedirect(followLink(LoginKind.MEMBER, token), "/medlem");
+    }
+
+    /// The page with the form for the code took no `Feedback`, and showed a
+    /// code refused as stale as if nothing had been typed.
+    @ParameterizedTest
+    @EnumSource(LoginKind.class)
+    void thePageForTheCodeSaysThatAFormWasStale(LoginKind kind) throws Exception {
+        String page = LoginUrls.of(kind).sent();
+
+        mockMvc.perform(get(page).param("gammal", ""))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("Sidan hade stått öppen för länge")));
+        mockMvc.perform(get(page))
+                .andExpect(content().string(not(containsString("Sidan hade stått öppen för länge"))));
     }
 
     @Test
@@ -454,10 +492,35 @@ class LoginIT extends IntegrationTestSupport {
         mockMvc.perform(get("/api/member").with(sessionOf(login))).andExpect(status().isForbidden());
     }
 
+    /// The outbox deletes a mail unsent after its `not_after`, so a link that
+    /// has expired is neither mailed nor kept in the outbox in plain text.
+    @Test
+    void aMembersLoginMailIsNotSentAfterItsLinkExpires() throws Exception {
+        insertAccount("Karin Karlsson", KARIN);
+        refuseEveryMail();
+
+        requestLink(LoginKind.MEMBER, KARIN);
+        awaitMails(1);
+
+        assertThat(notAfterOfTheMailInTheOutbox())
+                .isEqualTo(instantFrom("SELECT expires_at FROM one_time_token WHERE kind = 'member'"));
+    }
+
+    @Test
+    void anAdministratorsLoginMailIsNotSentAfterItsLinkExpires() throws Exception {
+        refuseEveryMail();
+
+        requestLink(LoginKind.ADMINISTRATOR, firstAdministratorEmail);
+        awaitMails(1);
+
+        assertThat(notAfterOfTheMailInTheOutbox())
+                .isEqualTo(instantFrom("SELECT expires_at FROM one_time_token WHERE kind = 'administrator'"));
+    }
+
     @Test
     void requestsOverTheAddressLimitGetTheSameResponseButNoMail() throws Exception {
         insertAccount("Karin Karlsson", KARIN);
-        int limit = settings.requestsPerAddress();
+        int limit = settings.requestsPerAddressAndClient();
 
         MvcResult first = requestLink(LoginKind.MEMBER, KARIN);
         for (int request = 1; request < limit + 2; request++) {
@@ -494,6 +557,32 @@ class LoginIT extends IntegrationTestSupport {
             }
 
             assertThat(allowed).isEqualTo(settings.requestsPerAddress());
+        }
+    }
+
+    /// The same from one client, which stops at its own allowance for the
+    /// address, below the address's total.
+    @Test
+    void requestsSentAtOnceFromOneClientStopAtItsAllowance() throws Exception {
+        int requests = settings.requestsPerAddressAndClient() * 4;
+        CountDownLatch start = new CountDownLatch(1);
+        List<Future<Boolean>> results = new ArrayList<>();
+        try (ExecutorService threads = Executors.newFixedThreadPool(requests)) {
+            for (int request = 0; request < requests; request++) {
+                results.add(threads.submit(() -> {
+                    start.await();
+                    return limiter.tryAcquire(KARIN, "10.0.0.1");
+                }));
+            }
+            start.countDown();
+            long allowed = 0;
+            for (Future<Boolean> result : results) {
+                if (result.get()) {
+                    allowed++;
+                }
+            }
+
+            assertThat(allowed).isEqualTo(settings.requestsPerAddressAndClient());
         }
     }
 
@@ -573,11 +662,12 @@ class LoginIT extends IntegrationTestSupport {
         String token = tokenIn(awaitMail(), linkPath(LoginKind.MEMBER));
         jdbc.sql("DELETE FROM spring_session").update();
         MvcResult page = mockMvc.perform(get("/logga-in/lank").param("token", token)
-                .cookie(browserCookie(LoginKind.MEMBER))).andReturn();
-        List<String> before = jdbc.sql("SELECT primary_id FROM spring_session").query(String.class).list();
+                .cookie(requireNonNull(browserCookie(LoginKind.MEMBER)))).andReturn();
+        List<@Nullable String> before = jdbc.sql("SELECT primary_id FROM spring_session").query(String.class).list();
 
         MvcResult login = mockMvc.perform(post("/logga-in/lank").param("token", token)
-                .cookie(browserCookie(LoginKind.MEMBER)).with(sessionOf(page)).with(csrf())).andReturn();
+                .cookie(requireNonNull(browserCookie(LoginKind.MEMBER)))
+                .with(sessionOf(page)).with(csrf())).andReturn();
 
         assertRedirect(login, "/medlem");
         assertThat(before).hasSize(1);
@@ -607,6 +697,11 @@ class LoginIT extends IntegrationTestSupport {
         mockMvc.perform(get("/api/development/routes")).andExpect(status().isNotFound());
         mockMvc.perform(get("/api/development/login-accounts")).andExpect(status().isNotFound());
         mockMvc.perform(get("/api/development/environment")).andExpect(status().isNotFound());
+        for (String path : new String[] {"/dev/login", "/api/development/login"}) {
+            mockMvc.perform(post(path).param("kind", "ADMINISTRATOR").param("email", firstAdministratorEmail)
+                            .with(csrf()))
+                    .andExpect(status().isNotFound());
+        }
         mockMvc.perform(get("/"))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("Nästa evenemang")));
@@ -675,7 +770,7 @@ class LoginIT extends IntegrationTestSupport {
 
     /// A failed login stores its error in a new, anonymous session, so only
     /// sessions with a principal count.
-    private List<String> signedInSessions() {
+    private List<@Nullable String> signedInSessions() {
         return jdbc.sql("SELECT principal_name FROM spring_session WHERE principal_name IS NOT NULL")
                 .query(String.class)
                 .list();

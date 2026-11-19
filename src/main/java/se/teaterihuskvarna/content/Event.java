@@ -28,10 +28,15 @@ public record Event(
         @Nullable Image image,
         String descriptionHtml,
         List<Image> gallery,
-        @Nullable String ticketUrl) {
+        @Nullable String ticketUrl) implements SanityDocument {
 
     /// Copies the gallery, so the event cannot change after it is made.
     public Event {
         gallery = List.copyOf(gallery);
+    }
+
+    @Override
+    public String type() {
+        return "evenemang";
     }
 }

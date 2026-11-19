@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 import se.teaterihuskvarna.login.SignedIn;
+import se.teaterihuskvarna.member.MemberId;
 import se.teaterihuskvarna.member.MemberService;
 import se.teaterihuskvarna.volunteer.BookingOutcome;
 import se.teaterihuskvarna.volunteer.MemberShift;
@@ -39,6 +40,13 @@ public class MemberShiftsController {
     }
 
     /// @param signedIn the logged-in account
+    /// @return the shifts this member has a place on that have not started, as the member's start page lists them
+    @GetMapping("/api/member/shifts/booked")
+    public List<MemberShift> booked(@AuthenticationPrincipal SignedIn signedIn) {
+        return shifts.booked(memberId(signedIn));
+    }
+
+    /// @param signedIn the logged-in account
     /// @param id       the shift
     /// @return 201 when a place was taken, 200 when the member already had one
     @PostMapping("/api/member/shifts/{id}/booking")
@@ -57,8 +65,8 @@ public class MemberShiftsController {
         shifts.cancel(id, memberId(signedIn));
     }
 
-    private long memberId(SignedIn signedIn) {
-        return members.findByAccount(signedIn.id())
+    private MemberId memberId(SignedIn signedIn) {
+        return members.findByAccount(signedIn.accountId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND))
                 .id();
     }

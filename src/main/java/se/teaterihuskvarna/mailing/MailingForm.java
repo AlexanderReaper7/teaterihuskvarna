@@ -5,7 +5,8 @@ import jakarta.validation.constraints.Size;
 import java.util.List;
 import org.jspecify.annotations.Nullable;
 
-/// What an administrator chooses for a mailing: R022.
+/// What an administrator chooses for a mailing: R022. The messages are keys in
+/// `messages_sv.properties`.
 ///
 /// @param subject  the subject line and heading
 /// @param intro    the administrator's own words above the content, plain text, or blank
@@ -13,9 +14,18 @@ import org.jspecify.annotations.Nullable;
 /// @param events   the slugs of the events to include
 /// @param news     the slugs of the news items to include
 public record MailingForm(
-        @NotBlank @Size(max = 150) String subject,
-        @Nullable @Size(max = 5000) String intro,
-        @NotBlank @Size(max = 40) String audience,
+        @NotBlank(message = "{mailing.subject.required}")
+        @Size(max = 150, message = "{mailing.subject.size}")
+        String subject,
+
+        @Nullable
+        @Size(max = 5000, message = "{mailing.intro.size}")
+        String intro,
+
+        @NotBlank(message = "{mailing.audience.required}")
+        @Size(max = 40, message = "{mailing.audience.size}")
+        String audience,
+
         @Nullable List<String> events,
         @Nullable List<String> news) {
 

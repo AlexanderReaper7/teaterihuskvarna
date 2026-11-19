@@ -6,9 +6,11 @@ description: Which accounts own the repository and the Sanity project.
 
 # 0002: Accounts under a personal login
 
+Amended by an agent on 2026-11-10. The repository is public and the Studio names a Sanity project, and the record now says so.
+
 ## Decision
 
-The repository is `AlexanderReaper7/teaterihuskvarna`, private, on a personal GitHub account. The Sanity project id is left empty in [`studio/`](../../studio/) rather than bound to whoever runs the initialiser.
+The repository is `AlexanderReaper7/teaterihuskvarna`, on a personal GitHub account. It was private when this was decided and is public now, a change [0003](0003-no-branch-protection-yet.md) records on 2026-09-30. The Sanity project id was left empty in [`studio/`](../../studio/) at first, rather than bound to whoever runs the initialiser. Since 2026-09-28 [`studio/env.ts`](../../studio/env.ts) names project `gk5ur3tb`. No record says which Sanity login owns that project, and Sanity's API answers 401 when asked about the project without a token.
 
 ## Why, when the plan says otherwise
 
@@ -26,4 +28,4 @@ The same reasoning covers Sanity: `npm create sanity@latest` wants a login and b
 
 ## Open
 
-Klas creates the association's organisation ([first meeting](../meetings/2026-09-24-meeting-1.md#who-does-what)), and the repository moves there once it exists. Risk number one in the plan's own risk table is a system nobody owns after week 12, and an account on one student's login is that risk in miniature.
+Klas creates the association's organisation ([first meeting](../meetings/2026-09-24-meeting-1.md#who-does-what)), and the repository moves there once it exists. On 2026-11-10 the repository is still owned by the user account `AlexanderReaper7`, and five other accounts have write access. Risk number one in the plan's own risk table is a system nobody owns after week 12, and an account on one student's login is that risk in miniature.

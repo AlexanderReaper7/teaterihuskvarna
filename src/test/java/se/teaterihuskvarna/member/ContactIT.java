@@ -11,6 +11,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.util.Map;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
@@ -131,7 +132,7 @@ class ContactIT extends MemberRegisterSupport {
         assertRedirect(mockMvc.perform(get("/medlem/kontaktuppgifter")).andReturn(), "/logga-in");
     }
 
-    private Map<String, Object> contact() {
+    private Map<String, @Nullable Object> contact() {
         return jdbc.sql("""
                 SELECT m.full_name, m.phone, m.address, m.postal_code, m.city, a.email
                 FROM member m JOIN account a ON a.member_id = m.id WHERE a.id = ?

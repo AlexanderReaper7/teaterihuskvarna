@@ -4,9 +4,10 @@ import java.time.Clock;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-/// The clock that decides what "today" and "this year" are, so a test can
-/// replace it. Code that asks `Instant.now()` directly cannot be tested at a
-/// day's boundary.
+/// The clock that decides what the time, "today" and "this year" are, so a
+/// test can replace it. Code that asks `Instant.now()` directly cannot be
+/// tested at a day's boundary, and `ClockRulesTest` fails the build on it:
+/// this class is the only one that may read the system clock.
 @Configuration(proxyBeanMethods = false)
 class ClockConfiguration {
 

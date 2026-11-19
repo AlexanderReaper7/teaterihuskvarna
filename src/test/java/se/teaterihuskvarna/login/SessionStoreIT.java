@@ -1,5 +1,6 @@
 package se.teaterihuskvarna.login;
 
+import static java.util.Objects.requireNonNull;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.ArrayList;
@@ -58,15 +59,15 @@ class SessionStoreIT extends IntegrationTestSupport {
     private static <S extends Session> String saveTwoCopies(FindByIndexNameSessionRepository<S> repository) {
         S created = repository.createSession();
         repository.save(created);
-        S first = repository.findById(created.getId());
-        S second = repository.findById(created.getId());
+        S first = requireNonNull(repository.findById(created.getId()));
+        S second = requireNonNull(repository.findById(created.getId()));
 
         first.setAttribute("flash", "first");
         second.setAttribute("flash", "second");
         repository.save(first);
         repository.save(second);
 
-        return repository.findById(created.getId()).getAttribute("flash");
+        return requireNonNull(requireNonNull(repository.findById(created.getId())).getAttribute("flash"));
     }
 
     private <S extends Session> Map<String, Set<String>> saveAndList(FindByIndexNameSessionRepository<S> repository) {
@@ -81,7 +82,7 @@ class SessionStoreIT extends IntegrationTestSupport {
             ids.add(session.getId());
         }
         for (int i = 0; i < SESSIONS; i += 3) {
-            S session = repository.findById(ids.get(i));
+            S session = requireNonNull(repository.findById(ids.get(i)));
             session.setAttribute("later", "x");
             repository.save(session);
         }

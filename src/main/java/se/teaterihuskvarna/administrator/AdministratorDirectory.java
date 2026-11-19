@@ -37,7 +37,6 @@ class AdministratorDirectory implements LoginDirectory {
     }
 
     private static SignedIn signedIn(Administrator administrator) {
-        return new SignedIn(
-                LoginKind.ADMINISTRATOR, administrator.getId(), administrator.getEmail(), administrator.getFullName());
+        return SignedIn.of(administrator.id(), administrator.getEmail(), administrator.getFullName());
     }
 }

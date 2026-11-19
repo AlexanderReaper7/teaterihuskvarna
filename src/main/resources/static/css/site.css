@@ -153,11 +153,18 @@ body {
   list-style: none;
 }
 
+/* A menu is not prose: it may use the whole column, and wraps only when the
+ * column is too narrow for it. */
+main > .section-nav {
+  max-width: none;
+}
+
 .section-nav {
   margin-bottom: 2rem;
 }
 
-.section-nav ul {
+.section-nav ul,
+.choices ul {
   display: flex;
   flex-wrap: wrap;
   gap: 0.75rem 1.25rem;
@@ -166,9 +173,42 @@ body {
   list-style: none;
 }
 
-.menu-button {
-  margin-top: 0.75rem;
-  border-color: var(--color-on-primary);
+/* Links that choose what a page lists, such as the register's fee filter. */
+.choices {
+  margin-bottom: 1.5rem;
+}
+
+/* The page or choice the visitor is on reads as text, not as a link. In a
+ * menu, so does the link to the section a page belongs to, such as
+ * "Erbjudanden" on an offer's page. */
+[aria-current="page"],
+nav [aria-current="true"] {
+  color: var(--color-text);
+  text-decoration: none;
+}
+
+/* The header's menu keeps its light text on teal. */
+.site-nav [aria-current] {
+  color: var(--color-on-primary);
+  text-decoration: none;
+}
+
+/* The menu button, shown only on a narrow screen and only by menu.js. Without
+ * the script the button keeps its hidden attribute and every link stays shown,
+ * so [hidden] has to win over the display the narrow layout gives both. While
+ * the page loads, .menu-pending in the narrow layout below does their work. */
+.menu-button[hidden],
+.site-nav[hidden] {
+  display: none;
+}
+
+.menu-button .menu-icon-close,
+.menu-button[aria-expanded="true"] .menu-icon-open {
+  display: none;
+}
+
+.menu-button[aria-expanded="true"] .menu-icon-close {
+  display: block;
 }
 
 /* Hidden until focused, for a keyboard user who wants to pass the menu. */
@@ -184,8 +224,13 @@ body {
   z-index: 1;
 }
 
-.preview-banner {
+/* The banner is role="status" as well. The role in the selector outranks the
+ * message box rule under Messages, whose panel colour behind this white text
+ * gave 1.08:1. */
+.preview-banner[role="status"] {
+  margin: 0;
   padding: 0.5rem var(--gutter);
+  border: 0;
   background: var(--color-dark);
   color: var(--color-white);
   text-align: center;
@@ -216,6 +261,14 @@ body {
   font-weight: 700;
 }
 
+/* Links in a row stand apart by a gap rather than a character between them, so
+ * a row that wraps never ends a line with a separator. */
+.links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.5rem;
+}
+
 /* Content */
 
 main {
@@ -230,7 +283,20 @@ main > * {
   max-width: var(--width-text);
 }
 
-main > table {
+main > table,
+main > .table-scroll {
+  max-width: none;
+}
+
+/* Registers and booking tables need more room than public articles. The
+ * footer under them is as wide, so its text starts where the page's does:
+ * at 2560 px it started 224 px further in. */
+main.admin-content,
+main.admin-content + .site-footer p {
+  max-width: 96rem;
+}
+
+main.admin-content > :is(.table-scroll, .section-nav) {
   max-width: none;
 }
 
@@ -241,7 +307,6 @@ h1 {
   line-height: 1.1;
   text-transform: uppercase;
   overflow-wrap: break-word;
-  hyphens: auto;
 }
 
 h2 {
@@ -283,6 +348,19 @@ dd {
   margin: 0 0 1rem;
 }
 
+/* Short facts with short names, such as contact details: each name beside its
+ * value instead of above it. */
+dl.details {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 0.25rem 1.5rem;
+}
+
+dl.details dd {
+  margin: 0;
+  overflow-wrap: break-word;
+}
+
 /* Content from Sanity */
 
 .meta {
@@ -320,30 +398,94 @@ main > article {
   max-width: none;
 }
 
+/* An article keeps its text to the measure every other page has, and only its
+ * main picture, its cards and its gallery take the whole column. Without this
+ * a page from Sanity ran about 130 characters a line at 2560 px. */
+main > article > * {
+  max-width: var(--width-text);
+}
+
+main > article > :is(.cards, .gallery) {
+  max-width: none;
+}
+
+/* The main picture's HTML width is the 1200 px Sanity is asked for, so the
+ * column, not the picture, sets how wide it may be. */
+main > article > .hero {
+  max-width: 100%;
+}
+
 .cards {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(18rem, 1fr));
-  gap: 1.5rem;
-  margin: 0 0 1.5rem;
+  column-gap: 1.5rem;
 }
 
+/* A card takes two rows of its list's grid, the first for its picture and the
+ * second for everything else, and tag/card.jte puts each in a box. Each row of
+ * cards sizes its own two. So the titles in a row start at one height, under
+ * the tallest picture in that row, and a row where no card has a picture has
+ * no empty box above its titles. /produktioner had two such rows at 2560 px,
+ * when the picture's box was kept for every card of a list in which any card
+ * had a picture.
+ *
+ * The space under a row of cards is the card's own margin. A gap between the
+ * grid's rows would also fall between a card's picture and its text. */
 .card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: subgrid;
+  grid-row: span 2;
+  margin: 0 0 1.5rem;
   padding: 1rem;
   background: var(--color-panel);
+  overflow-wrap: break-word;
 }
 
+.card > .card-picture {
+  grid-row: 1;
+}
+
+.card > .card-text {
+  grid-row: 2;
+}
+
+/* A card's title looks the same whether the page makes it an h2 or, under a
+ * section's own h2 as on the start page, an h3. */
 .card h2,
 .card h3 {
-  margin-top: 0.75rem;
+  margin: 0.75rem 0 0.5rem;
+  font-size: 1.25rem;
+  line-height: 1.3;
+}
+
+/* Every picture in a list of cards has the same 4:3 box and shows whole
+ * inside it, so the pictures in a row are as tall as each other whatever
+ * their own proportions. Productions are posters, upright, so their list uses
+ * an upright box. */
+.cards {
+  --picture-ratio: 4 / 3;
+}
+
+.cards.posters {
+  --picture-ratio: 3 / 4;
 }
 
 .card img {
   width: 100%;
 }
 
+/* Only the card's own picture. A picture in the card's text sits in a figure
+ * and keeps its proportions. */
+.card-picture > img {
+  aspect-ratio: var(--picture-ratio);
+  object-fit: contain;
+}
+
 .card img.logo {
   width: auto;
   max-height: 6rem;
+  aspect-ratio: auto;
 }
 
 .gallery {
@@ -380,6 +522,27 @@ form {
   margin: 0 0 1.5rem;
 }
 
+/* A one-line field followed by its button, as in the register's search: the
+ * two share a line when there is room, and keep a gap when a narrow screen
+ * puts the button below. As inline boxes they had none, so the button's border
+ * met the field's. The label and anything else has a line of its own, and the
+ * label's own margin gives way to the gap. */
+:has(> :is(input:not([type="hidden"], [type="radio"], [type="checkbox"]), select) ~ button) {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+:has(> :is(input:not([type="hidden"], [type="radio"], [type="checkbox"]), select) ~ button)
+  > :not(input, select, button) {
+  flex-basis: 100%;
+}
+
+:has(> :is(input:not([type="hidden"], [type="radio"], [type="checkbox"]), select) ~ button) > label {
+  margin-bottom: -0.25rem;
+}
+
 /* The passkey section ends in a bare button rather than a form, so it keeps
  * the gap a form would leave before whatever follows. */
 [data-passkeys] {
@@ -398,6 +561,15 @@ button {
   font: inherit;
 }
 
+/* A one-line field is as tall as a button, one line of text, the button's
+ * padding and its border, so a field and the button beside it line up. A
+ * select needs it most: both browsers give it line-height: normal whatever the
+ * page says, which left it 8 to 10 px short of a button. */
+input:not([type="radio"], [type="checkbox"]),
+select {
+  min-height: calc(var(--line-height-body) * 1em + 1.25rem + 4px);
+}
+
 input {
   width: 100%;
   max-width: 28rem;
@@ -409,6 +581,41 @@ input {
 
 input[aria-invalid="true"] {
   border-color: var(--color-error);
+}
+
+/* A radio button or checkbox goes inside its label, before the text, and the
+ * label lays them out on one line, so the whole line takes the click. The box
+ * is 24 px, the minimum target size in WCAG 2.2. Without this the input rule
+ * above stretched the box to 28rem and pushed the text below it. */
+label:has(> input:is([type="radio"], [type="checkbox"])) {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+  font-weight: 400;
+}
+
+input:is([type="radio"], [type="checkbox"]) {
+  flex: none;
+  width: 1.5rem;
+  height: 1.5rem;
+  margin: 0;
+  padding: 0;
+  accent-color: var(--color-primary);
+}
+
+/* A group of fields: the legend looks like a label, without the browser's box. */
+fieldset {
+  min-width: 0;
+  margin: 0 0 1.5rem;
+  padding: 0;
+  border: 0;
+}
+
+legend {
+  margin-bottom: 0.5rem;
+  padding: 0;
+  font-weight: 700;
 }
 
 .field-error {
@@ -441,6 +648,33 @@ button:hover {
   color: var(--color-primary);
 }
 
+/* A Lucide icon before a menu link's or an action's text, from
+ * scripts/lucide-icons.py. It draws in the text's colour, so a button's hover
+ * colour reaches it. The link or button becomes a flex box, which drops the
+ * space after the icon, so a link's underline starts at its first letter. A
+ * display set here would beat the hidden attribute, which passkey.js and
+ * session.js use to hide buttons, so a hidden one is left alone. */
+.icon {
+  width: 1.25em;
+  height: 1.25em;
+  flex: none;
+}
+
+a:has(> .icon):not([hidden]),
+button:has(> .icon):not([hidden]) {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.35em;
+}
+
+/* The words set the baseline, so a link or button with an icon lines up with
+ * the text and fields beside it as one without would. An inline-flex box takes
+ * its baseline from its first item that has one, and the icon's is its bottom
+ * edge, which put the words 4 px high. Centred, the icon has none. */
+:is(a, button) > .icon {
+  align-self: center;
+}
+
 /* Buttons side by side. Without it the only gap is the space between the
  * tags, and none at all once a narrow screen wraps them onto two lines. */
 .buttons {
@@ -451,6 +685,24 @@ button:hover {
 
 .button-secondary:hover {
   border-color: var(--color-primary);
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+}
+
+/* The file chooser's button looks like the site's secondary button rather than
+ * the browser's grey one in the system font. */
+input[type="file"]::file-selector-button {
+  margin-right: 0.75rem;
+  padding: 0.25rem 1rem;
+  border: 2px solid var(--color-primary);
+  background: var(--color-white);
+  color: var(--color-primary);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+input[type="file"]::file-selector-button:hover {
   background: var(--color-primary);
   color: var(--color-on-primary);
 }
@@ -495,6 +747,31 @@ button:hover {
   margin-bottom: 0;
 }
 
+/* The form on the page a mailed login link opens, which /js/login-link.js
+ * sends as soon as the page has loaded. Its line and button would make the
+ * page look like the login page for the second the login takes (#214), so
+ * they stay hidden for 5 s and show only if the page is still there by then:
+ * the script was blocked or failed, or the answer is slow. Hidden rather than
+ * left out, so they take their space from the start and nothing moves when
+ * they appear. Without JavaScript nothing sends the form, so they show at
+ * once, except in a browser older than the scripting feature (Firefox 113,
+ * Chrome 120, Safari 17), which waits the 5 s too. */
+form[data-auto-submit] {
+  animation: appear-late 0s 5s backwards;
+}
+
+@media (scripting: none) {
+  form[data-auto-submit] {
+    animation: none;
+  }
+}
+
+@keyframes appear-late {
+  from {
+    visibility: hidden;
+  }
+}
+
 /* Tables */
 
 table {
@@ -509,15 +786,20 @@ caption {
   text-align: left;
 }
 
+/* break-word rather than anywhere: a column is never narrower than its longest
+ * word, so the table wraps at spaces instead of inside words, and only a word
+ * wider than the column itself, such as a long email address, breaks. */
 th,
 td {
   padding: 0.5rem 0.75rem;
   text-align: left;
   vertical-align: middle;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
 }
 
-th {
+/* The line under the column headings. A row's heading cell is a th too and
+ * takes no line. */
+thead th {
   border-bottom: 2px solid var(--color-primary);
 }
 
@@ -527,6 +809,36 @@ tbody tr:nth-child(even) {
 
 td form {
   margin: 0;
+}
+
+/* tables.js puts each table in this box, which scrolls sideways when the table
+ * is wider than the page, so the page itself never does. */
+.table-scroll {
+  margin: 0 0 2rem;
+  overflow-x: auto;
+}
+
+.table-scroll > table {
+  margin-bottom: 0;
+}
+/*=== badge paid & unpaid member status */
+.badge{
+  display: inline-block;
+  padding: 0.1rem 0.6rem;
+  border-radius: 1rem;
+  font-size: var(--size-body);
+  font-weight: var(--weight-link);
+  vertical-align: middle;
+}
+.badge-paid{
+  background: var(--color-primary);
+  color: var(--color-white);
+  border: 2px solid var(--color-primary);
+}
+.badge-unpaid{
+  background: var(--color-white);
+  color: var(--color-error);
+  border: 2px solid var(--color-error);
 }
 
 /* Fields beyond a one-line input: the offer description and the document
@@ -552,6 +864,15 @@ select[aria-invalid="true"] {
   border-color: var(--color-error);
 }
 
+/* The mail in a mailing's preview, in a frame: on white whatever the page
+ * around it looks like, since that is what a mail client shows it on. */
+.mail-preview {
+  width: 100%;
+  height: 70vh;
+  border: 1px solid currentColor;
+  background: var(--color-white);
+}
+
 /* A plain text an administrator typed, such as an offer's description, shown
  * with its line breaks and nothing else. */
 .preserve-lines {
@@ -565,14 +886,108 @@ td button {
   white-space: nowrap;
 }
 
+/* A phone number is read as one unit, so it keeps to one line. */
+.tel {
+  white-space: nowrap;
+}
+
+/* Buttons grouped in a cell, such as the register's fee buttons, may wrap
+ * between words. Unbroken, "Betald, enskild" holds the fee column so wide that
+ * the register no longer fits a 320 px phone. */
+td .buttons button {
+  white-space: normal;
+  overflow-wrap: normal;
+}
+
 /* The old site's one working breakpoint. */
 @media (max-width: 767px) {
+  /* A long word in a heading may break with a hyphen only where the screen is
+   * too narrow for it. At 2560 px Firefox hyphenated "ADMINISTRA-TÖR" where
+   * Chromium moved the whole word down. */
+  h1 {
+    hyphens: auto;
+  }
+
   :root {
     --gutter: 1.25rem;
   }
 
+  /* Logo on the left, the menu button on the right, and the open menu as a
+   * full-width list below them. */
+  .site-header {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    padding: 0;
+    text-align: left;
+  }
+
+  .site-logo {
+    min-width: 0;
+    width: fit-content;
+    margin: 12px var(--gutter);
+  }
+
   .site-header img {
-    height: 4.5rem;
+    width: 62px;
+    height: 59px;
+    object-fit: contain;
+  }
+
+  .menu-button {
+    display: grid;
+    place-items: center;
+    width: 48px;
+    height: 48px;
+    margin: 0 var(--gutter) 0 0;
+    padding: 0;
+    border: 0;
+    border-radius: 4px;
+    background: transparent;
+    color: var(--color-on-primary);
+  }
+
+  .menu-button:hover {
+    background: color-mix(in srgb, var(--color-on-primary) 10%, transparent);
+  }
+
+  /* menu.js sets .menu-pending on <html> before the body is parsed and removes
+   * it once it has set the hidden attributes, so the first paint is already
+   * the collapsed header. Hiding the links only when the script had run moved
+   * the page up by 590 px after it was shown. The button still carries its
+   * hidden attribute here, and this selector outweighs .menu-button[hidden]. */
+  .menu-pending .site-nav {
+    display: none;
+  }
+
+  .menu-pending .menu-button[hidden] {
+    display: grid;
+  }
+
+  .site-nav {
+    grid-column: 1 / -1;
+    width: 100%;
+    border-top: 1px solid color-mix(in srgb, var(--color-on-primary) 25%, transparent);
+  }
+
+  .site-nav ul {
+    display: block;
+    margin: 0;
+    padding: 0;
+  }
+
+  .site-nav li + li {
+    border-top: 1px solid color-mix(in srgb, var(--color-on-primary) 25%, transparent);
+  }
+
+  .site-nav a {
+    display: block;
+    padding: 15px var(--gutter);
+    font-size: 20px;
+    line-height: 1.4;
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 6px;
   }
 
   main {
@@ -587,5 +1002,56 @@ td button {
   th,
   td {
     padding: 0.5rem;
+  }
+
+  /* Without tables.js a table stays a table, and may break words anywhere
+   * rather than scroll the page sideways. */
+  table:not(.stackable) :is(th, td) {
+    overflow-wrap: anywhere;
+  }
+
+  /* With it, every row is a block. The first cell is the block's title, and
+   * each other cell starts with its column's heading, which tables.js copied
+   * into data-label. The heading row stays for a screen reader only, and the
+   * "/ ''" keeps a screen reader from reading the copied heading twice. */
+  table.stackable,
+  table.stackable :is(caption, tbody, tr, th, td) {
+    display: block;
+  }
+
+  table.stackable thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  table.stackable tbody tr {
+    padding: 0.75rem;
+  }
+
+  table.stackable tbody :is(th, td) {
+    padding: 0;
+  }
+
+  table.stackable tbody tr > :first-child {
+    font-weight: 700;
+  }
+
+  table.stackable td[data-label]::before {
+    content: attr(data-label) ": ";
+    content: attr(data-label) ": " / "";
+    font-weight: 700;
+  }
+
+  table.stackable td[data-blank],
+  table.stackable td:has(> form)::before {
+    display: none;
+  }
+
+  table.stackable td:has(> form) {
+    margin-top: 0.5rem;
   }
 }

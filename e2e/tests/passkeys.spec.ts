@@ -208,7 +208,8 @@ test.describe("what a person might get wrong", () => {
     await addFromSection(gunnarPage, 1);
 
     await linkLogin(page, "administrator", ADMINISTRATORS.ada);
-    await page.getByRole("button", { name: text("admin.remove.label", "Gunnar Wik"), exact: true }).click();
+    await page.getByRole("link", { name: text("admin.remove.label", "Gunnar Wik"), exact: true }).click();
+    await page.locator("main").getByRole("button", { name: text("admin.remove.submit"), exact: true }).click();
     await expect(page.getByRole("status")).toHaveText(text("admin.removed"));
 
     await buttonLogin(gunnarPage, "administrator");

@@ -7,6 +7,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.Instant;
+import org.jspecify.annotations.Nullable;
 
 /// A household, so one fee can cover everyone living at the same address.
 @Entity
@@ -15,29 +16,49 @@ public class Household {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private @Nullable Long id;
 
     @Column(name = "name", nullable = false, length = 100)
     private String name;
 
+    @Column(name = "owner_member_id")
+    private @Nullable Long ownerMemberId;
+
     @Column(name = "created_at", nullable = false)
-    private Instant createdAt = Instant.now();
+    private Instant createdAt;
 
     protected Household() {
         // for JPA
     }
 
-    /// @param name what the household is called on a fee record, not a legal name
-    public Household(String name) {
+    /// @param name      what the household is called on a fee record, not a legal name
+    /// @param createdAt when the household is made
+    public Household(String name, Instant createdAt) {
         this.name = name;
+        this.createdAt = createdAt;
     }
 
+    /// @return the ID assigned by Hibernate
+    /// @throws IllegalStateException if this entity has not been persisted
     public Long getId() {
+        if (id == null) {
+            throw new IllegalStateException("Entity has not been persisted");
+        }
         return id;
     }
 
     public String getName() {
         return name;
+    }
+
+    /// @return the member owner, or null when administrators manage the household
+    public @Nullable MemberId getOwnerMemberId() {
+        return ownerMemberId == null ? null : new MemberId(ownerMemberId);
+    }
+
+    /// @param memberId the member owner, or null for administrator management
+    public void setOwnerMemberId(@Nullable MemberId memberId) {
+        ownerMemberId = memberId == null ? null : memberId.value();
     }
 
     /// @param name the new household name

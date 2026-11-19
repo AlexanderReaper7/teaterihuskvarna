@@ -101,6 +101,9 @@ public class DevelopmentService {
             routes.add(new Route(RouteKind.LOGIN_FILTER, "POST", passkeys.register(),
                     FILTERS + ": store a new passkey"));
         }
+        routes.add(new Route(RouteKind.LOGIN_FILTER, "POST", "/dev/login", FILTERS + ": immediate development login"));
+        routes.add(new Route(RouteKind.LOGIN_FILTER, "POST", "/api/development/login",
+                FILTERS + ": immediate development login"));
         routes.sort(Comparator.comparing(Route::kind).thenComparing(Route::path).thenComparing(Route::methods));
         return routes;
     }

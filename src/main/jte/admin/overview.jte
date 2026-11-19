@@ -2,59 +2,83 @@
 @import se.teaterihuskvarna.administrator.AdministratorDetails
 @import se.teaterihuskvarna.administrator.NewAdministrator
 @import se.teaterihuskvarna.login.DeviceDetails
-@import se.teaterihuskvarna.login.LoginStatus
 @import se.teaterihuskvarna.login.PasskeyDetails
 @import se.teaterihuskvarna.login.PasskeyUrls
 @import se.teaterihuskvarna.login.SignedIn
+@import se.teaterihuskvarna.member.FeeCount
+@import se.teaterihuskvarna.offer.OfferDetails
+@import se.teaterihuskvarna.volunteer.ShiftDetails
 @import se.teaterihuskvarna.web.Copy
 @import se.teaterihuskvarna.web.CsrfField
 @import se.teaterihuskvarna.web.DeviceUrls
 @import se.teaterihuskvarna.web.FieldErrors
 @import se.teaterihuskvarna.administrator.AdminRemovalLogEntry
 @param String studioUrl = null
+@import se.teaterihuskvarna.web.Feedback
+@param String studioUrl
 @param Copy copy
 @param CsrfField csrf
 @param SignedIn signedIn
+@param FeeCount fees
+@param List<ShiftDetails> shifts
+@param List<OfferDetails> offers
 @param List<AdministratorDetails> administrators
 @param List<AdminRemovalLogEntry> removalLog
 @param NewAdministrator form
 @param FieldErrors errors
-@param String error
-@param String notice
+@param Feedback feedback
 @param List<PasskeyDetails> passkeys
 @param PasskeyUrls passkeyUrls
-@param boolean offerPasskey = false
+@param boolean offerPasskey
 @param List<DeviceDetails> devices
-@param LoginStatus loginStatus
 @param DeviceUrls deviceUrls
 @template.admin.layout(copy = copy, title = copy.text("admin.heading"), content = @`
     <h1>${copy.text("admin.heading")}</h1>
     <p>${copy.text("admin.signedInAs", signedIn.fullName())}</p>
     @template.tag.logout(copy = copy, csrf = csrf, action = "/admin/logga-ut")
+    @if(offerPasskey)
+        @template.tag.passkeyOffer(copy = copy, csrf = csrf, urls = passkeyUrls)
+    @endif
+    @template.tag.feedback(copy = copy, feedback = feedback)
+
+    <h2>${copy.text("admin.fees.heading", String.valueOf(fees.year()))}</h2>
+    <p>${copy.text("admin.fees.count", fees.paid(), fees.paid() + fees.unpaid())}</p>
+    @if(fees.unpaid() > 0)
+        <p><a href="/admin/medlemmar?avgift=obetald">@template.icon.contact() ${copy.text("admin.fees.unpaid", fees.unpaid())}</a></p>
+    @endif
+
+    <h2>${copy.text("admin.shifts.heading")}</h2>
+    @if(shifts.isEmpty())
+        <p>${copy.text("admin.shifts.none")}</p>
+    @else
+        @template.tag.shiftTable(copy = copy, caption = copy.text("admin.shifts.caption"), shifts = shifts)
+    @endif
+    <p><a href="/admin/volontarpass">@template.icon.handHelping() ${copy.text("admin.shifts.all")}</a></p>
+
+    <h2>${copy.text("admin.offers.heading")}</h2>
+    @if(offers.isEmpty())
+        <p>${copy.text("admin.offers.none")}</p>
+    @else
+        @template.tag.offerTable(copy = copy, caption = copy.text("admin.offers.caption"), offers = offers)
+    @endif
+    <p><a href="/admin/erbjudanden">@template.icon.ticket() ${copy.text("admin.offers.all")}</a></p>
+
     <section aria-labelledby="webbplatsens-innehall">
         <h2 id="webbplatsens-innehall">${copy.text("admin.content.heading")}</h2>
         <p>${copy.text("admin.content.explain")}</p>
         @if(studioUrl != null)
-            <p><a href="${studioUrl}">${copy.text("admin.content.open")}</a></p>
+            <p><a href="${studioUrl}">@template.icon.externalLink() ${copy.text("admin.content.open")}</a></p>
         @else
-            <p>${copy.text("admin.content.unavailable")} <a href="https://www.sanity.io/manage">${copy.text("admin.content.manage")}</a></p>
+            <p>${copy.text("admin.content.unavailable")} <a href="https://www.sanity.io/manage">@template.icon.externalLink() ${copy.text("admin.content.manage")}</a></p>
         @endif
     </section>
     <section aria-labelledby="brevo">
         <h2 id="brevo">${copy.text("admin.brevo.heading")}</h2>
-        <p><a href="https://app.brevo.com/contact/segment">${copy.text("adminMailings.segments.open")}</a></p>
-        <p><a href="https://app.brevo.com/campaigns/listing/email">${copy.text("adminMailings.campaigns.open")}</a></p>
+        <p><a href="https://app.brevo.com/contact/segment">@template.icon.externalLink() ${copy.text("adminMailings.segments.open")}</a></p>
+        <p><a href="https://app.brevo.com/campaigns/listing/email">@template.icon.externalLink() ${copy.text("adminMailings.campaigns.open")}</a></p>
     </section>
-    @if(offerPasskey)
-        @template.tag.passkeyOffer(copy = copy, csrf = csrf, urls = passkeyUrls)
-    @endif
-    @if(error != null)
-        <p role="alert">${error}</p>
-    @endif
-    @if(notice != null)
-        <p role="status">${notice}</p>
-    @endif
 
+    <h2>${copy.text("admin.administrators.heading")}</h2>
     <table>
         <caption>${copy.text("admin.list.caption")}</caption>
         <thead>
@@ -71,13 +95,8 @@
                     <td>${administrator.fullName()}</td>
                     <td>${administrator.email()}</td>
                     <td>
-                        @if(administrator.id() != signedIn.id())
-                            <form method="post" action="/admin/administratorer/${administrator.id()}/ta-bort">
-                                @template.tag.csrf(csrf = csrf)
-                                <button type="submit" class="button-secondary" aria-label="${removeLabel}">
-                                    ${copy.text("admin.remove")}
-                                </button>
-                            </form>
+                        @if(!administrator.id().equals(signedIn.administratorId()))
+                            <a href="/admin/administratorer/${administrator.id().value()}/ta-bort" aria-label="${removeLabel}">@template.icon.trash2() ${copy.text("admin.remove")}</a>
                         @endif
                     </td>
                 </tr>
@@ -115,18 +134,19 @@
         @endif
     </details>
     <h2>${copy.text("admin.add.heading")}</h2>
+
+    <h3>${copy.text("admin.add.heading")}</h3>
     @template.tag.errors(copy = copy, errors = errors)
     <form method="post" action="/admin/administratorer">
         @template.tag.csrf(csrf = csrf)
-        @template.tag.field(name = "fullName", label = copy.text("admin.add.fullName"), type = "text",
+        @template.tag.field(copy = copy, name = "fullName", label = copy.text("admin.add.fullName"), type = "text",
                 autocomplete = "off", value = form.fullName(), error = errors.message("fullName"), required = true)
-        @template.tag.field(name = "email", label = copy.text("admin.add.email"), type = "email",
+        @template.tag.field(copy = copy, name = "email", label = copy.text("admin.add.email"), type = "email",
                 autocomplete = "off", value = form.email(), error = errors.message("email"), required = true)
-        <button type="submit">${copy.text("admin.add.submit")}</button>
+        <button type="submit">@template.icon.plus() ${copy.text("admin.add.submit")}</button>
     </form>
 
     @template.tag.passkeys(copy = copy, csrf = csrf, passkeys = passkeys, urls = passkeyUrls)
     @template.tag.devices(copy = copy, csrf = csrf, devices = devices, urls = deviceUrls)
-    @template.tag.loginCountdown(copy = copy, status = loginStatus, urls = deviceUrls)
     <script src="/js/passkey.js" defer></script>
 `)
