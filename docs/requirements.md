@@ -6,7 +6,7 @@ description: Which features the system has to have, and at which priority.
 
 # Requirements
 
-Working copy of the requirement table in [projektplan-original.md](projektplan-original.md). That file is a frozen conversion of the produktägare's docx. Its ids, R001 to R025, are in the same order as the R ids here, so R001 is R001 and R025 is R025. An id is never reused, and a new requirement takes the next number. An id may be followed directly by its issue on the [board](https://github.com/users/AlexanderReaper7/projects/1), as in `R005 #8`. What the finished system has to be is in [projektplan.md](projektplan.md).
+Working copy of the requirement table in [projektplan-original.md](projektplan-original.md). That file is a frozen conversion of the produktägare's docx. Its ids, R001 to R026, are in the same order as the R ids here, so R001 is R001 and R026 is R026. An id is never reused, and a new requirement takes the next number. An id may be followed directly by its issue on the [board](https://github.com/users/AlexanderReaper7/projects/1), as in `R005 #8`. What the finished system has to be is in [projektplan.md](projektplan.md).
 
 Priority: **MUST** has to be in version 1, **SHOULD** ought to be, **COULD** can wait for phase 2. The produktägare's document writes these as M, B and K, and [projektplan-original.en.md](projektplan-original.en.md) keeps those letters so the two files line up. M is MUST, B is SHOULD, K is COULD.
 
@@ -39,8 +39,9 @@ Requirement text is quoted verbatim in Swedish. A quotation does not get transla
 | R023 #26 | Mailings | Förhandsgranska och testskicka till sig själv | MUST |
 | R024 #27 | Mailings | Avregistreringslänk i varje utskick | MUST |
 | R025 #28 | Mailings | Logg över skickade utskick | SHOULD |
+| R026 #80 | Admin    | Logg över Admin konto hantering av Borttaget/Återställd | SHOULD |
 
-Totals: 21 MUST, 3 SHOULD, 1 COULD.
+Totals: 21 MUST, 4 SHOULD, 1 COULD.
 
 R016 is MUST although its row in the original, V1, says B. The original's scope table lists "Volontärbokning för garderob och servering" under "I version 1", and where the document contradicts itself, the scope table wins (decided 2026-09-23). [`docs/check.py`](check.py) holds the same exception, so the two cannot drift apart.
 

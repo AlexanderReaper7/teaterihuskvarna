@@ -15,6 +15,8 @@ import se.teaterihuskvarna.administrator.AdministratorService;
 import se.teaterihuskvarna.administrator.NewAdministrator;
 import se.teaterihuskvarna.login.AdministratorId;
 import se.teaterihuskvarna.login.SignedIn;
+import se.teaterihuskvarna.administrator.AdminRemovalLogEntry;
+import se.teaterihuskvarna.administrator.AdminRemovalLogService;
 
 /// Administrator accounts over HTTP: the same list, add and remove the `/admin`
 /// page offers. Errors become statuses in [ProblemResponses].
@@ -22,9 +24,11 @@ import se.teaterihuskvarna.login.SignedIn;
 public class AdministratorsController {
 
     private final AdministratorService administrators;
+    private final AdminRemovalLogService removalLog;
 
-    AdministratorsController(AdministratorService administrators) {
+    AdministratorsController(AdministratorService administrators, AdminRemovalLogService removalLog ) {
         this.administrators = administrators;
+        this.removalLog= removalLog;
     }
 
     /// @return every administrator
@@ -57,5 +61,11 @@ public class AdministratorsController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void remove(@AuthenticationPrincipal SignedIn signedIn, @PathVariable AdministratorId id) {
         administrators.remove(id, signedIn.administratorId());
+    }
+
+    ///@return the administrator removal log, newest first
+    @GetMapping("/api/admin/administrators/removal-log")
+    public List<AdminRemovalLogEntry> removalLog() {
+        return removalLog.entries();
     }
 }

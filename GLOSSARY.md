@@ -60,6 +60,10 @@ A person authorised to create and publish public content. Editor permission does
 
 A person with an administrator account, authorised to manage members, fees, registrations, volunteer bookings and mailing audiences. An administrator account is separate from an account: being an administrator neither requires nor grants membership, and losing membership does not remove administrator access. A board member who administers and is a member has both. Administrators create and remove other administrator accounts, but not below two. Administrator permission is separate from editor permission.
 
+### Removal log | Borttagningslogg
+
+The record of when an administrator was removed or added again, by whom, and from which browser. And row is written in the same transaction as the removal and is never changed afterwards. Names and browser are copied into the row, so a later rename does not change it. Shown to administrators on `/admin` and through `/api/admin/administrators/removal-log`.
+
 ## Membership
 
 ### Member register | Medlemsregister

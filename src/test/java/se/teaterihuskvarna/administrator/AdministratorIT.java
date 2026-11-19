@@ -64,6 +64,9 @@ class AdministratorIT extends IntegrationTestSupport {
     @Autowired
     private Copy copy;
 
+    @Autowired
+    private AdminRemovalLogService removalLog;
+
     @Test
     void theListShowsActiveAdministratorsOnly() throws Exception {
         insertAdministrator("removed@example.test", "Rut Removed");
@@ -133,9 +136,106 @@ class AdministratorIT extends IntegrationTestSupport {
         mockMvc.perform(get(API).with(asFirstAdministrator()))
                 .andExpect(jsonPath("$[*].email", not(hasItem(BO))));
     }
+/// Three adminstrator, so the removal is allowed. The log is written in
+/// the same  transaction as the removal, and `actor_id` names the administrator
+/// whoremoved, not the one removed.
+    @Test
+    void aRemovalIsLogged() throws Exception {
+        long bo = insertAdministrator(BO, "Bo Berg");
+        insertAdministrator(CILLA, "Cilla Carlsson");
 
-    /// Three administrators, so the refusal comes from the rule against removing
-    /// oneself and not from the minimum of two.
+        mockMvc.perform(removeByApi(bo)).andExpect(status().isNoContent());
+        assertThat(jdbc.sql("SELECT actor_id FROM administrator_removal_log"
+        + " WHERE administrator_id = ? AND event = 'Removed'")
+                .param(bo)
+                .query(Long.class)
+                .list())
+                .containsExactly(firstAdministratorId());
+    }
+/// The names are copied into the row, so alater rename dose not change the
+/// log. The device is `unkown` until a device is passed on.
+    @Test
+    void aRemovalLogRowHoldsNamesAndDevice() throws Exception {
+        long bo = insertAdministrator(BO, "Bo Berg");
+        insertAdministrator(CILLA, "Cilla Carlsson");
+
+        mockMvc.perform(removeByApi(bo)).andExpect(status().isNoContent());
+
+        assertThat(jdbc.sql("SELECT administrator_name || '/' || actor_name || '/' || device "
+            + " FROM administrator_removal_log WHERE administrator_id = ? ")
+            .param(bo)
+            .query(String.class)
+            .single())
+                .isEqualTo("Bo Berg/Ada Admin/unknown");
+    }
+/// The log is listed newest first, with the names and the event of each row.
+    @Test
+    void theLogIsListedNewestFirst() throws Exception{
+        long bo = insertAdministrator(BO, "Bo berg");
+        insertAdministrator(CILLA, "Cilla Carlsson");
+
+        mockMvc.perform(removeByApi(bo)).andExpect(status().isNoContent());
+        mockMvc.perform(addByApi(BO,"Bo Berg")).andExpect(status().isCreated());
+
+        assertThat(removalLog.entries())
+                  .extracting(AdminRemovalLogEntry::event)
+                  .containsExactly("Restored", "Removed");
+    }
+/// An administrator can read the log over HTTP newest first, with yhe names
+/// kept in each row. A removal is made first so that there is a row to read.
+    @Test
+    void theApiListesTheRemovalLog() throws Exception {
+        long bo = insertAdministrator(BO, "Bo Berg");
+        insertAdministrator(CILLA, "Cilla Carlsson");
+
+        mockMvc.perform(removeByApi(bo)).andExpect(status().isNoContent());
+        mockMvc.perform(get(API + "/removal-log").with(asFirstAdministrator()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].event").value("Removed"))
+                .andExpect(jsonPath("$[0].administratorName").value("Bo Berg"));
+    }
+/// The removal log names who was removed and by whom, so a member must not
+/// read it. The rule that keeps members out of '/api/admin**' is the one
+/// 'aMembercanNotusetheAdministratorApi' already proves for the list.
+    @Test
+    void aMembercannotreadTheremovalLog() throws Exception{
+        RequestPostProcessor member = user(new SignedIn(LoginKind.MEMBER, 1, "karin@example.test", "Karin"));
+        mockMvc.perform(get(API + "/removal-Log").with(member)).andExpect(status().isForbidden());
+    }
+/// A removal made from a real login stores the device name of that login,
+/// read from the session of the request.
+    @Test
+    void aRemovallogRowHoldsTheDeviceOfTheLogin() throws Exception {
+        long bo = insertAdministrator(BO, "Bo Berg");
+        insertAdministrator(CILLA, "Cilla Carlsson");
+
+        MvcResult login = logInByLink(LoginKind.ADMINISTRATOR, firstAdministratorEmail);
+        mockMvc.perform(delete(API + "/" + bo).with(sessionOf(login)).with(csrf()))
+            .andExpect(status().isNoContent());
+
+        assertThat(jdbc.sql("SELECT device FROM administrator_removal_log WHERE administrator_id = ?")
+                    .param(bo)
+                    .query(String.class)
+                    .single())
+                .isNotEqualTo("unknown");
+    }
+/// Two administrators, so the removal is refused. The refusal comes before
+/// the log row is written, so nothing is logged.
+    @Test
+    void aRefusedRemovalIsNotLogged() throws Exception {
+        long bo = insertAdministrator(BO, "Bo Berg");
+
+        mockMvc.perform(removeByApi(bo)).andExpect(status().isConflict());
+
+        assertThat(jdbc.sql("SELECT COUNT(*) FROM administrator_removal_log"
+       + " WHERE administrator_id = ?")
+                .param(bo)
+                .query(Long.class)
+                .single())
+                .isZero();
+    }
+ /// Three administrators, so the refusal comes from the rule against removing
+/// oneself and not from the minimum of two.
     @Test
     void anAdministratorCannotRemoveThemselves() throws Exception {
         insertAdministrator(BO, "Bo Berg");
@@ -194,7 +294,22 @@ class AdministratorIT extends IntegrationTestSupport {
         mockMvc.perform(get(API).with(asFirstAdministrator()))
                 .andExpect(jsonPath("$[*].email", hasItem(equalToIgnoringCase(BO))));
     }
+    /// re-adding clears `removedAt`and `removedBy`, so the log is the only recoed
+    /// that the administrator was removed. It holds one row for each event.
+    @Test
+    void aReactivationIsLogged() throws Exception {
+        long bo = insertAdministrator(BO, "Bo Berg");
+        insertAdministrator(CILLA, "Cilla Carlsson");
+        mockMvc.perform(removeByApi(bo)).andExpect(status().isNoContent());
+        mockMvc.perform(addByApi(BO, "Bo Berg")).andExpect(status().isCreated());
 
+        assertThat(jdbc.sql("SELECT event FROM administrator_removal_log"
+                + " WHERE administrator_id = ? ORDER BY id")
+                .param(bo)
+                .query(String.class)
+                .list())
+                .containsExactly("Removed", "Restored");
+    }
     /// Without this a removed administrator keeps a working session until it
     /// expires. The first request proves the session worked before the removal,
     /// so the last one fails because of the removal and not for another reason.

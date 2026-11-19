@@ -171,6 +171,7 @@ Kraven är prioriterade: M = måste finnas i version 1, B = bör finnas, K = kan
 | U2 | Utskick | Förhandsgranska och testskicka till sig själv | M |
 | U3 | Utskick | Avregistreringslänk i varje utskick | M |
 | U4 | Utskick | Logg över skickade utskick | B |
+| A5 | Admin | Logg över Admin konto hantering av Borttaget/Återställd | B |
 
 ## Teknikval och motiveringar
 

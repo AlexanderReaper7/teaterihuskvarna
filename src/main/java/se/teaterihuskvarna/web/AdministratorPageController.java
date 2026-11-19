@@ -11,6 +11,8 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+import se.teaterihuskvarna.administrator.AdminRemovalLogService;
 import org.springframework.web.servlet.View;
 import se.teaterihuskvarna.administrator.AdministratorAlreadyExists;
 import se.teaterihuskvarna.administrator.AdministratorDetails;
@@ -54,6 +56,12 @@ public class AdministratorPageController {
     private final Copy copy;
     private final PasskeySection passkeys;
     private final DeviceSection devices;
+    private final AdminRemovalLogService removalLog;
+
+    AdministratorPageController(AdministratorService administrators, AdminRemovalLogService removalLog, Copy copy,
+         PasskeySection passkeys, DeviceSection devices) {
+        this.administrators = administrators;
+        this.removalLog=removalLog;
     private final Templates templates;
 
     AdministratorPageController(AdministratorService administrators, MemberService members, OfferService offers,
@@ -187,6 +195,19 @@ public class AdministratorPageController {
         return devices.endOthers(signedIn, session, Redirect.to(PAGE));
     }
 
+    private String page(SignedIn signedIn, HttpSession session, NewAdministrator form, FieldErrors errors,
+            @Nullable String error, boolean offerPasskey, Model model) {
+        model.addAttribute("signedIn", signedIn);
+        passkeys.addTo(model, signedIn, offerPasskey);
+        devices.addTo(model, signedIn, session);
+        model.addAttribute("administrators", administrators.list());
+        model.addAttribute("removalLog", removalLog.entries());
+        model.addAttribute("form", form);
+        model.addAttribute("errors", errors);
+        if (error != null) {
+            model.addAttribute("error", error);
+        }
+        return "admin/overview";
     private View page(SignedIn signedIn, HttpSession session, NewAdministrator form, FieldErrors errors,
             boolean offerPasskey, CsrfField csrf, Feedback feedback) {
         return HtmlPage.of(templates.adminOverview(content.studioLink(), copy, csrf, signedIn, members.feeCount(),

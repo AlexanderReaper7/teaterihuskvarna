@@ -173,6 +173,7 @@ The requirements are prioritised: M = must be in version 1, B = should be there,
 | U2 | Mailings | Preview and send a test to oneself | M |
 | U3 | Mailings | Unsubscribe link in every mailing | M |
 | U4 | Mailings | Log of sent mailings | B |
+| A5 | Admin | Logg of admin account managment: removed/restored | B |
 
 ## Technology choices and rationale
 
