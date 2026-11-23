@@ -28,7 +28,7 @@ FROM scratch AS git
 # and needs a bundler, so it is built here from visual-editing/ rather than
 # kept in the repository, and Dependabot raises its versions in
 # visual-editing/package.json like any other.
-FROM node:26.13.0-alpine AS visual-editing
+FROM node:26.13.1-alpine AS visual-editing
 WORKDIR /visual-editing
 COPY visual-editing/package.json visual-editing/package-lock.json ./
 RUN npm ci --no-audit --no-fund
