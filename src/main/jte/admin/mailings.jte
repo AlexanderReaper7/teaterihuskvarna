@@ -86,7 +86,7 @@
         <button type="submit">@template.icon.eye() ${copy.text("adminMailings.form.preview")}</button>
     </form>
 
-    <h2>${copy.text("adminMailings.log")}</h2>
+    <h2 id="tidigare-utskick">${copy.text("adminMailings.log")}</h2>
     @if(log.isEmpty())
         <p>${copy.text("adminMailings.log.none")}</p>
     @else

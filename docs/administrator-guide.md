@@ -48,6 +48,16 @@ Under **Inloggade enheter** på översikten står varje webbläsare där du är 
 
 **Logga ut** överst på översikten loggar ut den här webbläsaren.
 
+## Rundtur
+
+Är du ny som administratör kan webbplatsen visa dig runt.
+
+1. Tryck **Starta rundturen** på översikten.
+2. Läs rutan som visas, och gör det den beskriver på sidan under den. Det rutan pekar på har en streckad ram.
+3. Tryck **Nästa** för att gå vidare. Har du gjort det rutan bad om går rundturen oftast vidare själv.
+
+Rundturen går igenom medlemsregistret, avgifterna, exporterna och utskicken. Allt du gör under den händer på riktigt: medlemmen du lägger till finns i registret tills du tar bort den, och en avgift du markerar som betald är markerad tills du trycker **Ångra betalningen** på medlemmens sida. **Avsluta rundturen** stänger den när du vill, och du startar den igen från översikten.
+
 ## Medlemsregistret
 
 ### Söka
@@ -252,6 +262,8 @@ Skriv vad du gjorde, vad du väntade dig och vad som hände i stället, och ta g
 En agent följde varje steg ovan den 3 november 2026 på en lokal testmiljö med webbplatsen som den ser ut när guiden publiceras, inloggad som den påhittade administratören Ada Admin, med ett skript som också tog bilderna. Skriptet kontrollerade att varje sida svarade som guiden säger, och från en påhittad medlems inloggning att medlemmarna ser det som guiden säger att de ser. Lösenordsnyckeln prövades med Chromiums låtsade autentiserare, inte med ett fingeravtryck eller en telefon.
 
 Den 10 november 2026 fick en handling, ett volontärpass och en administratör en sida som frågar innan något tas bort. En agent skrev om de tre stegen då och tog om bilderna av administratörerna och av volontärpasset. Stegen följdes den gången av de automatiska webbläsartesterna i [`e2e/tests/`](../e2e/tests/) ([`documents.spec.ts`](../e2e/tests/documents.spec.ts), [`shifts.spec.ts`](../e2e/tests/shifts.spec.ts) och [`admin.spec.ts`](../e2e/tests/admin.spec.ts)), inte av skriptet från den 3 november.
+
+Den 23 november 2026 kom avsnittet Rundtur till. Dess steg följs av de automatiska webbläsartesterna i [`tour.spec.ts`](../e2e/tests/tour.spec.ts), i Chromium och Firefox, mot en låtsad Brevo.
 
 Inte prövat:
 

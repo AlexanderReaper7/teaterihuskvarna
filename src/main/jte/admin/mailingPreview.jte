@@ -27,7 +27,7 @@
     @elseif(reach != null && reach.members() == 0)
         <p role="alert">${copy.text("adminMailings.error.noRecipients")}</p>
     @endif
-    <p>${copy.text("adminMailings.preview.unsubscribe")}</p>
+    <p id="avsluta-prenumerationen">${copy.text("adminMailings.preview.unsubscribe")}</p>
     <iframe class="mail-preview" title="${copy.text("adminMailings.preview.frame")}" sandbox
             src="/admin/utskick/forhandsgranska/${mailKey}"></iframe>
     <p>${copy.text("adminMailings.preview.next")}</p>

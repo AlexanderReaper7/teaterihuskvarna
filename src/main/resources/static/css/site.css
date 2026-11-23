@@ -726,6 +726,67 @@ input[type="file"]::file-selector-button:hover {
   margin-bottom: 0;
 }
 
+/* The administrators' walkthrough (/js/tour.js). Its card is a block of the
+ * page, put just above what it describes, so it covers nothing and needs no
+ * place worked out. A full border sets it apart from a status message, which
+ * has one down its left side only. */
+.tour {
+  margin: 1.5rem 0;
+  padding: 1rem 1.25rem;
+  border: 2px solid var(--color-primary);
+  background: var(--color-panel);
+  /* The script scrolls the card to the top of the window. */
+  scroll-margin-top: 1rem;
+}
+
+/* A section otherwise takes the whole column, as the start page's do. The
+ * card is prose, and at 96rem one line of it was 180 characters. */
+main > .tour {
+  max-width: var(--width-text);
+}
+
+/* The script moves focus to the card so a screen reader reads the step. The
+ * card is not a control, and its border already marks it. */
+.tour:focus {
+  outline: none;
+}
+
+.tour h2 {
+  margin-top: 0;
+}
+
+.tour-progress {
+  margin: 0;
+  font-weight: 700;
+}
+
+.tour-requirement {
+  font-style: italic;
+}
+
+.tour .buttons {
+  margin-top: 1rem;
+}
+
+/* What the step points at. Dashed and teal, 6.4:1 on white, so it is not
+ * taken for the focus ring, which is solid and black. Focus keeps its ring. */
+.tour-target:not(:focus-visible),
+.table-scroll:has(> .tour-target) {
+  outline: var(--focus-width) dashed var(--color-primary);
+  outline-offset: 4px;
+}
+
+/* A table's box scrolls sideways (/js/tables.js) and so cuts off whatever its
+ * table draws outside itself. The box is outlined in the table's place. */
+.table-scroll > .tour-target:not(:focus-visible) {
+  outline: none;
+}
+
+/* The start button's box on the overview. */
+[data-tour-start] {
+  margin: 0 0 1.5rem;
+}
+
 /* The countdown before a login ends (/js/session.js), fixed to the bottom of
  * the window so it shows wherever the page is scrolled. */
 .login-countdown > div {

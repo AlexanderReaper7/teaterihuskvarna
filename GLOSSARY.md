@@ -208,6 +208,10 @@ The class that holds the capabilities for one part of the domain, and the only t
 
 A way into the application services. There are two, and they are peers: the JTE pages, which call a service in process, and the REST API, which wraps the same method in HTTP. Anything one adapter can do, the other can.
 
+### Walkthrough | Rundtur
+
+A guide on the administrator pages that takes an administrator through the member register, the fees, the exports and the mailings one step at a time ([`tour.js`](src/main/resources/static/js/tour.js)). A card above what the step is about says what to do, and the administrator does it on the real page, so a member added in it is a real row and a fee marked in it is marked. It starts from a button on the administrator overview.
+
 ## Delivery
 
 ### Requirement | Krav
