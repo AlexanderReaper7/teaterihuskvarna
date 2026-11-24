@@ -8,7 +8,7 @@ description: The implemented runtime, code boundaries and starting points for a 
 
 The site is one Spring Boot application. JTE renders HTML on the server; REST endpoints expose the same application services. PostgreSQL holds the member register and pending work. Sanity holds public content, and Brevo holds mailing campaigns and contacts.
 
-This description follows code on `origin/main` at [b7247ec](https://github.com/AlexanderReaper7/teaterihuskvarna/commit/b7247ecb138611c50bfe6a1cb7a55c40bd013ba6), checked on 2026-11-11. It includes Flyway V18. It does not describe the separate login work on branch `214-logging-in-page`. The [system plan](projektplan.md) states the delivery requirements; the [decision records](decisions/) explain choices. The diagrams here describe what the code implements.
+This description follows code on `origin/main` at [b7247ec](https://github.com/AlexanderReaper7/teaterihuskvarna/commit/b7247ecb138611c50bfe6a1cb7a55c40bd013ba6), checked on 2026-11-11, except the dev stack's mounts, updated on 2026-11-24 for #283. It includes Flyway V18. It does not describe the separate login work on branch `214-logging-in-page`. The [system plan](projektplan.md) states the delivery requirements; the [decision records](decisions/) explain choices. The diagrams here describe what the code implements.
 
 Start with this page, then follow the question that matters:
 

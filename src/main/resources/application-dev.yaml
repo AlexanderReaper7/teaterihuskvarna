@@ -15,7 +15,12 @@ spring:
     resources:
       # So a reload after `docker compose up -d --build` fetches the new
       # stylesheet, instead of a cached one written for the old templates.
+      # no-cache alone is not enough: the jar dates every file 1980-02-01
+      # (pom.xml, project.build.outputTimestamp), so any build answered 304
+      # to any cached copy's If-Modified-Since on 2026-11-24. Without a
+      # Last-Modified the browser has nothing to revalidate and fetches.
       cache:
+        use-last-modified: false
         cachecontrol:
           no-cache: true
   mail:
