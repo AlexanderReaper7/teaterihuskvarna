@@ -819,10 +819,6 @@ html.tour-bar-open body {
   font-weight: 700;
 }
 
-.tour-requirement {
-  font-style: italic;
-}
-
 /* A card taller than its share of the window scrolls its text, and the
  * buttons stay in view at its bottom edge: without them in view there is no
  * way on. Their own background covers the text that scrolls under them, down

@@ -175,9 +175,7 @@
     // says only where the step is.
     if (!elsewhere) {
       part("body").append(...[...step.children].map((child) => child.cloneNode(true)));
-      part("requirement").textContent = step.dataset.requirement ?? "";
     }
-    part("requirement").hidden = elsewhere || !step.dataset.requirement;
     part("elsewhere").hidden = !elsewhere;
     part("resume").hidden = !elsewhere;
     part("next").hidden = elsewhere;
