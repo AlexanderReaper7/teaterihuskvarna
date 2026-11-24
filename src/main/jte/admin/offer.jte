@@ -39,7 +39,7 @@
         @endif
     </div>
 
-    <h2>${copy.text("adminOffers.registrations.heading")}</h2>
+    <h2 id="anmalda">${copy.text("adminOffers.registrations.heading")}</h2>
     <p>${copy.text("adminOffers.registrations.segment", ";" + offer.id() + ";")}</p>
     @if(registrations.isEmpty())
         <p>${copy.text("adminOffers.registrations.none")}</p>
