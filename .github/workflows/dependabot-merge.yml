@@ -1,0 +1,73 @@
+# Merges Dependabot's grouped minor and patch pull requests without the owner,
+# which the user decided on 2026-11-24:
+# docs/decisions/0020-pull-requests-and-merging.md. What makes a pull request
+# one this merges is at the top of scripts/dependabot-merge.sh.
+#
+# Only the owner's account may update main, so the merge uses a token of the
+# owner's. That token can do what the rulesets forbid everyone else, and
+# anyone with write access can push a branch with a workflow of their own, so
+# the token is not a repository secret, which every workflow on every branch
+# can read. It is a secret of the environment dependabot-merge, and that
+# environment accepts jobs from main only. A run of this file from another
+# branch stops at the merge job, before the secret exists in it:
+# docs/decisions/0003-no-branch-protection-yet.md.
+#
+# The first job only looks, with the read-only token every workflow gets. The
+# merge job starts only when there is something to merge or to rebase, so the
+# environment's history lists what was done and not every look.
+name: dependabot merge
+
+on:
+  # When a check on a Dependabot pull request finishes: the moment one may
+  # have become ready. These run this file as it is on main.
+  workflow_run:
+    workflows: [build, docs, pull request]
+    types: [completed]
+  # Whatever the event above missed, such as a rebase Dependabot was slow with.
+  schedule:
+    - cron: "23 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: read
+  checks: read
+
+# One at a time, and none cancelled: two runs at once could both ask for a rebase.
+concurrency:
+  group: dependabot-merge
+  cancel-in-progress: false
+
+jobs:
+  look:
+    if: >-
+      github.event_name != 'workflow_run'
+      || (github.event.workflow_run.event == 'pull_request'
+          && startsWith(github.event.workflow_run.head_branch, 'dependabot/'))
+    runs-on: ubuntu-latest
+    outputs:
+      acted: ${{ steps.look.outputs.acted }}
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - name: What would be merged or rebased
+        id: look
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: sh scripts/dependabot-merge.sh --dry-run
+
+  merge:
+    needs: look
+    if: needs.look.outputs.acted == 'true'
+    runs-on: ubuntu-latest
+    environment: dependabot-merge
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - name: Merge one pull request, and ask Dependabot to rebase the next
+        env:
+          GH_TOKEN: ${{ github.token }}
+          MERGE_TOKEN: ${{ secrets.DEPENDABOT_MERGE_TOKEN }}
+        run: sh scripts/dependabot-merge.sh

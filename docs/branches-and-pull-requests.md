@@ -6,7 +6,7 @@ description: How to take a work item from its issue to main, step by step, with 
 
 # Branches, commits and pull requests
 
-Every change reaches `main` through a pull request, and only Alexander merges it. This guide takes one work item from its card to `main`, then covers reviewing someone else's. The rules come from [decisions/0020](decisions/0020-pull-requests-and-merging.md), and the board side of the same journey is in [onboarding](onboarding.md).
+Every change reaches `main` through a pull request, and only Alexander merges it. The one exception is Dependabot's weekly version updates, which merge by themselves when their checks pass. This guide takes one work item from its card to `main`, then covers reviewing someone else's. The rules come from [decisions/0020](decisions/0020-pull-requests-and-merging.md), and the board side of the same journey is in [onboarding](onboarding.md).
 
 Each step shows the terminal command and the same thing in VS Code. The terminal commands work in PowerShell and in Git Bash. In VS Code, the Source Control view is `Ctrl+Shift+G`, and the Command Palette is `Ctrl+Shift+P`.
 

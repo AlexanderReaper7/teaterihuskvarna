@@ -6,7 +6,7 @@ description: How a change reaches main, who merges it, and how it gets reviewed.
 
 # 0020: Every change reaches main through a pull request the owner merges
 
-Amended by the user on 2026-11-02. A pull request may close several work items. Amended by an agent on 2026-11-10 with the user's decision that day to delete the review requirement.
+Amended by the user on 2026-11-02. A pull request may close several work items. Amended by an agent on 2026-11-10 with the user's decision that day to delete the review requirement. Amended by an agent on 2026-11-24 with the user's two decisions that day about Dependabot's pull requests.
 
 The decisions are the user's. The user gave no reasons beyond choosing, so the reasoning under Agent notes is an agent's. The guide for the team is [branches-and-pull-requests.md](../branches-and-pull-requests.md).
 
@@ -14,7 +14,8 @@ The decisions are the user's. The user gave no reasons beyond choosing, so the r
 
 Unless dated otherwise, decided by the user on 2026-09-27.
 
-- Only Alexander Öberg merges pull requests.
+- Only Alexander Öberg merges pull requests, with one exception.
+- The exception, decided by the user on 2026-11-24: Dependabot's grouped minor and patch updates merge without the owner. A workflow on GitHub Actions merges them with a token of the owner's, which the user chose over an agent's recommendation of a script on the owner's machine. Everything else Dependabot opens still waits for the owner: a major update, and the groups `pmd` and `temurin`.
 - A pull request is squash merged or rebase merged, chosen per pull request by whoever merges. Merge commits are off. A squash commit takes the pull request's title and description.
 - A branch is brought up to date by merging main into it. A pushed branch is never rebased or force-pushed.
 - A branch is created from its issue, with the issue's "Create a branch" button or `gh issue develop`, which names it `<issue>-<slug>` and links it to the issue.
@@ -27,6 +28,10 @@ Unless dated otherwise, decided by the user on 2026-09-27.
 
 ## Agent notes
 
+- What the Dependabot exception is made of is the agent's. [`dependabot-merge.yml`](../../.github/workflows/dependabot-merge.yml) runs [`dependabot-merge.sh`](../../scripts/dependabot-merge.sh), whose first comment lists what a pull request must be before it is merged: Dependabot's own, in a group whose name ends in `-minor-and-patch`, holding only commits GitHub made and signed for Dependabot, up to date with main, and green on every check the ruleset requires with no other check failed or running. The owner's token passes the rulesets, so the script reads the required checks from the ruleset and holds itself to them.
+- The token is a secret of the environment `dependabot-merge`, which accepts jobs from main only, because a repository secret can be read by a workflow on any branch and every collaborator can push one. [0003](0003-no-branch-protection-yet.md) has the settings and what was tried against them.
+- One pull request merges per run, and then Dependabot is asked to rebase the next with the comment `@dependabot rebase`. Main requires an up-to-date branch, so each merge leaves the others behind. Merging main into Dependabot's branch, as this record asks of people, would add a commit that is not Dependabot's, and the script would then refuse the pull request.
+- What the exception gives up: nobody reads these changes before they reach main, and the Playwright suite does not run on them, because [`e2e.yml`](../../.github/workflows/e2e.yml) starts by hand only. The `npm-minor-and-patch` group covers [`e2e/`](../../e2e/), so a Playwright update that breaks the suite is found at the next run of `sh e2e/run.sh`, not at the merge.
 - The customer's rule that every change is reviewed by at least one other student ("Regler för kod" in [projektplan-original.md](../projektplan-original.md)) is not changed by this record, so the guide keeps it: a student reviews, then the owner merges. The user has not said whether the automatic review replaces the student's.
 - Squash exists for the students: a branch of "wip" and "fix" commits becomes one commit on main, and one `git revert` undoes the pull request. Rebase exists for the owner, whose agents write a series of commits meant to stay separate. Because only the owner merges, allowing both is safe: a student never picks the method.
 - Merging main in, rather than rebasing, is for the students. Force-pushing a rebased branch is how a junior loses work or overwrites a teammate's, and squash throws the merge commits away anyway.
