@@ -43,10 +43,10 @@ services:
       # Tailscale name alike.
       traefik.http.routers.app.rule: PathPrefix(`/`)
       traefik.http.routers.app.entrypoints: web
-    volumes:
-      # The dev profile serves static files from here before the jar's copy, so
-      # an edited stylesheet shows on reload: application-dev.yaml.
-      - ./src/main/resources/static:/app/static:ro
+    # No mount of src/main/resources/static. The image compiles the templates,
+    # so a mounted stylesheet runs ahead of them after a pull without --build.
+    # That combination draws the start page's card text on top of each other,
+    # as reported in #283. docs/decisions/0008-everything-in-containers.md.
 
   db:
     # For a database client on the host, such as VS Code. The application still

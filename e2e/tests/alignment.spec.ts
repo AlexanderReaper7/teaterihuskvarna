@@ -1,7 +1,7 @@
 // How things line up, on every page, from a phone's width to the user's own
 // 2560 px view: a field and the button after it, a link or button with an icon
 // and the words around it, an article's line length, the titles in a row of
-// cards, and the footer under the page. layout.spec.ts checks what overflows,
+// cards, the parts of one card, and the footer under the page. layout.spec.ts checks what overflows,
 // touches or breaks.
 import { expect, test, type Page } from "@playwright/test";
 import { linkLogin } from "../support/auth";
@@ -78,6 +78,23 @@ async function misalignments(page: Page): Promise<string[]> {
     const wide = [...document.querySelectorAll("main > article > p")].find((p) => p.getBoundingClientRect().width > measure + 0.5);
     if (wide) {
       found.push(`the article's text is ${wide.getBoundingClientRect().width.toFixed(0)} px wide, past the ${measure.toFixed(0)} px measure`);
+    }
+
+    // Everything in a card, its picture, title, date, series and text, sits
+    // below what comes before it. A card whose children are not in the two
+    // boxes tag/card.jte writes piles them into the last row of its subgrid,
+    // on top of each other (#283).
+    for (const card of document.querySelectorAll(".card")) {
+      if (!shown(card)) {
+        continue;
+      }
+      const parts = [...card.children].flatMap((c) => c.matches(".card-text") ? [...c.children] : [c]).filter(shown);
+      for (let i = 1; i < parts.length; i++) {
+        const over = parts[i - 1].getBoundingClientRect().bottom - parts[i].getBoundingClientRect().top;
+        if (over > 1) {
+          found.push(`${words(parts[i])} overlaps ${words(parts[i - 1])} by ${over.toFixed(0)} px in a card`);
+        }
+      }
     }
 
     // The titles of the cards in one row start at the same height, and a row

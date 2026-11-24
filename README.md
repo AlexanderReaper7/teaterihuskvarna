@@ -55,8 +55,7 @@ The sitemap includes published public pages and articles. It excludes future new
 | To | Run |
 | --- | --- |
 | Start the stack | `docker compose up -d` |
-| See a change to Java code or a template | `docker compose up -d --build` |
-| See a change to CSS or an image | Reload the page. [`src/main/resources/static`](src/main/resources/static/) is mounted into the container. |
+| See a change to Java code, a template, CSS, JavaScript or an image, or the code a `git pull` brought | `docker compose up -d --build` |
 | Follow the application's log | `docker compose logs -f app` |
 | Stop the stack, keep the database | `docker compose down` |
 | Stop the stack and delete the database | `docker compose down -v`. The next start seeds it again. |
@@ -134,9 +133,7 @@ profile go to an in-memory Brevo that sends nothing; `BREVO_API=http` and the
 `BREVO_` lines make them real contacts and drafts in a Brevo account
 ([0026](docs/decisions/0026-outbox-and-brevo-contacts.md)).
 
-[`compose.dev.yaml`](compose.dev.yaml) also mounts [`src/main/resources/static`](src/main/resources/static/) into the container,
-so an edited stylesheet or image shows on reload. Templates and Java still
-need `docker compose up -d --build`.
+The stack serves everything from its image, stylesheets and scripts included, so any change to the code, a `git pull` included, shows only after `docker compose up -d --build`. A stylesheet served from the checkout ran ahead of the templates compiled into an older image ([0008](docs/decisions/0008-everything-in-containers.md#local-development-serves-everything-from-the-image)).
 
 The association's editors use Sanity hosting, separate from this development stack, as decided in [0021](docs/decisions/0021-content-from-sanity.md). [Studio instructions](studio/README.md) cover deployment, and [the editor guide](docs/editor-guide.md) is the editors' own step-by-step guide, in Swedish. The local Studio requires a Sanity login and internet access. Published edits appear on the application within 45 seconds, or on the next request after the publish webhook clears its cache. Automated tests alone use [`fixture.json`](src/main/resources/content/fixture.json), with their own source settings and no Sanity credentials.
 
