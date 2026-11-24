@@ -210,13 +210,10 @@ test("the walkthrough leads through every step, each done for real", async ({ pa
   await page.locator('form:has(input[name=kind][value=INDIVIDUAL]) button').first().click();
   await expectStep(page, "householdFee", 'form:has(input[name=kind][value=HOUSEHOLD])', "R019");
   await page.locator('form:has(input[name=kind][value=HOUSEHOLD]) button').first().click();
-  // The next step is on another page, so this one stays, and the page shows the answer.
-  await expect(main.getByRole("status")).toBeVisible();
-  await expect(card(page).getByRole("heading", { level: 2 })).toHaveText(text("tour.householdFee.title"));
+  // The next step is on another page, and the press that did this one leads there.
+  await expect(page).toHaveURL("/admin/hushall");
   const [fees] = await sql<{ count: string }>("SELECT count(*) FROM fee WHERE id > $1", [feesBefore]);
   expect(Number(fees.count)).toBe(2);
-  await next(page);
-  await expect(page).toHaveURL("/admin/hushall");
   await expectStep(page, "households", "main > h2", "R019");
 
   // R020: who registered for an offer and who booked a shift.

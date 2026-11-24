@@ -58,7 +58,8 @@
             path = "^/admin/medlemmar$", search = "avgift=obetald", href = "/admin/medlemmar?avgift=obetald",
             target = "table", requirement = copy.text("tour.requirement.R019"))
     @template.tag.tourStep(title = copy.text("tour.householdFee.title"), body = copy.text("tour.householdFee.body"),
-            path = "^/admin/medlemmar$", search = "avgift=obetald", href = "/admin/medlemmar?avgift=obetald",
+            path = "^/admin/medlemmar$", search = "avgift=obetald",
+            on = "form:has(input[name='kind'][value='HOUSEHOLD'])",
             target = "form:has(input[name='kind'][value='HOUSEHOLD'])",
             requirement = copy.text("tour.requirement.R019"))
     @template.tag.tourStep(title = copy.text("tour.households.title"), body = copy.text("tour.households.body"),

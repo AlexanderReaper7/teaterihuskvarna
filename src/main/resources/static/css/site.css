@@ -845,6 +845,13 @@ html.tour-bar-open body {
   outline-offset: 4px;
 }
 
+/* A link the step says to press gets a filled box out to its outline, so it
+ * reads as something to press. A shadow, which takes no room in the page. */
+a.tour-target:not(:focus-visible) {
+  background: var(--color-panel);
+  box-shadow: 0 0 0 4px var(--color-panel);
+}
+
 /* A step that points at a heading is about the whole section under it, which
  * is no one element. The script lays this frame over the section, from the
  * heading to the next one, and the heading goes without an outline of its

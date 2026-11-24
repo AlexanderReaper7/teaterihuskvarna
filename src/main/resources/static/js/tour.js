@@ -26,7 +26,8 @@
 //
 // - the next step, when the administrator pressed something inside the target
 //   and the page that came back has no error, or when only the next step is
-//   on this page;
+//   on this page. When that next step is on another page and has a link,
+//   begin() follows the link, so a press that did the step always leads on;
 // - the same step, when it is still on this page;
 // - an earlier step of the same errand, when the administrator went back, as
 //   from the mailing preview to its form;
@@ -407,6 +408,12 @@
       // The cookie is gone while the walkthrough is not over, so this page
       // came without the steps. The next one has them.
       ask();
+      return;
+    }
+    // The step was done and the next one is on another page: go there.
+    const after = state.step + 1;
+    if (state.acted && !refused() && !here(after) && steps[after]?.dataset.href) {
+      leave(after);
       return;
     }
     const index = locate(state);
