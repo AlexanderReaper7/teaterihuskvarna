@@ -29,7 +29,7 @@
          Maven Central's latest, checked on 2026-11-10; what its output guards
          drop is in docs/decisions/0004. -->
     <jte.version>3.2.5</jte.version>
-    <flyway.version>13.12.1</flyway.version>
+    <flyway.version>13.12.2</flyway.version>
     <!-- Boot 4.1.2 manages 9.2.0. 10.0.1 is Maven Central's latest, checked on
          2026-09-23. -->
     <git-commit-id-maven-plugin.version>10.0.1</git-commit-id-maven-plugin.version>
