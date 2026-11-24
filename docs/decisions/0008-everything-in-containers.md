@@ -8,6 +8,8 @@ description: How the application is deployed and run in production and locally.
 
 Amended by an agent on 2026-11-10. The registry, the commit tags, the deploy step and the scheduled backup are decided and not built, and the record now says so.
 
+Amended on 2026-11-24 with [Local development serves everything from the image](#local-development-serves-everything-from-the-image), which the user decided.
+
 ## Decision
 
 Every running piece is a container on one host in an EU region: a reverse proxy, the Spring Boot application, and PostgreSQL. [`compose.yaml`](../../compose.yaml) describes production, and local development loads [`compose.dev.yaml`](../../compose.dev.yaml) on top of it.
@@ -45,6 +47,16 @@ Buildpacks are the tempting option because they need no Dockerfile at all. They 
 The secondary gains are real but not the argument: a layered Dockerfile lands near 100 MB against roughly 300 MB for the Ubuntu-based buildpack, and layer caching means a code change pushes kilobytes rather than the whole image.
 
 The cost is about twenty lines of [`Dockerfile`](../../Dockerfile) to own.
+
+## Local development serves everything from the image
+
+[`compose.dev.yaml`](../../compose.dev.yaml) mounts no source into the application's container, and stylesheets, scripts and images come from the jar like the templates. A change to any of them, or a `git pull`, shows after `docker compose up -d --build`. Decided by the user on 2026-11-24, choosing between this, a warning when the image is older than the checkout, and mounting the templates as well.
+
+### Agent notes
+
+Until 2026-11-24 the dev stack mounted [`src/main/resources/static`](../../src/main/resources/static/) read-only and served it before the jar's copy, so an edited stylesheet showed on reload. The templates are compiled into the image, so after a pull without `--build` the page combined a new stylesheet with old templates. On the start page that drew each card's title, date and summary on top of each other (#283): the stylesheet from #258 puts a card's children in two rows of a subgrid, and the markup from before #258 had four or five children with no boxes around them, so a subgrid with no rows to spare stacked every child after the second in its last row. Reproduced in Chromium on 2026-11-24 from the two versions of the markup and the current stylesheet: the first card's title at y = 501 px and both its paragraphs at y = 489 px.
+
+The cost is the rebuild. After a change to [`site.css`](../../src/main/resources/static/css/site.css) alone, `docker compose build app` took 21 s on 2026-11-24, most of it `mvnw package` with its 167 unit tests, before the application restarts. Mounting the templates as well would keep a live reload, but needs jte-models' `DynamicTemplates`, which compiles templates at run time and so a JDK in the dev image and the `gg.jte:jte` compiler in the jar, and Java would still be stale after a pull.
 
 ## Deploying
 

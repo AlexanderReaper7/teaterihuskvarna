@@ -13,10 +13,8 @@
 spring:
   web:
     resources:
-      # compose.dev.yaml mounts src/main/resources/static at /app/static, so an
-      # edited stylesheet shows on reload without a rebuild. The classpath copy
-      # answers when the mount is absent, as in the tests.
-      static-locations: file:/app/static/, classpath:/static/
+      # So a reload after `docker compose up -d --build` fetches the new
+      # stylesheet, instead of a cached one written for the old templates.
       cache:
         cachecontrol:
           no-cache: true
