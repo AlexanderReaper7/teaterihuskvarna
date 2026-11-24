@@ -42,9 +42,54 @@ const card = (page: Page): Locator => page.locator("section.tour");
 const next = (page: Page): Promise<void> =>
   card(page).getByRole("button", { name: text("tour.next"), exact: true }).click();
 
+/// Where the card lies: over the page and not in it, and never on what the
+/// step is about. In the corner it touches no part of the target. As a bar it
+/// cannot help lying over a target taller than the window, so there the
+/// target's top is above it and the page has the bar's height after its end,
+/// which lets the rest scroll out from under it. Its Nästa is in the window
+/// either way, also when the card scrolls its text.
+async function expectOverlay(page: Page, step: string): Promise<"corner" | "bar"> {
+  await expect(card(page).locator("[data-tour-next]"), `Nästa on ${step}`).toBeInViewport({ ratio: 1 });
+  let place: "corner" | "bar" = "corner";
+  // The bar's height reaches the page a frame after the bar changes.
+  await expect(async () => {
+    const at = await card(page).evaluate((element) => {
+      const target = document.querySelector(".tour-target");
+      const outlined = target?.parentElement?.matches(".table-scroll") ? target.parentElement : target;
+      const over = element.getBoundingClientRect();
+      const under = outlined?.getBoundingClientRect() ?? null;
+      return {
+        position: getComputedStyle(element).position,
+        bar: element.classList.contains("tour-bar"),
+        top: over.top,
+        height: over.height,
+        window: window.innerHeight,
+        padding: parseFloat(getComputedStyle(document.body).paddingBottom),
+        targetTop: under ? under.top : null,
+        onTarget: under !== null && over.left < under.right && under.left < over.right
+          && over.top < under.bottom && under.top < over.bottom,
+      };
+    });
+    place = at.bar ? "bar" : "corner";
+    expect(at.position, `the card for ${step} is fixed to the window`).toBe("fixed");
+    if (at.bar) {
+      expect(Math.abs(at.padding - at.height), `room after the page for the bar on ${step}`).toBeLessThan(1);
+    } else {
+      expect(at.padding, `room after the page without a bar on ${step}`).toBe(0);
+      expect(at.onTarget, `the corner card lies on the target of ${step}`).toBe(false);
+    }
+    if (at.targetTop !== null) {
+      expect(at.targetTop, `the top of the target of ${step}`).toBeGreaterThanOrEqual(0);
+      expect(at.targetTop, `the top of the target of ${step}`).toBeLessThan(at.bar ? at.top : at.window);
+    }
+  }).toPass({ timeout: 5000 });
+  return place;
+}
+
 /// The card stands on the step: its number, title and text, the requirement
 /// it covers, and focus, so a screen reader reads it. With a target, the
-/// target is outlined and the card sits just above the block that holds it.
+/// target is outlined, the card stands before the block that holds it in the
+/// page's order, and it lies over the page without lying on the target.
 async function expectStep(page: Page, step: string, target?: string, requirement?: string): Promise<void> {
   const number = String(STEPS.indexOf(step) + 1);
   await expect(card(page).locator("[data-tour-progress]"))
@@ -64,10 +109,11 @@ async function expectStep(page: Page, step: string, target?: string, requirement
       `${step} outlines ${target}`).toBe(true);
     expect(await card(page).evaluate((element) =>
       element.nextElementSibling?.contains(document.querySelector(".tour-target")) ?? false),
-    `the card for ${step} is just above its target`).toBe(true);
+    `the card for ${step} stands before its target in the page's order`).toBe(true);
   } else {
     await expect(page.locator(".tour-target")).toHaveCount(0);
   }
+  await expectOverlay(page, step);
 }
 
 async function start(page: Page): Promise<void> {
@@ -164,7 +210,7 @@ test("the walkthrough leads through every step, each done for real", async ({ pa
   await page.locator('form:has(input[name=kind][value=INDIVIDUAL]) button').first().click();
   await expectStep(page, "householdFee", 'form:has(input[name=kind][value=HOUSEHOLD])', "R019");
   await page.locator('form:has(input[name=kind][value=HOUSEHOLD]) button').first().click();
-  // The next step is on another page, so this one stays, now with the answer above it.
+  // The next step is on another page, so this one stays, and the page shows the answer.
   await expect(main.getByRole("status")).toBeVisible();
   await expect(card(page).getByRole("heading", { level: 2 })).toHaveText(text("tour.householdFee.title"));
   const [fees] = await sql<{ count: string }>("SELECT count(*) FROM fee WHERE id > $1", [feesBefore]);
@@ -312,6 +358,49 @@ test("the keyboard reaches the card's buttons first and then what the card descr
   await expect(card(page).getByRole("button", { name: text("tour.end"), exact: true })).toBeFocused();
   await page.keyboard.press("Tab");
   await expect(page.locator("#q")).toBeFocused();
+});
+
+for (const [width, height] of [[1280, 720], [390, 844]] as const) {
+  test(`at ${width} by ${height} px the card lies on no step's target`, async ({ page }) => {
+    await start(page);
+    await page.setViewportSize({ width, height });
+    const progress = card(page).locator("[data-tour-progress]");
+    const last = text("tour.progress", String(STEPS.length), String(STEPS.length));
+    const seen: string[] = [];
+    for (let presses = 0; presses < STEPS.length; presses++) {
+      const at = (await progress.innerText()).trim();
+      seen.push(at);
+      await expect(card(page)).toBeFocused();
+      if (width < 768) {
+        await expect(card(page), `${at}: a window this narrow has no corner`).toHaveClass(/tour-bar/);
+      }
+      await expectOverlay(page, at);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth),
+        `sideways scroll on ${at}`).toBe(0);
+      if (at === last) {
+        break;
+      }
+      await next(page);
+      await expect(progress).not.toHaveText(at);
+    }
+    expect(seen.at(-1)).toBe(last);
+  });
+}
+
+test("the countdown before a login ends lies over the card, not under it", async ({ page }) => {
+  await start(page);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(card(page)).toHaveClass(/tour-bar/);
+  // Shown as /js/session.js shows it when the login is about to end.
+  const extend = page.locator("[data-login-extend]");
+  await page.locator("[data-login-ending]").evaluate((element: HTMLElement) => {
+    element.hidden = false;
+  });
+  await expect(extend).toBeVisible();
+  expect(await extend.evaluate((button) => {
+    const box = button.getBoundingClientRect();
+    return button.contains(document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2));
+  })).toBe(true);
 });
 
 test("a page with the card passes axe and stays inside a phone's width", async ({ page }) => {

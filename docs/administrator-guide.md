@@ -53,7 +53,7 @@ Under **Inloggade enheter** på översikten står varje webbläsare där du är 
 Är du ny som administratör kan webbplatsen visa dig runt.
 
 1. Tryck **Starta rundturen** på översikten.
-2. Läs rutan som visas, och gör det den beskriver på sidan under den. Det rutan pekar på har en streckad ram.
+2. Läs rutan som visas längst ner i fönstret, och gör det den beskriver på sidan. Det rutan pekar på har en streckad ram.
 3. Tryck **Nästa** för att gå vidare. Har du gjort det rutan bad om går rundturen oftast vidare själv.
 
 Rundturen går igenom medlemsregistret, avgifterna, exporterna och utskicken. Allt du gör under den händer på riktigt: medlemmen du lägger till finns i registret tills du tar bort den, och en avgift du markerar som betald är markerad tills du trycker **Ångra betalningen** på medlemmens sida. **Avsluta rundturen** stänger den när du vill, och du startar den igen från översikten.

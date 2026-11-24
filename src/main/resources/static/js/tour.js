@@ -4,11 +4,14 @@
 // tag/adminTour.jte writes the steps and the card into a <template>, with every
 // Swedish text, so nothing is written here. A step says which page it is on
 // (data-path, data-search, data-on), what it points at (data-target) and where
-// a link to it leads (data-href). This script puts the card into the page just
-// above the block that holds the target, and outlines the target. The card is
-// part of the page and not a layer over it, so it covers nothing, reads in
-// order for a screen reader, and the next Tab press lands on its buttons and
-// then on what it describes.
+// a link to it leads (data-href). This script outlines the target and shows the
+// card over the page, fixed to the bottom of the window, so the page under it
+// keeps its own layout. The card never lies on the target: it takes the right
+// corner, and where that would cover the target it is a bar along the bottom
+// edge instead, which the page can scroll everything out from under. In the
+// page's order the card stands just before the block that holds the target,
+// so a screen reader reads it there, and Tab goes from its buttons to what it
+// describes.
 //
 // The steps are in a page only while a walkthrough runs. Starting one sets the
 // cookie se.teaterihuskvarna.web.Walkthrough reads, and ending it removes the
@@ -135,6 +138,8 @@
 
   const clear = () => {
     card?.remove();
+    heights.disconnect();
+    document.documentElement.classList.remove("tour-bar-open");
     target?.classList.remove("tour-target");
     card = null;
     target = null;
@@ -179,6 +184,64 @@
 
   const top = () => main.querySelector(":scope > h1") ?? main.firstElementChild;
 
+  // What carries the outline: the target, or for a table the box that scrolls
+  // it sideways, which would cut the table's own outline off.
+  const outlined = () => (target.parentElement?.matches(".table-scroll") ? target.parentElement : target);
+
+  // Whether the card lies on the target or on its outline, which stands 4 px
+  // off the target and is --focus-width wide.
+  const covered = () => {
+    if (!target) {
+      return false;
+    }
+    const over = card.getBoundingClientRect();
+    const under = outlined().getBoundingClientRect();
+    return over.left < under.right + 8 && under.left - 8 < over.right
+        && over.top < under.bottom + 8 && under.top - 8 < over.bottom;
+  };
+
+  const bar = () => (card.classList.contains("tour-bar") ? card.offsetHeight : 0);
+
+  // Brings the target into the part of the window above the bar, unless its
+  // top already shows in the upper half of that part, so the page does not
+  // jump for a step that can be seen.
+  const reveal = () => {
+    const box = outlined().getBoundingClientRect();
+    const height = window.innerHeight - bar();
+    if (box.top >= 0 && (box.bottom <= height || box.top < height * 0.5)) {
+      return;
+    }
+    outlined().scrollIntoView({ block: box.height > height * 0.5 ? "start" : "center" });
+  };
+
+  // The bar's text takes one more line when the page's font arrives after the
+  // first drawing, so the height is read again whenever it changes.
+  const measure = () => {
+    if (card?.classList.contains("tour-bar")) {
+      document.documentElement.style.setProperty("--tour-bar", `${card.offsetHeight}px`);
+    }
+  };
+  const heights = new ResizeObserver(measure);
+
+  // Where the card goes: the lower right corner of the window, or a bar along
+  // the bottom edge when the corner would cover the target, or when the card
+  // is more than half as wide as the window and so leaves no corner. The bar
+  // hides the window's bottom over its whole width, so site.css gives the
+  // page as much room after its end, and for that the page is told how tall
+  // the bar is (--tour-bar).
+  const place = () => {
+    if (!card) {
+      return;
+    }
+    const root = document.documentElement;
+    card.classList.remove("tour-bar");
+    const corner = card.offsetWidth * 2 <= root.clientWidth && !covered();
+    card.classList.toggle("tour-bar", !corner);
+    root.classList.toggle("tour-bar-open", !corner);
+    measure();
+    heights.observe(card);
+  };
+
   // Shows a step that is on this page.
   const show = (index) => {
     clear();
@@ -195,15 +258,21 @@
       target = null;
       top().after(card);
     }
-    // Left where it is when it is already in the upper part of the window,
-    // so the page does not jump for a card that can be read as it stands.
-    const from = card.getBoundingClientRect().top;
-    if (from < 0 || from > window.innerHeight * 0.4) {
-      card.scrollIntoView({ block: "start" });
-    }
     // A form that was refused has put its own message first, and that is
-    // what the administrator has to read.
-    if (!refused()) {
+    // what the administrator has to read, so the page stays where it is and
+    // focus stays on the message.
+    const answered = refused();
+    // The card's place depends on where the target is in the window, so the
+    // target comes into the window first, and once more if the card became
+    // a bar and took the part of the window the target was in.
+    if (target && !answered) {
+      reveal();
+    }
+    place();
+    if (!answered) {
+      if (target) {
+        reveal();
+      }
       card.focus({ preventScroll: true });
     }
   };
@@ -214,6 +283,7 @@
     shown = index;
     card = fill(index, true);
     top().after(card);
+    place();
   };
 
   const end = () => {
@@ -325,6 +395,8 @@
       write(state.step, true);
     }
   });
+  // A window that changed size may have room for the corner, or none left.
+  window.addEventListener("resize", place);
   // A page the back button restores from the browser's cache still shows the
   // step it showed when it was left.
   window.addEventListener("pageshow", (event) => {
