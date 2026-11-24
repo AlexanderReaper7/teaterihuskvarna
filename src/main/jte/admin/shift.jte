@@ -19,7 +19,7 @@
         <dd>${copy.text("adminShifts.ofPlaces", shift.booked(), shift.places())}</dd>
     </dl>
 
-    <h2>${copy.text("adminShifts.volunteers")}</h2>
+    <h2 id="volontarer">${copy.text("adminShifts.volunteers")}</h2>
     @if(volunteers.isEmpty())
         <p>${copy.text("adminShifts.noVolunteers")}</p>
     @else

@@ -726,6 +726,153 @@ input[type="file"]::file-selector-button:hover {
   margin-bottom: 0;
 }
 
+/* The administrators' walkthrough (/js/tour.js). Its card lies over the page,
+ * fixed to the bottom of the window, so the page keeps its own layout. It has
+ * the right corner, and the script makes it a bar along the bottom edge,
+ * .tour-bar, where the corner would cover what the step is about and in a
+ * window too narrow for a corner. The shadow says it lies over the page. */
+.tour,
+main > .tour {
+  position: fixed;
+  right: 1.5rem;
+  bottom: 1.5rem;
+  z-index: 2;
+  box-sizing: border-box;
+  width: min(26rem, calc(100vw - 3rem));
+  max-height: calc(100vh - 3rem);
+  overflow-y: auto;
+  margin: 0;
+  padding: 1rem 1.25rem;
+  border: 2px solid var(--color-primary);
+  background: var(--color-panel);
+  box-shadow: 0 0.5rem 2rem rgb(0 0 0 / 30%);
+}
+
+.tour.tour-bar,
+main > .tour.tour-bar {
+  right: 0;
+  bottom: 0;
+  left: 0;
+  width: auto;
+  max-height: 50vh;
+  padding: 1rem var(--gutter);
+  border-width: 2px 0 0;
+}
+
+/* The bar's lines are as wide as the page's text, as the countdown's are. */
+.tour.tour-bar > * {
+  max-width: var(--width-text);
+  margin-right: auto;
+  margin-left: auto;
+}
+
+/* With room for it, the bar has its buttons beside the text and not under
+ * it, which makes it about 50 px lower over a table it cannot help covering. */
+@media (min-width: 768px) {
+  .tour.tour-bar {
+    display: grid;
+    grid-template-columns: minmax(0, var(--width-text)) max-content;
+    column-gap: 2rem;
+    align-items: start;
+    justify-content: center;
+  }
+
+  .tour.tour-bar > * {
+    grid-column: 1;
+    margin-right: 0;
+    margin-left: 0;
+  }
+
+  .tour.tour-bar > .buttons {
+    flex-direction: column;
+    grid-row: 1 / span 5;
+    grid-column: 2;
+    margin-top: 0;
+    padding-top: 0;
+  }
+}
+
+/* The bar hides the window's bottom over its whole width. The page gets as
+ * much room after its end, so that everything in it scrolls out from under
+ * the bar, and the browser keeps what it scrolls to, a field that takes
+ * focus among them, above the bar. The script measures the bar. */
+html.tour-bar-open {
+  scroll-padding-bottom: var(--tour-bar);
+}
+
+html.tour-bar-open body {
+  padding-bottom: var(--tour-bar);
+}
+
+/* The script moves focus to the card so a screen reader reads the step. The
+ * card is not a control, and its border already marks it. */
+.tour:focus {
+  outline: none;
+}
+
+.tour h2 {
+  margin-top: 0;
+}
+
+.tour-progress {
+  margin: 0;
+  font-weight: 700;
+}
+
+/* A card taller than its share of the window scrolls its text, and the
+ * buttons stay in view at its bottom edge: without them in view there is no
+ * way on. Their own background covers the text that scrolls under them, down
+ * to the card's edge: the row has the card's bottom padding as its own, and
+ * the margin and the offset put it over the card's. */
+.tour .buttons {
+  position: sticky;
+  bottom: -1rem;
+  margin: 0 0 -1rem;
+  padding: 0.5rem 0 1rem;
+  background: var(--color-panel);
+}
+
+/* What the step points at. Dashed and teal, 6.4:1 on white, so it is not
+ * taken for the focus ring, which is solid and black. Focus keeps its ring. */
+.tour-target:not(:focus-visible),
+.table-scroll:has(> .tour-target),
+.tour-frame {
+  outline: var(--focus-width) dashed var(--color-primary);
+  outline-offset: 4px;
+}
+
+/* A link the step says to press gets a filled box out to its outline, so it
+ * reads as something to press. A shadow, which takes no room in the page. */
+a.tour-target:not(:focus-visible) {
+  background: var(--color-panel);
+  box-shadow: 0 0 0 4px var(--color-panel);
+}
+
+/* A step that points at a heading is about the whole section under it, which
+ * is no one element. The script lays this frame over the section, from the
+ * heading to the next one, and the heading goes without an outline of its
+ * own. The frame takes no press from what it frames. */
+.tour-frame {
+  position: absolute;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.tour-target.tour-section:not(:focus-visible) {
+  outline: none;
+}
+
+/* A table's box scrolls sideways (/js/tables.js) and so cuts off whatever its
+ * table draws outside itself. The box is outlined in the table's place. */
+.table-scroll > .tour-target:not(:focus-visible) {
+  outline: none;
+}
+
+/* The start button's box on the overview. */
+[data-tour-start] {
+  margin: 0 0 1.5rem;
+}
+
 /* The countdown before a login ends (/js/session.js), fixed to the bottom of
  * the window so it shows wherever the page is scrolled. */
 .login-countdown > div {
@@ -733,6 +880,9 @@ input[type="file"]::file-selector-button:hover {
   right: 0;
   bottom: 0;
   left: 0;
+  /* Over the walkthrough's card, which has the same edge: the login ends
+   * whether or not the administrator saw the countdown. */
+  z-index: 3;
   padding: 1rem var(--gutter);
   border-top: 2px solid var(--color-primary);
   background: var(--color-white);

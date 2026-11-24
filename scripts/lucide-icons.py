@@ -69,6 +69,10 @@ POLICY = {
     "bell-off": "never ask again",
     "search": "search",
     "door-open": "leave a household",
+    # The administrators' walkthrough, /js/tour.js.
+    "route": "start the walkthrough, or go to the step it stands on",
+    "arrow-right": "the walkthrough's next step",
+    "arrow-left": "the walkthrough's previous step",
 }
 
 ROOT = Path(__file__).resolve().parent.parent

@@ -37,6 +37,7 @@
         @template.tag.passkeyOffer(copy = copy, csrf = csrf, urls = passkeyUrls)
     @endif
     @template.tag.feedback(copy = copy, feedback = feedback)
+    @template.tag.tourStart(copy = copy)
 
     <h2>${copy.text("admin.fees.heading", String.valueOf(fees.year()))}</h2>
     <p>${copy.text("admin.fees.count", fees.paid(), fees.paid() + fees.unpaid())}</p>
@@ -75,7 +76,7 @@
         <p><a href="https://app.brevo.com/campaigns/listing/email">@template.icon.externalLink() ${copy.text("adminMailings.campaigns.open")}</a></p>
     </section>
 
-    <h2>${copy.text("admin.administrators.heading")}</h2>
+    <h2 id="administratorer">${copy.text("admin.administrators.heading")}</h2>
     <table>
         <caption>${copy.text("admin.list.caption")}</caption>
         <thead>
