@@ -26,6 +26,7 @@ import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
 import se.teaterihuskvarna.IntegrationTestSupport;
+import se.teaterihuskvarna.login.AdministratorId;
 import se.teaterihuskvarna.login.LoginKind;
 import se.teaterihuskvarna.login.SignedIn;
 import se.teaterihuskvarna.web.Copy;
@@ -82,9 +83,12 @@ class MemberDocumentIT extends IntegrationTestSupport {
         assertRedirect(mockMvc.perform(get("/admin/handlingar").with(member)).andReturn(), "/admin/logga-in");
         assertRedirect(mockMvc.perform(get("/admin/handlingar/" + id + "/fil").with(member)).andReturn(),
                 "/admin/logga-in");
+        assertRedirect(mockMvc.perform(get("/admin/handlingar/" + id + "/ta-bort").with(member)).andReturn(),
+                "/admin/logga-in");
         assertRedirect(mockMvc.perform(post("/admin/handlingar/" + id + "/ta-bort").with(member).with(csrf()))
                 .andReturn(), "/admin/logga-in");
         mockMvc.perform(get("/api/admin/documents").with(member)).andExpect(status().isForbidden());
+        mockMvc.perform(get("/api/admin/documents/" + id).with(member)).andExpect(status().isForbidden());
         mockMvc.perform(multipart("/api/admin/documents").file(pdf("a.pdf", PDF)).param("title", "Smyg")
                 .param("kind", "MEMBER_LETTER").param("publishedOn", "2026-09-01").with(member).with(csrf()))
                 .andExpect(status().isForbidden());
@@ -166,10 +170,10 @@ class MemberDocumentIT extends IntegrationTestSupport {
         byte[] large = Arrays.copyOf(PDF, MemberDocumentService.MAX_BYTES + 1);
         DocumentForm form = new DocumentForm("Stor", DocumentKind.MEMBER_LETTER, LocalDate.of(2026, 9, 1));
 
-        assertThatThrownBy(() -> documents.upload(form, "stor.pdf", large, firstAdministratorId()))
+        assertThatThrownBy(() -> documents.upload(form, "stor.pdf", large, new AdministratorId(firstAdministratorId())))
                 .isInstanceOf(FileTooLarge.class);
         byte[] limit = Arrays.copyOf(PDF, MemberDocumentService.MAX_BYTES);
-        assertThat(documents.upload(form, "precis.pdf", limit, firstAdministratorId()).sizeBytes())
+        assertThat(documents.upload(form, "precis.pdf", limit, new AdministratorId(firstAdministratorId())).sizeBytes())
                 .isEqualTo(MemberDocumentService.MAX_BYTES);
         assertThat(rowsIn("member_document")).isEqualTo(1);
     }
@@ -189,6 +193,40 @@ class MemberDocumentIT extends IntegrationTestSupport {
                 .andExpect(jsonPath("$.errors.title").value(copy.text("document.title.required")))
                 .andExpect(jsonPath("$.errors.kind").value(copy.text("document.kind.required")))
                 .andExpect(jsonPath("$.errors.publishedOn").value(copy.text("document.publishedOn.required")));
+
+        assertThat(rowsIn("member_document")).isZero();
+    }
+
+    /// A year of five digits and a sort that does not exist never become a
+    /// `DocumentForm`. They are errors on their fields, and the page keeps what
+    /// was typed.
+    @Test
+    void theUploadFormShowsAValueItCannotReadOnItsField() throws Exception {
+        String page = bodyOf(mockMvc.perform(multipart("/admin/handlingar").file(pdf("a.pdf", PDF))
+                        .param("title", "Kallelse till årsmötet").param("kind", "ANNUAL_MEETING")
+                        .param("publishedOn", "12026-03-01").with(asAdministrator()).with(csrf()))
+                .andExpect(status().isOk())
+                .andReturn());
+
+        assertUnreadable(page, "publishedOn", "12026-03-01", copy.text("document.publishedOn.invalid"));
+        assertThat(page).contains("value=\"Kallelse till årsmötet\"",
+                "<option value=\"ANNUAL_MEETING\" selected>");
+
+        String noSuchKind = bodyOf(mockMvc.perform(multipart("/admin/handlingar").file(pdf("a.pdf", PDF))
+                        .param("title", "Kallelse till årsmötet").param("kind", "PROTOKOLL")
+                        .param("publishedOn", "2026-03-01").with(asAdministrator()).with(csrf()))
+                .andExpect(status().isOk())
+                .andReturn());
+
+        assertThat(noSuchKind).contains(
+                "<li><a href=\"#kind\">" + copy.text("document.kind.invalid") + "</a></li>",
+                "aria-invalid=\"true\" aria-describedby=\"kind-error\"",
+                "<span id=\"kind-error\" class=\"field-error\">" + copy.text("document.kind.invalid") + "</span>",
+                "value=\"2026-03-01\"");
+        mockMvc.perform(multipart("/api/admin/documents").file(pdf("a.pdf", PDF))
+                        .param("title", "Kallelse till årsmötet").param("kind", "ANNUAL_MEETING")
+                        .param("publishedOn", "12026-03-01").with(asAdministrator()).with(csrf()))
+                .andExpect(status().isBadRequest());
 
         assertThat(rowsIn("member_document")).isZero();
     }
@@ -224,6 +262,9 @@ class MemberDocumentIT extends IntegrationTestSupport {
                         .contentType("multipart/form-data; boundary=x")
                         .content(new byte[100]))
                 .andReturn(), "/admin/handlingar?gammal");
+        // The page says so. It took no `stale` value before, and showed the list with nothing said.
+        mockMvc.perform(get("/admin/handlingar").param("gammal", "").with(asAdministrator()))
+                .andExpect(content().string(containsString(copy.text("form.stale"))));
         assertThat(rowsIn("member_document")).isZero();
     }
 
@@ -232,7 +273,7 @@ class MemberDocumentIT extends IntegrationTestSupport {
     @Test
     void everyDownloadPathSendsTheSameSafeHeaders() throws Exception {
         long id = documents.upload(new DocumentForm("Brev", DocumentKind.MEMBER_LETTER, LocalDate.of(2026, 9, 1)),
-                "C:\\hem\\..\\Års\"möte\r\n.pdf", PDF, firstAdministratorId()).id();
+                "C:\\hem\\..\\Års\"möte\r\n.pdf", PDF, new AdministratorId(firstAdministratorId())).id();
         RequestPostProcessor member = asMember(insertAccount("Karin Holm", "karin@example.test"));
 
         List<MvcResult> downloads = List.of(
@@ -260,14 +301,57 @@ class MemberDocumentIT extends IntegrationTestSupport {
         mockMvc.perform(get("/api/member/documents/999999/file").with(member)).andExpect(status().isNotFound());
         mockMvc.perform(get("/admin/handlingar/999999/fil").with(asAdministrator()))
                 .andExpect(status().isNotFound());
+        mockMvc.perform(get("/api/admin/documents/999999").with(asAdministrator()))
+                .andExpect(status().isNotFound());
         mockMvc.perform(delete("/api/admin/documents/999999").with(asAdministrator()).with(csrf()))
                 .andExpect(status().isNotFound());
+        // The list another administrator already deleted from still has the link.
+        mockMvc.perform(get("/admin/handlingar/999999/ta-bort").with(asAdministrator()))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(flash().attribute("error", copy.text("adminDocuments.error.noSuch")));
         mockMvc.perform(post("/admin/handlingar/999999/ta-bort").with(asAdministrator()).with(csrf()))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(flash().attribute("error", copy.text("adminDocuments.error.noSuch")));
     }
 
     // Deleting
+
+    /// The list has a link, not a button that deletes. The page it leads to says
+    /// which document goes, and only its button deletes.
+    @Test
+    void deletingOnThePageAsksFirst() throws Exception {
+        long id = insertDocument("Kallelse till årsmötet", PDF);
+        String path = "/admin/handlingar/" + id + "/ta-bort";
+
+        String list = bodyOf(mockMvc.perform(get("/admin/handlingar").with(asAdministrator()))
+                .andExpect(status().isOk())
+                .andReturn());
+        assertThat(list)
+                .contains("<a href=\"" + path + "\" aria-label=\"Ta bort Kallelse till årsmötet\">")
+                .doesNotContain("action=\"" + path + "\"");
+
+        String page = bodyOf(mockMvc.perform(get(path).with(asAdministrator()))
+                .andExpect(status().isOk())
+                .andReturn());
+        assertThat(page).contains(
+                "<h1>" + copy.text("adminDocuments.delete.heading") + "</h1>",
+                copy.text("adminDocuments.delete.question", "Kallelse till årsmötet"),
+                copy.text("adminDocuments.delete.what", "Medlemsbrev", "1 september 2026"),
+                "<form method=\"post\" action=\"" + path + "\">",
+                "<a href=\"/admin/handlingar\">" + copy.text("adminDocuments.delete.cancel") + "</a>");
+        assertThat(rowsIn("member_document")).isOne();
+        mockMvc.perform(get("/api/admin/documents/" + id).with(asAdministrator()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.title").value("Kallelse till årsmötet"))
+                .andExpect(jsonPath("$.kind").value("MEMBER_LETTER"))
+                .andExpect(jsonPath("$.publishedOn").value("2026-09-01"))
+                .andExpect(jsonPath("$", not(hasKey("content"))));
+
+        mockMvc.perform(post(path).with(asAdministrator()).with(csrf()))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(flash().attribute("notice", copy.text("adminDocuments.deleted")));
+        assertThat(rowsIn("member_document")).isZero();
+    }
 
     @Test
     void anAdministratorDeletesADocumentThroughEitherAdapter() throws Exception {
@@ -300,11 +384,12 @@ class MemberDocumentIT extends IntegrationTestSupport {
 
     private long insertDocument(String title, byte[] content) {
         return documents.upload(new DocumentForm(title, DocumentKind.MEMBER_LETTER, LocalDate.of(2026, 9, 1)),
-                title + ".pdf", content, firstAdministratorId()).id();
+                title + ".pdf", content, new AdministratorId(firstAdministratorId())).id();
     }
 
     private void insertDocument(String title, DocumentKind kind, LocalDate publishedOn) {
-        documents.upload(new DocumentForm(title, kind, publishedOn), title + ".pdf", PDF, firstAdministratorId());
+        documents.upload(new DocumentForm(title, kind, publishedOn), title + ".pdf", PDF,
+                new AdministratorId(firstAdministratorId()));
     }
 
     private static MockMultipartFile pdf(String filename, byte[] content) {

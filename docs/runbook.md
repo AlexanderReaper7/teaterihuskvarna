@@ -1,16 +1,33 @@
 ---
 created: 2026-10-18
 provenance: agent
-description: How to back up the database, check that a backup restores and restore after data loss.
+description: Which environment file production starts from, and how to back up the database, check that a backup restores and restore after data loss.
 ---
 
 # Runbook
 
-The system plan asks for a runbook covering deployment, update, rollback, backup and restore ([projektplan.md](projektplan.md), "Ownership and maintenance are release work"). It covers backup and restore so far. PostgreSQL runs in a container, so backups are ours to make ([0007](decisions/0007-postgres-in-a-container.md)).
+The system plan asks for a runbook covering deployment, update, rollback, backup and restore ([projektplan.md](projektplan.md), "Ownership and maintenance are release work"). It covers the production environment file, backup and restore so far. PostgreSQL runs in a container, so backups are ours to make ([0007](decisions/0007-postgres-in-a-container.md)).
+
+## The environment file on the production host
+
+On the production host, `.env` starts as a copy of [`.env.production.example`](../.env.production.example), never of [`.env.example`](../.env.example):
+
+```sh
+cp .env.production.example .env
+docker compose config --quiet
+```
+
+[`.env.example`](../.env.example) is the local development stack. Its `COMPOSE_FILE` line loads [`compose.dev.yaml`](../compose.dev.yaml), which turns on the `dev` profile, where `POST /dev/login` logs in as any administrator without a credential and `/dev` lists every address. The production example has no such line, so `docker compose` reads [`compose.yaml`](../compose.yaml) alone. If the line is there anyway, the application refuses to start: the `dev` profile together with a `SITE_URL` stops it with a message naming the lines to remove ([`RealSiteGuard`](../src/main/java/se/teaterihuskvarna/development/RealSiteGuard.java)). It holds every variable [`compose.yaml`](../compose.yaml) reads except the three that only the image build uses, and each one's comment says what it is and where its value comes from.
+
+`docker compose config --quiet` prints nothing when compose can fill in the stack, and fails while `POSTGRES_PASSWORD` is empty. The application refuses to start while `SITE_URL`, `MAIL_FROM`, `BANKGIRO`, `SANITY_PROJECT_ID`, `SANITY_DATASET_NAME` or a `BREVO_` value is empty, and on a database with no administrator while `FIRST_ADMINISTRATOR_EMAIL` or `FIRST_ADMINISTRATOR_NAME` is. Nothing refuses an empty `SITE_HOST` or empty `SMTP_` values, so check those by eye.
+
+Git ignores `.env` and every other `.env.*` file except the two examples, so a copy named `.env.production` cannot be committed by accident.
+
+## Back up and restore
 
 Both scripts work against the running stack, from the repository root, in a POSIX shell. On Windows that is Git Bash.
 
-## Back up
+### Back up
 
 ```sh
 sh scripts/backup.sh
@@ -18,24 +35,28 @@ sh scripts/backup.sh
 
 [`scripts/backup.sh`](../scripts/backup.sh) runs `pg_dump` inside the `db` container, so its version always matches the server's, and writes `backups/teaterihuskvarna-2026-10-20T1430.dump`, named by date and time, in PostgreSQL's custom format. It prints `backup.sh: wrote <file>`. A dump that fails halfway leaves no file behind. Git and the image build both ignore `backups/`, since a dump from production holds real personal data.
 
-## Check that a backup restores
+The dump holds no sessions. `spring_session.session_id` is the session cookie's value in plain text, so a dump with those rows logs its reader in as everyone who was logged in when it was made. The script leaves out the rows of `spring_session` and `spring_session_attributes` and keeps the two tables' definitions.
+
+### Check that a backup restores
 
 ```sh
 sh scripts/restore-check.sh backups/teaterihuskvarna-2026-10-20T1430.dump
 ```
 
-[`scripts/restore-check.sh`](../scripts/restore-check.sh) restores the dump into a new database, `restore_check`, and never touches the real one. It compares the row count of every table with the live database, including `flyway_schema_history`, and deletes the check database afterwards:
+[`scripts/restore-check.sh`](../scripts/restore-check.sh) restores the dump into a new database, `restore_check`, and never touches the real one. It compares the row count of every table with the live database, including `flyway_schema_history`, and deletes the check database afterwards. The two session tables are the exception: they must exist in the restored database and hold no rows, whatever the live database holds.
 
 ```
 table                                          live   restored  result
 account                                           5          5  ok
-flyway_schema_history                             2          2  ok
-restore-check.sh: every table has the same row count, the dump restores
+flyway_schema_history                            15         15  ok
+spring_session                                    2          0  ok, sessions are not backed up
+spring_session_attributes                         2          0  ok, sessions are not backed up
+restore-check.sh: every table has the same row count and the dump holds no sessions, the dump restores
 ```
 
-It exits with 0 when every count matches, and with 1 when a count differs, a table is missing or the dump cannot be read. The live database is counted as it is now, so a row added after the dump shows as `DIFFERENT`. Run it right after [`backup.sh`](../scripts/backup.sh).
+It exits with 0 when every count matches, and with 1 when a count differs, a table is missing or the dump cannot be read. A dump with session rows in it, such as one made before the script left them out, fails with `HOLDS SESSIONS`: each of those rows is a working login until it expires, so treat that file as a credential. The live database is counted as it is now, so a row added after the dump shows as `DIFFERENT`. Run it right after [`backup.sh`](../scripts/backup.sh).
 
-## Restore after data loss
+### Restore after data loss
 
 Stop the application first, so nothing writes while the database is replaced:
 
@@ -46,6 +67,8 @@ docker compose start app
 ```
 
 `--clean --if-exists` drops each object in the dump before it is created again, so the command also works on a database with some tables left. If the whole volume is gone, `docker compose up -d db` creates an empty database, and the same command without `--clean --if-exists` fills it. Flyway sees its own history in the restored data and applies nothing twice.
+
+Everyone logs in again after a restore. The dump holds no sessions, so both session tables come back empty and the cookie in a member's or an administrator's browser matches nothing. Their passkeys and addresses are restored, so they log in the usual way.
 
 ## Not covered yet
 

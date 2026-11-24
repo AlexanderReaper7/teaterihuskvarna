@@ -2,6 +2,9 @@ package se.teaterihuskvarna.outbox;
 
 import jakarta.annotation.PreDestroy;
 import java.time.Duration;
+import java.time.Instant;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -21,6 +24,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.support.TransactionTemplate;
+import se.teaterihuskvarna.WithoutMessage;
 
 /// Work for another system, stored in the transaction that causes it and done
 /// after the commit. `docs/decisions/0026-outbox-and-brevo-contacts.md`.
@@ -36,8 +40,22 @@ import org.springframework.transaction.support.TransactionTemplate;
 /// decided that mail is retried until it is sent. After [#MAX_ATTEMPTS] it is
 /// logged as an error once, so someone looks, and tried every six hours.
 ///
+/// One exception, which an agent built after the review on 2026-11-10 and the
+/// user decided the same day: work stored with a `not_after`, which is mail
+/// whose link or code expires or whose text names a day. It is retried the same way
+/// until that moment. After it the row is deleted undone and logged with its
+/// id and kind, by the attempt that finds it or by [#retry] within a minute,
+/// and it is never handed to its handler. Without this a mail that kept
+/// failing kept its login link in the table in plain text, and went out after
+/// the link had expired. Work without a `not_after` follows the user's rule.
+///
 /// An attempt locks its row with `SKIP LOCKED`, so the immediate attempt and
 /// the job never do the same row at once, and neither do two instances.
+///
+/// The database writes rows too, with no Java code running: a trigger queues
+/// a member's Brevo contact (`V17__brevo_contact_queue.sql`). Nothing here
+/// added such a row, so nothing here tries it after the commit.
+/// [OutboxNotifications] hears of it from PostgreSQL and calls [#dispatchDue].
 @Component
 public final class Outbox {
 
@@ -69,18 +87,38 @@ public final class Outbox {
     }
 
     /// Stores work in the current transaction, or at once outside one, and
-    /// tries it after the commit.
+    /// tries it after the commit, and again until it is done.
     ///
     /// @param kind    the [OutboxHandler#kind] that does it
     /// @param payload what the handler needs
     /// @throws IllegalArgumentException if no handler does that kind
     public void add(String kind, String payload) {
+        store(kind, payload, null);
+    }
+
+    /// Stores work that is wrong to do after a moment, such as a mail whose
+    /// link expires then. It is tried like other work until that moment, and
+    /// deleted undone after it.
+    ///
+    /// @param kind     the [OutboxHandler#kind] that does it
+    /// @param payload  what the handler needs
+    /// @param notAfter the last moment the work may be done
+    /// @throws IllegalArgumentException if no handler does that kind
+    public void add(String kind, String payload, Instant notAfter) {
+        store(kind, payload, notAfter);
+    }
+
+    private void store(String kind, String payload, @Nullable Instant notAfter) {
         if (!handlers().containsKey(kind)) {
             throw new IllegalArgumentException("no outbox handler for " + kind);
         }
-        long id = jdbc.sql("INSERT INTO outbox (kind, payload) VALUES (?, ?) RETURNING id")
+        // The cast gives the parameter a type when it is null.
+        long id = jdbc.sql("""
+                INSERT INTO outbox (kind, payload, not_after) VALUES (?, ?, CAST(? AS TIMESTAMPTZ))
+                RETURNING id""")
                 .param(kind)
                 .param(payload)
+                .param(notAfter == null ? null : OffsetDateTime.ofInstant(notAfter, ZoneOffset.UTC))
                 .query(Long.class)
                 .single();
         AfterCommit.run(() -> dispatch(kind, id));
@@ -93,15 +131,22 @@ public final class Outbox {
         workers.values().forEach(ThreadPoolTaskExecutor::shutdown);
     }
 
-    /// Hands every due row to its kind's thread, the longest waiting first,
-    /// up to a batch per kind, so rows of one kind stuck behind a slow Brevo
-    /// never crowd a retried mail out of the batch. The scheduler's thread
-    /// only reads ids, so neither the mail nor Spring's other scheduled jobs
-    /// wait on Brevo. A row already waiting for its thread is not handed over
-    /// twice.
+    /// Deletes every row past its `not_after`, then hands over every due row:
+    /// [#dispatchDue].
     @Scheduled(fixedDelayString = "PT1M")
     public void retry() {
-        List<Due> due = jdbc.sql("""
+        deleteExpired();
+        dispatchDue();
+    }
+
+    /// Hands every due row to its kind's thread, the longest waiting first, up
+    /// to a batch per kind, so rows of one kind stuck behind a slow Brevo
+    /// never crowd a retried mail out of the batch. The calling thread only
+    /// reads ids, so neither the mail nor Spring's other scheduled jobs wait
+    /// on Brevo. A row already waiting for its thread is not handed over
+    /// twice.
+    void dispatchDue() {
+        List<Entry> due = jdbc.sql("""
                 SELECT id, kind FROM (
                     SELECT id, kind, next_attempt_at,
                         row_number() OVER (PARTITION BY kind ORDER BY next_attempt_at, id) AS place
@@ -109,11 +154,32 @@ public final class Outbox {
                 WHERE place <= ?
                 ORDER BY next_attempt_at, id""")
                 .param(BATCH)
-                .query(Due.class)
+                .query(Entry.class)
                 .list().stream().map(Objects::requireNonNull).toList();
-        for (Due row : due) {
+        for (Entry row : due) {
             dispatch(row.kind(), row.id());
         }
+    }
+
+    /// A row may wait six hours for its next attempt, so its `not_after` can
+    /// pass long before anything would try it. This takes it then, payload
+    /// and all. A row an attempt holds is skipped, so the scheduler's thread
+    /// never waits on the other system, and is taken on the next run.
+    private void deleteExpired() {
+        List<Entry> expired = jdbc.sql("""
+                DELETE FROM outbox WHERE id IN (
+                    SELECT id FROM outbox WHERE not_after < now() FOR UPDATE SKIP LOCKED)
+                RETURNING id, kind""")
+                .query(Entry.class)
+                .list().stream().map(Objects::requireNonNull).toList();
+        for (Entry row : expired) {
+            expired(row.id(), row.kind());
+        }
+    }
+
+    /// The id and the kind are all the log gets: the payload names a person.
+    private static void expired(long id, String kind) {
+        LOG.warn("Outbox row {} of kind {} passed its not_after undone and was deleted", id, kind);
     }
 
     /// A full queue leaves the row for [#retry].
@@ -151,7 +217,7 @@ public final class Outbox {
     private void attempt(long id) {
         transactions.executeWithoutResult(status -> {
             Optional<Row> found = jdbc.sql("""
-                    SELECT kind, payload, attempts FROM outbox
+                    SELECT kind, payload, attempts, COALESCE(not_after < now(), FALSE) AS expired FROM outbox
                     WHERE id = ? AND next_attempt_at <= now()
                     FOR UPDATE SKIP LOCKED""")
                     .param(id)
@@ -161,6 +227,11 @@ public final class Outbox {
                 return;
             }
             Row row = found.get();
+            if (row.expired()) {
+                jdbc.sql("DELETE FROM outbox WHERE id = ?").param(id).update();
+                expired(id, row.kind());
+                return;
+            }
             try {
                 OutboxHandler handler = handlers().get(row.kind());
                 if (handler == null) {
@@ -174,13 +245,19 @@ public final class Outbox {
         });
     }
 
+    /// The log gets the row's id, kind and attempt, and what failed as
+    /// [WithoutMessage] gives it: class names and stack frames. A handler's
+    /// exception is never logged as it is, because its message can name a
+    /// person, as a relay's refusal names the recipient. The frames stay
+    /// because, with the message gone, they are what tells a handler's own
+    /// fault from the other system's.
     private void failed(long id, Row row, RuntimeException e) {
         int attempts = row.attempts() + 1;
         if (attempts == MAX_ATTEMPTS) {
             LOG.error("Outbox row {} of kind {} has failed {} times; still trying every {}", id, row.kind(),
-                    attempts, LONGEST_WAIT, e);
+                    attempts, LONGEST_WAIT, WithoutMessage.of(e));
         } else {
-            LOG.warn("Outbox row {} of kind {} failed, attempt {}", id, row.kind(), attempts, e);
+            LOG.warn("Outbox row {} of kind {} failed, attempt {}", id, row.kind(), attempts, WithoutMessage.of(e));
         }
         jdbc.sql("""
                 UPDATE outbox SET attempts = ?, next_attempt_at = now() + make_interval(secs => ?), last_error = ?
@@ -214,9 +291,9 @@ public final class Outbox {
         return wait.compareTo(LONGEST_WAIT) > 0 ? LONGEST_WAIT : wait;
     }
 
-    private record Row(String kind, String payload, int attempts) {
+    private record Row(String kind, String payload, int attempts, boolean expired) {
     }
 
-    private record Due(long id, String kind) {
+    private record Entry(long id, String kind) {
     }
 }

@@ -2,9 +2,10 @@ package se.teaterihuskvarna;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.after;
 import static org.mockito.Mockito.clearInvocations;
-import static org.mockito.Mockito.timeout;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -15,13 +16,19 @@ import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.sql.Timestamp;
+import java.time.Instant;
 import java.util.Arrays;
 import java.util.EnumMap;
 import java.util.HexFormat;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.locks.LockSupport;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
@@ -34,6 +41,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.simple.JdbcClient;
+import org.springframework.mail.MailSendException;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mock.web.MockHttpServletResponse;
@@ -41,6 +49,8 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 import se.teaterihuskvarna.login.LoginBrowser;
 import se.teaterihuskvarna.login.LoginKind;
 
@@ -60,17 +70,13 @@ import se.teaterihuskvarna.login.LoginKind;
 /// from `teaterihuskvarna.first-administrator.*`, and the cleanup keeps it.
 @SpringBootTest
 @AutoConfigureMockMvc
-@Import(PostgresTestConfiguration.class)
+@Import({PostgresTestConfiguration.class, BackgroundTasks.class})
 public abstract class IntegrationTestSupport {
 
     /// How long a test waits for a mail. [se.teaterihuskvarna.login.Mailer] sends
     /// on a background thread after the commit, so the mail can arrive after the
     /// response has.
     protected static final long MAIL_WAIT_MILLIS = 5000;
-
-    /// How long a test watches for a mail that must not arrive, or for a second
-    /// one after the expected one.
-    protected static final long QUIET_MILLIS = 1000;
 
     /// The mail sender, mocked so nothing leaves the test. Spring resets it after
     /// each test.
@@ -83,6 +89,12 @@ public abstract class IntegrationTestSupport {
     @Autowired
     protected JdbcClient jdbc;
 
+    @Autowired
+    private BackgroundTasks backgroundTasks;
+
+    @Autowired
+    private PlatformTransactionManager transactionManager;
+
     @Value("${teaterihuskvarna.first-administrator.email}")
     protected String firstAdministratorEmail;
 
@@ -93,38 +105,80 @@ public abstract class IntegrationTestSupport {
     /// [#requestLink] sends and keeps it, [#followLink] and [#enterCode] send it.
     private final Map<LoginKind, Cookie> browser = new EnumMap<>(LoginKind.class);
 
-    /// Children before parents, because of the foreign keys. Passkeys have
-    /// none, so they go first by choice. The first
-    /// administrator is made active again rather than deleted, since the
-    /// application only seeds it when no administrator exists at all, and that
-    /// happens at startup, not between tests.
+    /// The tables emptied before every test, children before parents because of
+    /// the foreign keys. Passkeys have none, so they go first by choice.
+    /// `EmptiedTablesIT` fails when the database has a table that is not here,
+    /// so a new table cannot leak rows from one test into the next.
+    ///
+    /// The outbox goes last. Deleting a member queues their Brevo contact, as
+    /// every write to the register does (`V17__brevo_contact_queue.sql`), and
+    /// those rows are deleted with the rest, in the same transaction, so no
+    /// test starts with work left by the one before it.
+    public static final List<String> EMPTIED = List.of(
+            "spring_session",
+            "user_credentials",
+            "user_entities",
+            "one_time_token",
+            "link_request",
+            "membership_application",
+            "mailing",
+            "volunteer_booking",
+            "volunteer_shift",
+            "offer_registration",
+            "offer",
+            "member_document",
+            "fee",
+            "invitation",
+            "account",
+            "member",
+            "household",
+            "outbox");
+
+    private static final AtomicBoolean IDS_APART = new AtomicBoolean();
+
+    /// Gives the ids of every table a million of their own, once per run.
+    ///
+    /// The tests insert a member and its account together, so the two ids
+    /// were often the same number, and code that passed one where the other
+    /// belongs still found a row and the test passed. With the sequences
+    /// apart, an id of the wrong kind names no row.
+    @BeforeEach
+    protected void idsApart() {
+        if (!IDS_APART.compareAndSet(false, true)) {
+            return;
+        }
+        // Not information_schema.sequences, which leaves out the sequence of an identity column.
+        List<String> sequences = jdbc.sql("""
+                        SELECT sequencename FROM pg_sequences
+                        WHERE schemaname = 'public' ORDER BY sequencename""")
+                .query(String.class)
+                .list().stream().map(Objects::requireNonNull).toList();
+        for (int i = 0; i < sequences.size(); i++) {
+            jdbc.sql("SELECT setval(CAST(? AS REGCLASS), ?)")
+                    .param(sequences.get(i))
+                    .param((i + 1) * 1_000_000L)
+                    .query(Long.class)
+                    .single();
+        }
+    }
+
+    /// The first administrator is made active again rather than deleted, since
+    /// the application only seeds it when no administrator exists at all, and
+    /// that happens at startup, not between tests.
     @BeforeEach
     protected void emptyTables() {
         browser.clear();
-        jdbc.sql("DELETE FROM spring_session").update();
-        jdbc.sql("DELETE FROM user_credentials").update();
-        jdbc.sql("DELETE FROM user_entities").update();
-        jdbc.sql("DELETE FROM one_time_token").update();
-        jdbc.sql("DELETE FROM link_request").update();
-        jdbc.sql("DELETE FROM membership_application").update();
-        jdbc.sql("DELETE FROM mailing").update();
-        jdbc.sql("DELETE FROM outbox").update();
-        jdbc.sql("DELETE FROM volunteer_booking").update();
-        jdbc.sql("DELETE FROM volunteer_shift").update();
-        jdbc.sql("DELETE FROM offer_registration").update();
-        jdbc.sql("DELETE FROM offer").update();
-        jdbc.sql("DELETE FROM member_document").update();
-        jdbc.sql("DELETE FROM fee").update();
-        jdbc.sql("DELETE FROM invitation").update();
-        jdbc.sql("DELETE FROM account").update();
-        jdbc.sql("DELETE FROM member").update();
-        jdbc.sql("DELETE FROM household").update();
-        jdbc.sql("UPDATE administrator SET removed_at = NULL, removed_by = NULL WHERE LOWER(email) = LOWER(?)")
-                .param(firstAdministratorEmail)
-                .update();
-        jdbc.sql("DELETE FROM administrator WHERE LOWER(email) <> LOWER(?)")
-                .param(firstAdministratorEmail)
-                .update();
+        new TransactionTemplate(transactionManager).executeWithoutResult(status -> {
+            jdbc.sql("UPDATE administrator SET removed_at = NULL, removed_by = NULL WHERE LOWER(email) = LOWER(?)")
+                    .param(firstAdministratorEmail)
+                    .update();
+            jdbc.sql("DELETE FROM administrator WHERE LOWER(email) <> LOWER(?)")
+                    .param(firstAdministratorEmail)
+                    .update();
+            for (String table : EMPTIED) {
+                jdbc.sql("DELETE FROM " + table).update();
+            }
+        });
     }
 
     /// @param fullName the member's name
@@ -173,15 +227,16 @@ public abstract class IntegrationTestSupport {
         return jdbc.sql("SELECT COUNT(*) FROM " + table).query(Long.class).single();
     }
 
-    /// Waits for exactly `count` mails in total since the test started, or since
-    /// the last [#forgetMails], then watches a while longer for one too many.
+    /// Waits until the mail the test caused so far has gone out, then requires
+    /// exactly `count` mails in total since the test started, or since the last
+    /// [#forgetMails].
     ///
     /// @param count how many mails must go out
     /// @return the mails, in the order they were sent
     protected List<SimpleMailMessage> awaitMails(int count) {
-        verify(mailSender, timeout(MAIL_WAIT_MILLIS).times(count)).send(any(SimpleMailMessage.class));
+        awaitMailSettled();
         ArgumentCaptor<SimpleMailMessage> sent = ArgumentCaptor.forClass(SimpleMailMessage.class);
-        verify(mailSender, after(QUIET_MILLIS).times(count)).send(sent.capture());
+        verify(mailSender, times(count)).send(sent.capture());
         return sent.getAllValues();
     }
 
@@ -190,9 +245,60 @@ public abstract class IntegrationTestSupport {
         return awaitMails(1).getFirst();
     }
 
-    /// Fails if a mail goes out within [#QUIET_MILLIS].
+    /// Waits until the mail the test caused so far has gone out, and fails if there was any.
     protected void assertNoMail() {
-        verify(mailSender, after(QUIET_MILLIS).never()).send(any(SimpleMailMessage.class));
+        awaitMailSettled();
+        verify(mailSender, never()).send(any(SimpleMailMessage.class));
+    }
+
+    /// Waits, at most [#MAIL_WAIT_MILLIS], until no mail is on its way: no task
+    /// is left on the executor [se.teaterihuskvarna.login.Background] uses, and
+    /// no mail in the outbox is due. A mail leaves the outbox in the transaction
+    /// that hands it to the sender, so a due row is one not sent yet. A mail
+    /// that failed is not due until its retry, and does not count.
+    ///
+    /// The count is read before the outbox, never after. A task commits its
+    /// outbox row before it ends, so every row a finished task wrote is visible
+    /// to the query that follows. In the other order, a task could write its
+    /// row just after the query and end just before the count.
+    private void awaitMailSettled() {
+        assertThat(backgroundTasks.counting())
+                .as("BackgroundTasks counts the tasks on applicationTaskExecutor")
+                .isTrue();
+        long deadline = System.nanoTime() + MAIL_WAIT_MILLIS * 1_000_000;
+        while (backgroundTasks.pending() > 0 || mailsDue() > 0) {
+            assertThat(System.nanoTime() - deadline)
+                    .as("background tasks or mail still pending after %d ms", MAIL_WAIT_MILLIS)
+                    .isNegative();
+            LockSupport.parkNanos(5_000_000);
+        }
+    }
+
+    private long mailsDue() {
+        return jdbc.sql("SELECT COUNT(*) FROM outbox WHERE kind = 'mail' AND next_attempt_at <= now()")
+                .query(Long.class)
+                .single();
+    }
+
+    /// Makes the relay refuse every mail from now on. A refused mail stays in
+    /// the outbox, where a test can read what is stored with it, and still
+    /// counts as sent to [#awaitMails].
+    protected void refuseEveryMail() {
+        doThrow(new MailSendException("relay down")).when(mailSender).send(any(SimpleMailMessage.class));
+    }
+
+    /// @return `not_after` of the one mail in the outbox, or null if it has none
+    protected @Nullable Instant notAfterOfTheMailInTheOutbox() {
+        return jdbc.sql("SELECT not_after FROM outbox WHERE kind = 'mail'")
+                .query((row, number) -> Optional.ofNullable(row.getTimestamp(1)).map(Timestamp::toInstant))
+                .single()
+                .orElse(null);
+    }
+
+    /// @param sql a query for one timestamp
+    /// @return the timestamp
+    protected Instant instantFrom(String sql) {
+        return jdbc.sql(sql).query(Timestamp.class).single().toInstant();
     }
 
     /// Makes the mail helpers count from now.
@@ -363,6 +469,32 @@ public abstract class IntegrationTestSupport {
     protected static void assertRedirect(MvcResult result, String path) {
         assertThat(result.getResponse().getStatus()).as("status of a redirect to %s", path).isBetween(300, 399);
         assertThat(locationOf(result)).isEqualTo(path);
+    }
+
+    /// @param result a page
+    /// @return its body with every run of white space as one space, so that a tag
+    ///         the template splits over two lines can be matched
+    /// @throws UnsupportedEncodingException never, UTF-8 is always there
+    protected static String bodyOf(MvcResult result) throws UnsupportedEncodingException {
+        return result.getResponse().getContentAsString(StandardCharsets.UTF_8).replaceAll("\\s+", " ");
+    }
+
+    /// Asserts what a form's page shows for a field whose value could not become
+    /// the form's type: a link to the field in the summary, the value as it was
+    /// typed, and the message tied to the field.
+    ///
+    /// @param page    the page, from [#bodyOf]
+    /// @param field   the field's name, which is also its `id`
+    /// @param typed   what was sent in it
+    /// @param message the Swedish message the field gets
+    protected static void assertUnreadable(String page, String field, String typed, String message) {
+        assertThat(page).contains(
+                "<div role=\"alert\">",
+                "<li><a href=\"#" + field + "\">" + message + "</a></li>",
+                "id=\"" + field + "\" name=\"" + field + "\"",
+                "value=\"" + typed + "\"",
+                "aria-invalid=\"true\" aria-describedby=\"" + field + "-error\"",
+                "<span id=\"" + field + "-error\" class=\"field-error\">" + message + "</span>");
     }
 
     /// Independent of `Tokens.hash`, so a test does not check the hash with the

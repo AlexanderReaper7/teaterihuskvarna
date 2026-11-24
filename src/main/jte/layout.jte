@@ -32,8 +32,10 @@
     @endif
     <link rel="icon" href="/img/favicon.png" type="image/png">
     <link rel="stylesheet" href="/css/site.css">
+    <%-- Not deferred, so it runs before the body is parsed and the first paint has the menu collapsed
+         on a narrow screen: /js/menu.js. A file and not an inline script, which no template has. --%>
+    <script src="/js/menu.js"></script>
     <script src="/js/forms.js" defer></script>
-    <script src="/js/menu.js" defer></script>
     <script src="/js/tables.js" defer></script>
     @if(preview)
         <%-- Connects the page to the Studio's Presentation tool, built into the image from visual-editing/. --%>

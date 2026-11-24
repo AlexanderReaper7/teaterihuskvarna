@@ -8,6 +8,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.Instant;
 import org.jspecify.annotations.Nullable;
+import se.teaterihuskvarna.login.AdministratorId;
 import se.teaterihuskvarna.login.Email;
 
 /// An administrator account. Not an account in the member sense: an
@@ -19,8 +20,8 @@ import se.teaterihuskvarna.login.Email;
 /// they name, and an association would be one more lazy proxy to trip over
 /// outside a transaction.
 ///
-/// Column lengths mirror `V2__login.sql` by hand, because `ddl-auto: validate`
-/// does not compare them: `docs/decisions/0012-jpa-over-a-schema-flyway-owns.md`.
+/// Column lengths mirror `V2__login.sql`, which `EntityColumnsIT` checks:
+/// `docs/decisions/0012-jpa-over-a-schema-flyway-owns.md`.
 @Entity
 @Table(name = "administrator")
 public class Administrator {
@@ -36,7 +37,7 @@ public class Administrator {
     private String fullName;
 
     @Column(name = "created_at", nullable = false)
-    private Instant createdAt = Instant.now();
+    private Instant createdAt;
 
     @Column(name = "created_by")
     private @Nullable Long createdBy;
@@ -54,12 +55,16 @@ public class Administrator {
     /// @param email     the address, unique case insensitively across every row
     /// @param fullName  the name to greet them by
     /// @param createdBy the administrator who added this one, or null for the first administrator
-    public Administrator(Email email, String fullName, @Nullable Long createdBy) {
+    /// @param createdAt when they were added
+    public Administrator(Email email, String fullName, @Nullable AdministratorId createdBy, Instant createdAt) {
         this.email = email.value();
         this.fullName = fullName;
-        this.createdBy = createdBy;
+        this.createdBy = createdBy == null ? null : createdBy.value();
+        this.createdAt = createdAt;
     }
 
+    /// The number, for Hibernate and for a query. Everything else reads [#id].
+    ///
     /// @return the ID assigned by Hibernate
     /// @throws IllegalStateException if this entity has not been persisted
     public Long getId() {
@@ -67,6 +72,21 @@ public class Administrator {
             throw new IllegalStateException("Entity has not been persisted");
         }
         return id;
+    }
+
+    /// The id as its own type, which the compiler tells from every other id.
+    ///
+    /// Final, and it reads the number through [#getId]. A lazy reference to
+    /// this entity is a subclass Hibernate makes: it answers `getId` from the
+    /// reference itself and loads the row for any other method it can
+    /// override. It cannot override this one, so the id of a reference is
+    /// read without a query, and without loading a row ahead of a lock that
+    /// was meant to read it first. `EntityIdsIT` fails if that stops holding.
+    ///
+    /// @return the id
+    /// @throws IllegalStateException if this entity has not been persisted
+    public final AdministratorId id() {
+        return new AdministratorId(getId());
     }
 
     public String getEmail() {
@@ -81,16 +101,16 @@ public class Administrator {
         return createdAt;
     }
 
-    public @Nullable Long getCreatedBy() {
-        return createdBy;
+    public @Nullable AdministratorId getCreatedBy() {
+        return createdBy == null ? null : new AdministratorId(createdBy);
     }
 
     public @Nullable Instant getRemovedAt() {
         return removedAt;
     }
 
-    public @Nullable Long getRemovedBy() {
-        return removedBy;
+    public @Nullable AdministratorId getRemovedBy() {
+        return removedBy == null ? null : new AdministratorId(removedBy);
     }
 
     /// @return whether this administrator can log in, that is, has not been removed
@@ -99,9 +119,10 @@ public class Administrator {
     }
 
     /// @param by the administrator doing the removing
-    public void remove(long by) {
-        this.removedAt = Instant.now();
-        this.removedBy = by;
+    /// @param at when they are removed
+    public void remove(AdministratorId by, Instant at) {
+        this.removedAt = at;
+        this.removedBy = by.value();
     }
 
     /// Makes a removed administrator active again, as if newly added. The row is
@@ -110,10 +131,11 @@ public class Administrator {
     ///
     /// @param newFullName the name given when re-adding, which may differ from the old one
     /// @param by          the administrator doing the adding
-    public void reactivate(String newFullName, long by) {
+    /// @param at          when they are added again
+    public void reactivate(String newFullName, AdministratorId by, Instant at) {
         this.fullName = newFullName;
-        this.createdAt = Instant.now();
-        this.createdBy = by;
+        this.createdAt = at;
+        this.createdBy = by.value();
         this.removedAt = null;
         this.removedBy = null;
     }

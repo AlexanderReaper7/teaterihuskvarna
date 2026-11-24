@@ -1,6 +1,7 @@
 package se.teaterihuskvarna.login;
 
 import jakarta.servlet.http.HttpSession;
+import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -28,17 +29,19 @@ public class DeviceService {
 
     private final FindByIndexNameSessionRepository<? extends Session> repository;
     private final LoginSettings settings;
+    private final Clock clock;
 
-    DeviceService(FindByIndexNameSessionRepository<? extends Session> repository, LoginSettings settings) {
+    DeviceService(FindByIndexNameSessionRepository<? extends Session> repository, LoginSettings settings, Clock clock) {
         this.repository = repository;
         this.settings = settings;
+        this.clock = clock;
     }
 
     /// @param signedIn who is logged in
     /// @param current  the asking request's session
     /// @return the devices whose login has not ended, the asking one first, then the most recently used
     public List<DeviceDetails> list(SignedIn signedIn, HttpSession current) {
-        Instant now = Instant.now();
+        Instant now = clock.instant();
         List<DeviceDetails> devices = new ArrayList<>();
         for (Map.Entry<String, ? extends Session> entry : sessions(signedIn).entrySet()) {
             Session session = entry.getValue();
@@ -97,14 +100,14 @@ public class DeviceService {
     /// @return when the login now ends
     public LoginStatus extend(SignedIn signedIn, HttpSession current) {
         Duration lifetime = settings.session(signedIn.kind());
-        LoginSession.extend(current, Instant.now().plus(lifetime));
+        LoginSession.extend(current, clock.instant().plus(lifetime));
         return status(current);
     }
 
     /// @param current the asking request's session
     /// @return when its login ends
     public LoginStatus status(HttpSession current) {
-        Instant now = Instant.now();
+        Instant now = clock.instant();
         Instant endsAt = LoginSession.endsAt(current);
         if (endsAt == null) {
             // LoginExpiryFilter has already ended such a login.

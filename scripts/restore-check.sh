@@ -3,6 +3,11 @@
 # and compares the row count of every table with the live database. Exits 0 only
 # when every count matches. Never touches the live database: docs/decisions/0007.
 #
+# The two Spring Session tables are the exception. backup.sh leaves their rows
+# out, because a session row is a working login, so they must exist in the
+# restored database and hold no rows, whatever the live database holds. A
+# session row in a dump fails the check like any other difference.
+#
 #   sh scripts/restore-check.sh backups/teaterihuskvarna-2026-10-20T1430.dump
 #
 # The counts are compared against the live database as it is now, so a row added
@@ -21,6 +26,8 @@ if [ "$#" -ne 1 ] || [ ! -f "$1" ]; then
 fi
 dump="$1"
 check=restore_check
+# The tables backup.sh dumps without their rows.
+sessions="spring_session spring_session_attributes"
 
 # psql in the db container, as the container's own user, against the database
 # named by the first argument. The SQL comes from standard input.
@@ -71,14 +78,21 @@ if [ ! -s "$tmp/live" ] || [ ! -s "$tmp/restored" ]; then
   exit 1
 fi
 
-awk -F'|' '
+awk -F'|' -v sessions="$sessions" '
+  BEGIN { n = split(sessions, names, " "); for (i = 1; i <= n; i++) left_out[names[i]] = 1 }
   FNR == NR { live[$1] = $2; seen[$1] = 1; next }
   { restored[$1] = $2; seen[$1] = 1 }
   END {
     for (t in seen) {
       l = (t in live) ? live[t] : "-"
       r = (t in restored) ? restored[t] : "-"
-      print t "|" l "|" r "|" ((l == r) ? "ok" : "DIFFERENT")
+      if (t in left_out) {
+        if (l == "-" || r == "-") result = "DIFFERENT"
+        else result = (r == "0") ? "ok, sessions are not backed up" : "HOLDS SESSIONS"
+      } else {
+        result = (l == r) ? "ok" : "DIFFERENT"
+      }
+      print t "|" l "|" r "|" result
     }
   }
 ' "$tmp/live" "$tmp/restored" | sort > "$tmp/table"
@@ -86,9 +100,13 @@ awk -F'|' '
 printf '%-40s %10s %10s  %s\n' table live restored result
 awk -F'|' '{ printf "%-40s %10s %10s  %s\n", $1, $2, $3, $4 }' "$tmp/table"
 
-different="$(grep -c '|DIFFERENT$' "$tmp/table" || true)"
+if grep -q '|HOLDS SESSIONS$' "$tmp/table"; then
+  echo "restore-check.sh: the dump holds session rows, which backup.sh leaves out. Each is a working login until it expires, so treat the file as a credential." >&2
+fi
+
+different="$(grep -c -e '|DIFFERENT$' -e '|HOLDS SESSIONS$' "$tmp/table" || true)"
 if [ "$different" -ne 0 ]; then
   echo "restore-check.sh: $different table(s) differ, the dump does not match the live database" >&2
   exit 1
 fi
-echo "restore-check.sh: every table has the same row count, the dump restores"
+echo "restore-check.sh: every table has the same row count and the dump holds no sessions, the dump restores"

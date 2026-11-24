@@ -20,6 +20,8 @@ import java.util.Objects;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 import org.springframework.test.context.ActiveProfiles;
@@ -38,6 +40,18 @@ import tools.jackson.databind.json.JsonMapper;
 @ActiveProfiles("dev")
 class DevelopmentIndexIT extends IntegrationTestSupport {
 
+    @Autowired
+    private ObjectProvider<RealSiteGuard> realSiteGuard;
+
+    /// This class's context is the whole application under the profile with no
+    /// `SITE_URL`, so its starting is the dev stack's case. The guard that
+    /// refuses the profile on a real site has to be in it: `RealSiteGuardTest`
+    /// covers what the guard decides.
+    @Test
+    void theApplicationStartsUnderTheProfileWithItsGuard() {
+        assertThat(realSiteGuard.getIfAvailable()).isNotNull();
+    }
+
     @Test
     void theIndexLinksThePagesAndOffersALinkForEveryAccount() throws Exception {
         insertAccount("Tove Testsson", "tove@example.test");
@@ -52,6 +66,16 @@ class DevelopmentIndexIT extends IntegrationTestSupport {
                 .andExpect(content().string(containsString("action=\"/dev/login\"")))
                 .andExpect(content().string(containsString("Log in now")))
                 .andExpect(content().string(containsString("name=\"_csrf\"")));
+    }
+
+    /// The index holds two forms for every account, and took no `Feedback`.
+    @Test
+    void theIndexSaysThatAFormWasStale() throws Exception {
+        mockMvc.perform(get("/dev").param("gammal", ""))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("Sidan hade stått öppen för länge")));
+        mockMvc.perform(get("/dev"))
+                .andExpect(content().string(not(containsString("Sidan hade stått öppen för länge"))));
     }
 
     @ParameterizedTest

@@ -1,4 +1,9 @@
+# Every environment file but the two examples. .env and a variant of it, such
+# as .env.production, hold real credentials.
 .env
+.env.*
+!.env.example
+!.env.production.example
 target/
 __pycache__/
 .claude/worktrees/

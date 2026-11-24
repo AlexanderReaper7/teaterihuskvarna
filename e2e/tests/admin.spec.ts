@@ -18,8 +18,23 @@ async function add(page: Page, fullName: string, email: string): Promise<void> {
   await page.getByRole("button", { name: text("admin.add.submit"), exact: true }).click();
 }
 
-const removeButton = (page: Page, fullName: string) =>
-  page.getByRole("button", { name: text("admin.remove.label", fullName), exact: true });
+const removeLink = (page: Page, fullName: string) =>
+  page.getByRole("link", { name: text("admin.remove.label", fullName), exact: true });
+
+const confirmButton = (page: Page) =>
+  page.locator("main").getByRole("button", { name: text("admin.remove.submit"), exact: true });
+
+/// Follows the link on the administrator's row to the page that asks.
+async function askToRemove(page: Page, fullName: string): Promise<void> {
+  await removeLink(page, fullName).click();
+  await expect(page.getByRole("heading", { level: 1, name: text("admin.remove.heading") })).toBeVisible();
+}
+
+/// The link on the administrator's row, then the button on the page that asks.
+async function remove(page: Page, fullName: string): Promise<void> {
+  await askToRemove(page, fullName);
+  await confirmButton(page).click();
+}
 
 const rows = (page: Page) => page.getByRole("table", { name: text("admin.list.caption") }).locator("tbody tr");
 
@@ -48,7 +63,7 @@ test.describe("what works", () => {
     const theirPage = await theirs.newPage();
     await linkLogin(theirPage, "administrator", email);
 
-    await removeButton(page, "Tas Bort").click();
+    await remove(page, "Tas Bort");
     await expect(page.getByRole("status")).toHaveText(text("admin.removed"));
     await expect(rows(page).filter({ hasText: email })).toHaveCount(0);
 
@@ -62,9 +77,23 @@ test.describe("what works", () => {
     await theirs.close();
   });
 
+  test("removing asks first, and answering no keeps the administrator", async ({ page }) => {
+    await linkLogin(page, "administrator", ADMINISTRATORS.ada);
+    await askToRemove(page, "Gunnar Wik");
+    await expect(page.getByText(text("admin.remove.question", "Gunnar Wik", ADMINISTRATORS.gunnar))).toBeVisible();
+    await expect(page.getByText(text("admin.remove.what"))).toBeVisible();
+    expect(await activeAdministrators()).toContain(ADMINISTRATORS.gunnar);
+
+    await page.getByRole("link", { name: text("admin.remove.cancel"), exact: true }).click();
+    await expect(page).toHaveURL(PATHS.administrator.home);
+    await expect(rows(page).filter({ hasText: ADMINISTRATORS.gunnar })).toHaveCount(1);
+    await expect(page.getByRole("status")).toHaveCount(0);
+    expect(await activeAdministrators()).toContain(ADMINISTRATORS.gunnar);
+  });
+
   test("a removed administrator can be added back", async ({ page }) => {
     await linkLogin(page, "administrator", ADMINISTRATORS.ada);
-    await removeButton(page, "Gunnar Wik").click();
+    await remove(page, "Gunnar Wik");
     await expect(page.getByRole("status")).toHaveText(text("admin.removed"));
     await add(page, "Gunnar Wik", ADMINISTRATORS.gunnar);
     await expect(page.getByRole("status")).toHaveText(text("admin.added", "Gunnar Wik"));
@@ -106,9 +135,10 @@ test.describe("what a person might get wrong", () => {
 
   test("removal stops at two administrators", async ({ page }) => {
     await linkLogin(page, "administrator", ADMINISTRATORS.ada);
-    await removeButton(page, "Gunnar Wik").click();
+    await remove(page, "Gunnar Wik");
     await expect(page.getByRole("status")).toHaveText(text("admin.removed"));
-    await removeButton(page, "Karin Holmberg").click();
+    await remove(page, "Karin Holmberg");
+    await expect(page).toHaveURL(PATHS.administrator.home);
     await expect(page.getByRole("alert")).toHaveText(text("admin.error.tooFew"));
     await expect(rows(page)).toHaveCount(2);
   });
@@ -116,11 +146,16 @@ test.describe("what a person might get wrong", () => {
   test("an administrator cannot remove themselves", async ({ page }) => {
     await linkLogin(page, "administrator", ADMINISTRATORS.ada);
     await expect(rows(page).filter({ hasText: ADMINISTRATORS.ada })).toHaveCount(1);
-    await expect(removeButton(page, "Ada Admin")).toHaveCount(0);
+    await expect(removeLink(page, "Ada Admin")).toHaveCount(0);
+
+    // The address of the page that asks, typed by hand.
+    const id = await administratorId(ADMINISTRATORS.ada);
+    await page.goto(`${PATHS.administrator.home}/administratorer/${id}/ta-bort`);
+    await expect(page).toHaveURL(PATHS.administrator.home);
+    await expect(page.getByRole("alert")).toHaveText(text("admin.error.self"));
 
     // A form posted without the button, as an old tab or a script would.
     const csrf = await page.locator("input[name=_csrf]").first().inputValue();
-    const id = await administratorId(ADMINISTRATORS.ada);
     await page.request.post(`${PATHS.administrator.home}/administratorer/${id}/ta-bort`, {
       form: { _csrf: csrf },
       maxRedirects: 0,
@@ -135,7 +170,8 @@ test.describe("what a person might get wrong", () => {
     // in the session at once, and the second insert failed with a 500.
     // SessionStoreIT covers that insert without depending on the browser.
     await linkLogin(page, "administrator", ADMINISTRATORS.ada);
-    await removeButton(page, "Gunnar Wik").dblclick();
+    await askToRemove(page, "Gunnar Wik");
+    await confirmButton(page).dblclick();
     await expect(page).toHaveURL(PATHS.administrator.home);
     await expect(rows(page).filter({ hasText: ADMINISTRATORS.gunnar })).toHaveCount(0);
     await expect(page.getByRole("status")).toHaveText(text("admin.removed"));
@@ -144,12 +180,22 @@ test.describe("what a person might get wrong", () => {
 
   test("removing in a second tab someone the first tab removed says they are gone", async ({ page, context }) => {
     await linkLogin(page, "administrator", ADMINISTRATORS.ada);
-    const second = await context.newPage();
-    await second.goto(PATHS.administrator.home);
-    await removeButton(page, "Gunnar Wik").click();
+    // One tab still has the list, another already has the page that asks.
+    const listed = await context.newPage();
+    await listed.goto(PATHS.administrator.home);
+    const asked = await context.newPage();
+    await asked.goto(PATHS.administrator.home);
+    await askToRemove(asked, "Gunnar Wik");
+
+    await remove(page, "Gunnar Wik");
     await expect(page.getByRole("status")).toHaveText(text("admin.removed"));
-    await removeButton(second, "Gunnar Wik").click();
-    await expect(second.getByRole("alert")).toHaveText(text("admin.error.noSuch"));
+
+    await removeLink(listed, "Gunnar Wik").click();
+    await expect(listed).toHaveURL(PATHS.administrator.home);
+    await expect(listed.getByRole("alert")).toHaveText(text("admin.error.noSuch"));
+    await confirmButton(asked).click();
+    await expect(asked).toHaveURL(PATHS.administrator.home);
+    await expect(asked.getByRole("alert")).toHaveText(text("admin.error.noSuch"));
   });
 
   test("a member's session cannot add an administrator", async ({ page }) => {

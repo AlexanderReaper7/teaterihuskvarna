@@ -2,7 +2,6 @@
 @import se.teaterihuskvarna.administrator.AdministratorDetails
 @import se.teaterihuskvarna.administrator.NewAdministrator
 @import se.teaterihuskvarna.login.DeviceDetails
-@import se.teaterihuskvarna.login.LoginStatus
 @import se.teaterihuskvarna.login.PasskeyDetails
 @import se.teaterihuskvarna.login.PasskeyUrls
 @import se.teaterihuskvarna.login.SignedIn
@@ -13,7 +12,8 @@
 @import se.teaterihuskvarna.web.CsrfField
 @import se.teaterihuskvarna.web.DeviceUrls
 @import se.teaterihuskvarna.web.FieldErrors
-@param String studioUrl = null
+@import se.teaterihuskvarna.web.Feedback
+@param String studioUrl
 @param Copy copy
 @param CsrfField csrf
 @param SignedIn signedIn
@@ -23,13 +23,11 @@
 @param List<AdministratorDetails> administrators
 @param NewAdministrator form
 @param FieldErrors errors
-@param String error
-@param String notice
+@param Feedback feedback
 @param List<PasskeyDetails> passkeys
 @param PasskeyUrls passkeyUrls
-@param boolean offerPasskey = false
+@param boolean offerPasskey
 @param List<DeviceDetails> devices
-@param LoginStatus loginStatus
 @param DeviceUrls deviceUrls
 @template.admin.layout(copy = copy, title = copy.text("admin.heading"), content = @`
     <h1>${copy.text("admin.heading")}</h1>
@@ -38,12 +36,7 @@
     @if(offerPasskey)
         @template.tag.passkeyOffer(copy = copy, csrf = csrf, urls = passkeyUrls)
     @endif
-    @if(error != null)
-        <p role="alert">${error}</p>
-    @endif
-    @if(notice != null)
-        <p role="status">${notice}</p>
-    @endif
+    @template.tag.feedback(copy = copy, feedback = feedback)
 
     <h2>${copy.text("admin.fees.heading", String.valueOf(fees.year()))}</h2>
     <p>${copy.text("admin.fees.count", fees.paid(), fees.paid() + fees.unpaid())}</p>
@@ -99,13 +92,8 @@
                     <td>${administrator.fullName()}</td>
                     <td>${administrator.email()}</td>
                     <td>
-                        @if(administrator.id() != signedIn.id())
-                            <form method="post" action="/admin/administratorer/${administrator.id()}/ta-bort">
-                                @template.tag.csrf(csrf = csrf)
-                                <button type="submit" class="button-secondary" aria-label="${removeLabel}">
-                                    @template.icon.trash2() ${copy.text("admin.remove")}
-                                </button>
-                            </form>
+                        @if(!administrator.id().equals(signedIn.administratorId()))
+                            <a href="/admin/administratorer/${administrator.id().value()}/ta-bort" aria-label="${removeLabel}">@template.icon.trash2() ${copy.text("admin.remove")}</a>
                         @endif
                     </td>
                 </tr>
@@ -126,6 +114,5 @@
 
     @template.tag.passkeys(copy = copy, csrf = csrf, passkeys = passkeys, urls = passkeyUrls)
     @template.tag.devices(copy = copy, csrf = csrf, devices = devices, urls = deviceUrls)
-    @template.tag.loginCountdown(copy = copy, status = loginStatus, urls = deviceUrls)
     <script src="/js/passkey.js" defer></script>
 `)

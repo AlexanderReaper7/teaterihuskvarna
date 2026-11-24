@@ -18,13 +18,12 @@
         @for(Partner partner : partners)
             !{String url = partner.url();}
             !{String description = partner.description();}
-            <article class="card">
-                @template.tag.image(image = partner.logo(), kind = "logo", source = edit.field(partner, "logotyp"))
+            @template.tag.card(image = partner.logo(), kind = "logo", source = edit.field(partner, "logotyp"), content = @`
                 <h2 data-sanity="${edit.field(partner, "namn")}">@if(url != null)<a href="${url}">${partner.name()}</a>@else${partner.name()}@endif</h2>
                 @if(description != null)
                     <p data-sanity="${edit.field(partner, "beskrivning")}">${description}</p>
                 @endif
-            </article>
+            `)
         @endfor
         </div>
     @endif

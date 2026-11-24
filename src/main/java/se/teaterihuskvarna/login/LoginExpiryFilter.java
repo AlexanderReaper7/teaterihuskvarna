@@ -6,6 +6,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import java.io.IOException;
+import java.time.Clock;
 import java.time.Instant;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -26,6 +27,12 @@ import org.springframework.web.filter.OncePerRequestFilter;
 final class LoginExpiryFilter extends OncePerRequestFilter {
 
     private final SecurityContextHolderStrategy contexts = SecurityContextHolder.getContextHolderStrategy();
+    private final Clock clock;
+
+    /// @param clock the application's clock, which says whether a login has ended
+    LoginExpiryFilter(Clock clock) {
+        this.clock = clock;
+    }
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
@@ -34,7 +41,7 @@ final class LoginExpiryFilter extends OncePerRequestFilter {
         HttpSession session = request.getSession(false);
         if (authentication != null && authentication.getPrincipal() instanceof SignedIn && session != null) {
             Instant endsAt = LoginSession.endsAt(session);
-            if (endsAt == null || !Instant.now().isBefore(endsAt)) {
+            if (endsAt == null || !clock.instant().isBefore(endsAt)) {
                 contexts.clearContext();
                 session.invalidate();
             }

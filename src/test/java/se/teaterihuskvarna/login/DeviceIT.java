@@ -3,6 +3,7 @@ package se.teaterihuskvarna.login;
 import static java.util.Objects.requireNonNull;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.not;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -17,6 +18,8 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Base64;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -124,6 +127,37 @@ class DeviceIT extends IntegrationTestSupport {
         assertThat(secondsLeft(body)).isBetween(thirtyDays - 2, thirtyDays);
         assertThat(endsAt(sessionId(login)))
                 .isBetween(before.plus(settings.memberSession()), Instant.now().plus(settings.memberSession()));
+    }
+
+    /// A login can end on any page, so every logged-in page counts down, and
+    /// carries the token its script extends with. `/medlem/handlingar` has no
+    /// form, so the countdown's token is the only one on it.
+    @Test
+    void everyLoggedInPageCountsDownAndCarriesTheTokenToExtendWith() throws Exception {
+        insertAccount("Karin Karlsson", KARIN);
+        MvcResult member = logIn(LoginKind.MEMBER, KARIN, FIREFOX_ON_WINDOWS);
+        setEnd(sessionId(member), Instant.now().plusSeconds(100));
+
+        String page = mockMvc.perform(get("/medlem/handlingar").with(sessionOf(member)))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("data-status=\"/api/member/session\"")))
+                .andExpect(content().string(containsString("data-extend=\"/api/member/session/extend\"")))
+                .andExpect(content().string(not(containsString("<form"))))
+                .andReturn().getResponse().getContentAsString();
+        assertThat(Long.parseLong(attribute(page, "data-seconds-left"))).isBetween(98L, 100L);
+        mockMvc.perform(post("/api/member/session/extend").with(sessionOf(member))
+                        .header("X-CSRF-TOKEN", attribute(page, "data-csrf")))
+                .andExpect(status().isOk());
+
+        MvcResult administrator = logIn(LoginKind.ADMINISTRATOR, firstAdministratorEmail, FIREFOX_ON_WINDOWS);
+        mockMvc.perform(get("/admin/utskick").with(sessionOf(administrator)))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("data-extend=\"/api/admin/session/extend\"")));
+
+        // A public page counts nothing down, logged in or not.
+        mockMvc.perform(get("/bli-medlem").with(sessionOf(member)))
+                .andExpect(status().isOk())
+                .andExpect(content().string(not(containsString("data-login-countdown"))));
     }
 
     @Test
@@ -343,6 +377,12 @@ class DeviceIT extends IntegrationTestSupport {
             session.setAttribute(LoginSession.ENDS_AT, endsAt);
         }
         repository.save(session);
+    }
+
+    private static String attribute(String html, String name) {
+        Matcher attribute = Pattern.compile(name + "=\"([^\"]*)\"").matcher(html);
+        assertThat(attribute.find()).as("%s in the page", name).isTrue();
+        return attribute.group(1);
     }
 
     private static long secondsLeft(String json) {

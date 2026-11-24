@@ -21,10 +21,9 @@ public class Sessions {
 
     /// Deletes every session logged in as this login, in every browser.
     ///
-    /// @param kind which kind of login the id belongs to
-    /// @param id   the account's or the administrator's id
-    public void end(LoginKind kind, long id) {
-        for (String sessionId : repository.findByPrincipalName(kind.principalName(id)).keySet()) {
+    /// @param id the account's or the administrator's id, whose type says which
+    public void end(LoginId id) {
+        for (String sessionId : repository.findByPrincipalName(id.principalName()).keySet()) {
             repository.deleteById(sessionId);
         }
     }

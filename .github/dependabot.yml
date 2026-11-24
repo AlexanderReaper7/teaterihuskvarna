@@ -15,7 +15,6 @@
 # - The Temurin tag in .vscode/tasks.json and the PostgreSQL image the
 #   integration tests start: scripts/check-pins.sh, run in CI.
 # - The Playwright image in e2e/run.sh: read from e2e/package.json.
-# - The Java version of the devcontainer image: by hand, see its comment.
 version: 2
 
 updates:
@@ -86,8 +85,3 @@ updates:
       actions-minor-and-patch:
         update-types: [minor, patch]
 
-  - package-ecosystem: devcontainers
-    directory: /
-    schedule: { interval: weekly, day: monday }
-    cooldown: { default-days: 7 }
-    labels: [dependencies, no-issue]

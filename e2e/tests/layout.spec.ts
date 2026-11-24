@@ -12,7 +12,7 @@ import { text } from "../support/copy";
 import { clearLinkRequests, resetAdministrators, sql } from "../support/db";
 import { clearMail, waitForMail } from "../support/mail";
 import { ADMINISTRATORS, freshAddress } from "../support/site";
-import { ADMIN, MEMBER, PUBLIC, details, householdPages, prepareAdministratorPages, saveMailingDraft, scan } from "../support/pages";
+import { ADMIN, MEMBER, PUBLIC, confirmations, details, householdPages, linkPages, prepareAdministratorPages, saveMailingDraft, scan } from "../support/pages";
 
 test.beforeEach(async () => {
   await resetAdministrators();
@@ -227,7 +227,8 @@ for (const width of WIDTHS) {
     test.use({ viewport: { width, height: 900 } });
 
     test("every public page has no layout problems", async ({ page }) => {
-      const found = await scan(page, PUBLIC, problems);
+      const links = await linkPages();
+      const found = await scan(page, [...PUBLIC, ...links.paths], problems, links.shown);
       // The welcome page answers only the confirmation of a mailed link.
       const email = freshAddress("layout");
       await clearMail(email);
@@ -283,7 +284,8 @@ for (const width of WIDTHS) {
       const shifts = await details(page, "/admin/volontarpass", "/admin/volontarpass/");
       const mailings = await details(page, "/admin/utskick", "/admin/utskick/");
       const paths = [...new Set([...ADMIN, unpaid!, ...members, ...offers, ...shifts, ...mailings,
-        ...members.map((path) => path + "/ta-bort"), ...offers.map((path) => path + "/ta-bort")])];
+        ...members.map((path) => path + "/ta-bort"), ...offers.map((path) => path + "/ta-bort"),
+        ...await confirmations(page, shifts)])];
       expect([...found, ...await scan(page, paths, problems, shown)]).toEqual([]);
     });
   });

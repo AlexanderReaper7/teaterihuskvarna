@@ -25,6 +25,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
+import se.teaterihuskvarna.login.AccountId;
 import se.teaterihuskvarna.login.LoginKind;
 
 /// Member household management through both adapters, with scope checks,
@@ -99,7 +100,7 @@ class MemberHouseholdIT extends MemberRegisterSupport {
                 running.add(pool.submit(() -> {
                     start.await();
                     try {
-                        households.createForAccount(account, new NewHousehold("Familjen"));
+                        households.createForAccount(new AccountId(account), new NewHousehold("Familjen"));
                         return true;
                     } catch (AlreadyInHousehold e) {
                         return false;

@@ -8,6 +8,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.Instant;
 import org.jspecify.annotations.Nullable;
+import se.teaterihuskvarna.member.MemberId;
 
 /// One member's booking of one shift. The shift and the member are plain ids
 /// rather than associations; the queries join them where a name is needed.
@@ -35,9 +36,9 @@ public class Booking {
         // for JPA
     }
 
-    Booking(long shiftId, long memberId, Instant now) {
+    Booking(long shiftId, MemberId memberId, Instant now) {
         this.shiftId = shiftId;
-        this.memberId = memberId;
+        this.memberId = memberId.value();
         this.createdAt = now;
     }
 
@@ -54,8 +55,8 @@ public class Booking {
         return shiftId;
     }
 
-    public long getMemberId() {
-        return memberId;
+    public MemberId getMemberId() {
+        return new MemberId(memberId);
     }
 
     public Instant getCreatedAt() {

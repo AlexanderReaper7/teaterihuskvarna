@@ -1,4 +1,3 @@
-@import java.util.Objects
 @import java.util.List
 @import se.teaterihuskvarna.document.DocumentForm
 @import se.teaterihuskvarna.document.DocumentKind
@@ -6,14 +5,14 @@
 @import se.teaterihuskvarna.web.Copy
 @import se.teaterihuskvarna.web.CsrfField
 @import se.teaterihuskvarna.web.FieldErrors
+@import se.teaterihuskvarna.web.Feedback
 @param Copy copy
 @param CsrfField csrf
 @param List<DocumentSummary> documents
 @param DocumentForm form
 @param FieldErrors errors
 @param String fileError
-@param String error
-@param String notice
+@param Feedback feedback
 !{String kindError = errors.message("kind");}
 !{String kindInvalid = kindError == null ? null : "true";}
 !{String kindDescribedBy = kindError == null ? null : "kind-error";}
@@ -21,12 +20,7 @@
 !{String fileDescribedBy = fileError == null ? null : "file-error";}
 @template.admin.layout(copy = copy, title = copy.text("adminDocuments.heading"), content = @`
     <h1>${copy.text("adminDocuments.heading")}</h1>
-    @if(error != null)
-        <p role="alert">${error}</p>
-    @endif
-    @if(notice != null)
-        <p role="status">${notice}</p>
-    @endif
+    @template.tag.feedback(copy = copy, feedback = feedback)
 
     @if(documents.isEmpty())
         <p>${copy.text("adminDocuments.none")}</p>
@@ -48,15 +42,7 @@
                         <th scope="row"><a href="/admin/handlingar/${document.id()}/fil">${document.title()}</a></th>
                         <td>${copy.text("document.kind." + document.kind().name())}</td>
                         <td>${copy.date(document.publishedOn())}</td>
-                        <td>
-                            <form method="post" action="/admin/handlingar/${document.id()}/ta-bort">
-                                @template.tag.csrf(csrf = csrf)
-                                <button type="submit" class="button-secondary"
-                                        aria-label="${removeLabel}">
-                                    @template.icon.trash2() ${copy.text("adminDocuments.remove")}
-                                </button>
-                            </form>
-                        </td>
+                        <td><a href="/admin/handlingar/${document.id()}/ta-bort" aria-label="${removeLabel}">@template.icon.trash2() ${copy.text("adminDocuments.remove")}</a></td>
                     </tr>
                 @endfor
             </tbody>
@@ -85,7 +71,7 @@
             @endif
         </p>
         @template.tag.field(copy = copy, name = "publishedOn", label = copy.text("adminDocuments.upload.publishedOn"), type = "date",
-                autocomplete = "off", value = Objects.toString(form.publishedOn(), null),
+                autocomplete = "off", value = errors.value("publishedOn", form.publishedOn()),
                 error = errors.message("publishedOn"), required = true)
         <p>
             <label for="file">${copy.text("adminDocuments.upload.file")}</label>

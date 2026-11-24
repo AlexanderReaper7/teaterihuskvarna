@@ -1,7 +1,6 @@
 @import java.time.Instant
 @import java.util.List
 @import se.teaterihuskvarna.login.DeviceDetails
-@import se.teaterihuskvarna.login.LoginStatus
 @import se.teaterihuskvarna.login.PasskeyDetails
 @import se.teaterihuskvarna.login.PasskeyUrls
 @import se.teaterihuskvarna.member.HouseholdDetails
@@ -13,20 +12,19 @@
 @import se.teaterihuskvarna.web.Copy
 @import se.teaterihuskvarna.web.CsrfField
 @import se.teaterihuskvarna.web.DeviceUrls
+@import se.teaterihuskvarna.web.Feedback
 @param Copy copy
 @param CsrfField csrf
 @param MemberDetails member
-@param HouseholdDetails household = null
+@param HouseholdDetails household
 @param List<MemberOffer> registrations
 @param List<MemberShift> shifts
 @param List<PasskeyDetails> passkeys
 @param PasskeyUrls passkeyUrls
-@param boolean offerPasskey = false
+@param boolean offerPasskey
 @param List<DeviceDetails> devices
-@param LoginStatus loginStatus
 @param DeviceUrls deviceUrls
-@param String error
-@param String notice
+@param Feedback feedback
 !{Instant paidAt = member.fee().paidAt();}
 !{PaymentInstruction payment = member.fee().payment();}
 @template.member.layout(copy = copy, title = copy.text("member.heading"), content = @`
@@ -34,12 +32,7 @@
     @if(offerPasskey)
         @template.tag.passkeyOffer(copy = copy, csrf = csrf, urls = passkeyUrls)
     @endif
-    @if(error != null)
-        <p role="alert">${error}</p>
-    @endif
-    @if(notice != null)
-        <p role="status">${notice}</p>
-    @endif
+    @template.tag.feedback(copy = copy, feedback = feedback)
     <h2>${copy.text("fee.heading", String.valueOf(member.fee().year()))}
         @template.tag.feeBadge(copy = copy, paid = paidAt != null)</h2>
     @if(paidAt != null)
@@ -128,7 +121,7 @@
                         @if(other.invitationExpires() != null)
                             ${copy.text("household.invited", copy.dateTime(other.invitationExpires()))}
                         @endif
-                        <form method="post" action="/medlem/hushall/${other.id()}/inbjudan">
+                        <form method="post" action="/medlem/hushall/${other.id().value()}/inbjudan">
                             @template.tag.csrf(csrf = csrf)
                             !{String fieldId = "invite-" + other.id();}
                             <label for="${fieldId}">${copy.text("invitation.email", other.fullName())}</label>
@@ -144,6 +137,5 @@
     @template.tag.passkeys(copy = copy, csrf = csrf, passkeys = passkeys, urls = passkeyUrls)
     @template.tag.devices(copy = copy, csrf = csrf, devices = devices, urls = deviceUrls)
     @template.tag.logout(copy = copy, csrf = csrf, action = "/logga-ut")
-    @template.tag.loginCountdown(copy = copy, status = loginStatus, urls = deviceUrls)
     <script src="/js/passkey.js" defer></script>
 `)

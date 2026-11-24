@@ -28,7 +28,9 @@ import se.teaterihuskvarna.Swedish;
 public class MessagesConfiguration {
 
     /// The default locale matters for validation messages. The validator resolves them
-    /// in the locale of the request, so a browser asking for English would find no
+    /// in the locale of the thread. During a request that is Swedish, because
+    /// `spring.web.locale-resolver` in `application.yaml` is `fixed`. Outside a request,
+    /// such as in a scheduled task, it is the JVM's, and an English JVM would find no
     /// `messages_en` bundle, no base bundle either, and show the raw
     /// `{application.fullName.required}`. With Swedish as the default, every locale
     /// falls back to the one bundle there is.

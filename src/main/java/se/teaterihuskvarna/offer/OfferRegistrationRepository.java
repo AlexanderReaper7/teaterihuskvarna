@@ -49,7 +49,7 @@ interface OfferRegistrationRepository extends JpaRepository<OfferRegistration, L
     /// @return who registered, in the order they did
     @Query("""
             select new se.teaterihuskvarna.offer.Registrant(
-                m.id, m.fullName, a.email, m.contact.phone, r.createdAt)
+                new se.teaterihuskvarna.member.MemberId(m.id), m.fullName, a.email, m.contact.phone, r.createdAt)
             from OfferRegistration r
             join Member m on m.id = r.memberId
             left join Account a on a.member = m

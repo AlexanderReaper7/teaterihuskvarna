@@ -12,7 +12,7 @@ import org.jspecify.annotations.Nullable;
 /// An open invitation for a member without an account to create one. The
 /// member is a plain id: the database deletes the row with the member (`ON
 /// DELETE CASCADE`), and the service loads the member itself when the link is
-/// used. Column lengths mirror `V6__fees_households_invitations.sql` by hand.
+/// used. Column lengths mirror `V6__fees_households_invitations.sql`, which `EntityColumnsIT` checks.
 @Entity
 @Table(name = "invitation")
 public class Invitation {
@@ -45,8 +45,8 @@ public class Invitation {
     /// @param tokenHash [se.teaterihuskvarna.login.Tokens#hash] of the token in the mailed link
     /// @param createdAt when the invitation was sent
     /// @param expiresAt when the link stops working
-    public Invitation(long memberId, String email, String tokenHash, Instant createdAt, Instant expiresAt) {
-        this.memberId = memberId;
+    public Invitation(MemberId memberId, String email, String tokenHash, Instant createdAt, Instant expiresAt) {
+        this.memberId = memberId.value();
         this.email = email;
         this.tokenHash = tokenHash;
         this.createdAt = createdAt;
@@ -62,8 +62,8 @@ public class Invitation {
         return id;
     }
 
-    public long getMemberId() {
-        return memberId;
+    public MemberId getMemberId() {
+        return new MemberId(memberId);
     }
 
     public String getEmail() {

@@ -29,3 +29,7 @@ The rule underneath both: a quotation does not get translated.
 ## Why one rule rather than case by case
 
 A stated rule is one object that can be argued with. Twelve files each deciding for themselves is twelve separate arguments, and the drift shows up only when someone reads two of them side by side.
+
+## Agent notes
+
+The application's locale is fixed to `sv_SE`: `spring.web.locale` and `spring.web.locale-resolver: fixed` in [`application.yaml`](../../src/main/resources/application.yaml). The browser's `Accept-Language` therefore chooses nothing, and both a validation message and the `Content-Language` header are Swedish for every request. An agent set this on 2026-11-10, after a review found the mailing form answering "darf nicht leer sein" to a German browser: its five constraints named no key in [`messages_sv.properties`](../../src/main/resources/messages_sv.properties), so the validator used its own texts in the browser's language. They name keys now, and [`ValidationMessagesTest`](../../src/test/java/se/teaterihuskvarna/architecture/ValidationMessagesTest.java) fails the build on a new constraint that names none. It lists four older ones that still do not, which answer a REST client only, and it leaves out the settings classes, whose messages go to the log at startup. The fixed locale alone would not make such a constraint Swedish: Hibernate Validator 9.1.5 has no Swedish texts, so it would answer "must not be blank".

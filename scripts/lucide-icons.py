@@ -27,10 +27,10 @@ import urllib.request
 from pathlib import Path
 
 # Pinned to a release at least seven days old, as Dependabot's cooldown does
-# for every other dependency. 1.61.0 was published on 2026-10-21.
-VERSION = "1.61.0"
-# `npm view lucide-static@1.61.0 dist.integrity`
-INTEGRITY = "sha512-yLAiQB3MWUJEstsEDAwenSA3m7vr1tdLvgnC16Q/XMxRRma0DWwMs8M2bWlvgShrIs1m2mWMJ+0AiahqQO4GrA=="
+# for every other dependency. 1.67.0 was published on 2026-11-03.
+VERSION = "1.67.0"
+# `npm view lucide-static@1.67.0 dist.integrity`
+INTEGRITY = "sha512-Lu/Ntwfw1GOQiNgTC2iHd/PC4QbqzwktLVFHTB84tldlfUjFgQ+EBWiZc/UPrlNdX97O/KXWRn792hIdQh6nhA=="
 URL = f"https://registry.npmjs.org/lucide-static/-/lucide-static-{VERSION}.tgz"
 
 # Lucide's name, and what it stands for on the member and administrator pages.

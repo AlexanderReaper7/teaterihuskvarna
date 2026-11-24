@@ -15,7 +15,7 @@ import org.springframework.web.util.HtmlUtils;
 import tools.jackson.databind.JsonNode;
 
 /// Turns Sanity's Portable Text, the JSON the Studio's rich text field stores,
-/// into HTML: `docs/decisions/0021-portable-text-from-sanity.md`.
+/// into HTML: `docs/decisions/0021-content-from-sanity.md`.
 ///
 /// Every piece of text is escaped, and only what this class writes itself is
 /// markup, so a template may print the result unescaped. What an editor can
@@ -102,12 +102,9 @@ final class PortableText {
             }
             StringBuilder text = new StringBuilder();
             for (JsonNode child : block.path("children")) {
-                String part = Json.text(child, "text");
-                if (part != null) {
-                    text.append(part);
-                }
+                text.append(spanText(child));
             }
-            if (!text.isEmpty()) {
+            if (!text.toString().isBlank()) {
                 paragraphs.add(text.toString());
             }
         }
@@ -145,11 +142,11 @@ final class PortableText {
     }
 
     private void block(StringBuilder out, JsonNode block, Function<@Nullable String, @Nullable String> source) {
-        StringBuilder inner = new StringBuilder();
-        inline(inner, block);
-        if (inner.isEmpty()) {
+        if (!hasText(block)) {
             return;
         }
+        StringBuilder inner = new StringBuilder();
+        inline(inner, block);
         String style = Json.text(block, "style");
         String tag = BLOCK_TAGS.getOrDefault(style == null ? "normal" : style, "p");
         out.append('<').append(tag).append(attribute(block, source)).append('>')
@@ -168,11 +165,14 @@ final class PortableText {
             }
         }
         List<JsonNode> spans = new ArrayList<>();
+        List<String> texts = new ArrayList<>();
         for (JsonNode child : block.path("children")) {
             if ("span".equals(Json.text(child, "_type")) || child.has("text")) {
                 spans.add(child);
+                texts.add(spanText(child));
             }
         }
+        dropEnd(spans, texts);
         List<String> open = new ArrayList<>();
         List<String> closers = new ArrayList<>();
         for (int i = 0; i < spans.size(); i++) {
@@ -196,14 +196,54 @@ final class PortableText {
                 open.add(mark);
                 closers.add(tags[1]);
             }
-            String text = Json.text(spans.get(i), "text");
-            if (text != null) {
-                out.append(escape(text).replace("\n", "<br>"));
-            }
+            out.append(escape(texts.get(i)).replace("\n", "<br>"));
         }
         for (int j = closers.size() - 1; j >= 0; j--) {
             out.append(closers.get(j));
         }
+    }
+
+    /// Takes the line breaks and spaces that end a block off its last span,
+    /// and with them every span that then holds nothing, so no mark opens
+    /// around nothing. A line break inside the block stays.
+    ///
+    /// A news item moved from the old site ended its last paragraph in a span
+    /// of three line breaks, which the page showed as 51 px of nothing under
+    /// the paragraph.
+    ///
+    /// @param spans the block's spans, shortened along with `texts`
+    /// @param texts each span's text, at the same position
+    private static void dropEnd(List<JsonNode> spans, List<String> texts) {
+        for (int last = texts.size() - 1; last >= 0; last--) {
+            String kept = texts.get(last).stripTrailing();
+            if (!kept.isEmpty()) {
+                texts.set(last, kept);
+                return;
+            }
+            texts.remove(last);
+            spans.remove(last);
+        }
+    }
+
+    /// A span's text exactly as stored, not through [Json#text], which reads
+    /// text of only spaces as missing. Portable Text stores the space between
+    /// a bold word and an italic word as a span of its own, and without it the
+    /// two words run together.
+    ///
+    /// @return the text, empty if the span has none
+    private static String spanText(JsonNode span) {
+        JsonNode text = span.path("text");
+        return text.isString() ? text.stringValue() : "";
+    }
+
+    /// @return whether the block has anything to show: an editor's empty line, or one of only spaces, has not
+    private static boolean hasText(JsonNode block) {
+        for (JsonNode child : block.path("children")) {
+            if (!spanText(child).isBlank()) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /// The span's marks this class can write, in the order Sanity lists them.

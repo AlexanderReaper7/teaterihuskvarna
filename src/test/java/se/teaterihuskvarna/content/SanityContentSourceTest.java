@@ -22,7 +22,7 @@ class SanityContentSourceTest {
         RestClient.Builder client = RestClient.builder();
         MockRestServiceServer server = MockRestServiceServer.bindTo(client).build();
         ContentSettings settings = new ContentSettings(ContentSettings.Source.SANITY, "project", "dev",
-                null, null, Duration.ofSeconds(45), null, null);
+                null, null, Duration.ofSeconds(45), Duration.ofSeconds(10), null, null);
         SanityContentSource source = new SanityContentSource(settings, new ObjectMapper(), client);
         server.expect(requestTo(startsWith("https://project.api.sanity.io/v2025-02-19/data/query/dev?")))
                 .andExpect(header(HttpHeaders.ACCEPT_ENCODING, "gzip"))

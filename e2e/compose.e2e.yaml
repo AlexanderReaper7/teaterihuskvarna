@@ -42,10 +42,11 @@ services:
       SANITY_STUDIO_URL: ""
       SERVER_PORT: "55556"
       PROXY_HTTP_PORT: "55556"
-      # Back to production's per-address limit, so the suite can see it refuse.
-      # The per-client limit stays at the dev profile's 200, since every
-      # request in the suite comes from one address.
-      TEATERIHUSKVARNA_LOGIN_REQUESTS_PER_ADDRESS: "5"
+      # Back to production's allowance for one address from one client, so the
+      # suite can see it refuse. The address's total stays at the dev profile's
+      # 50 and the per-client limit at its 200, since every request in the
+      # suite comes from one address.
+      TEATERIHUSKVARNA_LOGIN_REQUESTS_PER_ADDRESS_AND_CLIENT: "5"
     labels:
       traefik.enable: "false"
 

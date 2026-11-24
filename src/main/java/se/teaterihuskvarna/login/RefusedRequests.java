@@ -27,7 +27,7 @@ import org.springframework.web.util.UriComponentsBuilder;
 /// it again. That happens when the browser restarted, or the session timed out,
 /// while the page stayed open. The page is the `Referer`, taken only when it
 /// names this host and a path on it; without one the chain's login page stands
-/// in. `se.teaterihuskvarna.web.PageModel` reads the same parameter name.
+/// in. `se.teaterihuskvarna.web.Feedback` reads the same parameter name.
 ///
 /// A file upload over the size limit, which [OversizeUploadFilter] stops,
 /// goes back to its page with `forstor` added to the query, so the page can

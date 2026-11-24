@@ -9,23 +9,26 @@ Website and member register for the Teater i Huskvarna association. What the sys
 - Git.
 - Docker Desktop on Windows or macOS, or Docker Engine with the compose plugin on Linux. Docker Desktop has to be running before any `docker` command works.
 - VS Code if you want it. It is optional, and the [VS Code](#vs-code) section covers what [`.vscode/`](.vscode/) sets up.
+- Python 3 (py on Windows) and `mmdc`, only if you want to run [`docs/check.py`](docs/check.py).
 
 Nothing else. Java and Maven are not installed on your machine: the build runs inside a container with a pinned JDK 25 and the checked-in Maven wrapper ([`mvnw`](mvnw)), per [decisions/0011](docs/decisions/0011-maven-and-the-build-in-a-container.md). Every command in this section works in PowerShell and in a POSIX shell. The multi-line commands further down are written for a POSIX shell, so on Windows use the VS Code tasks for those, or Git Bash, which `sh e2e/run.sh` needs too.
 
 ### First run
 
 1. Clone the repository and go into it: `git clone https://github.com/AlexanderReaper7/teaterihuskvarna.git` then `cd teaterihuskvarna`.
-2. Run every test and check once: `Ctrl+Shift+B` in VS Code, or the command under [Tests](#tests). The first build downloads Maven and every dependency and takes a few minutes; later builds reuse them. Besides the tests, it creates `.env` from [`.env.example`](.env.example) and installs the [git hooks](#git-hooks). Git ignores `.env`, so what goes in it stays on the machine. Set `SANITY_API_KEY` to a token with read access to the development dataset before presenting its content. Automated tests need no Sanity token.
+2. Run every test and check once: `Ctrl+Shift+B` in VS Code, or the command under [Tests](#tests). The first build downloads Maven and every dependency and takes a few minutes; later builds reuse them. Besides the tests, it creates `.env` from [`.env.example`](.env.example) and installs the [git hooks](#git-hooks). Git ignores `.env`, so what goes in it stays on the machine. The public pages show the development dataset's published content without a Sanity token, because that dataset answers queries from anyone. Set `SANITY_API_KEY` only for the Studio's draft preview. Automated tests need no Sanity token.
 3. Build and start the stack: `docker compose up -d --build`.
 4. Check that five containers are running: `docker compose ps` lists `proxy`, `app`, `db`, `mail` and [`studio`](studio/).
 5. Open [http://localhost:8000/](http://localhost:8000/). If the page does not load yet, the application is still starting. `docker compose logs -f app` shows it, and it is ready at the line `Started Application in ... seconds`. Ctrl+C stops following the log, not the application.
 
 ### Logging in
 
-Nobody has a password. The development index offers immediate login for any listed member or administrator. This shortcut exists only under the `dev` profile. Normal login uses an email link, and locally every mail goes to Mailpit instead of a real inbox.
+Nobody has a password. The development index offers immediate login for any listed member or administrator. This shortcut exists only under the `dev` profile, and the application refuses to start under that profile when `SITE_URL` is set, which production does and no development stack does. Normal login uses an email link, and locally every mail goes to Mailpit instead of a real inbox.
 
-1. On [http://localhost:8000/dev](http://localhost:8000/dev), pick a member or administrator and press `Log in now` to open that account's page immediately.
-2. To test normal login instead, press `Send link`, open [Mailpit](http://localhost:8000/mailpit/), then open the newest mail and follow its link.
+1. On [http://localhost:8000/dev](http://localhost:8000/dev), which is the development index, pick a seeded member or administrator. `Log in now` opens that account's page immediately. `Send link` tests the normal email flow: the application mails that address a login link.
+2. For the email flow, open [Mailpit](http://localhost:8000/mailpit/), and open the newest mail. It gives you two ways in:
+    - **The Link.** Follow it in the same browser that requested it. It works for one hour and only in that browser.
+    - **The code.** If you read the email on another device, copy the six-digit code from it and enter it on the page that says "TITTA I DIN E-POST".
 
 The seeded people are invented, under `.test` addresses that cannot reach anyone. Karin Holmberg has both a member account and an administrator account on the same address, which is the case the two login pages (`/logga-in` and `/admin/logga-in`) exist for.
 
@@ -97,24 +100,28 @@ A clone made before [`f9df7d5`](https://github.com/AlexanderReaper7/teaterihuskv
 - **`address already in use` or `port is already allocated` on 8000.** Another program has the port. Set `PROXY_HTTP_PORT=8001` in `.env`, run `docker compose up -d` again and use [http://localhost:8001/](http://localhost:8001/).
 - **`Cannot connect to the Docker daemon`, or on Windows `error during connect`.** Docker is not running. Start Docker Desktop and wait until it says it is running.
 - **The build fails at `checkstyle`, `spotbugs` or `pmd`.** The code breaks one of the static analysis rules, and the message names the file and line. See [Static analysis](#static-analysis).
+- **The app cannot connect to the database after you changed `POSTGRES_PASSWORD` in `.env`.** The database reads the password only when its volume is created. `docker compose down -v` deletes the volume, and the next start builds it again with the new password. A database client on the host uses the same password.
+- **The app container keeps restarting, and its log says `The dev profile is active and SITE_URL is set`.** `.env` sets `SITE_URL`, which only production does. Leave it empty locally: the `dev` profile builds its own address from `PROXY_HTTP_PORT`, and a shared stack takes `SHARE_URL`. On the production host the fix is the opposite one, and the message names the lines to remove.
 - **Anything else.** Read the end of `docker compose logs app`. The first `ERROR` line usually names the problem.
 
 ## The local stack
 
 The stack is Traefik, the Spring Boot application behind it, and PostgreSQL
-18.2. Flyway applies the migrations in [`src/main/resources/db/migration`](src/main/resources/db/migration/) at
+18.6. Flyway applies the migrations in [`src/main/resources/db/migration`](src/main/resources/db/migration/) at
 startup.
 
 [`compose.yaml`](compose.yaml) alone is production. `COMPOSE_FILE` in [`.env.example`](.env.example) adds
-[`compose.dev.yaml`](compose.dev.yaml), which must never be loaded in production. It serves plain
+[`compose.dev.yaml`](compose.dev.yaml), which must never be loaded in production: a production
+`.env` starts from [`.env.production.example`](.env.production.example), which has no such line
+([runbook](docs/runbook.md)). The dev file serves plain
 HTTP on `PROXY_HTTP_PORT` (8000 unless set), turns on the `dev` profile with
 invented settings ([`application-dev.yaml`](src/main/resources/application-dev.yaml)) and invented members, and starts
 Mailpit, which catches every mail the application sends, and Sanity Studio at [http://localhost:3333/](http://localhost:3333/). Studio uses the `dev` dataset unless `SANITY_DATASET_NAME` selects another one, and previews the application on `PROXY_HTTP_PORT`. Set `STUDIO_HTTP_PORT` to change its host port. Studio code changes need `docker compose up -d --build studio`.
 
 A database client on the host, such as VS Code, connects to PostgreSQL at `127.0.0.1`, port 5432 unless `POSTGRES_HOST_PORT` sets another, with the database, user and password from `POSTGRES_DB`, `POSTGRES_USER` and `POSTGRES_PASSWORD` in `.env`. The port is bound to loopback only, so nothing else on the network reaches it. The application itself still connects to `db:5432` inside the stack.
 
-Under the `dev` profile, [http://localhost:8000/dev](http://localhost:8000/dev) is the development index. It lists every route, has a button per seeded member and
-administrator that mails that address a login link, and shows the schema
+Under the `dev` profile, [http://localhost:8000/dev](http://localhost:8000/dev) is the development index. It lists every route, has two buttons per seeded member and
+administrator: `log in now`, which logs in at once, and `Send link`, which mails that address a login link, and shows the schema
 version, the commit the jar was built from, whether it was built with
 uncommitted changes, and who is logged in. Open the link in Mailpit's UI at
 [http://localhost:8000/mailpit/](http://localhost:8000/mailpit/), which Traefik routes to Mailpit. The same data is JSON under `/api/development/`, which
@@ -132,7 +139,7 @@ need `docker compose up -d --build`.
 
 The association's editors use Sanity hosting, separate from this development stack, as decided in [0021](docs/decisions/0021-content-from-sanity.md). [Studio instructions](studio/README.md) cover deployment. The local Studio requires a Sanity login and internet access. Published edits appear on the application within 45 seconds, or on the next request after the publish webhook clears its cache. Automated tests alone use [`fixture.json`](src/main/resources/content/fixture.json), with their own source settings and no Sanity credentials.
 
-The `dev` dataset contains 16 invented demo documents imported on 2026-09-30. Event and news dates are now fixed Sanity values, editable in Studio. Tests still resolve fixture dates relative to the test day. The configured API key can read the imported content; anonymous queries returned no documents during verification.
+The `dev` dataset answers queries without a token. On 2026-11-10 a `count(*)` sent without one returned 89 documents: 32 image assets and 57 content documents. Of the 57, 44 have a `wp-` id from the import of the old WordPress site on 2026-10-31 ([Studio instructions](studio/README.md#importing-the-old-site)), 12 were created by the demo import on 2026-09-30, and 1 was created on 2026-10-28. So the dataset holds the old site's real text, names and pictures beside invented demo content, and no API key protects any of it. Whatever an editor publishes in `dev` can be read by anyone through Sanity's API from that moment, also when no page shows it, so nothing that must stay private goes into a published document. A draft needs a token to read ([0006](docs/decisions/0006-sanity-for-now.md)). Event and news dates are fixed Sanity values, editable in Studio. Tests still resolve fixture dates relative to the test day.
 
 ### Sharing the dev stack
 
@@ -218,8 +225,6 @@ messages land in the Problems panel.
 The Java language server is the exception: it runs on the host JDK, and this
 project targets Java 25. If the host JDK is a different version the editor can
 offer APIs the build rejects, and `./mvnw verify` is what catches that.
-[`.devcontainer/`](.devcontainer/) is the fallback, a pinned JDK 25 with the docker socket passed
-through, for when that gap starts costing time.
 
 To debug the running application, pick "Attach to the application" in the Run
 view. It starts the dev stack with [`compose.debug.yaml`](compose.debug.yaml), which opens JDWP on
@@ -231,7 +236,7 @@ on purpose, so a plain `docker compose up` never opens a debug port.
 [`docs/check.py`](docs/check.py) guards the quoted requirement text, the relative links between
 documents, the Mermaid diagrams, every document's provenance and front matter,
 the names of meeting documents, and that a requirement id followed by an issue
-(`R005 #8`) names the same issue everywhere. Its docstring lists all eight
+(`R005 #8`) names the same issue everywhere. Its docstring lists all nine
 checks. CI runs it; see [.github/workflows/docs.yml](.github/workflows/docs.yml).
 
 - Requirements are numbered `R001` upwards, in [docs/requirements.md](docs/requirements.md), which says how ids are given out.

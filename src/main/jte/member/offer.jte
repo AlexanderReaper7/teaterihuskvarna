@@ -1,20 +1,15 @@
 @import se.teaterihuskvarna.offer.MemberOffer
 @import se.teaterihuskvarna.web.Copy
 @import se.teaterihuskvarna.web.CsrfField
+@import se.teaterihuskvarna.web.Feedback
 @param Copy copy
 @param CsrfField csrf
 @param MemberOffer offer
-@param String error
-@param String notice
+@param Feedback feedback
 @template.member.layout(copy = copy, title = offer.title(), content = @`
     <h1>${offer.title()}</h1>
     <p><a href="/medlem/erbjudanden">${copy.text("offers.back")}</a></p>
-    @if(error != null)
-        <p role="alert">${error}</p>
-    @endif
-    @if(notice != null)
-        <p role="status">${notice}</p>
-    @endif
+    @template.tag.feedback(copy = copy, feedback = feedback)
     @if(!offer.description().isEmpty())
         <p class="preserve-lines">${offer.description()}</p>
     @endif

@@ -1,8 +1,12 @@
 # Only paths that .gitignore also ignores. The Dockerfile explains why a tracked
-# file must not be listed here. .env is here so that credentials never enter
-# the build context. .git arrives as its own build context instead: see the
+# file must not be listed here. .env and its variants are here so that
+# credentials never enter the build context, and the two tracked examples are
+# let back in. .git arrives as its own build context instead: see the
 # Dockerfile's git stage.
 .env
+.env.*
+!.env.example
+!.env.production.example
 .git
 target/
 **/__pycache__/

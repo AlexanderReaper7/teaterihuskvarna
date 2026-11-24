@@ -1,9 +1,11 @@
 @import se.teaterihuskvarna.offer.OfferDetails
 @import se.teaterihuskvarna.web.Copy
 @import se.teaterihuskvarna.web.CsrfField
+@import se.teaterihuskvarna.web.Feedback
 @param Copy copy
 @param CsrfField csrf
 @param OfferDetails offer
+@param Feedback feedback
 @template.admin.layout(copy = copy, title = copy.text("adminOffers.delete.heading"), content = @`
     <h1>${copy.text("adminOffers.delete.heading")}</h1>
     <p>${copy.text("adminOffers.delete.question", offer.title())}</p>
@@ -11,6 +13,7 @@
         <p>${copy.text("adminOffers.delete.registrations", offer.registered())}</p>
     @endif
     <p>${copy.text("adminOffers.delete.final")}</p>
+    @template.tag.feedback(copy = copy, feedback = feedback)
     <div class="buttons">
         <form method="post" action="/admin/erbjudanden/${offer.id()}/ta-bort">
             @template.tag.csrf(csrf = csrf)

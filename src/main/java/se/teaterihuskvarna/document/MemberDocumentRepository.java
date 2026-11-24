@@ -1,6 +1,7 @@
 package se.teaterihuskvarna.document;
 
 import java.util.List;
+import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -21,6 +22,18 @@ interface MemberDocumentRepository extends JpaRepository<MemberDocument, Long> {
             order by d.kind, d.publishedOn desc, d.uploadedAt desc, d.id desc
             """)
     List<DocumentSummary> findSummaries();
+
+    /// Every column but `content`, as [#findSummaries] reads them.
+    ///
+    /// @param id the document
+    /// @return the document without its file, or empty
+    @Query("""
+            select new se.teaterihuskvarna.document.DocumentSummary(
+                d.id, d.title, d.kind, d.filename, d.sizeBytes, d.publishedOn, d.uploadedAt)
+            from MemberDocument d
+            where d.id = :id
+            """)
+    Optional<DocumentSummary> findSummary(@Param("id") long id);
 
     /// Deletes without loading the row, and so without reading the file.
     ///

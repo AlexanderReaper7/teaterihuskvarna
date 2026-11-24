@@ -2,7 +2,7 @@ package se.teaterihuskvarna.login;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
-import java.time.Instant;
+import java.time.Clock;
 import java.time.OffsetDateTime;
 import java.util.List;
 import org.jspecify.annotations.Nullable;
@@ -29,14 +29,16 @@ final class HashedTokenService implements OneTimeTokenService {
     private final LoginKind kind;
     private final LoginLinks links;
     private final JdbcClient jdbc;
+    private final Clock clock;
 
     /// @param kind  the login this store answers for
     /// @param links creates and mails the real token
     /// @param jdbc  reaches `one_time_token`
-    HashedTokenService(LoginKind kind, LoginLinks links, JdbcClient jdbc) {
+    HashedTokenService(LoginKind kind, LoginLinks links, JdbcClient jdbc, Clock clock) {
         this.kind = kind;
         this.links = links;
         this.jdbc = jdbc;
+        this.clock = clock;
     }
 
     /// Mails a link if the address has a login of this kind, and returns a token
@@ -59,7 +61,7 @@ final class HashedTokenService implements OneTimeTokenService {
         }
         links.send(kind, request.getUsername(), bound.browser());
         return new DefaultOneTimeToken(
-                Tokens.newToken(), request.getUsername(), Instant.now().plus(request.getExpiresIn()));
+                Tokens.newToken(), request.getUsername(), clock.instant().plus(request.getExpiresIn()));
     }
 
     /// Redeems a link or a code, but only in the browser that asked for it. A
@@ -73,7 +75,8 @@ final class HashedTokenService implements OneTimeTokenService {
     /// A code first takes one of its five tries, in the same `UPDATE` that finds
     /// the rows, so requests racing with guesses cannot get more than five
     /// between them. The rows are every unexpired link this browser asked for on
-    /// this page, since an older mail's code works as its link does. A match
+    /// this page, since an older mail's code works as its link does, except a
+    /// link made at a membership confirmation, which has no code. A match
     /// deletes that row the way a link does.
     ///
     /// @param authenticationToken the POSTed form, as a [BoundLogin]
@@ -109,6 +112,7 @@ final class HashedTokenService implements OneTimeTokenService {
         List<Candidate> candidates = jdbc.sql("""
                         UPDATE one_time_token SET code_tries = code_tries + 1
                         WHERE browser_hash = ? AND kind = ? AND code_tries < ? AND expires_at > now()
+                            AND code_hash IS NOT NULL
                         RETURNING token_hash, code_hash""")
                 .param(browser)
                 .param(kind.code())
@@ -128,13 +132,13 @@ final class HashedTokenService implements OneTimeTokenService {
 
     /// The token Spring gets back holds the hash, since the token itself is not
     /// known for a code, and Spring reads only the address and the expiry.
-    private static @Nullable OneTimeToken redeem(JdbcClient.StatementSpec delete) {
+    private @Nullable OneTimeToken redeem(JdbcClient.StatementSpec delete) {
         return delete.query((row, number) -> new DefaultOneTimeToken(
                         row.getString("token_hash"),
                         row.getString("email"),
                         row.getObject("expires_at", OffsetDateTime.class).toInstant()))
                 .optional()
-                .filter(found -> found.getExpiresAt().isAfter(Instant.now()))
+                .filter(found -> found.getExpiresAt().isAfter(clock.instant()))
                 .orElse(null);
     }
 

@@ -11,10 +11,14 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.jayway.jsonpath.JsonPath;
+import jakarta.servlet.http.Cookie;
 import java.time.Duration;
 import java.time.Year;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,7 +28,9 @@ import org.springframework.mail.SimpleMailMessage;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 import se.teaterihuskvarna.IntegrationTestSupport;
+import se.teaterihuskvarna.login.LoginBrowser;
 import se.teaterihuskvarna.login.LoginKind;
+import se.teaterihuskvarna.login.LoginSettings;
 
 /// Proves the membership application rules (R005) in `docs/projektplan.md`, through
 /// both adapters, the JTE form and the REST endpoints:
@@ -33,10 +39,17 @@ import se.teaterihuskvarna.login.LoginKind;
 ///   and the database keeps the SHA-256 of the confirmation token, not the token;
 /// - confirming creates one member with one account and shows the payment
 ///   instruction with the configured bankgiro;
-/// - a confirmation link works once, and not after it expires;
+/// - a confirmation link works once, and not after it expires, and the mail
+///   that carries it is not kept or sent after that;
+/// - a link that would confirm nothing says so when it is opened, with no
+///   button, and looking at a link uses nothing up;
 /// - an unconfirmed application is deleted 24 hours after it was sent;
-/// - an address that already has an account gets a login link instead, and the
-///   response is the same as for a new address;
+/// - the welcome page's login works once, without a mail, and only in the
+///   browser that sent the form;
+/// - an address that already has an account gets a mail pointing to the login
+///   page instead, and the response is the same as for a new address;
+/// - the form counts against the login page's rate limit, per address and per
+///   client, and answers the same way over it, with no mail;
 /// - invalid input is refused before anything is stored or mailed.
 ///
 /// The service does the work after the rate limit on a background thread, so
@@ -45,8 +58,10 @@ import se.teaterihuskvarna.login.LoginKind;
 class MembershipApplicationIT extends IntegrationTestSupport {
 
     private static final String CONFIRMATION = "/bli-medlem/bekrafta";
+    private static final String CONFIRMABLE = "/api/membership-applications/confirmation";
     private static final String KARIN = "karin@example.test";
     private static final String ERIK = "erik@example.test";
+    private static final Pattern WELCOME_LOGIN = Pattern.compile("href=\"/logga-in/lank\\?token=([A-Za-z0-9_-]{43})\"");
 
     @Value("${teaterihuskvarna.association.bankgiro}")
     private String bankgiro;
@@ -56,6 +71,12 @@ class MembershipApplicationIT extends IntegrationTestSupport {
 
     @Autowired
     private MemberRepository members;
+
+    @Autowired
+    private LoginSettings login;
+
+    @Autowired
+    private MembershipApplicationService applications;
 
     @Test
     void anApplicationMailsAConfirmationLinkAndStoresNoMember() throws Exception {
@@ -88,6 +109,48 @@ class MembershipApplicationIT extends IntegrationTestSupport {
 
         assertThat(rowsIn("member")).isZero();
         assertThat(rowsIn("membership_application")).isEqualTo(1);
+    }
+
+    /// The page used to show its button for any token at all, so a link that
+    /// was used, expired or cut short asked the person to press a button that
+    /// could only answer that the link does not work.
+    @Test
+    void aLinkThatWouldConfirmNothingSaysSoWhenItIsOpened() throws Exception {
+        assertOpensExpired("not-a-token");
+
+        apply("Karin Karlsson", KARIN);
+        String expired = tokenIn(awaitMail(), CONFIRMATION);
+        jdbc.sql("UPDATE membership_application SET expires_at = now() - INTERVAL '1 minute'").update();
+        assertOpensExpired(expired);
+        assertThat(rowsIn("membership_application")).as("a look deletes nothing").isEqualTo(1);
+
+        forgetMails();
+        apply("Karin Karlsson", KARIN);
+        String used = tokenIn(awaitMail(), CONFIRMATION);
+        mockMvc.perform(post(CONFIRMATION).param("token", used).with(csrf()))
+                .andExpect(content().string(containsString(bankgiro)));
+        assertOpensExpired(used);
+
+        forgetMails();
+        apply("Erik Eriksson", ERIK);
+        String taken = tokenIn(awaitMail(), CONFIRMATION);
+        insertAccount("Erik Eriksson", ERIK);
+        assertOpensExpired(taken);
+    }
+
+    @Test
+    void theApiTellsWhetherALinkWouldConfirmAndUsesNothingUp() throws Exception {
+        mockMvc.perform(applyByApi("Karin Karlsson", KARIN)).andExpect(status().isAccepted());
+        String token = tokenIn(awaitMail(), CONFIRMATION);
+
+        mockMvc.perform(get(CONFIRMABLE).param("token", token)).andExpect(status().isNoContent());
+        mockMvc.perform(get(CONFIRMABLE).param("token", token)).andExpect(status().isNoContent());
+        mockMvc.perform(get(CONFIRMABLE).param("token", "not-a-token")).andExpect(status().isNotFound());
+        mockMvc.perform(get(CONFIRMABLE)).andExpect(status().isNotFound());
+        assertThat(rowsIn("member")).isZero();
+
+        mockMvc.perform(confirmByApi(token)).andExpect(status().isOk());
+        mockMvc.perform(get(CONFIRMABLE).param("token", token)).andExpect(status().isNotFound());
     }
 
     @Test
@@ -155,6 +218,74 @@ class MembershipApplicationIT extends IntegrationTestSupport {
                 .andExpect(jsonPath("$.email").value(KARIN));
     }
 
+    /// #47. The form sets the member login cookie, and the welcome page links
+    /// to a login link bound to it, which no mail carries. Anywhere else the
+    /// link page sends the person to the address form and leaves the link
+    /// alone: `docs/decisions/0015`, "Logging in from the welcome page".
+    @Test
+    void theWelcomePageLogsInOnlyTheBrowserThatApplied() throws Exception {
+        Cookie applicant = requireNonNull(apply("Karin Karlsson", KARIN).getResponse()
+                .getCookie(LoginBrowser.COOKIE));
+        assertThat(applicant.getPath()).isEqualTo("/logga-in");
+        String token = tokenIn(awaitMail(), CONFIRMATION);
+        forgetMails();
+        String login = loginTokenIn(mockMvc.perform(post(CONFIRMATION).param("token", token).with(csrf()))
+                .andReturn());
+
+        assertRedirect(mockMvc.perform(get("/logga-in/lank").param("token", login)).andReturn(), "/logga-in");
+        requestLink(LoginKind.MEMBER, ERIK);
+        assertRedirect(mockMvc.perform(get("/logga-in/lank").param("token", login)
+                .cookie(requireNonNull(browserCookie(LoginKind.MEMBER)))).andReturn(), "/logga-in");
+        assertRedirect(followLink(LoginKind.MEMBER, login), "/logga-in?fel");
+        mockMvc.perform(get("/api/login-links").param("kind", "MEMBER").param("token", login))
+                .andExpect(jsonPath("$.opening").value("ELSEWHERE_WITHOUT_CODE"));
+
+        mockMvc.perform(get("/logga-in/lank").param("token", login).cookie(applicant))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("data-auto-submit")));
+        MvcResult loggedIn = mockMvc.perform(post("/logga-in/lank").param("token", login).cookie(applicant)
+                .with(csrf())).andReturn();
+        assertRedirect(loggedIn, "/medlem");
+        mockMvc.perform(get("/api/member").with(sessionOf(loggedIn)))
+                .andExpect(jsonPath("$.email").value(KARIN));
+        assertRedirect(mockMvc.perform(post("/logga-in/lank").param("token", login).cookie(applicant)
+                .with(csrf())).andReturn(), "/logga-in?fel");
+        assertNoMail();
+    }
+
+    /// The link has no code, so a code typed in the applying browser finds
+    /// nothing to try against, rather than failing on the missing code, and
+    /// the link still works afterwards.
+    @Test
+    void aCodeTypedBesideTheWelcomePagesLoginLinkRedeemsNothing() throws Exception {
+        Cookie applicant = requireNonNull(apply("Karin Karlsson", KARIN).getResponse()
+                .getCookie(LoginBrowser.COOKIE));
+        String token = tokenIn(awaitMail(), CONFIRMATION);
+        String login = loginTokenIn(mockMvc.perform(post(CONFIRMATION).param("token", token).with(csrf()))
+                .andReturn());
+
+        assertRedirect(mockMvc.perform(post("/logga-in/lank").param("code", "000000").cookie(applicant)
+                .with(csrf())).andReturn(), "/logga-in/skickat?fel");
+        assertThat(jdbc.sql("SELECT code_tries FROM one_time_token").query(Integer.class).single()).isZero();
+        assertRedirect(mockMvc.perform(post("/logga-in/lank").param("token", login).cookie(applicant)
+                .with(csrf())).andReturn(), "/medlem");
+    }
+
+    /// An application sent before the form set a login cookie has no browser to
+    /// bind a login to, so the welcome page links to the address form as it did.
+    @Test
+    void anApplicationWithoutALoginCookieConfirmsWithoutALogin() throws Exception {
+        apply("Karin Karlsson", KARIN);
+        String token = tokenIn(awaitMail(), CONFIRMATION);
+        jdbc.sql("UPDATE membership_application SET browser_hash = NULL").update();
+
+        mockMvc.perform(post(CONFIRMATION).param("token", token).with(csrf()))
+                .andExpect(content().string(containsString("href=\"/logga-in\"")))
+                .andExpect(content().string(not(containsString("/logga-in/lank"))));
+        assertThat(rowsIn("one_time_token")).isZero();
+        assertThat(rowsIn("account")).isEqualTo(1);
+    }
+
     @Test
     void aConfirmationLinkWorksOnce() throws Exception {
         apply("Karin Karlsson", KARIN);
@@ -211,18 +342,59 @@ class MembershipApplicationIT extends IntegrationTestSupport {
                 .containsExactly(ERIK);
     }
 
-    /// The form must not reveal that an address is already a member's, so the
-    /// response matches a new address's. The mail points to the login page and
-    /// carries no login link: the application form sets no login cookie, so a
-    /// link here would work in any browser.
     @Test
-    void anAddressWithAnAccountIsPointedToTheLoginPage() throws Exception {
+    void theConfirmationMailIsNotSentAfterItsLinkExpires() throws Exception {
+        refuseEveryMail();
+
+        apply("Karin Karlsson", KARIN);
+        awaitMails(1);
+
+        assertThat(notAfterOfTheMailInTheOutbox())
+                .isEqualTo(instantFrom("SELECT expires_at FROM membership_application"));
+    }
+
+    /// It carries a login link, and is worth nothing once the link has expired.
+    @Test
+    void theMailToAnAddressWithAnAccountIsNotSentAfterItsLinkExpires() throws Exception {
+        insertAccount("Karin Karlsson", KARIN);
+        refuseEveryMail();
+
+        apply("Karin Karlsson", KARIN);
+        awaitMails(1);
+
+        assertThat(notAfterOfTheMailInTheOutbox())
+                .isEqualTo(instantFrom("SELECT expires_at FROM one_time_token"));
+    }
+
+    /// Without a login cookie there is no browser to bind a link to, so the
+    /// mail points to the login page only, and is retried until it is sent.
+    /// Both adapters always pass the cookie the security filters set; this is
+    /// the service's answer to a caller that has none.
+    @Test
+    void theMailToAnAddressWithAnAccountHasNoLinkWithoutALoginCookie() throws Exception {
+        insertAccount("Karin Karlsson", KARIN);
+
+        applications.apply(new ApplicationForm("Karin K", KARIN, null, null, null, null), "192.0.2.1", null);
+        SimpleMailMessage mail = awaitMail();
+
+        assertThat(mail.getText()).doesNotContain("token=").contains(siteUrl + "/logga-in\n");
+        assertThat(rowsIn("one_time_token")).isZero();
+    }
+
+    /// The form must not reveal that an address is already a member's, so the
+    /// response matches a new address's, login cookie included. The mail
+    /// carries a login link bound to the browser that filled in the form, with
+    /// no code, and the login page for any other device: `docs/decisions/0015`,
+    /// "Bli medlem from an address that already has an account".
+    @Test
+    void anAddressWithAnAccountGetsALoginLinkForTheBrowserThatApplied() throws Exception {
         insertAccount("Karin Karlsson", KARIN);
 
         MvcResult fresh = apply("Nils Nilsson", "nils@example.test");
         awaitMail();
         forgetMails();
         MvcResult existing = apply("Karin K", "Karin@Example.test");
+        Cookie applicant = requireNonNull(existing.getResponse().getCookie(LoginBrowser.COOKIE));
         SimpleMailMessage mail = awaitMail();
 
         assertRedirect(existing, "/bli-medlem/skickat");
@@ -230,12 +402,62 @@ class MembershipApplicationIT extends IntegrationTestSupport {
         assertThat(mail.getTo()).containsExactly(KARIN);
         assertThat(mail.getText())
                 .doesNotContain(CONFIRMATION)
-                .doesNotContain("token=")
                 .contains(siteUrl + "/logga-in\n");
-        assertThat(rowsIn("one_time_token")).isZero();
         assertThat(jdbc.sql("SELECT email FROM membership_application").query(String.class).list())
                 .containsExactly("nils@example.test");
         assertThat(rowsIn("account")).isEqualTo(1);
+        assertThat(jdbc.sql("SELECT code_hash FROM one_time_token").query(String.class).list())
+                .containsExactly((String) null);
+
+        String login = tokenIn(mail, linkPath(LoginKind.MEMBER));
+        assertRedirect(mockMvc.perform(get("/logga-in/lank").param("token", login)).andReturn(), "/logga-in");
+        assertRedirect(followLink(LoginKind.MEMBER, login), "/logga-in?fel");
+        assertRedirect(mockMvc.perform(post("/logga-in/lank").param("token", login).cookie(applicant)
+                .with(csrf())).andReturn(), "/medlem");
+    }
+
+    /// Without the limit the form would mail anyone as often as it was posted,
+    /// and would answer "is this address a member?" without end.
+    @Test
+    void applicationsOverTheAddressLimitGetTheSameResponseButNoMail() throws Exception {
+        int limit = login.requestsPerAddressAndClient();
+
+        MvcResult first = apply("Karin Karlsson", KARIN);
+        for (int application = 1; application < limit + 2; application++) {
+            assertThat(Visible.of(apply("Karin Karlsson", KARIN))).isEqualTo(Visible.of(first));
+        }
+
+        assertRedirect(first, "/bli-medlem/skickat");
+        assertThat(awaitMails(limit)).allSatisfy(mail -> assertThat(mail.getTo()).containsExactly(KARIN));
+    }
+
+    /// One client, a new address each time, through the REST adapter.
+    @Test
+    void applicationsOverTheClientLimitAreAcceptedButSendNoMail() throws Exception {
+        int limit = login.requestsPerClient();
+
+        for (int application = 0; application < limit + 2; application++) {
+            mockMvc.perform(applyByApi("Karin Karlsson", "karin" + application + "@example.test"))
+                    .andExpect(status().isAccepted());
+        }
+
+        assertThat(awaitMails(limit)).hasSize(limit);
+        assertThat(rowsIn("membership_application")).isEqualTo(limit);
+    }
+
+    /// The limit is the login page's own, not a second one beside it: requests
+    /// for a login link use up what the form allows the same address.
+    @Test
+    void theFormSharesTheLoginPagesLimit() throws Exception {
+        for (int request = 0; request < login.requestsPerAddressAndClient(); request++) {
+            requestLink(LoginKind.MEMBER, KARIN);
+        }
+
+        MvcResult applied = apply("Karin Karlsson", KARIN);
+
+        assertRedirect(applied, "/bli-medlem/skickat");
+        assertNoMail();
+        assertThat(rowsIn("membership_application")).isZero();
     }
 
     @Test
@@ -250,30 +472,44 @@ class MembershipApplicationIT extends IntegrationTestSupport {
 
     @Test
     void theApiAcceptsAndConfirmsAnApplication() throws Exception {
-        mockMvc.perform(post("/api/membership-applications")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"fullName\": \"Karin Karlsson\", \"email\": \"" + KARIN + "\"}")
-                        .with(csrf()))
-                .andExpect(status().isAccepted());
+        Cookie client = requireNonNull(mockMvc.perform(applyByApi("Karin Karlsson", KARIN))
+                .andExpect(status().isAccepted())
+                .andReturn().getResponse().getCookie(LoginBrowser.COOKIE));
         String token = tokenIn(awaitMail(), CONFIRMATION);
 
-        mockMvc.perform(confirmByApi(token))
+        MvcResult confirmed = mockMvc.perform(confirmByApi(token))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.fullName").value("Karin Karlsson"))
                 .andExpect(jsonPath("$.email").value(KARIN))
                 .andExpect(jsonPath("$.bankgiro").value(bankgiro))
                 .andExpect(jsonPath("$.fee.year").value(Year.now(FeeLedger.SWEDEN).getValue()))
                 .andExpect(jsonPath("$.fee.paidAt").doesNotExist())
-                .andExpect(jsonPath("$.fee.payment.message").value(KARIN));
+                .andExpect(jsonPath("$.fee.payment.message").value(KARIN))
+                .andReturn();
         mockMvc.perform(confirmByApi(token)).andExpect(status().isNotFound());
 
         assertThat(rowsIn("member")).isEqualTo(1);
         assertThat(rowsIn("account")).isEqualTo(1);
+        String login = JsonPath.read(bodyOf(confirmed), "$.loginToken");
+        assertRedirect(mockMvc.perform(post("/logga-in/lank").param("token", login).cookie(client).with(csrf()))
+                .andReturn(), "/medlem");
     }
 
     @Test
     void theApiAnswers404ForAnUnknownToken() throws Exception {
         mockMvc.perform(confirmByApi("not-a-token")).andExpect(status().isNotFound());
+    }
+
+    /// The adapter checks this body itself, and answers as a service's constraints are answered.
+    @Test
+    void aConfirmationWithoutATokenIsRefusedInSwedish() throws Exception {
+        mockMvc.perform(post("/api/membership-applications/confirmation")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"token\": \"\"}")
+                        .with(csrf()))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors.token")
+                        .value("Länken kan ha gått ut eller redan använts. Fyll i ansökan igen."));
     }
 
     @Test
@@ -298,6 +534,21 @@ class MembershipApplicationIT extends IntegrationTestSupport {
         assertNoMail();
     }
 
+    /// @return the token of the login link on a welcome page
+    private static String loginTokenIn(MvcResult welcome) throws Exception {
+        Matcher found = WELCOME_LOGIN.matcher(bodyOf(welcome));
+        assertThat(found.find()).as("a login link on the welcome page").isTrue();
+        return found.group(1);
+    }
+
+    /// The expired page, and no form with the token in it to press.
+    private void assertOpensExpired(String token) throws Exception {
+        mockMvc.perform(get(CONFIRMATION).param("token", token))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("Länken fungerar inte")))
+                .andExpect(content().string(not(containsString(token))));
+    }
+
     private MvcResult apply(String fullName, String email) throws Exception {
         return mockMvc.perform(post("/bli-medlem")
                         .param("fullName", fullName)
@@ -308,6 +559,13 @@ class MembershipApplicationIT extends IntegrationTestSupport {
                         .param("city", "Huskvarna")
                         .with(csrf()))
                 .andReturn();
+    }
+
+    private static MockHttpServletRequestBuilder applyByApi(String fullName, String email) {
+        return post("/api/membership-applications")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"fullName\": \"" + fullName + "\", \"email\": \"" + email + "\"}")
+                .with(csrf());
     }
 
     private static MockHttpServletRequestBuilder confirmByApi(String token) {

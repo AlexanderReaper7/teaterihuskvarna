@@ -16,9 +16,9 @@ import org.jspecify.annotations.Nullable;
 /// A member of the association. The email address is on the [Account], because
 /// a member added to a household may have none.
 ///
-/// Column lengths mirror `V1__member_register.sql` by hand, here and in [ContactDetails]. Nothing enforces
-/// that: `ddl-auto: validate` catches a missing table or column, but it does not
-/// compare lengths, which was measured rather than assumed. See
+/// Column lengths mirror `V1__member_register.sql`, here and in [ContactDetails], which
+/// `EntityColumnsIT` checks: `ddl-auto: validate` catches a missing table or column, but
+/// it does not compare lengths, which was measured rather than assumed. See
 /// `docs/decisions/0012-jpa-over-a-schema-flyway-owns.md`.
 ///
 /// No personal identity number, by `docs/projektplan.md`.
@@ -41,17 +41,21 @@ public class Member {
     private @Nullable ContactDetails contact;
 
     @Column(name = "created_at", nullable = false)
-    private Instant createdAt = Instant.now();
+    private Instant createdAt;
 
     protected Member() {
         // for JPA
     }
 
-    /// @param fullName the member's name as the association writes it
-    public Member(String fullName) {
+    /// @param fullName  the member's name as the association writes it
+    /// @param createdAt when the person becomes a member
+    public Member(String fullName, Instant createdAt) {
         this.fullName = fullName;
+        this.createdAt = createdAt;
     }
 
+    /// The number, for Hibernate and for a query. Everything else reads [#id].
+    ///
     /// @return the ID assigned by Hibernate
     /// @throws IllegalStateException if this entity has not been persisted
     public Long getId() {
@@ -59,6 +63,21 @@ public class Member {
             throw new IllegalStateException("Entity has not been persisted");
         }
         return id;
+    }
+
+    /// The id as its own type, which the compiler tells from every other id.
+    ///
+    /// Final, and it reads the number through [#getId]. A lazy reference to
+    /// this entity is a subclass Hibernate makes: it answers `getId` from the
+    /// reference itself and loads the row for any other method it can
+    /// override. It cannot override this one, so the id of a reference is
+    /// read without a query, and without loading a row ahead of a lock that
+    /// was meant to read it first. `EntityIdsIT` fails if that stops holding.
+    ///
+    /// @return the id
+    /// @throws IllegalStateException if this entity has not been persisted
+    public final MemberId id() {
+        return new MemberId(getId());
     }
 
     public String getFullName() {
@@ -74,9 +93,29 @@ public class Member {
         return household;
     }
 
-    /// @param household the household whose fee covers this member, or null for none
-    public void setHousehold(@Nullable Household household) {
+    /// For a member who is not stored yet, who has paid nothing that could
+    /// need to follow them.
+    ///
+    /// @param household the household the new member starts in, or null for none
+    /// @throws IllegalStateException if the member is stored: [FeeLedger#join] moves that one
+    public void startIn(@Nullable Household household) {
+        if (id != null) {
+            throw new IllegalStateException("a stored member joins a household through FeeLedger.join");
+        }
         this.household = household;
+    }
+
+    /// Only [FeeLedger#join] calls this, so that a household fee the member has
+    /// paid goes with them. `HouseholdRulesTest` fails the build on another caller.
+    ///
+    /// @param household the household whose fee covers this member from now on
+    void enter(Household household) {
+        this.household = household;
+    }
+
+    /// Takes the member out of their household. Their own fee stays theirs.
+    public void leaveHousehold() {
+        this.household = null;
     }
 
     /// @return the member's phone and postal address, [ContactDetails#NONE] if none is known

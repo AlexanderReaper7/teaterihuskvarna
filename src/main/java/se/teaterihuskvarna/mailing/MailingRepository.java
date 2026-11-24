@@ -9,4 +9,8 @@ interface MailingRepository extends JpaRepository<Mailing, Long> {
 
     /// @return every mailing, newest first
     List<Mailing> findAllByOrderByCreatedAtDescIdDesc();
+
+    /// @param status a status, such as [Mailing#CREATING]
+    /// @return the mailings in it
+    List<Mailing> findByStatus(String status);
 }

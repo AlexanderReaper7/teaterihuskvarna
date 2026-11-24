@@ -5,21 +5,16 @@
 @import se.teaterihuskvarna.web.Copy
 @import se.teaterihuskvarna.web.CsrfField
 @import se.teaterihuskvarna.web.FieldErrors
+@import se.teaterihuskvarna.web.Feedback
 @param Copy copy
 @param CsrfField csrf
 @param List<HouseholdDetails> households
 @param NewHousehold form
 @param FieldErrors errors
-@param String notice
-@param boolean stale
+@param Feedback feedback
 @template.admin.layout(copy = copy, title = copy.text("household.heading"), content = @`
     <h1>${copy.text("household.heading")}</h1>
-    @if(stale)
-        <p role="alert">${copy.text("form.stale")}</p>
-    @endif
-    @if(notice != null)
-        <p role="status">${notice}</p>
-    @endif
+    @template.tag.feedback(copy = copy, feedback = feedback)
     <p>${copy.text("household.intro")}</p>
     @if(households.isEmpty())
         <p>${copy.text("household.none")}</p>
@@ -33,7 +28,7 @@
                 <option value="" selected="${household.ownerMemberId() == null}">${copy.text("household.owner.admin")}</option>
                 @for(HouseholdMember member : household.members())
                     @if(member.hasAccount())
-                        <option value="${member.id()}" selected="${member.id().equals(household.ownerMemberId())}">${member.fullName()}</option>
+                        <option value="${member.id().value()}" selected="${member.id().equals(household.ownerMemberId())}">${member.fullName()}</option>
                     @endif
                 @endfor
             </select>
@@ -45,7 +40,7 @@
             <ul>
                 @for(HouseholdMember member : household.members())
                     <li>
-                        <a href="/admin/medlemmar/${member.id()}">${member.fullName()}</a>
+                        <a href="/admin/medlemmar/${member.id().value()}">${member.fullName()}</a>
                         @if(member.hasAccount())
                             ${copy.text("household.hasAccount")}
                         @endif

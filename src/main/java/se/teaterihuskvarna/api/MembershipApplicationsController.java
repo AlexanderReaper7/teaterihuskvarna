@@ -3,18 +3,22 @@ package se.teaterihuskvarna.api;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
+import org.jspecify.annotations.Nullable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import se.teaterihuskvarna.login.LoginBrowser;
 import se.teaterihuskvarna.member.ApplicationForm;
 import se.teaterihuskvarna.member.MembershipApplicationService;
 import se.teaterihuskvarna.member.Welcome;
 
-/// A visitor's membership application over HTTP: the same two service calls the
-/// `/bli-medlem` pages make.
+/// A visitor's membership application over HTTP: the same three service calls
+/// the `/bli-medlem` pages make.
 @RestController
 public class MembershipApplicationsController {
 
@@ -25,18 +29,33 @@ public class MembershipApplicationsController {
     }
 
     /// Always 202 when the form is valid, whether or not the address already has
-    /// an account, so the response does not tell who is a member.
+    /// an account, so the response does not tell who is a member. The response
+    /// sets the member login cookie, which the client keeps for the confirmation's
+    /// `loginToken`, as it would for a login link.
     ///
     /// @param form    the applicant's details
-    /// @param request the request, for the client address the rate limit counts
+    /// @param request the request, for the client address the rate limit counts and the login cookie
     @PostMapping("/api/membership-applications")
     @ResponseStatus(HttpStatus.ACCEPTED)
     public void apply(@RequestBody ApplicationForm form, HttpServletRequest request) {
-        applications.apply(form, request.getRemoteAddr());
+        applications.apply(form, request.getRemoteAddr(), LoginBrowser.read(request));
+    }
+
+    /// Looks, and uses nothing up: the token still works afterwards.
+    ///
+    /// @param token the token from the mailed link
+    /// @return 204 when a confirmation would make a member now, or 404 when the
+    ///         token is missing, unknown, expired or already used
+    @GetMapping("/api/membership-applications/confirmation")
+    public ResponseEntity<Void> confirmable(@RequestParam(required = false) @Nullable String token) {
+        return applications.confirmable(token)
+                ? ResponseEntity.noContent().build()
+                : ResponseEntity.notFound().build();
     }
 
     /// @param confirmation the token from the mailed link
-    /// @return 200 with what the welcome page shows, or 404 when the token is
+    /// @return 200 with what the welcome page shows, `loginToken` included, which logs in when posted to
+    ///         `/logga-in/lank` with the login cookie the application set, or 404 when the token is
     ///         unknown, expired or already used
     @PostMapping("/api/membership-applications/confirmation")
     public ResponseEntity<Welcome> confirm(@RequestBody @Valid Confirmation confirmation) {
@@ -48,6 +67,6 @@ public class MembershipApplicationsController {
     /// not have to tell the two apart.
     ///
     /// @param token the token from the mailed link
-    public record Confirmation(@NotBlank String token) {
+    public record Confirmation(@NotBlank(message = "{application.expired.body}") String token) {
     }
 }

@@ -16,7 +16,6 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 import org.jspecify.annotations.Nullable;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.MessageSource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,8 +27,9 @@ import se.teaterihuskvarna.content.Perspective;
 import se.teaterihuskvarna.export.Csv;
 import se.teaterihuskvarna.export.CsvFile;
 import se.teaterihuskvarna.login.Email;
+import se.teaterihuskvarna.login.MailLife;
 import se.teaterihuskvarna.login.Mailer;
-import se.teaterihuskvarna.member.MemberChanged;
+import se.teaterihuskvarna.member.MemberId;
 
 /// Volunteer shifts at performances: R016 booking, R017 the reminder, R020 the
 /// list and export. `docs/decisions/0024-volunteer-shifts.md`.
@@ -63,25 +63,23 @@ public class ShiftService {
     private final Mailer mailer;
     private final MessageSource messages;
     private final Clock clock;
-    private final ApplicationEventPublisher events;
 
     ShiftService(ShiftRepository shifts, BookingRepository bookings, ContentService content, Mailer mailer,
-            MessageSource messages, Clock clock, ApplicationEventPublisher events) {
+            MessageSource messages, Clock clock) {
         this.shifts = shifts;
         this.bookings = bookings;
         this.content = content;
         this.mailer = mailer;
         this.messages = messages;
         this.clock = clock;
-        this.events = events;
     }
 
     /// @param memberId the member asking
     /// @return the shifts that have not started, earliest first
-    public List<MemberShift> upcoming(long memberId) {
+    public List<MemberShift> upcoming(MemberId memberId) {
         List<Shift> found = shifts.findStartingFrom(clock.instant());
         Map<Long, Long> counts = counts(found);
-        Set<Long> mine = new HashSet<>(bookings.findShiftIdsByMemberId(memberId));
+        Set<Long> mine = new HashSet<>(bookings.findShiftIdsByMemberId(memberId.value()));
         return found.stream()
                 .map(shift -> memberShift(shift, counts.getOrDefault(shift.getId(), 0L), mine.contains(shift.getId())))
                 .toList();
@@ -89,7 +87,7 @@ public class ShiftService {
 
     /// @param memberId the member asking
     /// @return the shifts the member has a place on that have not started, earliest first
-    public List<MemberShift> booked(long memberId) {
+    public List<MemberShift> booked(MemberId memberId) {
         return upcoming(memberId).stream().filter(MemberShift::booked).toList();
     }
 
@@ -104,9 +102,9 @@ public class ShiftService {
     /// @throws ShiftStarted if the shift has started
     /// @throws ShiftFull if every place is taken
     @Transactional
-    public BookingOutcome book(long shiftId, long memberId) {
+    public BookingOutcome book(long shiftId, MemberId memberId) {
         Shift shift = shifts.lockById(shiftId).orElseThrow(() -> new NoSuchShift("no shift " + shiftId));
-        if (bookings.existsByShiftIdAndMemberId(shiftId, memberId)) {
+        if (bookings.existsByShiftIdAndMemberId(shiftId, memberId.value())) {
             return BookingOutcome.ALREADY_BOOKED;
         }
         if (!clock.instant().isBefore(shift.getStartsAt())) {
@@ -139,12 +137,12 @@ public class ShiftService {
     /// @throws NoSuchShift if no shift has the id
     /// @throws ShiftStarted if the shift has started
     @Transactional
-    public boolean cancel(long shiftId, long memberId) {
+    public boolean cancel(long shiftId, MemberId memberId) {
         Shift shift = shifts.findById(shiftId).orElseThrow(() -> new NoSuchShift("no shift " + shiftId));
         if (!clock.instant().isBefore(shift.getStartsAt())) {
             throw new ShiftStarted("shift " + shiftId + " has started");
         }
-        return bookings.deleteBooking(shiftId, memberId) > 0;
+        return bookings.deleteBooking(shiftId, memberId.value()) > 0;
     }
 
     /// @return the events a shift can be added to: the upcoming published ones
@@ -208,13 +206,7 @@ public class ShiftService {
     /// @throws NoSuchShift if no shift has the id
     @Transactional
     public void delete(long id) {
-        Shift shift = shifts.findById(id).orElseThrow(() -> new NoSuchShift("no shift " + id));
-        if (!shift.getStartsAt().isAfter(clock.instant())) {
-            for (Volunteer volunteer : bookings.findVolunteers(id)) {
-                events.publishEvent(new MemberChanged(volunteer.memberId()));
-            }
-        }
-        shifts.delete(shift);
+        shifts.delete(shifts.findById(id).orElseThrow(() -> new NoSuchShift("no shift " + id)));
     }
 
     /// @param id the shift
@@ -250,25 +242,22 @@ public class ShiftService {
     ///
     /// @param memberId a member
     /// @return the day in Sweden the latest shift the member was booked on started, or null
-    public @Nullable LocalDate lastShift(long memberId) {
-        Instant start = bookings.findLastShiftStart(memberId, clock.instant());
+    public @Nullable LocalDate lastShift(MemberId memberId) {
+        Instant start = bookings.findLastShiftStart(memberId.value(), clock.instant());
         return start == null ? null : LocalDate.ofInstant(start, SWEDEN);
     }
 
-    /// Tells the contacts of the members booked on each shift that has
-    /// started since the last run, since their LAST_SHIFT changes with the
-    /// start and not with anything written. Each shift is reported once.
+    /// Marks each shift that has started since the last run. A member's
+    /// LAST_SHIFT changes when a shift starts, with nothing written, and the
+    /// database queues a Brevo contact only when a row changes
+    /// (`V17__brevo_contact_queue.sql`). This mark is that change: it queues
+    /// everyone booked on the shift. Each shift is marked once.
     ///
-    /// @return how many shifts were reported
+    /// @return how many shifts were marked
     @Transactional
     public int reportStartedShifts() {
         List<Shift> started = shifts.findStartedUnreported(clock.instant());
-        for (Shift shift : started) {
-            for (Volunteer volunteer : bookings.findVolunteers(shift.getId())) {
-                events.publishEvent(new MemberChanged(volunteer.memberId()));
-            }
-            shift.startReported();
-        }
+        started.forEach(Shift::startReported);
         return started.size();
     }
 
@@ -277,10 +266,10 @@ public class ShiftService {
     /// so a booking made today for tomorrow still gets its reminder. A booking
     /// made after the last run is reminded when it is made ([#book]); one the
     /// runs missed, such as during a restart, gets it on the shift's own day if
-    /// the shift has not started. A booking made on the shift's own day gets none: the
-    /// member booked knowing it was today. A member without an account has no
-    /// address and is marked as reminded all the same, so the job does not
-    /// look at the row again.
+    /// the shift has not started, with a text that says today. A booking made
+    /// on the shift's own day gets none: the member booked knowing it was
+    /// today. A member without an account has no address and is marked as
+    /// reminded all the same, so the job does not look at the row again.
     ///
     /// @return how many reminders were queued
     @Transactional
@@ -297,14 +286,24 @@ public class ShiftService {
         return sent;
     }
 
+    /// The text names the day. Made the day before, it says "i morgon", which
+    /// is wrong from midnight, so the mail is not sent from then. Made on the
+    /// shift's own day, for a booking the runs missed, it says "i dag", and is
+    /// not sent once the shift has started. [Mailer] has the rule.
+    ///
     /// @return how many mails were queued: one, or none for a member without an account
     private int remind(Booking booking, Shift shift) {
+        LocalDate shiftDay = LocalDate.ofInstant(shift.getStartsAt(), SWEDEN);
+        boolean today = !shiftDay.isAfter(LocalDate.now(clock.withZone(SWEDEN)));
+        String texts = today ? "shift.reminder.today" : "shift.reminder";
+        Instant notAfter = today ? shift.getStartsAt() : shiftDay.atStartOfDay(SWEDEN).toInstant();
         int sent = 0;
-        for (String email : bookings.findEmail(booking.getMemberId())) {
-            mailer.send(new Email(email), text("shift.reminder.subject", shift.getEventTitle()),
-                    text("shift.reminder.body", text("shift.task." + shift.getTask().name()),
+        for (String email : bookings.findEmail(booking.getMemberId().value())) {
+            mailer.send(new Email(email), text(texts + ".subject", shift.getEventTitle()),
+                    text(texts + ".body", text("shift.task." + shift.getTask().name()),
                             shift.getEventTitle(), MAIL_TIME.format(shift.getStartsAt()),
-                            MAIL_END.format(shift.getEndsAt())));
+                            MAIL_END.format(shift.getEndsAt())),
+                    MailLife.until(notAfter));
             sent++;
         }
         booking.reminded(clock.instant());

@@ -1,5 +1,6 @@
 package se.teaterihuskvarna.administrator;
 
+import java.time.Clock;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.core.annotation.Order;
@@ -22,10 +23,12 @@ class FirstAdministrator implements ApplicationRunner {
 
     private final AdministratorRepository administrators;
     private final FirstAdministratorSettings settings;
+    private final Clock clock;
 
-    FirstAdministrator(AdministratorRepository administrators, FirstAdministratorSettings settings) {
+    FirstAdministrator(AdministratorRepository administrators, FirstAdministratorSettings settings, Clock clock) {
         this.administrators = administrators;
         this.settings = settings;
+        this.clock = clock;
     }
 
     @Override
@@ -40,6 +43,6 @@ class FirstAdministrator implements ApplicationRunner {
             throw new IllegalStateException("No administrator exists, so FIRST_ADMINISTRATOR_EMAIL and"
                     + " FIRST_ADMINISTRATOR_NAME must both be set to create the first one.");
         }
-        administrators.save(new Administrator(new Email(email), fullName.strip(), null));
+        administrators.save(new Administrator(new Email(email), fullName.strip(), null, clock.instant()));
     }
 }

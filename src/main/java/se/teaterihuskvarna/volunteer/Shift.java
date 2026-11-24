@@ -13,8 +13,7 @@ import org.jspecify.annotations.Nullable;
 
 /// One volunteer shift at one event.
 ///
-/// Column lengths mirror `V9__volunteer_shifts.sql` by hand, because
-/// `ddl-auto: validate` does not compare them:
+/// Column lengths mirror `V9__volunteer_shifts.sql`, which `EntityColumnsIT` checks:
 /// `docs/decisions/0012-jpa-over-a-schema-flyway-owns.md`.
 @Entity
 @Table(name = "volunteer_shift")

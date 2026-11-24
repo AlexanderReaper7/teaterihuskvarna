@@ -2,6 +2,7 @@ package se.teaterihuskvarna.offer;
 
 import java.time.Instant;
 import org.jspecify.annotations.Nullable;
+import se.teaterihuskvarna.member.MemberId;
 
 /// One registration as an administrator sees it (R020).
 ///
@@ -10,6 +11,6 @@ import org.jspecify.annotations.Nullable;
 /// @param email        the member's account address, or null when the member has no account
 /// @param phone        the member's phone number, or null
 /// @param registeredAt when the member registered
-public record Registrant(long memberId, String fullName, @Nullable String email, @Nullable String phone,
+public record Registrant(MemberId memberId, String fullName, @Nullable String email, @Nullable String phone,
         Instant registeredAt) {
 }

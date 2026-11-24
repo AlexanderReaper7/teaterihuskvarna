@@ -31,7 +31,8 @@ public class LoginLinksController {
     /// @param kind    `MEMBER` or `ADMINISTRATOR`
     /// @param token   the token in the link
     /// @param browser the login cookie the request for the link set
-    /// @return `HERE`, `ELSEWHERE` or `UNUSABLE`
+    /// @return `HERE`, `ELSEWHERE`, `ELSEWHERE_WITHOUT_CODE` for a link from the welcome page after a
+    ///         membership confirmation, or `UNUSABLE`
     @GetMapping("/api/login-links")
     public LinkStatus open(@RequestParam LoginKind kind, @RequestParam(required = false) @Nullable String token,
             @CookieValue(name = LoginBrowser.COOKIE, required = false) @Nullable String browser) {

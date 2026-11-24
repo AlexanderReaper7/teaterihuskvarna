@@ -2,23 +2,16 @@
 @import se.teaterihuskvarna.volunteer.ShiftDetails
 @import se.teaterihuskvarna.volunteer.Volunteer
 @import se.teaterihuskvarna.web.Copy
-@import se.teaterihuskvarna.web.CsrfField
+@import se.teaterihuskvarna.web.Feedback
 @param Copy copy
-@param CsrfField csrf
 @param ShiftDetails shift
 @param List<Volunteer> volunteers
-@param String error
-@param String notice
+@param Feedback feedback
 !{String title = copy.text("adminShifts.shiftTitle", copy.text("shift.task." + shift.task().name()), shift.eventTitle());}
 @template.admin.layout(copy = copy, title = title, content = @`
     <h1>${title}</h1>
     <p><a href="/admin/volontarpass">${copy.text("adminShifts.back")}</a></p>
-    @if(error != null)
-        <p role="alert">${error}</p>
-    @endif
-    @if(notice != null)
-        <p role="status">${notice}</p>
-    @endif
+    @template.tag.feedback(copy = copy, feedback = feedback)
     <dl>
         <dt>${copy.text("shifts.time")}</dt>
         <dd>${copy.text("shifts.between", copy.dateTime(shift.startsAt()), copy.time(shift.endsAt()))}</dd>
@@ -57,9 +50,5 @@
     @endif
 
     <h2>${copy.text("adminShifts.delete")}</h2>
-    <p>${copy.text("adminShifts.deleteWarning", shift.booked())}</p>
-    <form method="post" action="/admin/volontarpass/${shift.id()}/ta-bort">
-        @template.tag.csrf(csrf = csrf)
-        <button type="submit" class="button-secondary">@template.icon.trash2() ${copy.text("adminShifts.delete")}</button>
-    </form>
+    <p><a href="/admin/volontarpass/${shift.id()}/ta-bort">@template.icon.trash2() ${copy.text("adminShifts.delete")}</a></p>
 `)

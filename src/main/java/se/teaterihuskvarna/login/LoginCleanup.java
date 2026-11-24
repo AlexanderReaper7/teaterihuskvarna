@@ -1,7 +1,7 @@
 package se.teaterihuskvarna.login;
 
+import java.time.Clock;
 import java.time.OffsetDateTime;
-import java.time.ZoneOffset;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -23,16 +23,18 @@ class LoginCleanup {
 
     private final JdbcClient jdbc;
     private final LoginSettings settings;
+    private final Clock clock;
 
-    LoginCleanup(JdbcClient jdbc, LoginSettings settings) {
+    LoginCleanup(JdbcClient jdbc, LoginSettings settings, Clock clock) {
         this.jdbc = jdbc;
         this.settings = settings;
+        this.clock = clock;
     }
 
     /// Runs every 15 minutes, counted from the end of the previous run.
     @Scheduled(fixedDelayString = "PT15M")
     void deleteExpired() {
-        OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
+        OffsetDateTime now = OffsetDateTime.now(clock);
         int tokens = jdbc.sql("DELETE FROM one_time_token WHERE expires_at <= ?")
                 .param(now)
                 .update();

@@ -54,9 +54,18 @@ public class AdministratorDocumentsController {
             @ModelAttribute DocumentForm form,
             @RequestParam(name = "file", required = false) @Nullable MultipartFile file) throws IOException {
         return documents.upload(form, file == null ? null : file.getOriginalFilename(),
-                file == null ? null : file.getBytes(), signedIn.id());
+                file == null ? null : file.getBytes(), signedIn.administratorId());
     }
 
+    /// @param id the document
+    /// @return the document without its file
+    @GetMapping("/api/admin/documents/{id}")
+    public DocumentSummary summary(@PathVariable long id) {
+        return documents.summary(id);
+    }
+
+    /// The pages ask before they delete. Here the DELETE is the whole request.
+    ///
     /// @param id the document
     @DeleteMapping("/api/admin/documents/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)

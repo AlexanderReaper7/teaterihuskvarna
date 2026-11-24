@@ -6,6 +6,7 @@ import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
 import { linkLogin } from "../support/auth";
 import { clearLinkRequests, resetAdministrators } from "../support/db";
+import { bookedShift, confirmations } from "../support/pages";
 import { ADMINISTRATORS, MEMBERS } from "../support/site";
 
 test.beforeEach(async () => {
@@ -140,4 +141,11 @@ test("the administrator pages pass axe", async ({ page }) => {
   }
   await scan(page, await firstDetail(page, "/admin/medlemmar", "/admin/medlemmar/"));
   await scan(page, await firstDetail(page, "/admin/erbjudanden", "/admin/erbjudanden/"));
+  await bookedShift();
+  const shift = await firstDetail(page, "/admin/volontarpass", "/admin/volontarpass/");
+  await scan(page, shift);
+  // The pages that ask before a document, an administrator and a shift is deleted.
+  for (const path of await confirmations(page, [shift])) {
+    await scan(page, path);
+  }
 });

@@ -11,6 +11,7 @@ import jakarta.persistence.Table;
 import java.time.Instant;
 import java.time.LocalDate;
 import org.jspecify.annotations.Nullable;
+import se.teaterihuskvarna.login.AdministratorId;
 
 /// A PDF for members, with the file itself in `content`.
 ///
@@ -18,8 +19,7 @@ import org.jspecify.annotations.Nullable;
 /// ([MemberDocumentRepository#findSummaries]) and never the entity; only a
 /// download loads it.
 ///
-/// Column lengths mirror `V8__member_documents.sql` by hand, because
-/// `ddl-auto: validate` does not compare them:
+/// Column lengths mirror `V8__member_documents.sql`, which `EntityColumnsIT` checks:
 /// `docs/decisions/0012-jpa-over-a-schema-flyway-owns.md`.
 @Entity
 @Table(name = "member_document")
@@ -46,7 +46,7 @@ public class MemberDocument {
     private int sizeBytes;
 
     @Column(name = "uploaded_at", nullable = false)
-    private Instant uploadedAt = Instant.now();
+    private Instant uploadedAt;
 
     @Column(name = "uploaded_by")
     private @Nullable Long uploadedBy;
@@ -64,15 +64,17 @@ public class MemberDocument {
     /// @param filename    the sanitised file name
     /// @param content     the PDF, copied
     /// @param uploadedBy  the administrator uploading it
+    /// @param uploadedAt  when it is uploaded
     MemberDocument(String title, DocumentKind kind, LocalDate publishedOn, String filename, byte[] content,
-            long uploadedBy) {
+            AdministratorId uploadedBy, Instant uploadedAt) {
+        this.uploadedAt = uploadedAt;
         this.title = title;
         this.kind = kind;
         this.publishedOn = publishedOn;
         this.filename = filename;
         this.content = content.clone();
         this.sizeBytes = content.length;
-        this.uploadedBy = uploadedBy;
+        this.uploadedBy = uploadedBy.value();
     }
 
     /// @return the ID assigned by Hibernate
@@ -109,8 +111,8 @@ public class MemberDocument {
         return uploadedAt;
     }
 
-    public @Nullable Long getUploadedBy() {
-        return uploadedBy;
+    public @Nullable AdministratorId getUploadedBy() {
+        return uploadedBy == null ? null : new AdministratorId(uploadedBy);
     }
 
     public LocalDate getPublishedOn() {

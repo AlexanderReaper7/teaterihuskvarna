@@ -1,5 +1,6 @@
 package se.teaterihuskvarna.member;
 
+import java.time.Clock;
 import java.time.Instant;
 import java.time.Year;
 import java.time.ZoneId;
@@ -8,35 +9,64 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.TreeSet;
 import org.jspecify.annotations.Nullable;
 import org.springframework.stereotype.Component;
 
-/// Computes fee statuses, the rule [FeeStatus] states, from the `fee` table. The
-/// services in this package call it inside their own transactions. It reads a
-/// member's address from their account itself, for the payment instruction,
-/// so no caller can pass the wrong one.
+/// Computes fee statuses, the rule [FeeStatus] states, from the `fee` table,
+/// and gives a household fee its household when the payer gains one after
+/// paying. The services in this package call it inside their own
+/// transactions. It reads a member's address from their account itself, for
+/// the payment instruction, so no caller can pass the wrong one.
 @Component
 class FeeLedger {
 
     /// The association is in Huskvarna, so "this year" is the year there,
-    /// whatever zone the container runs in. New Year's night is the only time
-    /// the two can differ.
+    /// whatever zone the container or the application's clock is in. New
+    /// Year's night is the only time the two can differ.
     static final ZoneId SWEDEN = ZoneId.of("Europe/Stockholm");
 
     private final FeeRepository fees;
     private final AccountRepository accounts;
     private final AssociationSettings association;
+    private final Clock clock;
 
-    FeeLedger(FeeRepository fees, AccountRepository accounts, AssociationSettings association) {
+    FeeLedger(FeeRepository fees, AccountRepository accounts, AssociationSettings association, Clock clock) {
         this.fees = fees;
         this.accounts = accounts;
         this.association = association;
+        this.clock = clock;
     }
 
+    /// Read from the application's clock, never the system's, so a test can
+    /// stop the clock on New Year's night.
+    ///
     /// @return the current year in Sweden
     int currentYear() {
-        return Year.now(SWEDEN).getValue();
+        return Year.now(clock.withZone(SWEDEN)).getValue();
+    }
+
+    /// Puts a stored member in a household. A household fee the member paid for
+    /// this year while in no household names none, and now names this one, so
+    /// it covers everyone in it. The database queues the Brevo contact of
+    /// everyone in the household when the fee row changes
+    /// (`V17__brevo_contact_queue.sql`), so nothing here tells them.
+    ///
+    /// This is the only way in for a stored member: nothing else may call
+    /// [Member#enter], and `HouseholdRulesTest` fails the build if something
+    /// does. A payment that already names a household stays with that
+    /// household, and a payment for another year is left as it is.
+    ///
+    /// @param member    the member
+    /// @param household the household the member gains
+    void join(Member member, Household household) {
+        member.enter(household);
+        Optional<Fee> own = fees.findByMemberIdAndYear(member.getId(), currentYear());
+        if (own.isEmpty() || own.get().getKind() != FeeKind.HOUSEHOLD || own.get().getHouseholdId() != null) {
+            return;
+        }
+        own.get().coverHousehold(household.getId());
     }
 
     /// This year's status of each of some members, with the year's payments and
@@ -46,9 +76,9 @@ class FeeLedger {
     /// @return each member's status for this year, in the order of `members`
     List<FeeStatus> thisYear(List<Member> members) {
         int year = currentYear();
-        Map<Long, Fee> own = new HashMap<>();
+        Map<MemberId, Fee> own = new HashMap<>();
         for (Fee fee : fees.findByYear(year)) {
-            Long memberId = fee.getMemberId();
+            MemberId memberId = fee.getMemberId();
             if (memberId != null) {
                 own.put(memberId, fee);
             }
@@ -57,18 +87,18 @@ class FeeLedger {
         for (HouseholdPayment payment : fees.householdPayments(year, FeeKind.HOUSEHOLD)) {
             households.merge(payment.getHouseholdId(), payment.getPaidAt(), FeeLedger::earlier);
         }
-        Map<Long, String> emails = new HashMap<>();
-        List<Long> ids = members.stream().map(Member::getId).toList();
+        Map<MemberId, String> emails = new HashMap<>();
+        List<Long> ids = members.stream().map(member -> member.getId()).toList();
         if (!ids.isEmpty()) {
             for (Account account : accounts.findByMembers(ids)) {
-                emails.put(account.getMember().getId(), account.getEmail());
+                emails.put(account.getMember().id(), account.getEmail());
             }
         }
         List<FeeStatus> statuses = new ArrayList<>();
         for (Member member : members) {
             Household household = member.getHousehold();
             Instant householdPaid = household == null ? null : households.get(household.getId());
-            statuses.add(status(year, own.get(member.getId()), householdPaid, emails.get(member.getId())));
+            statuses.add(status(year, own.get(member.id()), householdPaid, emails.get(member.id())));
         }
         return statuses;
     }

@@ -10,7 +10,7 @@
   // which on the machine 0011 was written on is Temurin 26. JDT takes the
   // compliance level from the pom but does not emulate `--release`, so a Java
   // 26 API can autocomplete here and fail the build. `./mvnw verify` is the
-  // check that catches it. Reopening in .devcontainer/ removes the gap.
+  // check that catches it.
   "java.configuration.updateBuildConfiguration": "automatic",
 
   // Checkstyle is a build gate and rejects trailing whitespace outright

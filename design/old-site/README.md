@@ -131,6 +131,7 @@ Everything here was captured from the live site on 2026-09-22 and is not meant t
 | Path | Source | Licence |
 | --- | --- | --- |
 | [`assets/brand/logo-negative.png`](assets/brand/logo-negative.png) | `wp-content/uploads/2023/06/FTH_ALF_neg_SV.png` | The association's mark |
+| [`assets/brand/logo-mark.svg`](assets/brand/logo-mark.svg) | Not on the old site. The head of [`logo-negative.png`](assets/brand/logo-negative.png), crop 570x680 at 555,50, traced to a four-tone vector on 2026-10-08 | The association's mark |
 | [`assets/brand/jatten-vist.png`](assets/brand/jatten-vist.png) | `wp-content/uploads/2023/06/jatten_vist.png` | Unknown artist. The association may use it ([first meeting](../../docs/meetings/2026-09-24-meeting-1.md#how-the-site-looks)) |
 | [`assets/brand/favicon.png`](assets/brand/favicon.png) | `wp-content/uploads/2023/06/favicon-32x32-1.png` | The association's mark |
 | `assets/fonts/montserrat-*.woff2` | Google Fonts, variable 100 to 900, latin and latin-ext | SIL OFL 1.1, text in [`assets/fonts/OFL.txt`](assets/fonts/OFL.txt) |

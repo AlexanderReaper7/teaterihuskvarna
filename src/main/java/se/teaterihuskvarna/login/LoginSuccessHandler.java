@@ -5,8 +5,8 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import java.io.IOException;
+import java.time.Clock;
 import java.time.Duration;
-import java.time.Instant;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.Authentication;
@@ -45,9 +45,11 @@ final class LoginSuccessHandler implements AuthenticationSuccessHandler {
     private final DeviceNames devices;
     private final boolean offerPasskey;
     private final AuthenticationSuccessHandler then;
+    private final Clock clock;
 
-    private LoginSuccessHandler(Duration lifetime, DeviceNames devices, boolean offerPasskey,
+    private LoginSuccessHandler(Clock clock, Duration lifetime, DeviceNames devices, boolean offerPasskey,
             AuthenticationSuccessHandler then) {
+        this.clock = clock;
         this.lifetime = lifetime;
         this.devices = devices;
         this.offerPasskey = offerPasskey;
@@ -57,25 +59,28 @@ final class LoginSuccessHandler implements AuthenticationSuccessHandler {
     /// A link login redirects, and the page it lands on offers a passkey
     /// ([PasskeyOffer]).
     ///
+    /// @param clock     the application's clock, which the login's end is counted from
     /// @param lifetime  how long the login lasts
     /// @param devices   names the device from the request
     /// @param targetUrl where to go once logged in
     /// @return the handler for the button on the link page
-    static LoginSuccessHandler byLink(Duration lifetime, DeviceNames devices, String targetUrl) {
-        return new LoginSuccessHandler(lifetime, devices, true, new SimpleUrlAuthenticationSuccessHandler(targetUrl));
+    static LoginSuccessHandler byLink(Clock clock, Duration lifetime, DeviceNames devices, String targetUrl) {
+        return new LoginSuccessHandler(clock, lifetime, devices, true,
+                new SimpleUrlAuthenticationSuccessHandler(targetUrl));
     }
 
     /// A passkey login answers the page's script, which then goes to
     /// `redirectUrl`. The body is what Spring's own passkey script expects, so
     /// a client written against Spring's documentation works here too.
     ///
+    /// @param clock     the application's clock, which the login's end is counted from
     /// @param lifetime  how long the login lasts
     /// @param devices   names the device from the request
     /// @param targetUrl where the script goes once logged in
     /// @return the handler for the passkey login filter
-    static LoginSuccessHandler byPasskey(Duration lifetime, DeviceNames devices, String targetUrl) {
+    static LoginSuccessHandler byPasskey(Clock clock, Duration lifetime, DeviceNames devices, String targetUrl) {
         byte[] body = JSON.writeValueAsBytes(new PasskeyLoggedIn(true, targetUrl));
-        return new LoginSuccessHandler(lifetime, devices, false, (request, response, authentication) -> {
+        return new LoginSuccessHandler(clock, lifetime, devices, false, (request, response, authentication) -> {
             response.setContentType(MediaType.APPLICATION_JSON_VALUE);
             response.getOutputStream().write(body);
         });
@@ -84,16 +89,18 @@ final class LoginSuccessHandler implements AuthenticationSuccessHandler {
     /// Development login keeps the regular lifetime and device tracking, and
     /// skips the passkey offer because the developer selected an account.
     ///
+    /// @param clock the application's clock, which the login's end is counted from
     /// @param lifetime how long the selected kind of login lasts
     /// @param devices names the device from the request
     /// @param targetUrl the selected account kind's home page
     /// @param api whether to return JSON instead of redirecting
     /// @return the handler for immediate development login
-    static LoginSuccessHandler inDevelopment(Duration lifetime, DeviceNames devices, String targetUrl, boolean api) {
+    static LoginSuccessHandler inDevelopment(Clock clock, Duration lifetime, DeviceNames devices, String targetUrl,
+            boolean api) {
         if (api) {
-            return byPasskey(lifetime, devices, targetUrl);
+            return byPasskey(clock, lifetime, devices, targetUrl);
         }
-        return new LoginSuccessHandler(lifetime, devices, false,
+        return new LoginSuccessHandler(clock, lifetime, devices, false,
                 new SimpleUrlAuthenticationSuccessHandler(targetUrl));
     }
 
@@ -103,7 +110,7 @@ final class LoginSuccessHandler implements AuthenticationSuccessHandler {
         HttpSession session = request.getSession();
         session.setMaxInactiveInterval(Math.toIntExact(lifetime.toSeconds()));
         String device = devices.of(request.getHeader(HttpHeaders.USER_AGENT));
-        LoginSession.start(session, Instant.now().plus(lifetime), device);
+        LoginSession.start(session, clock.instant().plus(lifetime), device);
         request.setAttribute(SpringSessionRememberMeServices.REMEMBER_ME_LOGIN_ATTR, Boolean.TRUE);
         if (offerPasskey) {
             PasskeyOffer.make(session);

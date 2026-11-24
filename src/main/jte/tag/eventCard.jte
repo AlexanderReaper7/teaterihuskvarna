@@ -9,8 +9,7 @@
 !{String place = event.place();}
 !{Series series = event.series();}
 !{String summary = event.summary();}
-<article class="card">
-    @template.tag.image(image = event.image(), kind = "card-picture", source = edit.field(event, "huvudbild"))
+@template.tag.card(image = event.image(), kind = "card-picture", source = edit.field(event, "huvudbild"), content = @`
     @if(level == 2)
         <h2 data-sanity="${edit.field(event, "title")}"><a href="/evenemang/${event.slug()}">${event.title()}</a></h2>
     @else
@@ -23,4 +22,4 @@
     @if(summary != null)
         <p data-sanity="${edit.field(event, "ingress")}">${summary}</p>
     @endif
-</article>
+`)

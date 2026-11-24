@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { expect, type Page } from "@playwright/test";
 import { sql } from "./db";
 import { text } from "./copy";
@@ -5,8 +6,8 @@ import { PATHS } from "./site";
 
 export const PUBLIC = ["/", "/kalender", "/evenemang/kulturnatten", "/nyheter", "/nyheter/ny-webbplats",
   "/om-foreningen", "/styrelsen", "/produktioner", "/ludde-priser", "/kontakt", "/partners", "/bli-medlem",
-  "/bli-medlem/skickat", "/bli-medlem/bekrafta", "/bli-medlem/bekrafta?token=page-check", "/inbjudan",
-  "/inbjudan?token=page-check", PATHS.member.login, PATHS.member.sent, PATHS.administrator.login, PATHS.administrator.sent, "/finns-inte"];
+  "/bli-medlem/skickat", "/bli-medlem/bekrafta", "/inbjudan", PATHS.member.login, PATHS.member.sent,
+  PATHS.administrator.login, PATHS.administrator.sent, "/finns-inte"];
 export const MEMBER = ["/medlem", "/medlem/kontaktuppgifter", "/medlem/erbjudanden", "/medlem/handlingar",
   "/medlem/volontar", "/medlem/hushall"];
 export const ADMIN = ["/admin", "/admin/medlemmar", "/admin/medlemmar/ny", "/admin/hushall", "/admin/erbjudanden",
@@ -45,6 +46,27 @@ export async function details(page: Page, list: string, prefix: string): Promise
   return paths;
 }
 
+/// The two pages a mailed link opens, with their buttons. A page shows its
+/// button only while the link would work, so an application and an invitation
+/// that nobody answers exist under a token written here, even in a standalone
+/// run. `shown` is the button, for `scan` to see: without it a scan would pass
+/// on the page that says the link does not work, which PUBLIC has already.
+export async function linkPages(): Promise<{ paths: string[]; shown: Record<string, string> }> {
+  const token = "page-check";
+  const hash = createHash("sha256").update(token).digest("hex");
+  await sql(`INSERT INTO membership_application (full_name, email, token_hash, created_at, expires_at)
+    VALUES ('Ansökan Sidtest', 'page-applicant@example.test', $1, now(), now() + interval '10 years')
+    ON CONFLICT ((LOWER(email))) DO NOTHING`, [hash]);
+  await sql(`INSERT INTO member (full_name, created_at)
+    SELECT 'Inbjuden Sidtest', now() WHERE NOT EXISTS (SELECT 1 FROM member WHERE full_name = 'Inbjuden Sidtest')`);
+  await sql(`INSERT INTO invitation (member_id, email, token_hash, created_at, expires_at)
+    SELECT id, 'page-invited@example.test', $1, now(), now() + interval '10 years'
+    FROM member WHERE full_name = 'Inbjuden Sidtest'
+    ON CONFLICT (member_id) DO NOTHING`, [hash]);
+  const paths = [`/bli-medlem/bekrafta?token=${token}`, `/inbjudan?token=${token}`];
+  return { paths, shown: Object.fromEntries(paths.map((path) => [path, 'main form button[type="submit"]'])) };
+}
+
 /// Own test records make owner-only forms reachable without changing seeded households.
 export async function householdPages(): Promise<{ email: string; paths: string[] }> {
   const email = "page-owner@example.test";
@@ -74,9 +96,23 @@ export async function householdPages(): Promise<{ email: string; paths: string[]
     base + owner.id + "/ta-bort"] };
 }
 
-/// A real draft in the fake Brevo and a booked shift exist even in a standalone run.
-/// The preview is left on screen so the caller can check that POST-only page too.
-export async function prepareAdministratorPages(page: Page): Promise<void> {
+/// The pages that ask before a document, an administrator and each of `shifts`
+/// is deleted. The first two are found by the link that leads to them, on the
+/// list of documents and on the administrators' start page; a shift's is beside
+/// its own page.
+export async function confirmations(page: Page, shifts: string[]): Promise<string[]> {
+  const paths = shifts.map((path) => path + "/ta-bort");
+  for (const [list, prefix] of [["/admin/handlingar", "/admin/handlingar/"], ["/admin", "/admin/administratorer/"]]) {
+    await visit(page, list);
+    const link = page.locator(`a[href^="${prefix}"][href$="/ta-bort"]`).first();
+    await expect(link, `a link to the page that asks, on ${list}`).toBeVisible();
+    paths.push((await link.getAttribute("href"))!);
+  }
+  return paths;
+}
+
+/// A shift that one member has booked exists even in a standalone run.
+export async function bookedShift(): Promise<void> {
   await sql(`INSERT INTO volunteer_shift
     (event_id, event_title, event_slug, task, starts_at, ends_at, places, created_at)
     SELECT 'kulturnatten', 'Sidtestets volontärpass', 'kulturnatten', 'GARDEROB',
@@ -86,6 +122,12 @@ export async function prepareAdministratorPages(page: Page): Promise<void> {
     SELECT s.id, a.member_id, now() FROM volunteer_shift s CROSS JOIN account a
     WHERE s.event_title = 'Sidtestets volontärpass' AND a.email = 'erik.lindqvist@example.test'
     ON CONFLICT (shift_id, member_id) DO NOTHING`);
+}
+
+/// A real draft in the fake Brevo and a booked shift exist even in a standalone run.
+/// The preview is left on screen so the caller can check that POST-only page too.
+export async function prepareAdministratorPages(page: Page): Promise<void> {
+  await bookedShift();
   await visit(page, "/admin/utskick");
   await page.locator("#audience").selectOption({ index: 1 });
   await page.locator("#subject").fill("Sidtestets utskick");

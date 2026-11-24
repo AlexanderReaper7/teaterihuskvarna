@@ -5,22 +5,17 @@
 @import se.teaterihuskvarna.web.Copy
 @import se.teaterihuskvarna.web.CsrfField
 @import se.teaterihuskvarna.web.RegisterFilter
+@import se.teaterihuskvarna.web.Feedback
 @param Copy copy
 @param CsrfField csrf
 @param String query
 @param String fee
 @param List<RegisterFilter> filters
 @param MemberList list
-@param String error
-@param String notice
+@param Feedback feedback
 @template.admin.layout(copy = copy, title = copy.text("register.heading"), content = @`
     <h1>${copy.text("register.heading")}</h1>
-    @if(error != null)
-        <p role="alert">${error}</p>
-    @endif
-    @if(notice != null)
-        <p role="status">${notice}</p>
-    @endif
+    @template.tag.feedback(copy = copy, feedback = feedback)
     <p class="links">
         <a href="/admin/medlemmar/ny">@template.icon.plus() ${copy.text("register.add")}</a>
         <a href="/admin/hushall">@template.icon.house() ${copy.text("household.heading")}</a>
@@ -59,7 +54,7 @@
         <tbody>
             @for(MemberDetails member : list.members())
                 <tr>
-                    <td><a href="/admin/medlemmar/${member.id()}">${member.fullName()}</a></td>
+                    <td><a href="/admin/medlemmar/${member.id().value()}">${member.fullName()}</a></td>
                     <%-- A line may break before a dot or the @, and after a hyphen, so a long address wraps in its column instead of pushing the fee buttons out of the table's box. Firefox does not break after a hyphen that a digit follows unless told it may. --%>
                     !{String email = member.email();}
                     <td>@if(email != null)@for(String part : email.split("(?=[.@])|(?<=-)"))<wbr>${part}@endfor@endif</td>
@@ -70,7 +65,7 @@
                         @if(!member.fee().paid())
                             <div class="buttons">
                                 @for(String kind : member.householdId() == null ? List.of("INDIVIDUAL") : List.of("INDIVIDUAL", "HOUSEHOLD"))
-                                    <form method="post" action="/admin/medlemmar/${member.id()}/avgift">
+                                    <form method="post" action="/admin/medlemmar/${member.id().value()}/avgift">
                                         @template.tag.csrf(csrf = csrf)
                                         <input type="hidden" name="kind" value="${kind}">
                                         <input type="hidden" name="tillbaka" value="lista">

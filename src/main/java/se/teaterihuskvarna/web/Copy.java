@@ -9,13 +9,13 @@ import org.springframework.context.MessageSource;
 import se.teaterihuskvarna.Swedish;
 import se.teaterihuskvarna.login.Lifetimes;
 
-/// Fixed Swedish copy, for templates to read by key. Every page gets one as the
-/// model attribute `copy`, from [PageModel].
+/// Fixed Swedish copy, for templates to read by key. A handler passes it to
+/// its page as the page's first argument.
 ///
 /// A template therefore holds `${copy.text("login.email")}` and never the Swedish
 /// itself, as `docs/decisions/0001-language-policy.md` requires. The alternative,
-/// a controller putting each string in the model, means a form page with twenty
-/// labels has twenty `addAttribute` lines and twenty `@param` lines that say nothing.
+/// a handler passing each string to its page, means a form page with twenty
+/// labels has twenty arguments and twenty `@param` lines that say nothing.
 ///
 /// Always Swedish, whatever the browser asks for: there is one bundle.
 public final class Copy {

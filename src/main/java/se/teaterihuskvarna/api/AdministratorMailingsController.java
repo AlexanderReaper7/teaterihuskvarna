@@ -65,7 +65,7 @@ public class AdministratorMailingsController {
     @PostMapping("/api/admin/mailings")
     @ResponseStatus(HttpStatus.CREATED)
     public MailingDetails prepare(@AuthenticationPrincipal SignedIn signedIn, @RequestBody MailingForm form) {
-        return mailings.prepare(form, signedIn.id());
+        return mailings.prepare(form, signedIn.administratorId());
     }
 
     /// R025.

@@ -25,6 +25,8 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.mail.SimpleMailMessage;
@@ -41,7 +43,8 @@ import se.teaterihuskvarna.IntegrationTestSupport;
 /// - each login page looks an address up among its own kind only, and a link
 ///   works only on the page of its own kind;
 /// - the database holds the SHA-256 of a token, never the token;
-/// - a link expires after the configured lifetime, one hour by default;
+/// - a link expires after the configured lifetime, one hour by default, and
+///   the mail that carries it is not kept or sent after that;
 /// - opening a link logs nobody in, pressing its button does, and only once;
 /// - a link and its code work only in the browser that asked for them, and a
 ///   code allows five tries;
@@ -327,6 +330,39 @@ class LoginIT extends IntegrationTestSupport {
         assertRedirect(followLink(LoginKind.MEMBER, token), "/medlem");
     }
 
+    /// The link page's script presses the button. When that press is refused
+    /// as stale the page comes back marked `gammal`, says so and leaves the
+    /// button to the person: a script that pressed again would send a
+    /// browser that loses its session every time round in a circle.
+    @Test
+    void aLinkPageThatCameBackStaleSaysSoAndDoesNotPressItsOwnButton() throws Exception {
+        insertAccount("Karin Karlsson", KARIN);
+        requestLink(LoginKind.MEMBER, KARIN);
+        String token = tokenIn(awaitMail(), linkPath(LoginKind.MEMBER));
+
+        mockMvc.perform(get("/logga-in/lank").param("token", token).param("gammal", "")
+                        .cookie(requireNonNull(browserCookie(LoginKind.MEMBER))))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("Sidan hade stått öppen för länge")))
+                .andExpect(content().string(containsString(token)))
+                .andExpect(content().string(not(containsString("data-auto-submit"))));
+        assertRedirect(followLink(LoginKind.MEMBER, token), "/medlem");
+    }
+
+    /// The page with the form for the code took no `Feedback`, and showed a
+    /// code refused as stale as if nothing had been typed.
+    @ParameterizedTest
+    @EnumSource(LoginKind.class)
+    void thePageForTheCodeSaysThatAFormWasStale(LoginKind kind) throws Exception {
+        String page = LoginUrls.of(kind).sent();
+
+        mockMvc.perform(get(page).param("gammal", ""))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("Sidan hade stått öppen för länge")));
+        mockMvc.perform(get(page))
+                .andExpect(content().string(not(containsString("Sidan hade stått öppen för länge"))));
+    }
+
     @Test
     void aLinkLogsInOnceOnly() throws Exception {
         long account = insertAccount("Karin Karlsson", KARIN);
@@ -456,10 +492,35 @@ class LoginIT extends IntegrationTestSupport {
         mockMvc.perform(get("/api/member").with(sessionOf(login))).andExpect(status().isForbidden());
     }
 
+    /// The outbox deletes a mail unsent after its `not_after`, so a link that
+    /// has expired is neither mailed nor kept in the outbox in plain text.
+    @Test
+    void aMembersLoginMailIsNotSentAfterItsLinkExpires() throws Exception {
+        insertAccount("Karin Karlsson", KARIN);
+        refuseEveryMail();
+
+        requestLink(LoginKind.MEMBER, KARIN);
+        awaitMails(1);
+
+        assertThat(notAfterOfTheMailInTheOutbox())
+                .isEqualTo(instantFrom("SELECT expires_at FROM one_time_token WHERE kind = 'member'"));
+    }
+
+    @Test
+    void anAdministratorsLoginMailIsNotSentAfterItsLinkExpires() throws Exception {
+        refuseEveryMail();
+
+        requestLink(LoginKind.ADMINISTRATOR, firstAdministratorEmail);
+        awaitMails(1);
+
+        assertThat(notAfterOfTheMailInTheOutbox())
+                .isEqualTo(instantFrom("SELECT expires_at FROM one_time_token WHERE kind = 'administrator'"));
+    }
+
     @Test
     void requestsOverTheAddressLimitGetTheSameResponseButNoMail() throws Exception {
         insertAccount("Karin Karlsson", KARIN);
-        int limit = settings.requestsPerAddress();
+        int limit = settings.requestsPerAddressAndClient();
 
         MvcResult first = requestLink(LoginKind.MEMBER, KARIN);
         for (int request = 1; request < limit + 2; request++) {
@@ -496,6 +557,32 @@ class LoginIT extends IntegrationTestSupport {
             }
 
             assertThat(allowed).isEqualTo(settings.requestsPerAddress());
+        }
+    }
+
+    /// The same from one client, which stops at its own allowance for the
+    /// address, below the address's total.
+    @Test
+    void requestsSentAtOnceFromOneClientStopAtItsAllowance() throws Exception {
+        int requests = settings.requestsPerAddressAndClient() * 4;
+        CountDownLatch start = new CountDownLatch(1);
+        List<Future<Boolean>> results = new ArrayList<>();
+        try (ExecutorService threads = Executors.newFixedThreadPool(requests)) {
+            for (int request = 0; request < requests; request++) {
+                results.add(threads.submit(() -> {
+                    start.await();
+                    return limiter.tryAcquire(KARIN, "10.0.0.1");
+                }));
+            }
+            start.countDown();
+            long allowed = 0;
+            for (Future<Boolean> result : results) {
+                if (result.get()) {
+                    allowed++;
+                }
+            }
+
+            assertThat(allowed).isEqualTo(settings.requestsPerAddressAndClient());
         }
     }
 

@@ -1,29 +1,21 @@
 @import se.teaterihuskvarna.member.HouseholdDetails
 @import se.teaterihuskvarna.member.HouseholdMember
+@import se.teaterihuskvarna.member.MemberId
 @import se.teaterihuskvarna.member.NewHousehold
 @import se.teaterihuskvarna.web.Copy
 @import se.teaterihuskvarna.web.CsrfField
 @import se.teaterihuskvarna.web.FieldErrors
+@import se.teaterihuskvarna.web.Feedback
 @param Copy copy
 @param CsrfField csrf
-@param HouseholdDetails household = null
-@param Long ownMemberId
+@param HouseholdDetails household
+@param MemberId ownMemberId
 @param NewHousehold form
 @param FieldErrors errors
-@param boolean stale
-@param String error
-@param String notice
+@param Feedback feedback
 @template.member.layout(copy = copy, title = copy.text("member.household.manage"), content = @`
     <h1>${copy.text(household == null ? "household.create" : "member.household.manage")}</h1>
-    @if(stale)
-        <p role="alert">${copy.text("form.stale")}</p>
-    @endif
-    @if(error != null)
-        <p role="alert">${error}</p>
-    @endif
-    @if(notice != null)
-        <p role="status">${notice}</p>
-    @endif
+    @template.tag.feedback(copy = copy, feedback = feedback)
     @template.tag.errors(copy = copy, errors = errors)
     @if(household == null || household.ownedBy(ownMemberId))
     <form method="post" action="${household == null ? "/medlem/hushall" : "/medlem/hushall/namn"}">
@@ -49,10 +41,10 @@
                         ${copy.text("household.hasAccount")}
                     @endif
                     @if(household.ownedBy(ownMemberId))
-                        <a href="/medlem/hushall/medlemmar/${member.id()}">@template.icon.pencil() ${copy.text("member.household.edit", member.fullName())}</a>
+                        <a href="/medlem/hushall/medlemmar/${member.id().value()}">@template.icon.pencil() ${copy.text("member.household.edit", member.fullName())}</a>
                     @endif
                     @if(household.ownedBy(ownMemberId) || member.id().equals(ownMemberId))
-                    <a href="/medlem/hushall/medlemmar/${member.id()}/ta-bort">@if(member.id().equals(ownMemberId))@template.icon.doorOpen()@else@template.icon.trash2()@endif ${copy.text(member.id().equals(ownMemberId)
+                    <a href="/medlem/hushall/medlemmar/${member.id().value()}/ta-bort">@if(member.id().equals(ownMemberId))@template.icon.doorOpen()@else@template.icon.trash2()@endif ${copy.text(member.id().equals(ownMemberId)
                             ? "member.household.leave" : "member.household.remove", member.fullName())}</a>
                     @endif
                 </li>

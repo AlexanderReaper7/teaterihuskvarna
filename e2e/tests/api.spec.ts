@@ -57,6 +57,37 @@ test("an application and its confirmation over the API", async ({ request }) => 
   expect(again.status()).toBe(404);
 });
 
+test("the client that applied logs in with the confirmation's login token, and another client cannot", async ({
+  request,
+}) => {
+  // #47 over the API: the token works with the login cookie the application
+  // set, through the same URL the pages post to. docs/decisions/0015.
+  const email = freshAddress("api-inloggning");
+  await clearMail(email);
+  await request.post("/api/membership-applications", {
+    data: { fullName: "Api Inloggning", email }, headers: { "X-CSRF-TOKEN": await csrf(request) },
+  });
+  const token = new URL((await waitForMail(email)).link).searchParams.get("token")!;
+  const confirmed = await request.post("/api/membership-applications/confirmation", {
+    data: { token }, headers: { "X-CSRF-TOKEN": await csrf(request) },
+  });
+  const loginToken: string = (await confirmed.json()).loginToken;
+  expect(loginToken).toMatch(/^[A-Za-z0-9_-]{43}$/);
+
+  const other = await http.newContext({ baseURL: SITE });
+  const refused = await other.post(PATHS.member.link, {
+    form: { token: loginToken, _csrf: await csrf(other) }, maxRedirects: 0,
+  });
+  expect(new URL(refused.headers().location, SITE).pathname).toBe(PATHS.member.login);
+  await other.dispose();
+
+  const login = await request.post(PATHS.member.link, {
+    form: { token: loginToken, _csrf: await csrf(request) }, maxRedirects: 0,
+  });
+  expect(new URL(login.headers().location, SITE).pathname).toBe(PATHS.member.home);
+  expect(await (await request.get("/api/member")).json()).toMatchObject({ fullName: "Api Inloggning", email });
+});
+
 test("a member reads their own details over the API", async () => {
   const client = await loggedIn("member", MEMBERS.erik);
   const response = await client.get("/api/member");

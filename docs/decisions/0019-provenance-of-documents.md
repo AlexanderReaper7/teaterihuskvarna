@@ -6,6 +6,8 @@ description: How a document shows what the user decided and what an agent wrote.
 
 # 0019: Every document says who stands behind it
 
+Amended on 2026-11-11, when the user marked [research/credential-vault.md](../research/credential-vault.md) `reviewed`.
+
 The Decision and Front matter sections are the user's. Everything under Agent notes is an agent's.
 
 ## Decision
@@ -27,6 +29,8 @@ superseded_by: 0020-example.md
 
 There is no `related` field: "we can compute it by the links, so the content becomes the source of truth." Meeting notes carry neither front matter nor a Provenance line. The design README is `agent`. Decided by the user on 2026-09-25.
 
+The provenance `reviewed` marks a document an agent wrote and the user has reviewed. Decided by the user on 2026-11-11.
+
 ## The user's reasons
 
 The user programs only through AI agents, and the documents exist because agents need context. On 2026-09-25 the user wrote:
@@ -39,9 +43,10 @@ The user programs only through AI agents, and the documents exist because agents
 
 An agent designed this format on 2026-09-25. The user has not reviewed it beyond the conversation it came from.
 
-Every Markdown file under [`docs/`](../), [`design/`](../../design/), [`GLOSSARY.md`](../../GLOSSARY.md) and [`AGENTS.md`](../../AGENTS.md) states its provenance, with one of three values:
+Every Markdown file under [`docs/`](../), [`design/`](../../design/), [`GLOSSARY.md`](../../GLOSSARY.md) and [`AGENTS.md`](../../AGENTS.md) states its provenance, with one of four values:
 
 - `user`: the user decided or wrote it. Agent text inside the file sits under a heading that starts with "Agent notes".
+- `reviewed`: an agent wrote it, and the user has reviewed it, see [Front matter](#front-matter).
 - `agent`: an agent decided or wrote it, and the user has not approved it. It is a default, open to a better idea.
 - `unreviewed`: an agent wrote it before this record, and some of it may be the user's, but nobody has marked which. Treat it as `agent`. Where the user has since confirmed a part, that part ends with "Decided by the user on" and a date.
 

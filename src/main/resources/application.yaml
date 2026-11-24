@@ -1,6 +1,14 @@
 spring:
   application:
     name: teaterihuskvarna
+  # The site has one language, so the browser's Accept-Language chooses
+  # nothing. Left to Spring's default, a validation message without a key of
+  # ours came in the browser's language, and Content-Language named that
+  # language over a page that says lang="sv". The locale is
+  # se.teaterihuskvarna.Swedish.LOCALE.
+  web:
+    locale: sv_SE
+    locale-resolver: fixed
   datasource:
     url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/teaterihuskvarna}
     username: ${DATABASE_USER:teaterihuskvarna}
@@ -99,6 +107,12 @@ teaterihuskvarna:
     # R008 allows a minute from publishing to the site. The webhook usually
     # clears the copy at once, and this bounds the time when it does not.
     max-age: 45s
+    # After a fetch that failed, the last copy is shown this long before Sanity
+    # is asked again. Sanity's timeout is 5 s, so a publish that meets one
+    # failed fetch and no webhook still shows after 45 + 5 + 10 s, R008's
+    # minute, and a Sanity that hangs holds one request per type for 5 s in
+    # every 15.
+    retry-after: 10s
   # Contacts and mailings: docs/decisions/0005 and 0026. With the http api, the
   # application refuses to start until every BREVO_ value below is set.
   brevo:
@@ -118,8 +132,3 @@ teaterihuskvarna:
   first-administrator:
     email: ${FIRST_ADMINISTRATOR_EMAIL:}
     full-name: ${FIRST_ADMINISTRATOR_NAME:}
-
-gg:
-  jte:
-    development-mode: false
-    use-precompiled-templates: true

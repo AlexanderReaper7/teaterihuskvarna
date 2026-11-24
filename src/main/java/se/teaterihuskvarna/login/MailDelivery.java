@@ -1,5 +1,6 @@
 package se.teaterihuskvarna.login;
 
+import org.springframework.mail.MailSendException;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Component;
@@ -8,7 +9,9 @@ import tools.jackson.databind.json.JsonMapper;
 
 /// Sends the mails [Mailer] put in the outbox. A `MailException` from the relay
 /// leaves the mail for a later attempt. The recipient stays out of the log,
-/// which is not the place to keep who asked for a login link.
+/// which is not the place to keep who asked for a login link: the outbox logs
+/// a failure's class names and never its message, where the relay names the
+/// recipients it refused.
 @Component
 class MailDelivery implements OutboxHandler {
 
@@ -37,7 +40,19 @@ class MailDelivery implements OutboxHandler {
         message.setTo(mail.to());
         message.setSubject(mail.subject());
         message.setText(mail.body());
-        sender.send(message);
+        try {
+            sender.send(message);
+        } catch (MailSendException e) {
+            // Spring keeps the relay's reason for each message beside the
+            // exception, not as its cause, and puts it in the message text
+            // the log leaves out. As suppressed exceptions their class names
+            // reach the log, such as SendFailedException for a refused
+            // recipient.
+            for (Exception reason : e.getMessageExceptions()) {
+                e.addSuppressed(reason);
+            }
+            throw e;
+        }
     }
 
     /// @param to      the recipient's address

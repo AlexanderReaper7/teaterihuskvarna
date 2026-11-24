@@ -66,6 +66,8 @@ public class AdministratorShiftsController {
         return shifts.details(id);
     }
 
+    /// The pages ask before they delete. Here the DELETE is the whole request.
+    ///
     /// @param id the shift, which takes its bookings with it
     @DeleteMapping("/api/admin/shifts/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)

@@ -8,6 +8,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.Instant;
 import org.jspecify.annotations.Nullable;
+import se.teaterihuskvarna.member.MemberId;
 
 /// One member's place in one offer. The offer and the member are plain ids
 /// rather than associations, as on `Administrator`: nothing here loads either
@@ -27,17 +28,19 @@ public class OfferRegistration {
     private long memberId;
 
     @Column(name = "created_at", nullable = false)
-    private Instant createdAt = Instant.now();
+    private Instant createdAt;
 
     protected OfferRegistration() {
         // for JPA
     }
 
-    /// @param offerId  the offer registered for
-    /// @param memberId the member who registered
-    OfferRegistration(long offerId, long memberId) {
+    /// @param offerId   the offer registered for
+    /// @param memberId  the member who registered
+    /// @param createdAt when they registered
+    OfferRegistration(long offerId, MemberId memberId, Instant createdAt) {
         this.offerId = offerId;
-        this.memberId = memberId;
+        this.memberId = memberId.value();
+        this.createdAt = createdAt;
     }
 
     /// @return the ID assigned by Hibernate
@@ -53,8 +56,8 @@ public class OfferRegistration {
         return offerId;
     }
 
-    public long getMemberId() {
-        return memberId;
+    public MemberId getMemberId() {
+        return new MemberId(memberId);
     }
 
     public Instant getCreatedAt() {

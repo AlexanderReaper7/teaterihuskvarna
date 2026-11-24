@@ -25,15 +25,17 @@ public class Household {
     private @Nullable Long ownerMemberId;
 
     @Column(name = "created_at", nullable = false)
-    private Instant createdAt = Instant.now();
+    private Instant createdAt;
 
     protected Household() {
         // for JPA
     }
 
-    /// @param name what the household is called on a fee record, not a legal name
-    public Household(String name) {
+    /// @param name      what the household is called on a fee record, not a legal name
+    /// @param createdAt when the household is made
+    public Household(String name, Instant createdAt) {
         this.name = name;
+        this.createdAt = createdAt;
     }
 
     /// @return the ID assigned by Hibernate
@@ -50,13 +52,13 @@ public class Household {
     }
 
     /// @return the member owner, or null when administrators manage the household
-    public @Nullable Long getOwnerMemberId() {
-        return ownerMemberId;
+    public @Nullable MemberId getOwnerMemberId() {
+        return ownerMemberId == null ? null : new MemberId(ownerMemberId);
     }
 
     /// @param memberId the member owner, or null for administrator management
-    public void setOwnerMemberId(@Nullable Long memberId) {
-        ownerMemberId = memberId;
+    public void setOwnerMemberId(@Nullable MemberId memberId) {
+        ownerMemberId = memberId == null ? null : memberId.value();
     }
 
     /// @param name the new household name

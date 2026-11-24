@@ -21,8 +21,8 @@ import org.jspecify.annotations.Nullable;
 /// with SQL, because a second application for the same address has to replace
 /// the first in one statement: see that method.
 ///
-/// Column lengths mirror `V2__login.sql` by hand, here and in [ContactDetails], because `ddl-auto: validate`
-/// does not compare them: `docs/decisions/0012-jpa-over-a-schema-flyway-owns.md`.
+/// Column lengths mirror `V2__login.sql`, here and in [ContactDetails], which `EntityColumnsIT` checks:
+/// `docs/decisions/0012-jpa-over-a-schema-flyway-owns.md`.
 @Entity
 @Table(name = "membership_application")
 public class MembershipApplication {
@@ -42,6 +42,9 @@ public class MembershipApplication {
 
     @Column(name = "token_hash", nullable = false, length = 64)
     private String tokenHash;
+
+    @Column(name = "browser_hash", length = 64)
+    private @Nullable String browserHash;
 
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
@@ -77,6 +80,12 @@ public class MembershipApplication {
 
     public String getTokenHash() {
         return tokenHash;
+    }
+
+    /// @return [se.teaterihuskvarna.login.Tokens#hash] of the login cookie the form set, or null for an
+    ///         application sent before the form set one
+    public @Nullable String getBrowserHash() {
+        return browserHash;
     }
 
     public Instant getCreatedAt() {

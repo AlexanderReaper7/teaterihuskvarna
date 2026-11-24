@@ -12,7 +12,7 @@
 # it. The git plugin runs git itself, so that untracked files count as
 # uncommitted changes (see the plugin's comment in pom.xml) and so that a git
 # worktree records its own commit rather than the main checkout's.
-FROM eclipse-temurin:25.0.4.1_1-jdk-alpine AS jdk
+FROM eclipse-temurin:25.0.5_8-jdk-alpine AS jdk
 RUN apk add --no-cache git
 
 # The repository's git directory, supplied as a named build context:
@@ -28,7 +28,7 @@ FROM scratch AS git
 # and needs a bundler, so it is built here from visual-editing/ rather than
 # kept in the repository, and Dependabot raises its versions in
 # visual-editing/package.json like any other.
-FROM node:26.12.1-alpine AS visual-editing
+FROM node:26.13.0-alpine AS visual-editing
 WORKDIR /visual-editing
 COPY visual-editing/package.json visual-editing/package-lock.json ./
 RUN npm ci --no-audit --no-fund
@@ -72,7 +72,7 @@ RUN --mount=type=cache,id=teaterihuskvarna-m2,target=/root/.m2/repository \
     GIT_DIR="/git${BUILD_GIT_WORKTREE:+/worktrees/$BUILD_GIT_WORKTREE}" GIT_WORK_TREE=/build \
     ./mvnw -B -ntp -Dmaven.gitcommitid.nativegit=true package
 
-FROM eclipse-temurin:25.0.4.1_1-jre-alpine AS runtime
+FROM eclipse-temurin:25.0.5_8-jre-alpine AS runtime
 WORKDIR /app
 
 # Alpine's security fixes, which reach its repository days or weeks before

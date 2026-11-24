@@ -11,6 +11,7 @@ import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import java.time.Instant;
 import org.jspecify.annotations.Nullable;
+import se.teaterihuskvarna.login.AccountId;
 import se.teaterihuskvarna.login.Email;
 
 /// A member's login, and the address login links and mailings go to. A member
@@ -18,8 +19,8 @@ import se.teaterihuskvarna.login.Email;
 /// accept an invitation. An administrator account is a different thing, in
 /// `se.teaterihuskvarna.administrator`.
 ///
-/// Column lengths mirror `V2__login.sql` by hand, because `ddl-auto: validate`
-/// does not compare them: `docs/decisions/0012-jpa-over-a-schema-flyway-owns.md`.
+/// Column lengths mirror `V2__login.sql`, which `EntityColumnsIT` checks:
+/// `docs/decisions/0012-jpa-over-a-schema-flyway-owns.md`.
 @Entity
 @Table(name = "account")
 public class Account {
@@ -36,19 +37,23 @@ public class Account {
     private String email;
 
     @Column(name = "created_at", nullable = false)
-    private Instant createdAt = Instant.now();
+    private Instant createdAt;
 
     protected Account() {
         // for JPA
     }
 
-    /// @param member the member this account logs in as
-    /// @param email  the address, unique case insensitively across accounts
-    public Account(Member member, Email email) {
+    /// @param member    the member this account logs in as
+    /// @param email     the address, unique case insensitively across accounts
+    /// @param createdAt when the account is made
+    public Account(Member member, Email email, Instant createdAt) {
         this.member = member;
         this.email = email.value();
+        this.createdAt = createdAt;
     }
 
+    /// The number, for Hibernate and for a query. Everything else reads [#id].
+    ///
     /// @return the ID assigned by Hibernate
     /// @throws IllegalStateException if this entity has not been persisted
     public Long getId() {
@@ -56,6 +61,21 @@ public class Account {
             throw new IllegalStateException("Entity has not been persisted");
         }
         return id;
+    }
+
+    /// The id as its own type, which the compiler tells from every other id.
+    ///
+    /// Final, and it reads the number through [#getId]. A lazy reference to
+    /// this entity is a subclass Hibernate makes: it answers `getId` from the
+    /// reference itself and loads the row for any other method it can
+    /// override. It cannot override this one, so the id of a reference is
+    /// read without a query, and without loading a row ahead of a lock that
+    /// was meant to read it first. `EntityIdsIT` fails if that stops holding.
+    ///
+    /// @return the id
+    /// @throws IllegalStateException if this entity has not been persisted
+    public final AccountId id() {
+        return new AccountId(getId());
     }
 
     public Member getMember() {

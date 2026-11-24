@@ -2,20 +2,15 @@
 @import se.teaterihuskvarna.volunteer.MemberShift
 @import se.teaterihuskvarna.web.Copy
 @import se.teaterihuskvarna.web.CsrfField
+@import se.teaterihuskvarna.web.Feedback
 @param Copy copy
 @param CsrfField csrf
 @param List<MemberShift> shifts
-@param String error
-@param String notice
+@param Feedback feedback
 @template.member.layout(copy = copy, title = copy.text("shifts.heading"), content = @`
     <h1>${copy.text("shifts.heading")}</h1>
     <p>${copy.text("shifts.intro")}</p>
-    @if(error != null)
-        <p role="alert">${error}</p>
-    @endif
-    @if(notice != null)
-        <p role="status">${notice}</p>
-    @endif
+    @template.tag.feedback(copy = copy, feedback = feedback)
     @if(shifts.isEmpty())
         <p>${copy.text("shifts.none")}</p>
     @else

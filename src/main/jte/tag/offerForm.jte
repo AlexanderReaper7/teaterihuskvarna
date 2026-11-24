@@ -1,4 +1,3 @@
-@import java.util.Objects
 @import se.teaterihuskvarna.offer.OfferForm
 @import se.teaterihuskvarna.web.Copy
 @import se.teaterihuskvarna.web.CsrfField
@@ -27,16 +26,16 @@
         @endif
     </p>
     @template.tag.field(copy = copy, name = "startsAt", label = copy.text("adminOffers.form.startsAt"), type = "datetime-local",
-            autocomplete = "off", value = Objects.toString(form.startsAt(), null),
+            autocomplete = "off", value = errors.value("startsAt", form.startsAt()),
             error = errors.message("startsAt"), required = false)
     @template.tag.field(copy = copy, name = "registrationClosesAt", label = copy.text("adminOffers.form.registrationClosesAt"),
             type = "datetime-local", autocomplete = "off",
-            value = Objects.toString(form.registrationClosesAt(), null),
+            value = errors.value("registrationClosesAt", form.registrationClosesAt()),
             error = errors.message("registrationClosesAt"), required = false)
     <p>${copy.text("adminOffers.form.closesHint")}</p>
     @template.tag.field(copy = copy, name = "capacity", label = copy.text("adminOffers.form.capacity"), type = "number",
-            autocomplete = "off", value = Objects.toString(form.capacity(), null),
-            error = errors.message("capacity"), required = false)
+            autocomplete = "off", value = errors.value("capacity", form.capacity()),
+            error = errors.message("capacity"), required = false, max = String.valueOf(OfferForm.CAPACITY_MAX))
     <p>${copy.text("adminOffers.form.capacityHint")}</p>
     <button type="submit">${icon} ${submit}</button>
 </form>

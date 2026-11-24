@@ -6,6 +6,16 @@ description: How members and administrators log in.
 
 # 0015: Login links on Spring Security
 
+Amended on 2026-11-11, the choice the user's and the reasons an agent's. The mail to an address that already has an account carries a login link bound to the browser that filled in the form, under "Bli medlem from an address that already has an account".
+
+Amended on 2026-11-11, the choice the user's and the design an agent's. Confirming a membership application in the browser that sent the form logs the new member in from the welcome page (#47), under "Logging in from the welcome page".
+
+Amended by an agent on 2026-11-11. The page a link opens says "Du loggas in" and shows its button only when it is still there after 5 seconds, or at once without JavaScript (#214).
+
+Amended by an agent on 2026-11-10. Deleting a member removes an account, so the member chain runs the active-login check too.
+
+Amended by the user on 2026-11-10. Each client IP address has its own allowance of link requests per address, under "What each limit counts".
+
 ## Decision
 
 Members and administrators log in with Spring Security 7.1.1's one-time-token login. The flow is Spring's: the filter that takes an address and generates a token, the filter that takes a token and logs in, the session, CSRF and the access rules. This project supplies the parts that Spring's defaults get wrong for it: a token store that keeps hashes, a lookup that says nothing about unknown addresses, a rate limit, mail sent after the response, and a cookie that makes a link work only in the browser that asked for it. They live in `se.teaterihuskvarna.login`.
@@ -38,6 +48,8 @@ The link in the mail opens a page with a form that POSTs the token. Mail scanner
 
 2026-09-23: a script on that page, [`static/js/login-link.js`](../../src/main/resources/static/js/login-link.js), submits the form as soon as the page loads, so a person who follows the link is logged in without pressing anything. The button stays for browsers without JavaScript. This keeps out scanners that only fetch the HTML. Some gateways open links in a headless browser that runs JavaScript, and those will still spend the token; for such a mailbox the page behaves as if the server logged in on GET. Logging in on GET was rejected for that reason: it would lose every scanned mailbox rather than only those. The script is a file rather than inline, so a later Content-Security-Policy need not allow inline script.
 
+The page stays on screen until the answer to that POST comes back: 960 ms on 2026-11-11 in Chromium with 150 ms latency, 1.6 Mbit/s down and an empty cache, 20 to 50 ms on the local stack. Headed "Logga in" with a "Logga in" button, it looked like the login page for that moment (#214). Since 2026-11-11 it is headed "Du loggas in", and [`site.css`](../../src/main/resources/static/css/site.css) keeps the line "Händer inget? Tryck på knappen." and the button hidden for 5 seconds, so they show only if the script was blocked or failed or the answer is slow. Under `@media (scripting: none)` they show at once. A page that came back stale keeps the login heading and shows the button at once, since its script does not press it. An agent chose the wording and the 5 seconds.
+
 ## A link works only in the browser that asked for it
 
 Since 2026-09-23. Before that, anyone could ask for a link to their own address and send it to someone else, in a mail or a chat message. The other person would click it and be logged in as the sender, and anything they then typed, such as their own contact details, would land in the sender's account. That is login CSRF. A review raised it that day, and the user rejected fixes that depend on the person reading the page carefully: nobody checks whose name is in the corner before typing.
@@ -61,22 +73,47 @@ This design uses both: a link bound to the browser, and a code for every other c
 
 A code allows five tries (`HashedTokenService.CODE_TRIES`), and a wrong code does not spend the link. The tries are counted in the `UPDATE` that finds the rows, so guesses sent at once cannot get more than five between them. `LoginIT.codeGuessesSentAtOnceStillStopAtFive` sends 20 at once. It was checked to fail when the count moved to a separate statement, with a 50 ms pause added between the two statements to widen the race.
 
-An attacker who guesses from their own browser can ask for 5 links an hour to a victim's address (`requests-per-address`), with 5 tries each: 25 guesses an hour against a million codes. That is 1 in 40 000 per hour, about 1.8% over 30 days and about 20% over a year of guessing without pause. The victim gets 120 mails a day meanwhile, so the attack is loud. Eight digits would bring the year down to about 0.2%. The user kept six digits on 2026-09-23 with these numbers in front of them.
+An attacker who guesses from their own browser can ask for 5 links an hour to a victim's address (`requests-per-address-and-client`), with 5 tries each: 25 guesses an hour against a million codes. That is 1 in 40 000 per hour, about 1.8% over 30 days and about 20% over a year of guessing without pause. The victim gets 120 mails a day meanwhile, so the attack is loud. Eight digits would bring the year down to about 0.2%. The user kept six digits on 2026-09-23 with these numbers in front of them.
+
+Since 2026-11-10 those numbers hold for an attacker on one IP address. One who asks from two or more gets 10 links an hour, the address's total (`requests-per-address`): 50 guesses an hour, which is 1 in 20 000 per hour, about 3.5% over 30 days and about 35% over a year of guessing without pause, with 240 mails a day to the victim. The user chose the allowance per IP address that day, and has not seen these numbers beside the six digits.
 
 ### Limits
 
-- **The code's timing.** The code is checked on the request thread, and the `UPDATE` finds a row only if this browser asked for a link to a known address. A browser that asked about an unknown address gets the same redirect, a fraction of a millisecond sooner. The difference was not measured. Each sample costs a link request, which the rate limit caps at five an hour per address, and the difference sits under the noise of an internet round trip.
+- **The code's timing.** The code is checked on the request thread, and the `UPDATE` finds a row only if this browser asked for a link to a known address. A browser that asked about an unknown address gets the same redirect, a fraction of a millisecond sooner. The difference was not measured. Each sample costs a link request, which the rate limit caps at five an hour per address for one client and ten for all clients, and the difference sits under the noise of an internet round trip.
 - **Cookies set from a sibling host.** A page on another host under the same domain, such as an old WordPress site on `www.` while the application runs elsewhere, can set a `login-browser` cookie for the parent domain with the same path. It could plant the attacker's value in the victim's browser and bring the attack back. The `__Host-` name prefix stops that, but it requires `Path=/` and `Secure`, so the cookie would go with every request on the site and not at all over plain HTTP in development. The cookie uses the login page's path instead, the way the passkey offer cookie does in [0016](0016-passkeys-beside-links.md). Whether any sibling host will exist depends on the open question about the WordPress site in [open-questions.md](../open-questions.md).
 - **Consent.** The cookie is set when the person asks to log in, is needed to log in, and lasts as long as a link, one hour. Article 29 Working Party Opinion 04/2012 lists authentication cookies among those exempt from consent. The privacy text should still name it.
 - **The REST adapter.** An API client has to keep the cookie from the request for a link to the POST that logs in, as a browser does.
 
 ### Bli medlem from an address that already has an account
 
-Before this change, the form mailed such an address a login link. The form sets no `login-browser` cookie, so that link would be bound to nobody, and it cannot be bound to the browser that filled in the form without reopening the attack: anyone could apply with their own address and pass the link on. Since 2026-09-23 the mail says the address already belongs to a member and links to the plain login page, `/logga-in`, with no token. The user chose this that day. The cost is one extra step for a member who applied again: type the address on the login page.
+Before 2026-09-23, the form mailed such an address a login link. The form set no `login-browser` cookie then, so that link was bound to nobody. From 2026-09-23 the mail said the address already belongs to a member and linked to the plain login page, `/logga-in`, with no token. The user chose this that day, at the cost of one extra step for a member who applied again: type the address on the login page.
+
+Since 2026-11-11 the form sets the cookie ("Logging in from the welcome page"), and the mail carries a login link bound to the browser that filled in the form, with the plain login page below it for another device. The user chose this that day, after the agent's account of it. The reasons that follow are the agent's.
+
+- The link is bound as a link from the login page is, so passing the mail on logs nobody in, and in another browser the link leads to `/logga-in` (`ELSEWHERE_WITHOUT_CODE`).
+- It has no code (`LoginLinks.createWithoutCode`). A code is typed on the login page's "link sent" page in the browser that asked, which the applicant never saw, so a code would only add guesses.
+- The form shares the login page's rate limit, so it sends nobody more mails or links than the login page does. Someone who types another member's address gets a link mailed to that member and bound to their own browser, which neither of them can use, as on the login page.
+- The mail expires with its link, an hour, as a login mail does. A caller that set no cookie gets the earlier mail, with the login page only, retried until it is sent. Both adapters always set one.
+
+### Logging in from the welcome page
+
+Since 2026-11-11 (#47). That day the user chose, from options an agent gave, that confirming a membership application logs the new member in when it happens in the browser that sent the form, in the same pull request as #214. The rest of this section is the agent's.
+
+The welcome page after Bekräfta used to link to `/logga-in`, where the new member typed the address again and waited for a login mail. The confirmation link alone cannot log anyone in. It proves only that someone read the mail within 24 hours, and it works in any browser. Logging in on it would bring back the login CSRF above, through the form: someone applies with their own address and passes the confirmation link on, and whoever confirms is logged in to the sender's new account and types their own details into it.
+
+So the form sets the member `login-browser` cookie, in both adapters and in every case, as a request for a login link does (`LoginBrowserFilter`), and the application stores the cookie's hash in `membership_application.browser_hash` (V18). Confirming creates a login link for the new account bound to that hash (`LoginLinks.createWithoutCode`). No mail carries it, and it has no code. The welcome page's "Logga in" opens it on the page a mailed link opens:
+
+- In the browser that applied, that page logs in as it does for a mailed link, through Spring's filter.
+- In any other browser, or once the cookie has expired, `LoginLinks.open` answers `ELSEWHERE_WITHOUT_CODE`, and the page sends the person to `/logga-in`, as the welcome page did before. The page that says to open the link where it was asked for would point to a code that does not exist.
+- The REST adapter returns the token as `loginToken` in the confirmation's answer. A client posts it to `/logga-in/lank` with the cookie the application set, as it does a mailed token.
+
+The login proves what a mailed link proves: someone read the mailbox, in the browser that asked, once. The cookie lasts as long as a login link, an hour from the form, so a confirmation more than an hour after applying confirms without logging in, and the link itself lasts an hour from the confirmation. A code typed on the "link sent" page never matches it, because `HashedTokenService` skips rows without a code.
+
+The cost is a member login link waiting in the same browser. The form's request does not carry the cookie, whose path is the login page's, so the form sets a new value, and a member login link that browser asked for earlier stops working there. An application sent before V18 has no browser hash, and its welcome page links to `/logga-in` as before.
 
 ## Sessions in PostgreSQL
 
-A member login lasts 30 days ("A login ends a fixed time after it starts"). In memory, every deploy would end it. Spring Session JDBC keeps sessions in `SPRING_SESSION`, so they survive a restart.
+A member login lasts 30 days ("A login ends a fixed time after it starts"). In memory, every deploy would end it. Spring Session JDBC keeps sessions in `SPRING_SESSION`, so they survive a restart. They do not survive a restore from a backup: `SESSION_ID` is the cookie's value in plain text, so [`backup.sh`](../../scripts/backup.sh) leaves the rows of both session tables out of the dump, and everyone logs in again ([runbook](../runbook.md)).
 
 `spring.session.jdbc.initialize-schema` is `never`, and V3 creates the tables instead. V3 is `schema-postgresql.sql` from the spring-session-jdbc 4.1.1 jar, and on 2026-09-23 it was identical to that file apart from its header comment and tabs turned to spaces. Upgrading Spring Session means comparing the two again.
 
@@ -91,7 +128,7 @@ The cost was measured the same day on the e2e stack, 5 000 sequential keep-alive
 | `/admin` | 1.192, 1.130 | 1.203, 1.115 |
 | `/api/admin/administrators` | 1.009, 1.004 | 0.964, 1.060 |
 
-The difference is smaller than the spread between two runs of the same build. By itself, the lookup (`removed_at IS NULL` by primary key) took 0.014 ms in `pgbench`. Spring Session's own load of the session takes 0.023 ms. Members get no such check, because nothing removes an account yet. Whatever later removes one should add the filter to the member chain.
+The difference is smaller than the spread between two runs of the same build. By itself, the lookup (`removed_at IS NULL` by primary key) took 0.014 ms in `pgbench`. Spring Session's own load of the session takes 0.023 ms. Members get the same check since 2026-09-28: `MemberService.delete` removes a member's account and ends its sessions, and the member chain runs `ActiveLoginFilter` too. The measurement above covers only the administrator chain.
 
 ## A login ends a fixed time after it starts
 
@@ -99,7 +136,9 @@ Since 2026-09-23 a member login lasts 30 days and an administrator login 8 hours
 
 The end is a session attribute, set at login by `LoginSuccessHandler` for a link and a passkey alike. A filter in both chains, before the access rules, deletes a logged-in session whose end has passed, and a logged-in session without an end, which only one from before the change can be. The access rules then answer as for anyone: the login page, or 401 under `/api/`. Spring Session's idle timeout stays set to the same length, only so that its cleanup job deletes rows nobody comes back to.
 
-Two minutes before the end, `/medlem` and `/admin` beep once, count down and offer "Fortsätt vara inloggad", which starts the full 30 days or 8 hours again ([`static/js/session.js`](../../src/main/resources/static/js/session.js), `DeviceService.extend`). The user chose one click, a restart of the full period and two minutes on 2026-09-23. At the end, or when the server says the login is gone, the page stays and says the person is logged out, with a link to the plain login page and never a login link, because the user asked that a login that ended must not be one click away from starting again. Browsers play sound only on a page the person has clicked or typed on, so on a page left untouched the beep stays silent and only the text shows.
+Two minutes before the end, every logged-in page beeps once, counts down and offers "Fortsätt vara inloggad", which starts the full 30 days or 8 hours again ([`static/js/session.js`](../../src/main/resources/static/js/session.js), `DeviceService.extend`). The user chose one click, a restart of the full period and two minutes on 2026-09-23. At the end, or when the server says the login is gone, the page stays and says the person is logged out, with a link to the plain login page and never a login link, because the user asked that a login that ended must not be one click away from starting again. Browsers play sound only on a page the person has clicked or typed on, so on a page left untouched the beep stays silent and only the text shows.
+
+The countdown is in the member's and the administrator's layout, through [`tag/loginCountdown.jte`](../../src/main/jte/tag/loginCountdown.jte), so a page under `/medlem` or `/admin` has it without asking for it. `CountdownAdvice` keeps what it needs on the request before the page renders, and the tag reads it from there (`LoginCountdown`). The countdown carries its own CSRF token, because a page such as `/medlem/handlingar` has no form to borrow one from. Extending is a request in the background, and nothing loads the page again, so what is typed in a form stays, and a page whose login has ended still shows it. An agent put the countdown on every page on 2026-11-10, after a review found that an administrator writing a mailing on `/admin/utskick` got no warning: only the two start pages had it, and the first press after the end led to the login page without the text. A login of 8 hours is under the 20 hours WCAG 2.2.1 exempts, so the criterion applies, and R006 covers it.
 
 The page gets the seconds left rather than the time of the end, since the computer's clock may be wrong. It asks the server again before it warns, at zero, and when the tab comes back into view after a minute or more, because another tab may have extended the login or another device may have ended it. Each question counts as a use and moves "Senast använd" below. Extending changes only the attribute. The session keeps its id, and the cookie needs no new expiry, since the login already set it to last as long as the browser keeps it.
 
@@ -137,9 +176,23 @@ Spring's request cache is off in both chains since 2026-09-23. It saves a refuse
 
 ## The rate limit answers like a success
 
-A filter in front of the token filter counts link requests per address and per client IP address in `link_request`. Over the limit, it answers with the same redirect a successful request gets and sends nothing. A distinct error would tell a caller the address had been asked for recently, which is itself a hint that it exists.
+A filter in front of the token filter counts link requests per address, per client IP address and per pair of the two in `link_request` (`LinkRequestLimiter`). Over a limit, it answers with the same redirect a successful request gets and sends nothing. A distinct error would tell a caller the address had been asked for recently, which is itself a hint that it exists.
 
 The client IP address is the one Traefik forwards: `server.forward-headers-strategy: native` in [`src/main/resources/application.yaml`](../../src/main/resources/application.yaml), with the reasoning beside it.
+
+### What each limit counts
+
+The user chose on 2026-11-10 to give each client IP address its own allowance per address: "i think doing it by IP is a good idea". The choice closes what the first fix for finding C4 of the review of that day left open: whoever sent 5 requests an hour with another person's address held that address at its limit, and its owner could get no link. The agent had recommended a cookie that marks a browser that has logged in before, and the third choice was to leave it and act on the log line. The rest of this section is an agent's, written the same day, and a default the user has not reviewed.
+
+- One client's allowance for one address is 5 requests an hour by default (`requests-per-address-and-client`). It counts the requests that were let through for that address from that client. Whoever uses it up with another person's address has used up their own allowance, and the owner still has theirs.
+- An address's total is 10 an hour by default (`requests-per-address`), counted over every client. Without a total, clients on many IP addresses could send one address mail without end. The agent chose 10 because it is the lowest total that leaves the owner a whole allowance beside one other client's. Each further 5 makes holding the address at its total take one more IP address, and gives a guesser 25 more tries an hour at the code ("How strong the code is").
+- A client counts every request it made, for any address and refused ones too, 20 an hour by default (`requests-per-client`), so a client that keeps asking stays over its limit instead of getting a new allowance each hour.
+- A client is an IPv4 address, or the /64 network of an IPv6 address, written as `2001:db8:1:2::/64`, and that is what `link_request.client_address` holds. A connection that has one IPv6 address has every address in its /64, so counted by the whole address it would be a new client with each request.
+- A refused request is stored with an empty address, so it counts against its client and against no address. Counted against the address, as it was until 2026-11-10, it let a client over its own limit fill any address's count by posting that address, and it kept a person who tried again while over the limit over it for as long as they tried.
+- Each refusal is logged at WARN with the limit that refused it, as in `Refused a request for mail: over the limit of 5 per address from one client in PT1H`, so an address held at its total shows in the log as `10 per address`. The line holds neither the address nor the client IP address.
+- The membership application form goes through the same limiter with the same counts, so requests on the login page use up what the form allows the same address, and the other way round.
+- `LinkRequestLimiterIT` proves the counting, the IPv6 network and the log lines, `LoginIT` that requests sent at once stop at the allowance and at the total, and `MembershipApplicationIT` that the form is limited.
+- Left open: clients on two or more IP addresses can together hold another person's address at its total. That person cannot get a link meanwhile, and gets 10 mails an hour they cannot use, because a link works only in the browser that asked for it. So can someone on the owner's own IP address, such as the same home network, who uses the allowance the owner would have used. A member with a passkey ([0016](0016-passkeys-beside-links.md)) logs in without mail and is not affected.
 
 ## Rejected
 
@@ -152,4 +205,4 @@ The client IP address is the one Traefik forwards: `server.forward-headers-strat
 
 ## What it costs to undo
 
-Swapping the token store for Spring's means a table rename and accepting plaintext tokens. Unbinding links from the browser means dropping `LoginBrowserFilter`, the browser condition in `HashedTokenService` and the code, and brings back login CSRF. Going back to in-memory sessions means deleting one dependency and V3's tables through a new migration, and losing the list of logged-in devices, which reads the session table. Going back to sessions that slide with use means dropping `LoginExpiryFilter`, the countdown and the extend endpoints; the two attributes can stay. Dropping Spring's flow for one written here means owning everything listed under "Why Spring's flow".
+Swapping the token store for Spring's means a table rename and accepting plaintext tokens. Unbinding links from the browser means dropping `LoginBrowserFilter`, the browser condition in `HashedTokenService` and the code, and brings back login CSRF. Dropping the welcome page's login and the link in the mail to a member who applied again means dropping the cookie on the application paths, `LoginLinks.createWithoutCode` and `ELSEWHERE_WITHOUT_CODE`; the column and the nullable code can stay. Going back to in-memory sessions means deleting one dependency and V3's tables through a new migration, and losing the list of logged-in devices, which reads the session table. Going back to sessions that slide with use means dropping `LoginExpiryFilter`, the countdown and the extend endpoints; the two attributes can stay. Dropping Spring's flow for one written here means owning everything listed under "Why Spring's flow".

@@ -1,10 +1,15 @@
-// The countdown before a login ends, on /medlem and /admin. A login lasts a
+// The countdown before a login ends, on every logged-in page: the member's
+// and the administrator's layout include it. A login lasts a
 // fixed time from when it started, whatever happens meanwhile:
 // docs/decisions/0015, "A login ends a fixed time after it starts". Two
 // minutes before the end the page beeps once, counts down and offers to
 // extend the login. At the end, or once the server says the login is gone,
 // the page stays as it is and says so, with a link to the plain login page.
 // Every Swedish text comes from the page.
+//
+// Nothing here loads the page again or leaves it. Extending is a request in
+// the background, so what is typed in a form on the page stays, and a page
+// whose login has ended still shows it.
 //
 // The page gives the seconds left, not the time of the end, because this
 // computer's clock may not agree with the server's. Before it warns, and at
@@ -39,8 +44,9 @@
       method,
       headers: {
         Accept: "application/json",
-        // The masked token from any form on the page, as passkey.js sends it.
-        "X-CSRF-TOKEN": document.querySelector("input[name=_csrf]")?.value ?? "",
+        // The countdown's own token. A form's would do, but not every
+        // logged-in page has a form.
+        "X-CSRF-TOKEN": root.dataset.csrf,
       },
     });
     if (response.status === 401) {
