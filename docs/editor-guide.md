@@ -21,9 +21,9 @@ Innan du kan logga in måste du ha blivit inbjuden till Sanity-projektet. Be en 
 4. När du är inloggad ser du listan **Innehåll** till vänster med Evenemang, Nyheter, Serier, Sidor, Produktioner, Styrelsen, Ludde-priser och Partners.
 
 ## Skapa och publicera ett evenemang
- 
-1. Klicka på **Evenemang** i listan **Innehåll** till vänster och sedan på **Kommande evenemang**. Där visas evenemangen som inte har hänt än.
-2. Klicka på plustecknet (**+**) högst upp i den mittersta kolumnen. Ett nytt, tomt formulär öppnas till höger.
+
+1. Klicka på **Evenemang** i listan **Innehåll** till vänster och sedan på **Kommande**. Listan **Kommande evenemang** öppnas, med evenemangen som inte har hänt än.
+2. Klicka på plustecknet (**+**) högst upp i listan **Kommande evenemang**. Ett nytt, tomt formulär öppnas till höger.
 
    ![Ett nytt, tomt evenemang i Sanity Studio. Markören står i fältet Titel.](editor-guide/evenemang-nytt.png)
 
@@ -32,7 +32,7 @@ Innan du kan logga in måste du ha blivit inbjuden till Sanity-projektet. Be en 
    | Fält | Vad du gör                                                                                                                                                                                     |
    |------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
    | **Titel** | Skriv evenemangets namn.                                                                                                                                                                       |
-   | **Adress** | Klicka på **Generera** så skapas adressen av titeln. Hela adressen blir till exempel `/evenemang/exempelforestallning`. Å, ä och ö ersätts med andra bokstäver, och det är normalt. |          |
+   | **Adress** | Klicka på **Generera** så skapas adressen av titeln. Hela adressen blir till exempel `/evenemang/exempelforestallning`. Å, ä och ö ersätts med andra bokstäver, och det är normalt. |
    | **Datum och tid** | Skriv datum och klockslag, till exempel `2026-12-16 19:00`, eller klicka på kalenderikonen till höger i fältet och välj. Glöm inte klockslaget. |
    | **Plats** | Skriv var evenemanget hålls.                                                                                                                                                                   |
    | **Serie** | Valfritt. Hör evenemanget inte till en serie, hoppa över fältet. Hör det till en serie, skriv i fältet och välj serien i listan, till exempel Kaffe med drömmar. Klicka på **Skapa ny** bara om serien inte finns. Då skapas en ny serie. |
@@ -68,7 +68,7 @@ Innan du kan logga in måste du ha blivit inbjuden till Sanity-projektet. Be en 
    |------|------------------------------------------------------------------------------------------------|
    | **Rubrik** | Skriv nyhetens rubrik.                                                                         |
    | **Adress** | Klicka på **Generera** så skapas adressen av rubriken.                                         |
-   | **Publiceringsdatum** | Välj datum och tid då nyheten ska börja synas på webbplatsen.                                  |
+   | **Publiceringsdatum** | Fältet är redan ifyllt med tiden just nu. Låt det stå om nyheten ska synas direkt. Välj en senare tid om den ska börja synas först då. |
    | **Ingress** | Skriv en kort inledning.                                                                       |
    | **Huvudbild** | Klicka på **Ladda upp** för att välja en bild från datorn, eller dra eller klistra in en bild. |
    | **Alternativ text** | Beskriv bilden för den som inte ser den. Du måste fylla i den när du har lagt till en bild.    |
@@ -82,7 +82,7 @@ Innan du kan logga in måste du ha blivit inbjuden till Sanity-projektet. Be en 
    Studio sparar det du skriver automatiskt som ett utkast. Det finns ingen sparaknapp. När du är klar klickar du på **Publicera**.
 
 4. Klicka på knappen **Publicera** längst ned till höger.
-5. Kontrollera att fliken **Publicerad** nu är markerad högst upp. Då är nyheten publicerad och syns på webbplatsen inom en minut.
+5. Kontrollera att fliken **Publicerad** nu är markerad högst upp. Då är nyheten publicerad och syns på webbplatsen inom en minut. Har **Publiceringsdatum** en tid som inte har varit än, syns nyheten först från den tiden.
 
 ## Redigera en fast sida
 
@@ -97,8 +97,8 @@ De fasta sidorna är **Om föreningen**, **Styrelsen**, **Produktioner**, **Ludd
 
    | Fält | Vad du gör |
    |------|------------|
-   | **Rubrik** | Ändra inte. Webbplatsen använder den för att hitta rätt sida. |
-   | **Vilken sida** | Ändra inte. Det finns bara fem sidor, och adressen måste vara en av dem. |
+   | **Rubrik** | Rubriken som står överst på sidan. Ändra den bara om sidan ska heta något annat. |
+   | **Vilken sida** | Ändra inte. Webbplatsen använder den för att hitta rätt sida. Det finns bara fem sidor, och adressen måste vara en av dem. |
    | **Bild överst** | Klicka på **Ladda upp** för att välja en bild från datorn, eller **Välj** för att välja en bild som redan finns. Du kan också dra eller klistra in en bild. |
    | **Alternativ text** | Beskriv bilden för den som inte ser den, till exempel "Tre skådespelare på scenen". Du måste fylla i den när du har lagt till en bild. |
    | **Innehåll** | Skriv eller ändra sidans text. Verktygsraden ovanför texten har bland annat fet stil, kursiv, punktlista, numrerad lista och länk. |
@@ -184,7 +184,7 @@ Vill du sluta förhandsgranska helt, öppna webbplatsen i en vanlig flik och kli
 
 ### Se vad besökarna ser
 
-Medan förhandsgranskningen är på visar webbplatsen dina utkast även utanför Studio, i den webbläsaren. Vill du se vad besökarna ser, öppna webbplatsen i ett privat fönster (**Ctrl + Shift + N**).
+Medan förhandsgranskningen är på visar webbplatsen dina utkast även utanför Studio, i den webbläsaren. Vill du se vad besökarna ser, öppna webbplatsen i ett privat fönster (**Ctrl + Shift + N** i Chrome och Edge, **Ctrl + Shift + P** i Firefox).
 
 ## Avpublicera, ta bort och ångra
 
@@ -239,7 +239,7 @@ Om ändringen inte syns:
 3. Kontrollera i Studio att fliken **Publicerad** är markerad. Om bara **Utkast** är markerad är ändringen inte publicerad. Klicka på **Publicera**.
 4. Syns det fortfarande inte, kontakta systemets förvaltare enligt nästa avsnitt.
 
-Kontrollera webbplatsen i ett privat fönster (**Ctrl + Shift + N**), så att du ser det besökarna ser och inte dina utkast.
+Kontrollera webbplatsen i ett privat fönster (**Ctrl + Shift + N** i Chrome och Edge, **Ctrl + Shift + P** i Firefox), så att du ser det besökarna ser och inte dina utkast.
 
 ## Vem kontaktar du om något går fel?
 
