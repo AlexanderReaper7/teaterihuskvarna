@@ -7,7 +7,7 @@
 @param CsrfField csrf
 @param List<DeviceDetails> devices
 @param DeviceUrls urls
-<section>
+<section data-devices>
     <h2>${copy.text("device.heading")}</h2>
     <p>${copy.text("device.intro")}</p>
     <table>
