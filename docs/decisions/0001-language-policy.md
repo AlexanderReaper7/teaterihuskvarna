@@ -16,7 +16,7 @@ Where that Swedish lives is a second question, and the answer is not "in the tem
 
 English is everything else: this [`docs/`](../) tree, code identifiers, comments, commit messages, README, decision records.
 
-A guide for the association's own people is the exception inside [`docs/`](../): [administrator-guide.md](../administrator-guide.md), and the editor guide #114 asks for. Its readers are board members and editors, not developers, and every step names a Swedish heading or button they see on the screen.
+A guide for the association's own people is the exception inside [`docs/`](../): [administrator-guide.md](../administrator-guide.md) and [editor-guide.md](../editor-guide.md). Its readers are board members and editors, not developers, and every step names a Swedish heading or button they see on the screen.
 
 ## Two exceptions, both quotations
 
