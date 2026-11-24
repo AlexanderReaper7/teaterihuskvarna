@@ -6,6 +6,11 @@
 # Minor and patch updates are grouped per ecosystem, so a week brings a few
 # pull requests rather than one per artifact. A major update comes alone.
 #
+# A group whose name ends in -minor-and-patch is merged without the owner,
+# by .github/workflows/dependabot-merge.yml, once its checks pass. The name is
+# what scripts/dependabot-merge.sh goes by, so a group that should wait for
+# the owner, as pmd and temurin do, must not end that way.
+#
 # A new release waits seven days before it is proposed, so that a hijacked
 # release is more likely found before it gets here. trivy-action's hijacked
 # tags of 2026-03-19 were replaced by a clean release the next day. Security
