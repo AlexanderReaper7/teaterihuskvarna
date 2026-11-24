@@ -4,8 +4,10 @@
 // tag/adminTour.jte writes the steps and the card into a <template>, with every
 // Swedish text, so nothing is written here. A step says which page it is on
 // (data-path, data-search, data-on), what it points at (data-target) and where
-// a link to it leads (data-href). This script outlines the target and shows the
-// card over the page, fixed to the bottom of the window, so the page under it
+// a link to it leads (data-href). This script outlines the target, or, when
+// the target is a heading, frames the heading with everything under it as
+// far as the next heading, since such a step is about the whole section. It
+// shows the card over the page, fixed to the bottom of the window, so the page under it
 // keeps its own layout. The card never lies on the target: it takes the right
 // corner, and where that would cover the target it is a bar along the bottom
 // edge instead, which the page can scroll everything out from under. In the
@@ -47,6 +49,8 @@
 
   let card = null;
   let target = null;
+  // The frame around a section, when the target is a heading.
+  let frame = null;
   // The step the card shows, or -1 when the walkthrough is not running.
   let shown = -1;
   // Whether the last press was inside the target. Kept at pagehide, so a
@@ -138,10 +142,12 @@
 
   const clear = () => {
     card?.remove();
-    heights.disconnect();
+    frame?.remove();
+    sizes.disconnect();
     document.documentElement.classList.remove("tour-bar-open");
-    target?.classList.remove("tour-target");
+    target?.classList.remove("tour-target", "tour-section");
     card = null;
+    frame = null;
     target = null;
     shown = -1;
     acted = false;
@@ -184,51 +190,92 @@
 
   const top = () => main.querySelector(":scope > h1") ?? main.firstElementChild;
 
-  // What carries the outline: the target, or for a table the box that scrolls
-  // it sideways, which would cut the table's own outline off.
-  const outlined = () => (target.parentElement?.matches(".table-scroll") ? target.parentElement : target);
+  // The heading and everything under it, as far as the next heading of its
+  // level or a higher one, or a block that holds one, as a <section> with its
+  // own heading does. Null when the target is no heading.
+  const section = () => {
+    const level = /^H([1-6])$/.exec(target.tagName)?.[1];
+    if (!level) {
+      return null;
+    }
+    const next = Array.from({ length: Number(level) }, (_, i) => `h${i + 1}`).join(",");
+    const parts = [target];
+    for (let at = target.nextElementSibling; at && !at.matches(next) && !at.querySelector(next);
+      at = at.nextElementSibling) {
+      parts.push(at);
+    }
+    return parts;
+  };
 
-  // Whether the card lies on the target or on its outline, which stands 4 px
-  // off the target and is --focus-width wide.
+  // The box of what the step is about, in the window: the section, or the
+  // target, or for a table the box that scrolls it sideways, which carries
+  // the outline since it would cut the table's own off.
+  const area = () => {
+    const parts = section()
+        ?? [target.parentElement?.matches(".table-scroll") ? target.parentElement : target];
+    const boxes = parts.map((part) => part.getBoundingClientRect())
+        .filter((box) => box.width > 0 || box.height > 0);
+    if (boxes.length === 0) {
+      return target.getBoundingClientRect();
+    }
+    const left = Math.min(...boxes.map((box) => box.left));
+    const top = Math.min(...boxes.map((box) => box.top));
+    const right = Math.max(...boxes.map((box) => box.right));
+    const bottom = Math.max(...boxes.map((box) => box.bottom));
+    return { left, top, right, bottom, width: right - left, height: bottom - top };
+  };
+
+  // Whether the card lies on that box or on its outline, which stands 4 px
+  // off it and is --focus-width wide.
   const covered = () => {
     if (!target) {
       return false;
     }
     const over = card.getBoundingClientRect();
-    const under = outlined().getBoundingClientRect();
+    const under = area();
     return over.left < under.right + 8 && under.left - 8 < over.right
         && over.top < under.bottom + 8 && under.top - 8 < over.bottom;
   };
 
   const bar = () => (card.classList.contains("tour-bar") ? card.offsetHeight : 0);
 
-  // Brings the target into the part of the window above the bar, unless its
+  // Brings that box into the part of the window above the bar, unless its
   // top already shows in the upper half of that part, so the page does not
-  // jump for a step that can be seen.
+  // jump for a step that can be seen. A tall box goes to the top, 1.5 rem
+  // under the window's edge, and a low one to the middle.
   const reveal = () => {
-    const box = outlined().getBoundingClientRect();
+    const box = area();
     const height = window.innerHeight - bar();
     if (box.top >= 0 && (box.bottom <= height || box.top < height * 0.5)) {
       return;
     }
-    outlined().scrollIntoView({ block: box.height > height * 0.5 ? "start" : "center" });
+    window.scrollBy(0, box.height > height * 0.5 ? box.top - 24 : (box.top + box.bottom - height) / 2);
   };
 
-  // The bar's text takes one more line when the page's font arrives after the
-  // first drawing, so the height is read again whenever it changes.
-  const measure = () => {
+  // What follows a size: the room the page leaves for the bar, and the place
+  // of the frame around a section. The bar's text takes one more line when
+  // the page's font arrives after the first drawing, and the page under the
+  // frame changes with the window, so both are read again on every change.
+  const settle = () => {
     if (card?.classList.contains("tour-bar")) {
       document.documentElement.style.setProperty("--tour-bar", `${card.offsetHeight}px`);
     }
+    if (frame) {
+      const box = area();
+      frame.style.left = `${box.left + window.scrollX}px`;
+      frame.style.top = `${box.top + window.scrollY}px`;
+      frame.style.width = `${box.width}px`;
+      frame.style.height = `${box.height}px`;
+    }
   };
-  const heights = new ResizeObserver(measure);
+  const sizes = new ResizeObserver(settle);
 
   // Where the card goes: the lower right corner of the window, or a bar along
-  // the bottom edge when the corner would cover the target, or when the card
-  // is more than half as wide as the window and so leaves no corner. The bar
-  // hides the window's bottom over its whole width, so site.css gives the
-  // page as much room after its end, and for that the page is told how tall
-  // the bar is (--tour-bar).
+  // the bottom edge when the corner would cover what the step is about, or
+  // when the card is more than half as wide as the window and so leaves no
+  // corner. The bar hides the window's bottom over its whole width, so
+  // site.css gives the page as much room after its end, and for that the
+  // page is told how tall the bar is (--tour-bar).
   const place = () => {
     if (!card) {
       return;
@@ -238,8 +285,9 @@
     const corner = card.offsetWidth * 2 <= root.clientWidth && !covered();
     card.classList.toggle("tour-bar", !corner);
     root.classList.toggle("tour-bar-open", !corner);
-    measure();
-    heights.observe(card);
+    settle();
+    sizes.observe(card);
+    sizes.observe(main);
   };
 
   // Shows a step that is on this page.
@@ -254,6 +302,14 @@
     if (before) {
       target.classList.add("tour-target");
       before.before(card);
+      if (section()) {
+        // Outside <main>, whose rules for its blocks would size it, and over
+        // the page without taking a press meant for what it frames.
+        target.classList.add("tour-section");
+        frame = document.createElement("div");
+        frame.className = "tour-frame";
+        document.body.append(frame);
+      }
     } else {
       target = null;
       top().after(card);

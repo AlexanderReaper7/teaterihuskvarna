@@ -839,11 +839,24 @@ html.tour-bar-open body {
 /* What the step points at. Dashed and teal, 6.4:1 on white, so it is not
  * taken for the focus ring, which is solid and black. Focus keeps its ring. */
 .tour-target:not(:focus-visible),
-.table-scroll:has(> .tour-target) {
+.table-scroll:has(> .tour-target),
+.tour-frame {
   outline: var(--focus-width) dashed var(--color-primary);
   outline-offset: 4px;
-  /* Scrolled to the top of the window, it keeps its outline in view. */
-  scroll-margin: 1.5rem;
+}
+
+/* A step that points at a heading is about the whole section under it, which
+ * is no one element. The script lays this frame over the section, from the
+ * heading to the next one, and the heading goes without an outline of its
+ * own. The frame takes no press from what it frames. */
+.tour-frame {
+  position: absolute;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.tour-target.tour-section:not(:focus-visible) {
+  outline: none;
 }
 
 /* A table's box scrolls sideways (/js/tables.js) and so cuts off whatever its
