@@ -37,7 +37,7 @@
         @template.tag.passkeyOffer(copy = copy, csrf = csrf, urls = passkeyUrls)
     @endif
     @template.tag.feedback(copy = copy, feedback = feedback)
-    @template.tag.tourStart(copy = copy)
+    @template.tag.tourStart(copy = copy, root = "/admin", explain = copy.text("tour.start.explain"))
 
     <h2>${copy.text("admin.fees.heading", String.valueOf(fees.year()))}</h2>
     <p>${copy.text("admin.fees.count", fees.paid(), fees.paid() + fees.unpaid())}</p>

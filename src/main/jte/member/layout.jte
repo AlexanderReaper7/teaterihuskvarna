@@ -16,5 +16,6 @@
         </ul>
     </nav>
     ${content}
+    @template.tag.memberTour(copy = copy)
     @template.tag.loginCountdown(copy = copy)
 `)

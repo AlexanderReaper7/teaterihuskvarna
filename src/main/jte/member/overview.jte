@@ -33,7 +33,8 @@
         @template.tag.passkeyOffer(copy = copy, csrf = csrf, urls = passkeyUrls)
     @endif
     @template.tag.feedback(copy = copy, feedback = feedback)
-    <h2>${copy.text("fee.heading", String.valueOf(member.fee().year()))}
+    @template.tag.tourStart(copy = copy, root = "/medlem", explain = copy.text("memberTour.start.explain"))
+    <h2 id="avgift">${copy.text("fee.heading", String.valueOf(member.fee().year()))}
         @template.tag.feeBadge(copy = copy, paid = paidAt != null)</h2>
     @if(paidAt != null)
         <p>
@@ -80,7 +81,7 @@
         <p><a href="/medlem/volontar">@template.icon.handHelping() ${copy.text("member.shifts.manage")}</a></p>
     @endif
 
-    <h2>${copy.text("member.contact.heading")}</h2>
+    <h2 id="kontaktuppgifter">${copy.text("member.contact.heading")}</h2>
     <dl class="details">
         <dt>${copy.text("member.name")}</dt>
         <dd>${member.fullName()}</dd>
@@ -98,7 +99,7 @@
     <p><a href="/medlem/kontaktuppgifter">@template.icon.pencil() ${copy.text("member.contact.edit")}</a></p>
     <p>${copy.text("member.contact.emailNote")}</p>
 
-    <h2>${copy.text("member.household")}</h2>
+    <h2 id="hushall">${copy.text("member.household")}</h2>
     @if(household == null)
         <p>${copy.text("member.noHousehold")}</p>
         <p><a href="/medlem/hushall">@template.icon.plus() ${copy.text("household.create")}</a></p>

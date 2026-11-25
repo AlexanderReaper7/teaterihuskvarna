@@ -1,8 +1,15 @@
-// The administrators' walkthrough, "rundturen", on every administrator page.
-// Without this script the start button stays hidden and nothing else changes.
+// The walkthroughs, "rundturen": the administrators' on every administrator
+// page and the members' on every page of Mina sidor. Without this script the
+// start button stays hidden and nothing else changes. What is said here of
+// the administrator holds for the member on the member pages.
 //
-// tag/adminTour.jte writes the steps and the card into a <template>, with every
-// Swedish text, so nothing is written here. A step says which page it is on
+// tag/tour.jte writes the card into a <template>, and tag/adminTour.jte or
+// tag/memberTour.jte the steps, with every Swedish text, so nothing is
+// written here. The script's own tag says which section the page belongs to
+// (data-root, /admin or /medlem). Each section has its own walkthrough: where
+// it stands is kept under the section's name, and its cookie goes only to
+// the section's pages, so one started among the member pages shows nothing
+// on an administrator page. A step says which page it is on
 // (data-path, data-search, data-on), what it points at (data-target) and where
 // a link to it leads (data-href). This script outlines the target, or, when
 // the target is a heading, frames the heading with everything under it as
@@ -44,6 +51,9 @@
     return;
   }
   const KEY = "rundtur";
+  // The section's first page, which names its walkthrough.
+  const ROOT = document.currentScript?.dataset.root ?? "/admin";
+  const STORE = `${KEY}:${ROOT}`;
   // Null in a page sent without the cookie.
   const source = document.getElementById("tour");
   const steps = source ? [...source.content.querySelectorAll("[data-tour-step]")] : [];
@@ -60,19 +70,19 @@
   let acted = false;
 
   // The cookie only says that the next page should hold the steps. It is a
-  // session cookie for the administrator pages, and holds nothing.
+  // session cookie for the section's pages, and holds nothing.
   const ask = () => {
-    document.cookie = `${KEY}=1; Path=/admin; SameSite=Lax${location.protocol === "https:" ? "; Secure" : ""}`;
+    document.cookie = `${KEY}=1; Path=${ROOT}; SameSite=Lax${location.protocol === "https:" ? "; Secure" : ""}`;
   };
   const stopAsking = () => {
-    document.cookie = `${KEY}=; Path=/admin; Max-Age=0; SameSite=Lax`;
+    document.cookie = `${KEY}=; Path=${ROOT}; Max-Age=0; SameSite=Lax`;
   };
 
   // A browser may refuse storage, in a private window or by a setting. The
   // walkthrough then works on one page and ends when another loads.
   const read = () => {
     try {
-      const state = JSON.parse(sessionStorage.getItem(KEY));
+      const state = JSON.parse(sessionStorage.getItem(STORE));
       return state && Number.isInteger(state.step) && state.step >= 0 ? state : null;
     } catch {
       return null;
@@ -80,14 +90,14 @@
   };
   const write = (step, pressed) => {
     try {
-      sessionStorage.setItem(KEY, JSON.stringify({ step, acted: pressed }));
+      sessionStorage.setItem(STORE, JSON.stringify({ step, acted: pressed }));
     } catch {
       // Nothing to do: see read().
     }
   };
   const forget = () => {
     try {
-      sessionStorage.removeItem(KEY);
+      sessionStorage.removeItem(STORE);
     } catch {
       // Nothing to do: see read().
     }

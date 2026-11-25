@@ -210,7 +210,7 @@ A way into the application services. There are two, and they are peers: the JTE 
 
 ### Walkthrough | Rundtur
 
-A guide on the administrator pages that takes an administrator through the member register, the fees, the exports and the mailings one step at a time ([`tour.js`](src/main/resources/static/js/tour.js)). A card that lies over the page at the bottom of the window says what to do, what the step is about has a dashed outline, and the administrator does it on the real page, so a member added in it is a real row and a fee marked in it is marked. It starts from a button on the administrator overview.
+A guide that takes someone through a section of the site one step at a time ([`tour.js`](src/main/resources/static/js/tour.js)). There are two: the administrators' goes through the member register, the fees, the exports and the mailings, and the members' goes through Mina sidor, with the fee, the contact details, the household, the offers, the documents, the volunteer shifts, the passkeys and the logged-in devices. A card that lies over the page at the bottom of the window says what to do, what the step is about has a dashed outline, and the reader does it on the real page, so a member added in it is a real row and a telephone number changed in it is changed. Each starts from a button on its section's overview, and the two run independently of each other.
 
 ## Delivery
 
